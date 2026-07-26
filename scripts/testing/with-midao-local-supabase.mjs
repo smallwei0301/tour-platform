@@ -371,6 +371,73 @@ export function redactSupabaseOutput(text, secrets = []) {
   return redacted;
 }
 
+async function probeOwnedResources(adapter, expectedProjectId, { allowEmpty = false } = {}) {
+  const errors = [];
+  const confirm = (result, label) => {
+    if (result.status === 'rejected') {
+      errors.push(new Error(`${label} ownership probe failed`, { cause: result.reason }));
+      return null;
+    }
+    if (!Array.isArray(result.value)) {
+      errors.push(new Error(`${label} ownership probe invalid`));
+      return null;
+    }
+    if (allowEmpty && result.value.length === 0) return [];
+    try { return confirmProjectContainers({ expectedProjectId, containers: result.value }); }
+    catch (error) { errors.push(error); return null; }
+  };
+  if (typeof adapter.networks === 'function' || typeof adapter.volumes === 'function') {
+    const [containerResult, networkResult, volumeResult] = await Promise.allSettled([
+      adapter.containers(),
+      typeof adapter.networks === 'function' ? adapter.networks({ allowEmpty }) : Promise.resolve([]),
+      typeof adapter.volumes === 'function' ? adapter.volumes({ allowEmpty }) : Promise.resolve([]),
+    ]);
+    return {
+      containers: confirm(containerResult, 'container'), networks: confirm(networkResult, 'network'),
+      volumes: confirm(volumeResult, 'volume'), errors,
+    };
+  }
+  const [containerResult, assetResult] = await Promise.allSettled([
+    adapter.containers(), adapter.assets ? adapter.assets({ allowEmpty }) : Promise.resolve(null),
+  ]);
+  const containers = confirm(containerResult, 'container');
+  if (assetResult.status === 'rejected') {
+    errors.push(new Error('asset ownership probe failed', { cause: assetResult.reason }));
+    return { containers, networks: null, volumes: null, errors };
+  }
+  const assets = assetResult.value;
+  if (assets === null) return { containers, networks: null, volumes: null, errors };
+  if (!assets || !Array.isArray(assets.networks) || !Array.isArray(assets.volumes)) {
+    errors.push(new Error('asset ownership probe invalid'));
+    return { containers, networks: null, volumes: null, errors };
+  }
+  return {
+    containers,
+    networks: confirm({ status: 'fulfilled', value: assets.networks }, 'network'),
+    volumes: confirm({ status: 'fulfilled', value: assets.volumes }, 'volume'),
+    errors,
+  };
+}
+
+function ownershipAssets(ownership) {
+  if (ownership.networks === null && ownership.volumes === null) return null;
+  return { networks: ownership.networks ?? [], volumes: ownership.volumes ?? [] };
+}
+
+function adoptOwnership(current, probe) {
+  for (const resource of ['containers', 'networks', 'volumes']) if (probe[resource] !== null) current[resource] = probe[resource];
+}
+
+function requireOwnershipProbe(probe, label) {
+  if (probe.errors.length) throw new AggregateError(probe.errors, `${label} ownership probe failed`);
+  return probe;
+}
+
+function adoptRequiredOwnership(current, probe, label) {
+  adoptOwnership(current, probe);
+  return requireOwnershipProbe(probe, label);
+}
+
 export async function runWithLocalSupabase({
   adapter, expectedProjectId, childArgs, signal, reportStage = () => {},
   initialize = 'start-then-reset', onReady,
@@ -378,8 +445,7 @@ export async function runWithLocalSupabase({
   if (!['start-then-reset', 'start-only'].includes(initialize)
     || (onReady !== undefined && typeof onReady !== 'function')
     || (onReady && Array.isArray(childArgs) && childArgs.length > 0)) throw new Error('RUNNER_CALLBACK_CONTRACT_INVALID');
-  let owned = null;
-  let ownedAssets = null;
+  const ownership = { containers: null, networks: null, volumes: null };
   let localEnv;
   let value;
   let primaryError;
@@ -393,50 +459,34 @@ export async function runWithLocalSupabase({
       await adapter.start();
     } catch (startError) {
       reportStage('start-failed-identity');
-      try {
-        const partialContainers = await adapter.containers();
-        const partialAssets = adapter.assets ? await adapter.assets({ allowEmpty: true }) : null;
-        if (partialContainers.length > 0) {
-          owned = confirmProjectContainers({ expectedProjectId, containers: partialContainers });
-          ownedAssets = partialAssets;
-        } else if (partialAssets && (partialAssets.networks.length > 0 || partialAssets.volumes.length > 0)) {
-          owned = [];
-          ownedAssets = partialAssets;
-        }
-      } catch (identityError) {
-        throw new AggregateError([startError, identityError], 'start and partial ownership probe failed');
-      }
+      const probe = await probeOwnedResources(adapter, expectedProjectId, { allowEmpty: true });
+      adoptOwnership(ownership, probe);
+      if (probe.errors.length) throw new AggregateError([startError, ...probe.errors], 'start and partial ownership probe failed');
       throw startError;
     }
     if (initialize === 'start-then-reset') {
       reportStage('pre-reset-identity');
-      owned = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
-      ownedAssets = adapter.assets ? await adapter.assets() : null;
+      adoptRequiredOwnership(ownership, await probeOwnedResources(adapter, expectedProjectId), 'pre-reset');
       reportStage('pre-reset-health');
-      if (adapter.waitForDatabase) await adapter.waitForDatabase(owned);
+      if (adapter.waitForDatabase) await adapter.waitForDatabase(ownership.containers);
       reportStage('reset');
       try { await adapter.reset(); }
       catch (resetError) {
         reportStage('post-reset-failed-identity');
-        try {
-          owned = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
-          ownedAssets = adapter.assets ? await adapter.assets() : null;
-        } catch (identityError) {
-          throw new AggregateError([resetError, identityError], 'reset and ownership probe failed');
-        }
+        const probe = await probeOwnedResources(adapter, expectedProjectId, { allowEmpty: true });
+        adoptOwnership(ownership, probe);
+        if (probe.errors.length) throw new AggregateError([resetError, ...probe.errors], 'reset and ownership probe failed');
         throw resetError;
       }
       reportStage('post-reset-identity');
-      owned = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
-      ownedAssets = adapter.assets ? await adapter.assets() : null;
+      adoptRequiredOwnership(ownership, await probeOwnedResources(adapter, expectedProjectId), 'post-reset');
       reportStage('post-reset-health');
-      if (adapter.waitForDatabase) await adapter.waitForDatabase(owned);
+      if (adapter.waitForDatabase) await adapter.waitForDatabase(ownership.containers);
     } else {
       reportStage('post-start-identity');
-      owned = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
-      ownedAssets = adapter.assets ? await adapter.assets() : null;
+      adoptRequiredOwnership(ownership, await probeOwnedResources(adapter, expectedProjectId), 'post-start');
       reportStage('post-start-health');
-      if (adapter.waitForDatabase) await adapter.waitForDatabase(owned);
+      if (adapter.waitForDatabase) await adapter.waitForDatabase(ownership.containers);
     }
     reportStage('status-json');
     localEnv = adapter.statusJson ? await adapter.statusJson() : {};
@@ -444,7 +494,7 @@ export async function runWithLocalSupabase({
     if (adapter.ready) await adapter.ready(localEnv);
     if (onReady) {
       reportStage('on-ready');
-      value = await onReady({ localEnv, ownedContainers: owned, ownedAssets });
+      value = await onReady({ localEnv, ownedContainers: ownership.containers, ownedAssets: ownershipAssets(ownership) });
     } else if (adapter.child) {
       reportStage('child');
       const child = await adapter.child(childArgs, localEnv);
@@ -456,23 +506,26 @@ export async function runWithLocalSupabase({
   }
 
   let cleanupError;
-  if (owned || ownedAssets) {
-    try {
-      reportStage('cleanup-identity');
-      const currentContainers = await adapter.containers();
-      if (owned.length === 0) {
-        if (currentContainers.length !== 0) throw new Error('OWNERSHIP_DRIFT');
-      } else {
-        const current = confirmProjectContainers({ expectedProjectId, containers: currentContainers });
-        assertOwnershipUnchanged(owned, current);
-      }
-      if (ownedAssets) {
-        const currentAssets = await adapter.assets({ allowEmpty: true });
-        if (JSON.stringify(ownedAssets) !== JSON.stringify(currentAssets)) throw new Error('OWNERSHIP_DRIFT');
-      }
+  if (Object.values(ownership).some((value) => value !== null)) {
+    const cleanupErrors = [];
+    reportStage('cleanup-identity');
+    const current = await probeOwnedResources(adapter, expectedProjectId, { allowEmpty: true });
+    cleanupErrors.push(...current.errors);
+    const safe = { containers: [], networks: [], volumes: [] };
+    for (const resource of ['containers', 'networks', 'volumes']) {
+      if (ownership[resource] === null || current[resource] === null) continue;
+      try {
+        assertOwnershipUnchanged(ownership[resource], current[resource]);
+        safe[resource] = ownership[resource];
+      } catch (error) { cleanupErrors.push(error); }
+    }
+    if (Object.values(safe).some((resources) => resources.length > 0)) {
       reportStage('cleanup');
-      await adapter.stop(owned, ownedAssets);
-    } catch (error) { cleanupError = error; }
+      try { await adapter.stop(safe.containers, { networks: safe.networks, volumes: safe.volumes }); }
+      catch (error) { cleanupErrors.push(error); }
+    }
+    if (cleanupErrors.length === 1) [cleanupError] = cleanupErrors;
+    else if (cleanupErrors.length > 1) cleanupError = new AggregateError(cleanupErrors, 'resource-class cleanup failed');
   }
   const signalError = signal?.aborted ? new Error('RUNNER_SIGNALLED') : null;
   const errors = [primaryError, cleanupError, signalError].filter(Boolean);
@@ -552,44 +605,44 @@ export function createActualAdapter({ repoRoot, pin, nodeBin, signal, cliWorkdir
     if (result.exitCode !== 0 || result.stderr.trim()) throw new Error('DOCKER_IDENTITY_FAILED');
     return parseContainerRows(result.stdout, canonicalProjectId(repoRoot));
   };
-  const assets = async ({ allowEmpty = false } = {}) => {
-    const label = `label=com.supabase.cli.project=${canonicalProjectId(repoRoot)}`;
-    const networkResult = await commandRunner('docker', [
-      'network', 'ls', '--no-trunc', '--filter', label,
+  const networks = async ({ allowEmpty = false } = {}) => {
+    const projectId = canonicalProjectId(repoRoot);
+    const result = await commandRunner('docker', [
+      'network', 'ls', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`,
       '--format', '{{.ID}}\t{{.Name}}\t{{.Label "com.supabase.cli.project"}}',
     ], { cwd: repoRoot });
-    const volumeResult = await commandRunner('docker', [
-      'volume', 'ls', '--filter', label,
+    if (result.exitCode !== 0 || result.stderr.trim()) throw new Error('DOCKER_NETWORK_IDENTITY_FAILED');
+    const rows = parseContainerRows(result.stdout, projectId);
+    return allowEmpty && rows.length === 0 ? [] : confirmProjectContainers({ expectedProjectId: projectId, containers: rows });
+  };
+  const volumes = async ({ allowEmpty = false } = {}) => {
+    const projectId = canonicalProjectId(repoRoot);
+    const result = await commandRunner('docker', [
+      'volume', 'ls', '--filter', `label=com.supabase.cli.project=${projectId}`,
       '--format', '{{.Name}}\t{{.Label "com.supabase.cli.project"}}',
     ], { cwd: repoRoot });
-    if (networkResult.exitCode !== 0 || networkResult.stderr.trim() || volumeResult.exitCode !== 0 || volumeResult.stderr.trim()) {
-      throw new Error('DOCKER_ASSET_IDENTITY_FAILED');
-    }
-    const projectId = canonicalProjectId(repoRoot);
-    const networks = parseContainerRows(networkResult.stdout, projectId);
-    const volumeRows = nonemptyLines(volumeResult.stdout).map((line) => {
+    if (result.exitCode !== 0 || result.stderr.trim()) throw new Error('DOCKER_VOLUME_IDENTITY_FAILED');
+    const listedRows = nonemptyLines(result.stdout).map((line) => {
       const [name, projectLabel] = line.split('\t');
       return { name, projectLabel };
     });
-    const volumes = [];
-    for (const listed of volumeRows) {
+    const rows = [];
+    for (const listed of listedRows) {
       const inspected = await commandRunner('docker', [
         'volume', 'inspect', '--format', '{{.Name}}\t{{.CreatedAt}}\t{{.Driver}}\t{{.Scope}}\t{{index .Labels "com.supabase.cli.project"}}', '--', listed.name,
       ], { cwd: repoRoot });
       if (inspected.exitCode !== 0 || inspected.stderr.trim()) throw new Error('DOCKER_VOLUME_IDENTITY_FAILED');
-      const rows = nonemptyLines(inspected.stdout);
-      if (rows.length !== 1) throw new Error('DOCKER_VOLUME_IDENTITY_FAILED');
-      const [name, createdAt, driver, scope, projectLabel] = rows[0].split('\t');
-      if (name !== listed.name || projectLabel !== listed.projectLabel || !createdAt || !driver || !scope) {
-        throw new Error('DOCKER_VOLUME_IDENTITY_FAILED');
-      }
-      volumes.push({ id: createdAt, name, projectLabel, driver, scope });
+      const inspectedRows = nonemptyLines(inspected.stdout);
+      if (inspectedRows.length !== 1) throw new Error('DOCKER_VOLUME_IDENTITY_FAILED');
+      const [name, createdAt, driver, scope, projectLabel] = inspectedRows[0].split('\t');
+      if (name !== listed.name || projectLabel !== listed.projectLabel || !createdAt || !driver || !scope) throw new Error('DOCKER_VOLUME_IDENTITY_FAILED');
+      rows.push({ id: createdAt, name, projectLabel, driver, scope });
     }
-    return {
-      networks: allowEmpty && networks.length === 0 ? [] : confirmProjectContainers({ expectedProjectId: projectId, containers: networks }),
-      volumes: allowEmpty && volumes.length === 0 ? [] : confirmProjectContainers({ expectedProjectId: projectId, containers: volumes }),
-    };
+    return allowEmpty && rows.length === 0 ? [] : confirmProjectContainers({ expectedProjectId: projectId, containers: rows });
   };
+  const assets = async ({ allowEmpty = false } = {}) => ({
+    networks: await networks({ allowEmpty }), volumes: await volumes({ allowEmpty }),
+  });
   const waitForDatabase = async (owned) => {
     const expectedName = `supabase_db_${canonicalProjectId(repoRoot)}`;
     const database = owned.filter((container) => container.name === expectedName);
@@ -616,6 +669,8 @@ export function createActualAdapter({ repoRoot, pin, nodeBin, signal, cliWorkdir
         : cliWorkdir, lifecycleContract ? undefined : 'start');
     },
     containers,
+    networks,
+    volumes,
     assets,
     waitForDatabase,
     reset: async () => {

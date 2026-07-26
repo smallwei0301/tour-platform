@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -52,18 +52,27 @@ async function fixture() {
   await mkdir(publishDir, { mode: 0o700 }); await mkdir(docs, { mode: 0o700 });
   const captureLedgerPath = path.join(docs, 'baseline-ledger.json');
   await writeFile(captureLedgerPath, '{"capture":true}\n', { mode: 0o600, flag: 'wx' });
-  return { parent, publishDir, ledgerPath: path.join(docs, names[3]), captureLedgerPath, prepared: prepared(), semanticValidator(value, captureBytes) {
+  return { parent, repositoryRoot: primary, publishDir, ledgerPath: path.join(docs, names[3]), captureLedgerPath, prepared: prepared(), semanticValidator(value, captureBytes) {
     assert.equal(value.payloads instanceof Map, true); assert.equal(captureBytes.toString(), '{"capture":true}\n'); return true;
   } };
+}
+function internalPublicationPaths(repositoryRoot) {
+  const common = spawnSync('/usr/bin/git', ['-C', repositoryRoot, 'rev-parse', '--git-common-dir'], { encoding: 'utf8' }).stdout.trim();
+  const state = path.resolve(repositoryRoot, common);
+  return {
+    journalPath: path.join(state, 'midao-expected-terminal-publication.journal.json'),
+    lockPath: path.join(state, 'midao-baseline-publication.lock'),
+  };
 }
 async function cleanup(fx, mod) {
   const paths = mod?.resolveExpectedTerminalPublicationPaths?.();
   if (paths) await rm(paths.journalPath, { force: true });
+  if (fx?.repositoryRoot) await rm(internalPublicationPaths(fx.repositoryRoot).journalPath, { force: true });
   if (fx) await rm(fx.parent, { recursive: true, force: true });
 }
 function publicationInput(fx, extra = {}) {
-  const { publishDir, ledgerPath, captureLedgerPath, prepared, semanticValidator } = fx;
-  return { publishDir, ledgerPath, captureLedgerPath, prepared, semanticValidator, ...extra };
+  const { repositoryRoot, publishDir, ledgerPath, captureLedgerPath, prepared, semanticValidator } = fx;
+  return { repositoryRoot, publishDir, ledgerPath, captureLedgerPath, prepared, semanticValidator, ...extra };
 }
 
 // RED: this file intentionally imports the wished-for dedicated module before implementation.
@@ -94,8 +103,10 @@ test('formal API owns fixed repository paths and rejects fake terminal semantics
   const mod = await api(); const fx = await fixture(); const operations = [];
   const fake = prepared(Buffer.from('{"schemaVersion":1,"terminal":true}\n'));
   try {
-    assert.match(mod.resolveExpectedTerminalPublicationPaths().journalPath, /\.git\/midao-expected-terminal-publication\.journal\.json$/u);
-    assert.match(mod.resolveExpectedTerminalPublicationPaths().lockPath, /\.git\/midao-baseline-publication\.lock$/u);
+    const expectedCommon = spawnSync('/usr/bin/git', ['-C', root, 'rev-parse', '--git-common-dir'], { encoding: 'utf8' }).stdout.trim();
+    const expectedState = path.resolve(root, expectedCommon);
+    assert.equal(mod.resolveExpectedTerminalPublicationPaths().journalPath, path.join(expectedState, 'midao-expected-terminal-publication.journal.json'));
+    assert.equal(mod.resolveExpectedTerminalPublicationPaths().lockPath, path.join(expectedState, 'midao-baseline-publication.lock'));
     await assert.rejects(mod.publishExpectedTerminalTransaction({ ...publicationInput(fx), extra: true }), /input shape/iu);
     await assert.rejects(mod.publishExpectedTerminalTransaction({ prepared: fake }), /terminal catalog|normalized catalog/iu);
     assert.equal(existsSync(mod.resolveExpectedTerminalPublicationPaths().journalPath), false);
@@ -125,6 +136,29 @@ test('repo-common directory inode flock interoperates with Task7 namespace and l
   assert.equal(probe.status, 1);
   await assert.rejects(mod.__internal.withRepositoryPublicationLock(async () => {}), /lock is active/iu);
   release(); await holder;
+});
+
+test('all four temps are prepared and read back before any existing target is detached', async () => {
+  const mod = await api(); const fx = await fixture(); const targetPaths = [
+    ...names.slice(0, 3).map((name) => path.join(fx.publishDir, name)), fx.ledgerPath,
+  ];
+  for (const [index, target] of targetPaths.entries()) await writeFile(target, `prepare-original-${index}\n`, { mode: 0o600, flag: 'wx' });
+  const crash = new Error('PREPARE_PHASE_CRASH'); crash[mod.SIMULATED_PROCESS_CRASH] = true;
+  let snapshot;
+  try {
+    await assert.rejects(mod.__internal.publishExpectedTerminalTransaction({ ...fx, fault(point) {
+      if (point === `after-temp-write:${names[1]}`) {
+        snapshot = {
+          targets: targetPaths.map((target) => existsSync(target)),
+          backups: [...readdirSync(fx.publishDir), ...readdirSync(path.dirname(fx.ledgerPath))]
+            .filter((name) => name.includes('.midao-backup-')),
+        };
+        throw crash;
+      }
+    } }), /PREPARE_PHASE_CRASH/u);
+    assert.deepEqual(snapshot?.targets, [true, true, true, true]);
+    assert.deepEqual(snapshot?.backups, []);
+  } finally { await cleanup(fx, mod); }
 });
 
 test('rename runtime gate and observed-after-side-effect errors fail closed or rollback in-process', async () => {
@@ -188,7 +222,7 @@ test('RENAME_NOREPLACE preserves destination occupation and rollback preserves f
         if (scenario === 'replacement' && point === `after-rename:${names[0]}`) { await rm(target); await writeFile(target, 'foreign\n', { mode: 0o600, flag: 'wx' }); throw new Error('replace'); }
       } }), /HOLD|noreplace|rollback/iu);
       assert.equal(await readFile(target, 'utf8'), 'foreign\n');
-      assert.equal(existsSync(mod.resolveExpectedTerminalPublicationPaths().journalPath), true);
+      assert.equal(existsSync(internalPublicationPaths(fx.repositoryRoot).journalPath), true);
     } finally { await cleanup(fx, mod); }
   }
 });
@@ -199,12 +233,12 @@ test('same-content replacement is an identity HOLD', async () => {
     await assert.rejects(mod.__internal.publishExpectedTerminalTransaction({ ...fx, fault: async (point) => {
       if (point === 'before-commit-readback') { const bytes = await readFile(target); await rm(target); await writeFile(target, bytes, { mode: 0o600, flag: 'wx' }); }
     } }), /identity|foreign replacement|HOLD|rollback/iu);
-    assert.equal(existsSync(mod.resolveExpectedTerminalPublicationPaths().journalPath), true);
+    assert.equal(existsSync(internalPublicationPaths(fx.repositoryRoot).journalPath), true);
   } finally { await cleanup(fx, mod); }
 });
 
 test('publication journal requires exact mode 0600 during recovery', async () => {
-  const mod = await api(); const fx = await fixture(); const paths = mod.resolveExpectedTerminalPublicationPaths();
+  const mod = await api(); const fx = await fixture(); const paths = internalPublicationPaths(fx.repositoryRoot);
   const crash = new Error('JOURNAL_MODE_CRASH'); crash[mod.SIMULATED_PROCESS_CRASH] = true;
   try {
     await assert.rejects(mod.__internal.publishExpectedTerminalTransaction({ ...fx, fault(point) { if (point === `after-rename:${names[0]}`) throw crash; } }), /JOURNAL_MODE_CRASH/u);
@@ -215,7 +249,7 @@ test('publication journal requires exact mode 0600 during recovery', async () =>
 });
 
 test('initial empty journal crash recovers before any target mutation', async () => {
-  const mod = await api(); const fx = await fixture(); const paths = mod.resolveExpectedTerminalPublicationPaths();
+  const mod = await api(); const fx = await fixture(); const paths = internalPublicationPaths(fx.repositoryRoot);
   const crash = new Error('EMPTY_JOURNAL_CRASH'); crash[mod.SIMULATED_PROCESS_CRASH] = true;
   try {
     await assert.rejects(mod.__internal.publishExpectedTerminalTransaction({ ...fx, fault(point) { if (point === 'journal:after-create-before-write') throw crash; } }), /EMPTY_JOURNAL_CRASH/u);
@@ -227,7 +261,7 @@ test('initial empty journal crash recovers before any target mutation', async ()
 });
 
 test('all twelve journal record-sync boundaries recover idempotently without residue', async () => {
-  const mod = await api(); const paths = mod.resolveExpectedTerminalPublicationPaths();
+  const mod = await api();
   {
     const inventory = await fixture(); let observedRecords = 0;
     try {
@@ -238,7 +272,7 @@ test('all twelve journal record-sync boundaries recover idempotently without res
     } finally { await cleanup(inventory, mod); }
   }
   for (const boundary of Array.from({ length: 12 }, (_, index) => index + 1)) {
-    const fx = await fixture(); let records = 0;
+    const fx = await fixture(); const paths = internalPublicationPaths(fx.repositoryRoot); let records = 0;
     const targetPaths = [...names.slice(0, 3).map((name) => path.join(fx.publishDir, name)), fx.ledgerPath];
     const expectedNew = [fx.prepared.payloads.get(names[0]), fx.prepared.payloads.get(names[1]), fx.prepared.manifestBytes, fx.prepared.ledgerBytes];
     const crash = new Error(`JOURNAL_RECORD_${boundary}`); crash[mod.SIMULATED_PROCESS_CRASH] = true;
@@ -261,10 +295,30 @@ test('all twelve journal record-sync boundaries recover idempotently without res
   }
 });
 
+test('truncated tail is removed before recovery append so a second crash remains recoverable', async () => {
+  const mod = await api(); const fx = await fixture(); const paths = internalPublicationPaths(fx.repositoryRoot);
+  const publishCrash = new Error('TRUNCATED_INFERENCE_PUBLISH_CRASH'); publishCrash[mod.SIMULATED_PROCESS_CRASH] = true;
+  const recoveryCrash = new Error('TRUNCATED_INFERENCE_RECOVERY_CRASH'); recoveryCrash[mod.SIMULATED_PROCESS_CRASH] = true;
+  try {
+    await assert.rejects(mod.__internal.publishExpectedTerminalTransaction({ ...fx, fault(point) {
+      if (point === `after-target-rename-before-identity-check:${names[0]}`) throw publishCrash;
+    } }), /TRUNCATED_INFERENCE_PUBLISH_CRASH/u);
+    await writeFile(paths.journalPath, '00000020 partial-tail', { flag: 'a' });
+    await assert.rejects(mod.__internal.recoverExpectedTerminalPublication({ ...fx, fault(point) {
+      if (point === 'after-journal-record-sync') throw recoveryCrash;
+    } }), /TRUNCATED_INFERENCE_RECOVERY_CRASH/u);
+    await mod.__internal.recoverExpectedTerminalPublication(fx);
+    assert.equal(existsSync(paths.journalPath), false);
+    const residue = [...await readdir(fx.publishDir), ...await readdir(path.dirname(fx.ledgerPath))]
+      .filter((name) => /midao-(?:temp|backup)-/u.test(name));
+    assert.deepEqual(residue, []);
+  } finally { await cleanup(fx, mod); }
+});
+
 test('truncated tail recovers but complete corrupt checksum frame is held', async () => {
-  const mod = await api(); const paths = mod.resolveExpectedTerminalPublicationPaths();
+  const mod = await api();
   for (const corrupt of [false, true]) {
-    const fx = await fixture(); const crash = new Error('CRASH'); crash[mod.SIMULATED_PROCESS_CRASH] = true;
+    const fx = await fixture(); const paths = internalPublicationPaths(fx.repositoryRoot); const crash = new Error('CRASH'); crash[mod.SIMULATED_PROCESS_CRASH] = true;
     try {
       await assert.rejects(mod.__internal.publishExpectedTerminalTransaction({ ...fx, fault(point) { if (point === `after-rename:${names[1]}`) throw crash; } }), /CRASH/u);
       await writeFile(paths.journalPath, corrupt ? `00000003 ${'0'.repeat(64)}\n{}\n` : '00000020 partial', { flag: 'a' });
@@ -276,7 +330,7 @@ test('truncated tail recovers but complete corrupt checksum frame is held', asyn
 });
 
 test('rollback recovery is idempotent after a second crash during restore', async () => {
-  const mod = await api(); const fx = await fixture(); const paths = mod.resolveExpectedTerminalPublicationPaths();
+  const mod = await api(); const fx = await fixture(); const paths = internalPublicationPaths(fx.repositoryRoot);
   const originals = new Map();
   for (const name of names.slice(0, 3)) {
     const bytes = Buffer.from(`original:${name}\n`); originals.set(path.join(fx.publishDir, name), bytes);
@@ -303,7 +357,7 @@ test('rollback recovery is idempotent after a second crash during restore', asyn
 });
 
 test('rollback recovery survives a crash immediately after promoted target detach', async () => {
-  const mod = await api(); const fx = await fixture(); const paths = mod.resolveExpectedTerminalPublicationPaths();
+  const mod = await api(); const fx = await fixture(); const paths = internalPublicationPaths(fx.repositoryRoot);
   const originals = new Map();
   for (const name of names.slice(0, 3)) {
     const bytes = Buffer.from(`detach-original:${name}\n`); originals.set(path.join(fx.publishDir, name), bytes);
@@ -327,7 +381,7 @@ test('rollback recovery survives a crash immediately after promoted target detac
 });
 
 test('durable COMMITTED cleanup failure preserves new targets and resumes cleanup without rollback', async () => {
-  const mod = await api(); const fx = await fixture(); const paths = mod.resolveExpectedTerminalPublicationPaths();
+  const mod = await api(); const fx = await fixture(); const paths = internalPublicationPaths(fx.repositoryRoot);
   const targetPaths = [
     ...names.slice(0, 3).map((name) => path.join(fx.publishDir, name)),
     fx.ledgerPath,
@@ -366,23 +420,30 @@ test('durable COMMITTED cleanup failure preserves new targets and resumes cleanu
   } finally { await cleanup(fx, mod); }
 });
 
-test('COMMITTED target digest tamper rolls the whole transaction back', async () => {
-  const mod = await api(); const fx = await fixture(); const paths = mod.resolveExpectedTerminalPublicationPaths();
+test('COMMITTED target tamper is a HOLD and never rolls back other committed targets', async () => {
+  const mod = await api(); const fx = await fixture(); const paths = internalPublicationPaths(fx.repositoryRoot);
   const crash = new Error('COMMITTED_TAMPER_CRASH'); crash[mod.SIMULATED_PROCESS_CRASH] = true;
+  const targets = [...names.slice(0, 3).map((name) => path.join(fx.publishDir, name)), fx.ledgerPath];
   try {
     await assert.rejects(mod.__internal.publishExpectedTerminalTransaction({ ...fx, fault(point) {
       if (point === 'after-commit-journal') throw crash;
     } }), /COMMITTED_TAMPER_CRASH/u);
-    await writeFile(path.join(fx.publishDir, names[0]), 'tampered after commit\n', { mode: 0o600 });
-    await mod.__internal.recoverExpectedTerminalPublication(fx);
-    for (const name of names.slice(0, 3)) assert.equal(existsSync(path.join(fx.publishDir, name)), false);
-    assert.equal(existsSync(fx.ledgerPath), false);
-    assert.equal(existsSync(paths.journalPath), false);
+    const untouched = [];
+    for (const target of targets.slice(1)) untouched.push({ target, stat: await lstat(target), bytes: await readFile(target) });
+    await writeFile(targets[0], 'tampered after commit\n', { mode: 0o600 });
+    await assert.rejects(mod.__internal.recoverExpectedTerminalPublication(fx), /committed|HOLD|changed|digest/iu);
+    assert.equal(existsSync(paths.journalPath), true);
+    for (const snapshot of untouched) {
+      const current = await lstat(snapshot.target);
+      assert.equal(current.dev, snapshot.stat.dev);
+      assert.equal(current.ino, snapshot.stat.ino);
+      assert.deepEqual(await readFile(snapshot.target), snapshot.bytes);
+    }
   } finally { await cleanup(fx, mod); }
 });
 
 test('COMMITTED recovery retains published targets and removes journal and all residue', async () => {
-  const mod = await api(); const fx = await fixture(); const paths = mod.resolveExpectedTerminalPublicationPaths(); const crash = new Error('COMMIT_CRASH'); crash[mod.SIMULATED_PROCESS_CRASH] = true;
+  const mod = await api(); const fx = await fixture(); const paths = internalPublicationPaths(fx.repositoryRoot); const crash = new Error('COMMIT_CRASH'); crash[mod.SIMULATED_PROCESS_CRASH] = true;
   try {
     await assert.rejects(mod.__internal.publishExpectedTerminalTransaction({ ...fx, fault(point) { if (point === 'after-commit-journal') throw crash; } }), /COMMIT_CRASH/u);
     await mod.__internal.recoverExpectedTerminalPublication(fx);
@@ -406,7 +467,7 @@ test('COMMITTED semantic recovery closes every pinned target and capture handle'
 });
 
 test('COMMITTED recovery revalidates pinned capture ledger identity before cleanup', async () => {
-  const mod = await api(); const fx = await fixture(); const paths = mod.resolveExpectedTerminalPublicationPaths();
+  const mod = await api(); const fx = await fixture(); const paths = internalPublicationPaths(fx.repositoryRoot);
   const crash = new Error('COMMIT_CAPTURE_CRASH'); crash[mod.SIMULATED_PROCESS_CRASH] = true;
   try {
     await assert.rejects(mod.__internal.publishExpectedTerminalTransaction({ ...fx, fault(point) { if (point === 'after-commit-journal') throw crash; } }), /COMMIT_CAPTURE_CRASH/u);

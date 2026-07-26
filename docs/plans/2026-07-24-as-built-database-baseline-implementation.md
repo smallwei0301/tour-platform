@@ -567,7 +567,7 @@ git commit -m "feat: 建立 expected terminal builder"
 **Heavy local publication**
 
 ```bash
-timeout --signal=TERM 570s node scripts/database-baseline/build-expected-terminal.mjs \
+timeout --signal=TERM 570s /root/.hermes/toolchains/node/22.23.1/node scripts/database-baseline/build-expected-terminal.mjs \
   --runs 2 \
   --baseline supabase/baselines/v1 \
   --publish-dir supabase/baselines/v1 \

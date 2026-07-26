@@ -157,7 +157,7 @@ function parseCanonical(bytes, label) {
   return value;
 }
 
-function parseJournal(bytes) {
+function parseJournalFrames(bytes) {
   if (!Buffer.isBuffer(bytes) || bytes.length === 0 || bytes.length > MAX_JOURNAL_BYTES || bytes.includes(0) || bytes.includes(13)) {
     throw new Error('publication journal bytes invalid');
   }
@@ -174,7 +174,33 @@ function parseJournal(bytes) {
     latest = parseCanonical(body, 'publication journal record'); offset = end;
   }
   if (!latest) throw new Error('publication journal has no complete record');
-  return latest;
+  return Object.freeze({ latest, completeOffset: offset });
+}
+
+function parseJournal(bytes) {
+  return parseJournalFrames(bytes).latest;
+}
+
+async function truncateJournalTail(state, expectedIdentity, completeOffset, fault = () => {}) {
+  if (!Number.isSafeInteger(completeOffset) || completeOffset < 1) throw new Error('journal complete offset invalid');
+  const handle = await open(`/proc/self/fd/${state.handle.fd}/${JOURNAL_NAME}`,
+    constants.O_RDWR | constants.O_NOFOLLOW);
+  let primary;
+  try {
+    const opened = await handle.stat({ bigint: true });
+    const named = await lstat(path.join(state.path, JOURNAL_NAME), { bigint: true });
+    assertRegular(opened, 'publication journal');
+    if (!sameInode(opened, expectedIdentity) || !sameInode(named, expectedIdentity)) {
+      throw new Error('publication journal changed before tail truncate HOLD');
+    }
+    await handle.truncate(completeOffset);
+    await handle.sync();
+    if (!sameInode(await lstat(path.join(state.path, JOURNAL_NAME), { bigint: true }), expectedIdentity)) {
+      throw new Error('publication journal changed during tail truncate HOLD');
+    }
+    await fault('after-journal-tail-truncate');
+  } catch (error) { primary = error; throw error; }
+  finally { await closeHandlePreserving(handle, primary, 'publication journal tail truncate'); }
 }
 
 async function appendJournal(state, journal, expectedIdentity = null, fault = () => {}) {
@@ -203,17 +229,24 @@ async function appendJournal(state, journal, expectedIdentity = null, fault = ()
   finally { frame.fill(0); await closeHandlePreserving(handle, primary, 'publication journal'); }
 }
 
-function gitCommonPath(name) {
-  const common = execFileSync('/usr/bin/git', ['rev-parse', '--git-common-dir'], {
-    cwd: process.cwd(), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+function gitCommonPath(name, repositoryRoot = REPO_ROOT) {
+  if (typeof repositoryRoot !== 'string' || !path.isAbsolute(repositoryRoot) || repositoryRoot.includes('\0')) {
+    throw new Error('repository root invalid');
+  }
+  const common = execFileSync('/usr/bin/git', ['-C', repositoryRoot, 'rev-parse', '--git-common-dir'], {
+    encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
     env: { HOME: process.env.HOME ?? '/root', LANG: 'C', LC_ALL: 'C' },
   }).trim();
   if (!common || common.includes('\0')) throw new Error('git common directory invalid');
-  return path.join(path.resolve(common), name);
+  return path.join(path.resolve(repositoryRoot, common), name);
 }
 
 export function resolveExpectedTerminalPublicationPaths() {
-  return Object.freeze({ journalPath: gitCommonPath(JOURNAL_NAME), lockPath: gitCommonPath(LOCK_NAME) });
+  return Object.freeze({ journalPath: gitCommonPath(JOURNAL_NAME, REPO_ROOT), lockPath: gitCommonPath(LOCK_NAME, REPO_ROOT) });
+}
+
+function resolveInternalPublicationPaths(repositoryRoot) {
+  return Object.freeze({ journalPath: gitCommonPath(JOURNAL_NAME, repositoryRoot), lockPath: gitCommonPath(LOCK_NAME, repositoryRoot) });
 }
 
 async function acquireLock(state) {
@@ -234,9 +267,10 @@ async function acquireLock(state) {
 
 async function releaseLock(lock) { lock.child.stdin.end(); if (await lock.closed !== 0) throw new Error('publication flock release failed'); }
 
-async function withRepositoryPublicationLock(callback) {
+async function withRepositoryPublicationLock(callback, repositoryRoot = REPO_ROOT) {
   if (typeof callback !== 'function') throw new Error('publication callback invalid');
-  const paths = resolveExpectedTerminalPublicationPaths(); let state; let lock; let result; let primary; const cleanup = [];
+  const paths = repositoryRoot === REPO_ROOT ? resolveExpectedTerminalPublicationPaths() : resolveInternalPublicationPaths(repositoryRoot);
+  let state; let lock; let result; let primary; const cleanup = [];
   try {
     state = await openDirectory(path.dirname(paths.lockPath), 'repository publication state');
     lock = await acquireLock(state);
@@ -428,7 +462,13 @@ async function recoverLocked(input, scope) {
       await removeJournal(state, emptyIdentity);
       return Object.freeze({ transactionId: null, recovered: true, emptyJournal: true });
     }
-    try { journal = validateJournal(parseJournal(pinned.bytes), input); journal.journalIdentity = pinned.identity; }
+    try {
+      const frames = parseJournalFrames(pinned.bytes);
+      journal = validateJournal(frames.latest, input); journal.journalIdentity = pinned.identity;
+      if (frames.completeOffset < pinned.bytes.length) {
+        await truncateJournalTail(state, pinned.identity, frames.completeOffset, input.fault);
+      }
+    }
     finally { pinned.bytes.fill(0); }
     publish = await openDirectory(input.publishDir, 'recovery publish'); ledger = await openDirectory(path.dirname(input.ledgerPath), 'recovery ledger');
     capture = await openDirectory(path.dirname(input.captureLedgerPath), 'recovery capture ledger');
@@ -436,7 +476,11 @@ async function recoverLocked(input, scope) {
     const adopted = await adoptInterruptedArtifacts(journal, parents);
     const inferred = await inferPromotions(journal, parents);
     if (adopted || inferred) journal.journalIdentity = await appendJournal(state, serializable(journal), journal.journalIdentity, input.fault);
-    if (await exactCommit(journal, parents)) {
+    const committed = await exactCommit(journal, parents);
+    if (['COMMITTED', 'CLEANED'].includes(journal.state) && !committed) {
+      throw new Error(`committed target identity or digest changed HOLD: ${journal.state}`);
+    }
+    if (committed) {
       await revalidateCommittedSemantics(journal, parents, capture, input);
       await cleanupCommitted(journal, parents, input.fault);
     } else await rollback(journal, parents, input.fault, input.renameAdapter);
@@ -452,7 +496,7 @@ async function recoverLocked(input, scope) {
 
 async function recoverExpectedTerminalPublication(input) {
   const normalized = normalizePublicInput(input, true);
-  return withRepositoryPublicationLock((scope) => recoverLocked(normalized, scope));
+  return withRepositoryPublicationLock((scope) => recoverLocked(normalized, scope), normalized.repositoryRoot);
 }
 
 function validateTerminalPayload(bytes) {
@@ -539,6 +583,11 @@ async function publishLocked(input, scope) {
     journal.journalIdentity = await appendJournal(state, serializable(journal), null, input.fault);
     for (const entry of targets) {
       const parent = parents[entry.parentKey];
+      entry.tempIdentity = await writeExclusive(parent, entry.tempName, entry.bytes);
+      await input.fault(`after-temp-write:${entry.name}`);
+    }
+    for (const entry of targets) {
+      const parent = parents[entry.parentKey];
       if (entry.existed) {
         await parent.handle.sync();
         await input.fault(`before-backup-detach:${entry.name}`);
@@ -548,8 +597,6 @@ async function publishLocked(input, scope) {
         entry.backupIdentity = inode(backup);
         await input.fault(`after-backup-write:${entry.name}`);
       }
-      entry.tempIdentity = await writeExclusive(parent, entry.tempName, entry.bytes);
-      await input.fault(`after-temp-write:${entry.name}`);
       journal.journalIdentity = await appendJournal(state, serializable(journal), journal.journalIdentity, input.fault);
     }
     journal.state = 'PROMOTING'; journal.journalIdentity = await appendJournal(state, serializable(journal), journal.journalIdentity, input.fault);
@@ -627,9 +674,14 @@ function normalizePublicInput(input, internal = false) {
   }
   if (path.basename(input.ledgerPath) !== TARGET_NAMES[3]) throw new Error(`publisher ledger basename must be ${TARGET_NAMES[3]}`);
   if (typeof input.semanticValidator !== 'function') throw new Error('semantic validator callback invalid');
+  const repositoryRoot = internal && input.repositoryRoot !== undefined ? input.repositoryRoot : REPO_ROOT;
+  if (typeof repositoryRoot !== 'string' || !path.isAbsolute(repositoryRoot) || repositoryRoot.includes('\0')) {
+    throw new Error('internal repositoryRoot invalid');
+  }
   validatePrepared(input.prepared);
   return {
     ...input,
+    repositoryRoot,
     fault: internal && typeof input.fault === 'function' ? input.fault : () => {},
     onOperation: internal && typeof input.onOperation === 'function' ? input.onOperation : () => {},
     renameAdapter: internal && typeof input.renameAdapter === 'function' ? input.renameAdapter : renameNoReplace,
@@ -648,12 +700,12 @@ export async function publishExpectedTerminalTransaction(input = {}) {
     prepared: input.prepared,
     semanticValidator: validateExpectedTerminalPublicationSemantics,
   }, true);
-  return withRepositoryPublicationLock((scope) => publishLocked(normalized, scope));
+  return withRepositoryPublicationLock((scope) => publishLocked(normalized, scope), normalized.repositoryRoot);
 }
 
 async function publishExpectedTerminalTransactionInternal(input = {}) {
   const normalized = normalizePublicInput(input, true);
-  return withRepositoryPublicationLock((scope) => publishLocked(normalized, scope));
+  return withRepositoryPublicationLock((scope) => publishLocked(normalized, scope), normalized.repositoryRoot);
 }
 
 export const __internal = Object.freeze({

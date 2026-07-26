@@ -459,6 +459,7 @@ test('lifecycle preserves start/reset primary with identity probe failures and c
 
   const calls = [];
   const assets = { networks: [{ id: 'network-id', name: `supabase_network_${projectId}`, projectLabel: projectId }], volumes: [{ name: `supabase_db_${projectId}`, projectLabel: projectId }] };
+  let assetObserved;
   await assert.rejects(runWithLocalSupabase({
     expectedProjectId: projectId,
     childArgs: [],
@@ -469,8 +470,76 @@ test('lifecycle preserves start/reset primary with identity probe failures and c
       async assets() { calls.push('assets'); return structuredClone(assets); },
       async stop(identity, stoppedAssets) { calls.push(['stop', identity, stoppedAssets]); },
     },
-  }), /ASSET_ONLY_PRIMARY/u);
-  assert.deepEqual(calls, ['start', 'containers', 'assets', 'containers', 'assets', ['stop', [], assets]]);
+  }), (error) => { assetObserved = error; return true; });
+  assert.match(flatten(assetObserved).join('\n'), /ASSET_ONLY_PRIMARY/u);
+  const safeAssets = { networks: assets.networks, volumes: [] };
+  assert.deepEqual(calls, ['start', 'containers', 'assets', 'containers', 'assets', ['stop', [], safeAssets]]);
+});
+
+test('partial ownership probes clean each confirmed resource class and preserve every failure', async () => {
+  const flattenError = (error, seen = new Set()) => {
+    if (!error || seen.has(error)) return [];
+    seen.add(error);
+    return [String(error), ...flattenError(error.cause, seen), ...(Array.isArray(error.errors) ? error.errors.flatMap((entry) => flattenError(entry, seen)) : [])];
+  };
+  const calls = []; let networkReads = 0; let observed;
+  const container = { id: 'owned-container', name: `supabase_db_${projectId}`, projectLabel: projectId };
+  const volume = { id: 'created-at', name: `supabase_db_${projectId}`, projectLabel: projectId, driver: 'local', scope: 'local' };
+  await assert.rejects(runWithLocalSupabase({
+    expectedProjectId: projectId,
+    childArgs: [],
+    adapter: {
+      async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+      async start() { calls.push('start'); throw new Error('PARTIAL_START_PRIMARY'); },
+      async containers() { calls.push('containers'); return [container]; },
+      async networks() { networkReads += 1; calls.push(`networks-${networkReads}`); throw new Error(`NETWORK_PROBE_${networkReads}`); },
+      async volumes() { calls.push('volumes'); return [volume]; },
+      async stop(stoppedContainers, stoppedAssets) {
+        calls.push(['stop', stoppedContainers, stoppedAssets]);
+        throw new AggregateError([new Error('CONTAINER_CLEANUP_FAILED'), new Error('VOLUME_CLEANUP_FAILED')], 'partial cleanup failed');
+      },
+    },
+  }), (error) => { observed = error; return true; });
+  const confirmedVolume = { id: volume.id, name: volume.name, projectLabel: volume.projectLabel };
+  assert.deepEqual(calls, [
+    'start', 'containers', 'networks-1', 'volumes',
+    'containers', 'networks-2', 'volumes',
+    ['stop', [container], { networks: [], volumes: [confirmedVolume] }],
+  ]);
+  const messages = flattenError(observed).join('\n');
+  for (const marker of ['PARTIAL_START_PRIMARY', 'NETWORK_PROBE_1', 'NETWORK_PROBE_2', 'CONTAINER_CLEANUP_FAILED', 'VOLUME_CLEANUP_FAILED']) {
+    assert.match(messages, new RegExp(marker, 'u'));
+  }
+});
+
+test('post-start partial probe failure still cleans every independently confirmed resource class', async () => {
+  const flattenError = (error, seen = new Set()) => {
+    if (!error || seen.has(error)) return [];
+    seen.add(error);
+    return [String(error), ...flattenError(error.cause, seen), ...(Array.isArray(error.errors) ? error.errors.flatMap((entry) => flattenError(entry, seen)) : [])];
+  };
+  const calls = []; let networkReads = 0; let observed;
+  const container = { id: 'post-start-container', name: `supabase_db_${projectId}`, projectLabel: projectId };
+  const volume = { id: 'post-start-created-at', name: `supabase_db_${projectId}`, projectLabel: projectId };
+  await assert.rejects(runWithLocalSupabase({
+    expectedProjectId: projectId, childArgs: [], initialize: 'start-only',
+    adapter: {
+      async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+      async start() { calls.push('start'); },
+      async containers() { calls.push('containers'); return [container]; },
+      async networks() { networkReads += 1; calls.push(`networks-${networkReads}`); throw new Error(`POST_START_NETWORK_PROBE_${networkReads}`); },
+      async volumes() { calls.push('volumes'); return [volume]; },
+      async stop(stoppedContainers, stoppedAssets) { calls.push(['stop', stoppedContainers, stoppedAssets]); },
+    },
+  }), (error) => { observed = error; return true; });
+  assert.deepEqual(calls, [
+    'start', 'containers', 'networks-1', 'volumes',
+    'containers', 'networks-2', 'volumes',
+    ['stop', [container], { networks: [], volumes: [volume] }],
+  ]);
+  const messages = flattenError(observed).join('\n');
+  assert.match(messages, /POST_START_NETWORK_PROBE_1/u);
+  assert.match(messages, /POST_START_NETWORK_PROBE_2/u);
 });
 
 test('start failure before identity confirmation never stops and child failure cleans owned stack', async () => {
@@ -486,7 +555,7 @@ test('start failure before identity confirmation never stops and child failure c
       async stop() { startCalls.push('stop'); },
     },
   }), /start failed/u);
-  assert.deepEqual(startCalls, ['start', 'containers']);
+  assert.deepEqual(startCalls, ['start', 'containers', 'containers']);
 
   const partialCalls = [];
   const partialOwned = [{ id: 'partial-id', name: `supabase_db_${projectId}`, projectLabel: projectId }];

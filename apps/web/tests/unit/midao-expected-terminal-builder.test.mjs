@@ -53,6 +53,11 @@ test('builder CLI accepts only the exact Task10 flag sequence and two runs', asy
   ]) assert.throws(() => api.parseBuilderArgs(hostile, root), /argument|CLI|path/iu);
 });
 
+test('Task 10 heavy command pins the verified Node 22.23.1 binary', async () => {
+  const plan = await readFile(path.join(root, 'docs/plans/2026-07-24-as-built-database-baseline-implementation.md'), 'utf8');
+  assert.match(plan, /timeout --signal=TERM 570s \/root\/\.hermes\/toolchains\/node\/22\.23\.1\/node scripts\/database-baseline\/build-expected-terminal\.mjs \\\n\s+--runs 2/u);
+});
+
 test('local connection parser accepts only exact loopback PostgreSQL URLs without ambient or query overrides', async () => {
   const api = await subject();
   assert.deepEqual(api.parseLocalConnectionEnv('postgresql://postgres:local-only@127.0.0.1:54322/postgres'), {
