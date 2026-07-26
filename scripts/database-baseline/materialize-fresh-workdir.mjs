@@ -193,6 +193,35 @@ async function syncDirectory(directory) {
   try { await handle.sync(); } finally { await handle.close(); }
 }
 
+function databaseOnlyConfig(source) {
+  if (!Buffer.isBuffer(source) || source.includes(0) || source.includes(13)) throw new Error('Supabase config framing invalid');
+  let text;
+  try { text = new TextDecoder('utf-8', { fatal: true }).decode(source); }
+  catch (error) { throw new Error('Supabase config encoding invalid', { cause: error }); }
+  const lines = text.split('\n');
+  for (const section of ['storage', 'auth', 'realtime', 'db.seed']) {
+    const marker = `[${section}]`;
+    const matches = lines.map((line, index) => line.trim() === marker ? index : -1).filter((index) => index >= 0);
+    if (matches.length > 1) throw new Error(`Supabase config section duplicate: ${section}`);
+    if (matches.length === 0) {
+      const insertAt = lines.at(-1) === '' ? lines.length - 1 : lines.length;
+      lines.splice(insertAt, 0, ...(insertAt > 0 && lines[insertAt - 1] !== '' ? [''] : []), marker, 'enabled = false');
+      continue;
+    }
+    const start = matches[0];
+    let end = lines.findIndex((line, index) => index > start && /^\s*\[/u.test(line));
+    if (end < 0) end = lines.length;
+    const enabled = lines.map((line, index) => index > start && index < end && /^\s*enabled\s*=/u.test(line) ? index : -1)
+      .filter((index) => index >= 0);
+    if (enabled.length > 1 || enabled.some((index) => !/^\s*enabled\s*=\s*(?:true|false)\s*$/u.test(lines[index]))) {
+      throw new Error(`Supabase config enabled value invalid: ${section}`);
+    }
+    if (enabled.length === 0) lines.splice(start + 1, 0, 'enabled = false');
+    else lines[enabled[0]] = 'enabled = false';
+  }
+  return Buffer.from(lines.join('\n'));
+}
+
 async function assertExactNames(directory, expected, label) {
   const actual = (await readdir(directory)).sort();
   if (JSON.stringify(actual) !== JSON.stringify([...expected].sort())) throw new Error(`cleanup HOLD: ${label} inventory changed`);
@@ -237,6 +266,7 @@ async function materializeWithPaths(options = {}) {
   let selected = [];
   let seed;
   let config;
+  let runtimeConfig;
   let marker;
   let baseline;
   let overlay;
@@ -253,6 +283,7 @@ async function materializeWithPaths(options = {}) {
     config = await readIdentityBound(configSource, 'Supabase config source', options.onSourceOpen, options.afterSourceOpen);
     seed = await readIdentityBound(seedSource, 'seed source', options.onSourceOpen, options.afterSourceOpen);
     if (sha256(config) !== CONFIG_SHA256 || sha256(seed) !== SEED_SHA256) throw new Error('config or seed digest mismatch');
+    runtimeConfig = databaseOnlyConfig(config);
     marker = Buffer.concat([
       Buffer.from(SYNTHETIC_BASELINE_PREFIX), baseline,
       Buffer.from(BASELINE_OVERLAY_BOUNDARY), overlay, Buffer.from(SYNTHETIC_BASELINE_FOOTER),
@@ -279,7 +310,7 @@ async function materializeWithPaths(options = {}) {
     await writeExclusive(path.join(outputMigrations, SYNTHETIC_BASELINE_FILENAME), marker);
     for (const entry of selected) await writeExclusive(path.join(outputMigrations, entry.filename), entry.bytes);
     const configPath = path.join(workdir, 'supabase/config.toml');
-    await writeExclusive(configPath, config);
+    await writeExclusive(configPath, runtimeConfig);
     const seedPath = path.join(workdir, 'supabase/seed.sql');
     await writeExclusive(seedPath, seed);
     await syncDirectory(outputMigrations);
@@ -319,6 +350,7 @@ async function materializeWithPaths(options = {}) {
     overlay?.fill(0);
     marker?.fill(0);
     config?.fill(0);
+    runtimeConfig?.fill(0);
     seed?.fill(0);
     for (const entry of selected) entry.bytes.fill(0);
   }

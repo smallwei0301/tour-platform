@@ -62,6 +62,32 @@ test('public materializer can bind an exact lowercase Supabase project identity 
   }
 });
 
+test('fresh materialized config disables optional service jobs without mutating repository config', async () => {
+  const api = await subject();
+  const parent = await mkdtemp(path.join(os.tmpdir(), 'midao-materializer-db-only-'));
+  const sourcePath = path.join(root, 'supabase/config.toml');
+  const sourceBefore = await readFile(sourcePath);
+  let result;
+  try {
+    result = await api.materializeFreshWorkdir({ outputParent: parent, projectId: 'midao-terminal-db-only' });
+    const text = await readFile(result.configPath, 'utf8');
+    const enabledFor = (section) => {
+      const marker = `[${section}]\n`; const start = text.indexOf(marker);
+      assert.notEqual(start, -1, `missing [${section}]`);
+      const next = text.indexOf('\n[', start + marker.length);
+      const body = text.slice(start + marker.length, next < 0 ? text.length : next + 1);
+      const values = [...body.matchAll(/^enabled\s*=\s*(true|false)\s*$/gmu)].map((entry) => entry[1]);
+      assert.deepEqual(values, ['false'], `[${section}] must have one false enabled value`);
+    };
+    for (const section of ['storage', 'auth', 'realtime', 'db.seed']) enabledFor(section);
+    assert.deepEqual(await readFile(sourcePath), sourceBefore);
+  } finally {
+    await result?.cleanup();
+    await rm(parent, { recursive: true, force: true });
+    assert.deepEqual(await readFile(sourcePath), sourceBefore);
+  }
+});
+
 test('materializer verifies capture transaction then emits one marker, six migrations and separate seed', async () => {
   const api = await subject();
   const parent = await mkdtemp(path.join(os.tmpdir(), 'midao-materializer-green-'));
