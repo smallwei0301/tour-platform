@@ -1,0 +1,789 @@
+5498; 0 0 ACL - SCHEMA public pg_database_owner
+1461; 1247 24477 TYPE public booking_status postgres
+1470; 1247 24524 TYPE public payment_method postgres
+1467; 1247 24511 TYPE public payment_status postgres
+496; 1255 17819 FUNCTION public fn_auto_full_status() postgres
+5575; 0 0 ACL public FUNCTION fn_auto_full_status() postgres
+497; 1255 17821 FUNCTION public fn_book_schedule(uuid, integer) postgres
+5576; 0 0 ACL public FUNCTION fn_book_schedule(p_schedule_id uuid, p_count integer) postgres
+498; 1255 17822 FUNCTION public fn_cancel_booking(uuid, integer) postgres
+5577; 0 0 ACL public FUNCTION fn_cancel_booking(p_schedule_id uuid, p_count integer) postgres
+514; 1255 23802 FUNCTION public fn_create_external_hold(uuid, integer, uuid, uuid, text, uuid) postgres
+5578; 0 0 ACL public FUNCTION fn_create_external_hold(p_schedule_id uuid, p_count integer, p_guide_id uuid, p_activity_plan_id uuid, p_note text, p_actor_user_id uuid) postgres
+516; 1255 23820 FUNCTION public fn_expire_unpaid_order_atomic(uuid, timestamp with time zone) postgres
+5579; 0 0 ACL public FUNCTION fn_expire_unpaid_order_atomic(p_order_id uuid, p_now timestamp with time zone) postgres
+510; 1255 23090 FUNCTION public fn_process_payment_callback_atomic(uuid, text, text, jsonb, text, text) postgres
+5580; 0 0 ACL public FUNCTION fn_process_payment_callback_atomic(p_order_id uuid, p_trade_no text, p_owner_email text, p_raw_payload jsonb, p_merchant_trade_no text, p_provider text) postgres
+508; 1255 22904 FUNCTION public fn_redeem_promo_code(text, uuid, uuid) postgres
+5581; 0 0 ACL public FUNCTION fn_redeem_promo_code(p_code text, p_user_id uuid, p_order_id uuid) postgres
+506; 1255 22791 FUNCTION public fn_refresh_activity_availability_daily(uuid, date, date) postgres
+5582; 0 0 ACL public FUNCTION fn_refresh_activity_availability_daily(p_activity_id uuid, p_date_from date, p_date_to date) postgres
+507; 1255 22792 FUNCTION public fn_refresh_activity_availability_daily_by_schedule_change() postgres
+5583; 0 0 ACL public FUNCTION fn_refresh_activity_availability_daily_by_schedule_change() postgres
+515; 1255 23803 FUNCTION public fn_release_external_hold(uuid, uuid, uuid) postgres
+5584; 0 0 ACL public FUNCTION fn_release_external_hold(p_booking_id uuid, p_guide_id uuid, p_actor_user_id uuid) postgres
+519; 1255 24758 FUNCTION public fn_reschedule_booking_atomic(uuid, text) postgres
+5585; 0 0 ACL public FUNCTION fn_reschedule_booking_atomic(p_request_id uuid, p_resolver text) postgres
+495; 1255 17817 FUNCTION public fn_schedule_date(timestamp with time zone) postgres
+5586; 0 0 ACL public FUNCTION fn_schedule_date(ts timestamp with time zone) postgres
+502; 1255 20375 FUNCTION public generate_booking_no() postgres
+5587; 0 0 ACL public FUNCTION generate_booking_no() postgres
+503; 1255 21503 FUNCTION public handle_auth_user_sync() postgres
+5588; 0 0 ACL public FUNCTION handle_auth_user_sync() postgres
+468; 1255 17162 FUNCTION public rls_auto_enable() postgres
+5589; 0 0 ACL public FUNCTION rls_auto_enable() postgres
+523; 1255 25088 FUNCTION public rls_grants_preflight_check_grants(text) postgres
+5590; 0 0 ACL public FUNCTION rls_grants_preflight_check_grants(p_table text) postgres
+522; 1255 25087 FUNCTION public rls_grants_preflight_check_policies(text) postgres
+5591; 0 0 ACL public FUNCTION rls_grants_preflight_check_policies(p_table text) postgres
+521; 1255 25071 FUNCTION public rls_preflight_scan() postgres
+5592; 0 0 ACL public FUNCTION rls_preflight_scan() postgres
+509; 1255 22928 FUNCTION public set_activity_qa_updated_at() postgres
+5593; 0 0 ACL public FUNCTION set_activity_qa_updated_at() postgres
+517; 1255 24565 FUNCTION public set_admin_security_updated_at() postgres
+5594; 0 0 ACL public FUNCTION set_admin_security_updated_at() postgres
+518; 1255 24568 FUNCTION public set_order_booking_no() postgres
+5595; 0 0 ACL public FUNCTION set_order_booking_no() postgres
+504; 1255 22699 FUNCTION public set_payment_booking_mismatch_governance_updated_at() postgres
+5596; 0 0 ACL public FUNCTION set_payment_booking_mismatch_governance_updated_at() postgres
+501; 1255 20159 FUNCTION public update_updated_at_column() postgres
+5597; 0 0 ACL public FUNCTION update_updated_at_column() postgres
+313; 1259 17582 TABLE public activities postgres
+5666; 0 0 COMMENT public COLUMN activities.regions postgres
+5667; 0 0 ACL public TABLE activities postgres
+385; 1259 24946 TABLE public activity_addons postgres
+5668; 0 0 ACL public TABLE activity_addons postgres
+340; 1259 22772 TABLE public activity_availability_daily postgres
+5669; 0 0 ACL public TABLE activity_availability_daily postgres
+375; 1259 24589 TABLE public activity_images postgres
+5670; 0 0 ACL public TABLE activity_images postgres
+369; 1259 24435 TABLE public activity_packages postgres
+5671; 0 0 ACL public TABLE activity_packages postgres
+349; 1259 23238 TABLE public activity_plan_seasons postgres
+5672; 0 0 ACL public TABLE activity_plan_seasons postgres
+376; 1259 24606 TABLE public activity_plan_tiers postgres
+5673; 0 0 ACL public TABLE activity_plan_tiers postgres
+331; 1259 20160 TABLE public activity_plans postgres
+5674; 0 0 COMMENT public COLUMN activity_plans.status postgres
+5675; 0 0 COMMENT public COLUMN activity_plans.is_year_round postgres
+5676; 0 0 COMMENT public COLUMN activity_plans.pending_new_plan postgres
+5677; 0 0 ACL public TABLE activity_plans postgres
+341; 1259 22852 TABLE public activity_qa postgres
+5678; 0 0 ACL public TABLE activity_qa postgres
+324; 1259 17798 TABLE public activity_reviews postgres
+5679; 0 0 ACL public TABLE activity_reviews postgres
+314; 1259 17620 TABLE public activity_schedules postgres
+5680; 0 0 ACL public TABLE activity_schedules postgres
+373; 1259 24556 TABLE public admin_security postgres
+5681; 0 0 ACL public TABLE admin_security postgres
+320; 1259 17730 TABLE public audit_logs postgres
+5682; 0 0 ACL public TABLE audit_logs postgres
+319; 1259 17729 SEQUENCE public audit_logs_id_seq postgres
+5683; 0 0 SEQUENCE OWNED BY public audit_logs_id_seq postgres
+5684; 0 0 ACL public SEQUENCE audit_logs_id_seq postgres
+371; 1259 24487 TABLE public booking_status_history postgres
+5685; 0 0 ACL public TABLE booking_status_history postgres
+335; 1259 20296 TABLE public booking_status_logs postgres
+5686; 0 0 ACL public TABLE booking_status_logs postgres
+334; 1259 20248 TABLE public bookings postgres
+5687; 0 0 COMMENT public COLUMN bookings.conflict_override_id postgres
+5688; 0 0 COMMENT public COLUMN bookings.conflict_override_snapshot postgres
+5689; 0 0 COMMENT public COLUMN bookings.guide_approval_status postgres
+5690; 0 0 COMMENT public COLUMN bookings.guide_approval_decided_at postgres
+5691; 0 0 COMMENT public COLUMN bookings.guide_approval_note postgres
+5692; 0 0 ACL public TABLE bookings postgres
+365; 1259 24385 TABLE public cron_job_controls postgres
+5693; 0 0 ACL public TABLE cron_job_controls postgres
+367; 1259 24395 TABLE public cron_run_log postgres
+5694; 0 0 ACL public TABLE cron_run_log postgres
+366; 1259 24394 SEQUENCE public cron_run_log_id_seq postgres
+5695; 0 0 ACL public SEQUENCE cron_run_log_id_seq postgres
+326; 1259 18952 TABLE public events postgres
+5696; 0 0 COMMENT public TABLE events postgres
+5697; 0 0 COMMENT public COLUMN events.event_name postgres
+5698; 0 0 COMMENT public COLUMN events.session_id postgres
+5699; 0 0 COMMENT public COLUMN events.properties postgres
+5700; 0 0 COMMENT public COLUMN events.ip_hash postgres
+5701; 0 0 COMMENT public COLUMN events.utm_source postgres
+5702; 0 0 COMMENT public COLUMN events.utm_medium postgres
+5703; 0 0 COMMENT public COLUMN events.utm_campaign postgres
+5704; 0 0 COMMENT public COLUMN events.utm_content postgres
+5705; 0 0 COMMENT public COLUMN events.utm_term postgres
+5706; 0 0 ACL public TABLE events postgres
+325; 1259 18951 SEQUENCE public events_id_seq postgres
+5707; 0 0 SEQUENCE OWNED BY public events_id_seq postgres
+5708; 0 0 ACL public SEQUENCE events_id_seq postgres
+328; 1259 20115 TABLE public experiences postgres
+5709; 0 0 ACL public TABLE experiences postgres
+318; 1259 17715 TABLE public guide_applications postgres
+5710; 0 0 COMMENT public COLUMN guide_applications.specialties postgres
+5711; 0 0 COMMENT public COLUMN guide_applications.languages postgres
+5712; 0 0 COMMENT public COLUMN guide_applications.regions postgres
+5713; 0 0 COMMENT public COLUMN guide_applications.certifications postgres
+5714; 0 0 COMMENT public COLUMN guide_applications.payment_method postgres
+5715; 0 0 COMMENT public COLUMN guide_applications.profile_photo_url postgres
+5716; 0 0 COMMENT public COLUMN guide_applications.hero_image_url postgres
+5717; 0 0 COMMENT public COLUMN guide_applications.gallery_urls postgres
+5718; 0 0 COMMENT public COLUMN guide_applications.payment_methods postgres
+5719; 0 0 ACL public TABLE guide_applications postgres
+332; 1259 20192 TABLE public guide_availability_rules postgres
+5720; 0 0 COMMENT public COLUMN guide_availability_rules.use_dynamic_reemit postgres
+5721; 0 0 ACL public TABLE guide_availability_rules postgres
+346; 1259 22971 TABLE public guide_balances postgres
+5722; 0 0 ACL public TABLE guide_balances postgres
+333; 1259 20228 TABLE public guide_blackout_dates postgres
+5723; 0 0 ACL public TABLE guide_blackout_dates postgres
+364; 1259 23703 TABLE public guide_line_bind_code postgres
+5724; 0 0 ACL public TABLE guide_line_bind_code postgres
+363; 1259 23686 TABLE public guide_line_mapping postgres
+5725; 0 0 ACL public TABLE guide_line_mapping postgres
+312; 1259 17551 TABLE public guide_profiles postgres
+5726; 0 0 COMMENT public COLUMN guide_profiles.is_published postgres
+5727; 0 0 COMMENT public COLUMN guide_profiles.bank_name postgres
+5728; 0 0 COMMENT public COLUMN guide_profiles.account_name postgres
+5729; 0 0 COMMENT public COLUMN guide_profiles.account_number postgres
+5730; 0 0 COMMENT public COLUMN guide_profiles.transfer_note postgres
+5731; 0 0 COMMENT public COLUMN guide_profiles.regions postgres
+5732; 0 0 COMMENT public COLUMN guide_profiles.certifications postgres
+5733; 0 0 COMMENT public COLUMN guide_profiles.payment_methods postgres
+5734; 0 0 ACL public TABLE guide_profiles postgres
+350; 1259 23305 TABLE public guide_slot_conflict_overrides postgres
+5735; 0 0 COMMENT public TABLE guide_slot_conflict_overrides postgres
+5736; 0 0 COMMENT public COLUMN guide_slot_conflict_overrides.reason postgres
+5737; 0 0 COMMENT public COLUMN guide_slot_conflict_overrides.requires_helper postgres
+5738; 0 0 COMMENT public COLUMN guide_slot_conflict_overrides.helper_status postgres
+5739; 0 0 COMMENT public COLUMN guide_slot_conflict_overrides.status postgres
+5740; 0 0 COMMENT public COLUMN guide_slot_conflict_overrides.created_by_admin_email postgres
+5741; 0 0 COMMENT public COLUMN guide_slot_conflict_overrides.helper_decided_at postgres
+5742; 0 0 ACL public TABLE guide_slot_conflict_overrides postgres
+351; 1259 23340 TABLE public guide_trip_reports postgres
+5743; 0 0 ACL public TABLE guide_trip_reports postgres
+353; 1259 23440 TABLE public homepage_featured_settings postgres
+5744; 0 0 ACL public TABLE homepage_featured_settings postgres
+377; 1259 24644 TABLE public incidents postgres
+5745; 0 0 ACL public TABLE incidents postgres
+322; 1259 17772 TABLE public kpi_settings postgres
+5746; 0 0 ACL public TABLE kpi_settings postgres
+323; 1259 17787 TABLE public kpi_settings_history postgres
+5747; 0 0 ACL public TABLE kpi_settings_history postgres
+360; 1259 23639 TABLE public line_bind_code postgres
+5748; 0 0 ACL public TABLE line_bind_code postgres
+361; 1259 23655 TABLE public line_user_mapping postgres
+5749; 0 0 ACL public TABLE line_user_mapping postgres
+362; 1259 23676 TABLE public line_webhook_events postgres
+5750; 0 0 ACL public TABLE line_webhook_events postgres
+389; 1259 25792 TABLE public midao_availability_defaults postgres
+5751; 0 0 ACL public TABLE midao_availability_defaults postgres
+390; 1259 25810 TABLE public midao_day_overrides postgres
+5752; 0 0 ACL public TABLE midao_day_overrides postgres
+388; 1259 25759 TABLE public midao_requests postgres
+5753; 0 0 ACL public TABLE midao_requests postgres
+358; 1259 23616 TABLE public notification_event_settings postgres
+5754; 0 0 ACL public TABLE notification_event_settings postgres
+359; 1259 23628 TABLE public notification_event_settings_audit postgres
+5755; 0 0 ACL public TABLE notification_event_settings_audit postgres
+321; 1259 17747 TABLE public operations_tracking postgres
+5756; 0 0 ACL public TABLE operations_tracking postgres
+386; 1259 24966 TABLE public order_addons postgres
+5757; 0 0 ACL public TABLE order_addons postgres
+330; 1259 20130 TABLE public order_events postgres
+5758; 0 0 ACL public TABLE order_events postgres
+329; 1259 20129 SEQUENCE public order_events_id_seq postgres
+5759; 0 0 SEQUENCE OWNED BY public order_events_id_seq postgres
+5760; 0 0 ACL public SEQUENCE order_events_id_seq postgres
+336; 1259 20319 TABLE public order_items postgres
+5761; 0 0 ACL public TABLE order_items postgres
+382; 1259 24717 TABLE public order_messages postgres
+5762; 0 0 ACL public TABLE order_messages postgres
+315; 1259 17644 TABLE public orders postgres
+5763; 0 0 COMMENT public COLUMN orders.payment_deadline_at postgres
+5764; 0 0 ACL public TABLE orders postgres
+374; 1259 24567 SEQUENCE public orders_booking_no_seq postgres
+5765; 0 0 ACL public SEQUENCE orders_booking_no_seq postgres
+370; 1259 24447 TABLE public package_activities postgres
+5766; 0 0 ACL public TABLE package_activities postgres
+339; 1259 22682 TABLE public payment_booking_mismatch_governance postgres
+5767; 0 0 ACL public TABLE payment_booking_mismatch_governance postgres
+338; 1259 22681 SEQUENCE public payment_booking_mismatch_governance_id_seq postgres
+5768; 0 0 SEQUENCE OWNED BY public payment_booking_mismatch_governance_id_seq postgres
+5769; 0 0 ACL public SEQUENCE payment_booking_mismatch_governance_id_seq postgres
+337; 1259 20339 TABLE public payment_events postgres
+5770; 0 0 ACL public TABLE payment_events postgres
+372; 1259 24535 TABLE public payment_logs postgres
+5771; 0 0 ACL public TABLE payment_logs postgres
+316; 1259 17673 TABLE public payments postgres
+5772; 0 0 ACL public TABLE payments postgres
+347; 1259 22984 TABLE public payout_items postgres
+5773; 0 0 ACL public TABLE payout_items postgres
+348; 1259 23007 TABLE public payouts postgres
+5774; 0 0 ACL public TABLE payouts postgres
+342; 1259 22867 TABLE public promo_codes postgres
+5775; 0 0 ACL public TABLE promo_codes postgres
+343; 1259 22886 TABLE public promo_redemptions postgres
+5776; 0 0 ACL public TABLE promo_redemptions postgres
+378; 1259 24659 TABLE public refund_policies postgres
+5777; 0 0 ACL public TABLE refund_policies postgres
+317; 1259 17694 TABLE public refund_requests postgres
+5778; 0 0 COMMENT public COLUMN refund_requests.policy_snapshot postgres
+5779; 0 0 ACL public TABLE refund_requests postgres
+383; 1259 24736 TABLE public reschedule_requests postgres
+5780; 0 0 ACL public TABLE reschedule_requests postgres
+352; 1259 23369 TABLE public review_invitations postgres
+5781; 0 0 ACL public TABLE review_invitations postgres
+345; 1259 22954 TABLE public settlement_rules postgres
+5782; 0 0 ACL public TABLE settlement_rules postgres
+380; 1259 24690 TABLE public soft_launch_control_audit postgres
+5783; 0 0 ACL public TABLE soft_launch_control_audit postgres
+379; 1259 24677 TABLE public soft_launch_controls postgres
+5784; 0 0 ACL public TABLE soft_launch_controls postgres
+381; 1259 24701 TABLE public soft_launch_whitelist postgres
+5785; 0 0 ACL public TABLE soft_launch_whitelist postgres
+355; 1259 23573 TABLE public telegram_bind_code postgres
+5786; 0 0 ACL public TABLE telegram_bind_code postgres
+354; 1259 23557 TABLE public telegram_chat_mapping postgres
+5787; 0 0 ACL public TABLE telegram_chat_mapping postgres
+356; 1259 23583 TABLE public telegram_webhook_events postgres
+5788; 0 0 ACL public TABLE telegram_webhook_events postgres
+368; 1259 24408 TABLE public tour_reminder_log postgres
+5789; 0 0 ACL public TABLE tour_reminder_log postgres
+357; 1259 23594 TABLE public traveler_profiles postgres
+5790; 0 0 ACL public TABLE traveler_profiles postgres
+384; 1259 24926 TABLE public user_notifications postgres
+5791; 0 0 ACL public TABLE user_notifications postgres
+387; 1259 24990 TABLE public user_points_ledger postgres
+5792; 0 0 ACL public TABLE user_points_ledger postgres
+311; 1259 17538 TABLE public users postgres
+5793; 0 0 ACL public TABLE users postgres
+344; 1259 22906 TABLE public wishlists postgres
+5794; 0 0 ACL public TABLE wishlists postgres
+4137; 2604 17733 DEFAULT public audit_logs id postgres
+4164; 2604 18955 DEFAULT public events id postgres
+4167; 2604 20133 DEFAULT public order_events id postgres
+4204; 2604 22685 DEFAULT public payment_booking_mismatch_governance id postgres
+4686; 2606 17605 CONSTRAINT public activities activities_pkey postgres
+4691; 2606 17607 CONSTRAINT public activities activities_slug_key postgres
+4988; 2606 24959 CONSTRAINT public activity_addons activity_addons_pkey postgres
+4951; 2606 24599 CONSTRAINT public activity_images activity_images_pkey postgres
+4932; 2606 24446 CONSTRAINT public activity_packages activity_packages_pkey postgres
+4862; 2606 23253 CONSTRAINT public activity_plan_seasons activity_plan_seasons_pkey postgres
+4954; 2606 24616 CONSTRAINT public activity_plan_tiers activity_plan_tiers_pkey postgres
+4956; 2606 24618 CONSTRAINT public activity_plan_tiers activity_plan_tiers_plan_id_tier_key postgres
+4770; 2606 20181 CONSTRAINT public activity_plans activity_plans_activity_id_slug_key postgres
+4772; 2606 20179 CONSTRAINT public activity_plans activity_plans_pkey postgres
+4830; 2606 22862 CONSTRAINT public activity_qa activity_qa_pkey postgres
+4746; 2606 17808 CONSTRAINT public activity_reviews activity_reviews_pkey postgres
+4696; 2606 17633 CONSTRAINT public activity_schedules activity_schedules_pkey postgres
+4949; 2606 24564 CONSTRAINT public admin_security admin_security_pkey postgres
+4736; 2606 17738 CONSTRAINT public audit_logs audit_logs_pkey postgres
+4941; 2606 24495 CONSTRAINT public booking_status_history booking_status_history_pkey postgres
+4801; 2606 20305 CONSTRAINT public booking_status_logs booking_status_logs_pkey postgres
+4787; 2606 20266 CONSTRAINT public bookings bookings_booking_no_key postgres
+4789; 2606 20264 CONSTRAINT public bookings bookings_pkey postgres
+4919; 2606 24393 CONSTRAINT public cron_job_controls cron_job_controls_pkey postgres
+4921; 2606 24404 CONSTRAINT public cron_run_log cron_run_log_pkey postgres
+4755; 2606 18961 CONSTRAINT public events events_pkey postgres
+4764; 2606 20121 CONSTRAINT public experiences experiences_pkey postgres
+4766; 2606 20123 CONSTRAINT public experiences experiences_slug_key postgres
+4732; 2606 17726 CONSTRAINT public guide_applications guide_applications_pkey postgres
+4778; 2606 20212 CONSTRAINT public guide_availability_rules guide_availability_rules_pkey postgres
+4854; 2606 22977 CONSTRAINT public guide_balances guide_balances_pkey postgres
+4783; 2606 20239 CONSTRAINT public guide_blackout_dates guide_blackout_dates_pkey postgres
+4915; 2606 23710 CONSTRAINT public guide_line_bind_code guide_line_bind_code_pkey postgres
+4911; 2606 23697 CONSTRAINT public guide_line_mapping guide_line_mapping_line_user_id_key postgres
+4913; 2606 23695 CONSTRAINT public guide_line_mapping guide_line_mapping_pkey postgres
+4674; 2606 17838 CONSTRAINT public guide_profiles guide_profiles_guide_email_key postgres
+4677; 2606 17569 CONSTRAINT public guide_profiles guide_profiles_pkey postgres
+4680; 2606 17571 CONSTRAINT public guide_profiles guide_profiles_slug_key postgres
+4866; 2606 23320 CONSTRAINT public guide_slot_conflict_overrides guide_slot_conflict_overrides_pkey postgres
+4873; 2606 23354 CONSTRAINT public guide_trip_reports guide_trip_reports_pkey postgres
+4879; 2606 23449 CONSTRAINT public homepage_featured_settings homepage_featured_settings_pkey postgres
+4962; 2606 24654 CONSTRAINT public incidents incidents_pkey postgres
+4744; 2606 17794 CONSTRAINT public kpi_settings_history kpi_settings_history_pkey postgres
+4742; 2606 17785 CONSTRAINT public kpi_settings kpi_settings_pkey postgres
+4900; 2606 23646 CONSTRAINT public line_bind_code line_bind_code_pkey postgres
+4904; 2606 23667 CONSTRAINT public line_user_mapping line_user_mapping_line_user_id_key postgres
+4906; 2606 23665 CONSTRAINT public line_user_mapping line_user_mapping_pkey postgres
+4909; 2606 23683 CONSTRAINT public line_webhook_events line_webhook_events_pkey postgres
+5004; 2606 25804 CONSTRAINT public midao_availability_defaults midao_availability_defaults_guide_id_weekday_period_key postgres
+5006; 2606 25802 CONSTRAINT public midao_availability_defaults midao_availability_defaults_pkey postgres
+5009; 2606 25820 CONSTRAINT public midao_day_overrides midao_day_overrides_pkey postgres
+5000; 2606 25777 CONSTRAINT public midao_requests midao_requests_pkey postgres
+5002; 2606 25779 CONSTRAINT public midao_requests midao_requests_request_no_key postgres
+4896; 2606 23636 CONSTRAINT public notification_event_settings_audit notification_event_settings_audit_pkey postgres
+4894; 2606 23625 CONSTRAINT public notification_event_settings notification_event_settings_pkey postgres
+4738; 2606 17765 CONSTRAINT public operations_tracking operations_tracking_order_id_key postgres
+4740; 2606 17763 CONSTRAINT public operations_tracking operations_tracking_pkey postgres
+4992; 2606 24975 CONSTRAINT public order_addons order_addons_pkey postgres
+4768; 2606 20138 CONSTRAINT public order_events order_events_pkey postgres
+4808; 2606 20330 CONSTRAINT public order_items order_items_pkey postgres
+4978; 2606 24727 CONSTRAINT public order_messages order_messages_pkey postgres
+4710; 2606 17656 CONSTRAINT public orders orders_pkey postgres
+4937; 2606 24456 CONSTRAINT public package_activities package_activities_package_id_activity_id_key postgres
+4939; 2606 24454 CONSTRAINT public package_activities package_activities_pkey postgres
+4822; 2606 22696 CONSTRAINT public payment_booking_mismatch_governance payment_booking_mismatch_governance_payment_id_key postgres
+4824; 2606 22694 CONSTRAINT public payment_booking_mismatch_governance payment_booking_mismatch_governance_pkey postgres
+4817; 2606 20348 CONSTRAINT public payment_events payment_events_pkey postgres
+4947; 2606 24543 CONSTRAINT public payment_logs payment_logs_pkey postgres
+4721; 2606 17685 CONSTRAINT public payments payments_pkey postgres
+4857; 2606 22993 CONSTRAINT public payout_items payout_items_pkey postgres
+4860; 2606 23017 CONSTRAINT public payouts payouts_pkey postgres
+4835; 2606 22883 CONSTRAINT public promo_codes promo_codes_code_unique postgres
+4837; 2606 22881 CONSTRAINT public promo_codes promo_codes_pkey postgres
+4840; 2606 22892 CONSTRAINT public promo_redemptions promo_redemptions_pkey postgres
+4844; 2606 22894 CONSTRAINT public promo_redemptions promo_redemptions_user_id_promo_code_id_key postgres
+4965; 2606 24672 CONSTRAINT public refund_policies refund_policies_pkey postgres
+4967; 2606 24674 CONSTRAINT public refund_policies refund_policies_version_key postgres
+4728; 2606 17706 CONSTRAINT public refund_requests refund_requests_pkey postgres
+4981; 2606 24749 CONSTRAINT public reschedule_requests reschedule_requests_pkey postgres
+4876; 2606 23385 CONSTRAINT public review_invitations review_invitations_pkey postgres
+4852; 2606 22968 CONSTRAINT public settlement_rules settlement_rules_pkey postgres
+4971; 2606 24698 CONSTRAINT public soft_launch_control_audit soft_launch_control_audit_pkey postgres
+4969; 2606 24687 CONSTRAINT public soft_launch_controls soft_launch_controls_pkey postgres
+4973; 2606 24712 CONSTRAINT public soft_launch_whitelist soft_launch_whitelist_entry_type_value_key postgres
+4975; 2606 24710 CONSTRAINT public soft_launch_whitelist soft_launch_whitelist_pkey postgres
+4888; 2606 23581 CONSTRAINT public telegram_bind_code telegram_bind_code_pkey postgres
+4883; 2606 23568 CONSTRAINT public telegram_chat_mapping telegram_chat_mapping_pkey postgres
+4885; 2606 23570 CONSTRAINT public telegram_chat_mapping telegram_chat_mapping_role_subject_id_key postgres
+4890; 2606 23590 CONSTRAINT public telegram_webhook_events telegram_webhook_events_pkey postgres
+4928; 2606 24421 CONSTRAINT public tour_reminder_log tour_reminder_log_order_id_reminder_kind_channel_key postgres
+4930; 2606 24419 CONSTRAINT public tour_reminder_log tour_reminder_log_pkey postgres
+4892; 2606 23605 CONSTRAINT public traveler_profiles traveler_profiles_pkey postgres
+4986; 2606 24935 CONSTRAINT public user_notifications user_notifications_pkey postgres
+4996; 2606 24999 CONSTRAINT public user_points_ledger user_points_ledger_pkey postgres
+4667; 2606 17549 CONSTRAINT public users users_email_key postgres
+4669; 2606 17547 CONSTRAINT public users users_pkey postgres
+4846; 2606 22914 CONSTRAINT public wishlists wishlists_pkey postgres
+4848; 2606 22937 CONSTRAINT public wishlists wishlists_user_activity_unique postgres
+4682; 1259 17616 INDEX public activities_category_idx postgres
+4683; 1259 17613 INDEX public activities_guide_id_idx postgres
+4684; 1259 17614 INDEX public activities_guide_slug_idx postgres
+4687; 1259 17617 INDEX public activities_published_idx postgres
+4688; 1259 17615 INDEX public activities_region_idx postgres
+4689; 1259 24052 INDEX public activities_regions_gin_idx postgres
+4825; 1259 22788 INDEX public activity_availability_daily_all_plan_unique_idx postgres
+4826; 1259 22790 INDEX public activity_availability_daily_date_idx postgres
+4827; 1259 22789 INDEX public activity_availability_daily_lookup_idx postgres
+4828; 1259 22787 INDEX public activity_availability_daily_plan_unique_idx postgres
+4693; 1259 17639 INDEX public activity_schedules_activity_id_idx postgres
+4694; 1259 17641 INDEX public activity_schedules_open_idx postgres
+4697; 1259 17640 INDEX public activity_schedules_start_at_idx postgres
+4733; 1259 17745 INDEX public audit_logs_created_at_idx postgres
+4734; 1259 17744 INDEX public audit_logs_order_id_idx postgres
+4750; 1259 18980 INDEX public events_activity_id_idx postgres
+4751; 1259 18981 INDEX public events_created_at_idx postgres
+4752; 1259 18977 INDEX public events_event_name_idx postgres
+4753; 1259 18979 INDEX public events_order_id_idx postgres
+4756; 1259 18978 INDEX public events_session_id_idx postgres
+4757; 1259 18985 INDEX public events_utm_campaign_idx postgres
+4758; 1259 18984 INDEX public events_utm_source_idx postgres
+4730; 1259 17727 INDEX public guide_applications_pending_idx postgres
+4670; 1259 17579 INDEX public guide_profiles_approved_idx postgres
+4671; 1259 17839 INDEX public guide_profiles_email_idx postgres
+4672; 1259 23073 INDEX public guide_profiles_guide_email_idx postgres
+4675; 1259 17836 INDEX public guide_profiles_invite_token_idx postgres
+4678; 1259 17578 INDEX public guide_profiles_region_idx postgres
+4681; 1259 17577 INDEX public guide_profiles_user_id_idx postgres
+4869; 1259 23367 INDEX public guide_trip_reports_booking_id_idx postgres
+4870; 1259 23365 INDEX public guide_trip_reports_booking_submitted_unique postgres
+4871; 1259 23366 INDEX public guide_trip_reports_guide_id_idx postgres
+4692; 1259 23806 INDEX public idx_activities_review_state postgres
+4989; 1259 24965 INDEX public idx_activity_addons_activity postgres
+4952; 1259 24605 INDEX public idx_activity_images_activity_id_sort_order postgres
+4933; 1259 24467 INDEX public idx_activity_packages_is_active postgres
+4863; 1259 23260 INDEX public idx_activity_plan_seasons_plan_active postgres
+4864; 1259 23259 INDEX public idx_activity_plan_seasons_plan_id postgres
+4957; 1259 24624 INDEX public idx_activity_plan_tiers_plan_id postgres
+4773; 1259 20187 INDEX public idx_activity_plans_activity_id postgres
+4774; 1259 23157 INDEX public idx_activity_plans_activity_legacy_plan_id postgres
+4775; 1259 23809 INDEX public idx_activity_plans_review_state postgres
+4776; 1259 20188 INDEX public idx_activity_plans_status postgres
+4831; 1259 22863 INDEX public idx_activity_qa_activity_id_status postgres
+4747; 1259 22952 INDEX public idx_activity_reviews_slug_status postgres
+4942; 1259 24506 INDEX public idx_booking_status_history_booking_id postgres
+4943; 1259 24507 INDEX public idx_booking_status_history_created_at postgres
+4802; 1259 20316 INDEX public idx_booking_status_logs_booking_id postgres
+4803; 1259 20317 INDEX public idx_booking_status_logs_created_at postgres
+4790; 1259 20293 INDEX public idx_bookings_active postgres
+4791; 1259 20289 INDEX public idx_bookings_activity_id postgres
+4792; 1259 23339 INDEX public idx_bookings_conflict_override_id postgres
+4793; 1259 23818 INDEX public idx_bookings_guide_approval_status postgres
+4794; 1259 20288 INDEX public idx_bookings_guide_id postgres
+4795; 1259 20290 INDEX public idx_bookings_plan_id postgres
+4796; 1259 23801 INDEX public idx_bookings_schedule_id postgres
+4797; 1259 20292 INDEX public idx_bookings_start_at postgres
+4798; 1259 20291 INDEX public idx_bookings_status postgres
+4799; 1259 20287 INDEX public idx_bookings_traveler_id postgres
+4922; 1259 24405 INDEX public idx_cron_run_log_job_finished postgres
+4779; 1259 20225 INDEX public idx_guide_availability_rules_active postgres
+4780; 1259 20223 INDEX public idx_guide_availability_rules_guide_id postgres
+4781; 1259 20224 INDEX public idx_guide_availability_rules_plan_id postgres
+4784; 1259 20245 INDEX public idx_guide_blackout_dates_guide_id postgres
+4785; 1259 20246 INDEX public idx_guide_blackout_dates_starts_at postgres
+4916; 1259 23717 INDEX public idx_guide_line_bind_code_expires_at postgres
+4917; 1259 23716 INDEX public idx_guide_line_bind_code_guide_id postgres
+4867; 1259 23336 INDEX public idx_guide_slot_conflict_overrides_exact_active postgres
+4868; 1259 23337 INDEX public idx_guide_slot_conflict_overrides_plan_date_active postgres
+4958; 1259 24658 INDEX public idx_incidents_created_at postgres
+4959; 1259 24656 INDEX public idx_incidents_severity postgres
+4960; 1259 24657 INDEX public idx_incidents_source postgres
+4897; 1259 23653 INDEX public idx_lbc_email postgres
+4898; 1259 23652 INDEX public idx_lbc_user_id postgres
+4901; 1259 23675 INDEX public idx_line_user_mapping_email postgres
+4902; 1259 23674 INDEX public idx_line_user_mapping_user_id postgres
+4907; 1259 23685 INDEX public idx_line_webhook_events_received_at postgres
+5007; 1259 25827 INDEX public idx_midao_day_overrides_guide_date postgres
+4997; 1259 25791 INDEX public idx_midao_requests_guide_date postgres
+4998; 1259 25790 INDEX public idx_midao_requests_guide_status postgres
+4990; 1259 24986 INDEX public idx_order_addons_order postgres
+4804; 1259 24582 INDEX public idx_order_items_booking_id postgres
+4805; 1259 20337 INDEX public idx_order_items_item_type postgres
+4806; 1259 20336 INDEX public idx_order_items_order_id postgres
+4976; 1259 24733 INDEX public idx_order_messages_order_created postgres
+4700; 1259 20372 INDEX public idx_orders_booking_id postgres
+4701; 1259 24570 INDEX public idx_orders_booking_no_unique postgres
+4702; 1259 23819 INDEX public idx_orders_payment_deadline_pending postgres
+4703; 1259 20374 INDEX public idx_orders_payment_status postgres
+4704; 1259 20373 INDEX public idx_orders_source_channel postgres
+4934; 1259 24469 INDEX public idx_package_activities_activity_id postgres
+4935; 1259 24468 INDEX public idx_package_activities_package_id postgres
+4809; 1259 20355 INDEX public idx_payment_events_created_at postgres
+4810; 1259 23085 INDEX public idx_payment_events_merchant_trade_no postgres
+4811; 1259 23086 INDEX public idx_payment_events_order_created_at_desc postgres
+4812; 1259 23064 INDEX public idx_payment_events_order_id postgres
+4813; 1259 20354 INDEX public idx_payment_events_payment_id postgres
+4814; 1259 23084 INDEX public idx_payment_events_provider postgres
+4815; 1259 23065 INDEX public idx_payment_events_trade_no postgres
+4944; 1259 24553 INDEX public idx_payment_logs_created_at postgres
+4945; 1259 24552 INDEX public idx_payment_logs_payment_id postgres
+4713; 1259 24576 INDEX public idx_payments_booking_id postgres
+4714; 1259 24551 INDEX public idx_payments_created_at postgres
+4715; 1259 24550 INDEX public idx_payments_merchant_trade_no postgres
+4716; 1259 24549 INDEX public idx_payments_status postgres
+4819; 1259 22697 INDEX public idx_pbmg_order_id postgres
+4820; 1259 22698 INDEX public idx_pbmg_status_label postgres
+4993; 1259 25010 INDEX public idx_points_ledger_user postgres
+4748; 1259 17809 INDEX public idx_reviews_activity_slug postgres
+4749; 1259 17810 INDEX public idx_reviews_guide_slug postgres
+4698; 1259 17816 INDEX public idx_schedules_activity_plan postgres
+4699; 1259 17818 INDEX public idx_schedules_unique_date_plan postgres
+4886; 1259 23582 INDEX public idx_telegram_bind_code_subject postgres
+4880; 1259 23571 INDEX public idx_telegram_chat_mapping_chat postgres
+4881; 1259 23572 INDEX public idx_telegram_chat_mapping_email postgres
+4923; 1259 24425 INDEX public idx_tour_reminder_log_created_at postgres
+4924; 1259 24426 INDEX public idx_tour_reminder_log_kind_channel postgres
+4925; 1259 24423 INDEX public idx_tour_reminder_log_order_id postgres
+4926; 1259 24424 INDEX public idx_tour_reminder_log_schedule_id postgres
+4983; 1259 24942 INDEX public idx_user_notifications_unread postgres
+4984; 1259 24941 INDEX public idx_user_notifications_user_created postgres
+4705; 1259 17671 INDEX public orders_active_idx postgres
+4706; 1259 17667 INDEX public orders_activity_id_idx postgres
+4707; 1259 17669 INDEX public orders_contact_email_idx postgres
+4708; 1259 17670 INDEX public orders_created_at_idx postgres
+4711; 1259 17668 INDEX public orders_schedule_id_idx postgres
+4712; 1259 18992 INDEX public orders_user_id_idx postgres
+4818; 1259 23087 INDEX public payment_events_provider_event_idempotent_unique postgres
+4717; 1259 23081 INDEX public payments_order_id_created_at_desc_idx postgres
+4718; 1259 17691 INDEX public payments_order_id_idx postgres
+4719; 1259 17692 INDEX public payments_paid_idx postgres
+4722; 1259 23079 INDEX public payments_provider_merchant_trade_no_unique postgres
+4723; 1259 23080 INDEX public payments_provider_trade_no_unique postgres
+4855; 1259 23027 INDEX public payout_items_order_kind_unique postgres
+4858; 1259 23023 INDEX public payouts_pending_unique postgres
+4832; 1259 22885 INDEX public promo_codes_active_idx postgres
+4833; 1259 22884 INDEX public promo_codes_code_idx postgres
+4838; 1259 24716 INDEX public promo_codes_public_active_idx postgres
+4841; 1259 22901 INDEX public promo_redemptions_promo_code_id_idx postgres
+4842; 1259 22900 INDEX public promo_redemptions_user_id_idx postgres
+4963; 1259 24675 INDEX public refund_policies_active_unique postgres
+4724; 1259 17713 INDEX public refund_requests_active_idx postgres
+4725; 1259 17712 INDEX public refund_requests_order_id_idx postgres
+4726; 1259 23040 INDEX public refund_requests_order_request_id_unique postgres
+4729; 1259 23041 INDEX public refund_requests_request_id_idx postgres
+4979; 1259 24755 INDEX public reschedule_requests_order_request_unique postgres
+4982; 1259 24756 INDEX public reschedule_requests_status_idx postgres
+4874; 1259 23392 INDEX public review_invitations_order_id_idx postgres
+4877; 1259 23391 INDEX public review_invitations_sent_unique postgres
+4850; 1259 22969 INDEX public settlement_rules_active_unique postgres
+5010; 1259 25826 INDEX public uq_midao_day_overrides_period postgres
+4994; 1259 25011 INDEX public uq_points_earn_per_order postgres
+4849; 1259 22922 INDEX public wishlists_user_id_idx postgres
+5109; 2620 21504 TRIGGER auth users on_auth_user_created supabase_auth_admin
+5118; 2620 20191 TRIGGER public activity_plans activity_plans_updated_at postgres
+5120; 2620 20376 TRIGGER public bookings bookings_generate_booking_no postgres
+5121; 2620 20295 TRIGGER public bookings bookings_updated_at postgres
+5119; 2620 20227 TRIGGER public guide_availability_rules guide_availability_rules_updated_at postgres
+5123; 2620 22929 TRIGGER public activity_qa trg_activity_qa_updated_at postgres
+5125; 2620 24566 TRIGGER public admin_security trg_admin_security_updated_at postgres
+5115; 2620 17820 TRIGGER public activity_schedules trg_auto_full_status postgres
+5122; 2620 22700 TRIGGER public payment_booking_mismatch_governance trg_payment_booking_mismatch_governance_updated_at postgres
+5116; 2620 22793 TRIGGER public activity_schedules trg_refresh_activity_availability_daily postgres
+5117; 2620 24569 TRIGGER public orders trg_set_order_booking_no postgres
+5124; 2620 24474 TRIGGER public activity_packages update_activity_packages_updated_at postgres
+5036; 2606 17608 FK CONSTRAINT public activities activities_guide_id_fkey postgres
+5099; 2606 24960 FK CONSTRAINT public activity_addons activity_addons_activity_id_fkey postgres
+5069; 2606 22782 FK CONSTRAINT public activity_availability_daily activity_availability_daily_activity_id_fkey postgres
+5094; 2606 24600 FK CONSTRAINT public activity_images activity_images_activity_id_fkey postgres
+5077; 2606 23254 FK CONSTRAINT public activity_plan_seasons activity_plan_seasons_activity_plan_id_fkey postgres
+5095; 2606 24619 FK CONSTRAINT public activity_plan_tiers activity_plan_tiers_plan_id_fkey postgres
+5053; 2606 20182 FK CONSTRAINT public activity_plans activity_plans_activity_id_fkey postgres
+5037; 2606 17634 FK CONSTRAINT public activity_schedules activity_schedules_activity_id_fkey postgres
+5046; 2606 17739 FK CONSTRAINT public audit_logs audit_logs_order_id_fkey postgres
+5091; 2606 24496 FK CONSTRAINT public booking_status_history booking_status_history_booking_id_fkey postgres
+5092; 2606 24501 FK CONSTRAINT public booking_status_history booking_status_history_changed_by_fkey postgres
+5063; 2606 20311 FK CONSTRAINT public booking_status_logs booking_status_logs_actor_user_id_fkey postgres
+5064; 2606 20306 FK CONSTRAINT public booking_status_logs booking_status_logs_booking_id_fkey postgres
+5057; 2606 20277 FK CONSTRAINT public bookings bookings_activity_id_fkey postgres
+5058; 2606 20282 FK CONSTRAINT public bookings bookings_activity_plan_id_fkey postgres
+5059; 2606 20272 FK CONSTRAINT public bookings bookings_guide_id_fkey postgres
+5060; 2606 23796 FK CONSTRAINT public bookings bookings_schedule_id_fkey postgres
+5061; 2606 20267 FK CONSTRAINT public bookings bookings_traveler_id_fkey postgres
+5048; 2606 18967 FK CONSTRAINT public events events_activity_id_fkey postgres
+5049; 2606 18962 FK CONSTRAINT public events events_order_id_fkey postgres
+5050; 2606 18972 FK CONSTRAINT public events events_schedule_id_fkey postgres
+5051; 2606 20124 FK CONSTRAINT public experiences experiences_guide_id_fkey postgres
+5062; 2606 24571 FK CONSTRAINT public bookings fk_bookings_order_id postgres
+5065; 2606 24583 FK CONSTRAINT public order_items fk_order_items_booking_id postgres
+5043; 2606 24577 FK CONSTRAINT public payments fk_payments_booking_id postgres
+5054; 2606 20218 FK CONSTRAINT public guide_availability_rules guide_availability_rules_activity_plan_id_fkey postgres
+5055; 2606 20213 FK CONSTRAINT public guide_availability_rules guide_availability_rules_guide_id_fkey postgres
+5073; 2606 22978 FK CONSTRAINT public guide_balances guide_balances_guide_id_fkey postgres
+5056; 2606 20240 FK CONSTRAINT public guide_blackout_dates guide_blackout_dates_guide_id_fkey postgres
+5088; 2606 23711 FK CONSTRAINT public guide_line_bind_code guide_line_bind_code_guide_id_fkey postgres
+5087; 2606 23698 FK CONSTRAINT public guide_line_mapping guide_line_mapping_guide_id_fkey postgres
+5035; 2606 17572 FK CONSTRAINT public guide_profiles guide_profiles_user_id_fkey postgres
+5078; 2606 23326 FK CONSTRAINT public guide_slot_conflict_overrides guide_slot_conflict_overrides_activity_id_fkey postgres
+5079; 2606 23331 FK CONSTRAINT public guide_slot_conflict_overrides guide_slot_conflict_overrides_activity_plan_id_fkey postgres
+5080; 2606 23321 FK CONSTRAINT public guide_slot_conflict_overrides guide_slot_conflict_overrides_guide_id_fkey postgres
+5081; 2606 23355 FK CONSTRAINT public guide_trip_reports guide_trip_reports_booking_id_fkey postgres
+5082; 2606 23360 FK CONSTRAINT public guide_trip_reports guide_trip_reports_guide_id_fkey postgres
+5085; 2606 23647 FK CONSTRAINT public line_bind_code line_bind_code_user_id_fkey postgres
+5086; 2606 23668 FK CONSTRAINT public line_user_mapping line_user_mapping_user_id_fkey postgres
+5107; 2606 25805 FK CONSTRAINT public midao_availability_defaults midao_availability_defaults_guide_id_fkey postgres
+5108; 2606 25821 FK CONSTRAINT public midao_day_overrides midao_day_overrides_guide_id_fkey postgres
+5104; 2606 25785 FK CONSTRAINT public midao_requests midao_requests_activity_id_fkey postgres
+5105; 2606 25780 FK CONSTRAINT public midao_requests midao_requests_guide_id_fkey postgres
+5106; 2606 25835 FK CONSTRAINT public midao_requests midao_requests_plan_id_fkey postgres
+5047; 2606 17766 FK CONSTRAINT public operations_tracking operations_tracking_order_id_fkey postgres
+5100; 2606 24981 FK CONSTRAINT public order_addons order_addons_addon_id_fkey postgres
+5101; 2606 24976 FK CONSTRAINT public order_addons order_addons_order_id_fkey postgres
+5052; 2606 20139 FK CONSTRAINT public order_events order_events_order_id_fkey postgres
+5066; 2606 20331 FK CONSTRAINT public order_items order_items_order_id_fkey postgres
+5096; 2606 24728 FK CONSTRAINT public order_messages order_messages_order_id_fkey postgres
+5038; 2606 17657 FK CONSTRAINT public orders orders_activity_id_fkey postgres
+5039; 2606 20357 FK CONSTRAINT public orders orders_booking_id_fkey postgres
+5040; 2606 20364 FK CONSTRAINT public orders orders_handled_by_fkey postgres
+5041; 2606 17662 FK CONSTRAINT public orders orders_schedule_id_fkey postgres
+5042; 2606 18987 FK CONSTRAINT public orders orders_user_id_fkey postgres
+5089; 2606 24462 FK CONSTRAINT public package_activities package_activities_activity_id_fkey postgres
+5090; 2606 24457 FK CONSTRAINT public package_activities package_activities_package_id_fkey postgres
+5067; 2606 23058 FK CONSTRAINT public payment_events payment_events_order_id_fkey postgres
+5068; 2606 20349 FK CONSTRAINT public payment_events payment_events_payment_id_fkey postgres
+5093; 2606 24544 FK CONSTRAINT public payment_logs payment_logs_payment_id_fkey postgres
+5044; 2606 17686 FK CONSTRAINT public payments payments_order_id_fkey postgres
+5074; 2606 23001 FK CONSTRAINT public payout_items payout_items_guide_id_fkey postgres
+5075; 2606 22996 FK CONSTRAINT public payout_items payout_items_order_id_fkey postgres
+5076; 2606 23018 FK CONSTRAINT public payouts payouts_guide_id_fkey postgres
+5070; 2606 22895 FK CONSTRAINT public promo_redemptions promo_redemptions_promo_code_id_fkey postgres
+5045; 2606 17707 FK CONSTRAINT public refund_requests refund_requests_order_id_fkey postgres
+5097; 2606 24750 FK CONSTRAINT public reschedule_requests reschedule_requests_order_id_fkey postgres
+5083; 2606 23386 FK CONSTRAINT public review_invitations review_invitations_order_id_fkey postgres
+5084; 2606 23606 FK CONSTRAINT public traveler_profiles traveler_profiles_user_id_fkey postgres
+5098; 2606 24936 FK CONSTRAINT public user_notifications user_notifications_user_id_fkey postgres
+5102; 2606 25005 FK CONSTRAINT public user_points_ledger user_points_ledger_order_id_fkey postgres
+5103; 2606 25000 FK CONSTRAINT public user_points_ledger user_points_ledger_user_id_fkey postgres
+5034; 2606 21495 FK CONSTRAINT public users users_id_fkey postgres
+5071; 2606 22938 FK CONSTRAINT public wishlists wishlists_activity_id_fkey postgres
+5072; 2606 22915 FK CONSTRAINT public wishlists wishlists_user_id_fkey postgres
+5426; 3256 24471 POLICY public activity_packages Activity packages are manageable by authenticated users postgres
+5425; 3256 24470 POLICY public activity_packages Activity packages are viewable by everyone postgres
+5399; 3256 23262 POLICY public activity_plan_seasons Activity plan seasons mutate for service role postgres
+5400; 3256 23263 POLICY public activity_plan_seasons Activity plan seasons read for anonymous postgres
+5398; 3256 23261 POLICY public activity_plan_seasons Activity plan seasons read for authenticated postgres
+5430; 3256 24509 POLICY public booking_status_history Booking status history insertable by authenticated users postgres
+5429; 3256 24508 POLICY public booking_status_history Booking status history viewable by authenticated users postgres
+5401; 3256 23338 POLICY public guide_slot_conflict_overrides Guide slot conflict overrides mutate for service role postgres
+5428; 3256 24473 POLICY public package_activities Package activities are manageable by authenticated users postgres
+5427; 3256 24472 POLICY public package_activities Package activities are viewable by everyone postgres
+5432; 3256 24555 POLICY public payment_logs Payment logs insertable by authenticated users postgres
+5431; 3256 24554 POLICY public payment_logs Payment logs viewable by authenticated users postgres
+5380; 3256 21501 POLICY public users Users can update their own profile postgres
+5379; 3256 21500 POLICY public users Users can view their own profile postgres
+5301; 0 17582 ROW SECURITY public activities postgres
+5435; 3256 24626 POLICY public activities activities: guide insert own postgres
+5433; 3256 24625 POLICY public activities activities: guide select own postgres
+5436; 3256 24627 POLICY public activities activities: guide update own postgres
+5373; 3256 17618 POLICY public activities activities: public read published postgres
+5452; 3256 24810 POLICY public activities activities: service role full access postgres
+5366; 0 24946 ROW SECURITY public activity_addons postgres
+5478; 3256 24987 POLICY public activity_addons activity_addons_select_active postgres
+5479; 3256 24988 POLICY public activity_addons activity_addons_service_all postgres
+5323; 0 22772 ROW SECURITY public activity_availability_daily postgres
+5356; 0 24589 ROW SECURITY public activity_images postgres
+5438; 3256 24630 POLICY public activity_images activity_images: guide manage own postgres
+5439; 3256 24633 POLICY public activity_images activity_images: public read postgres
+5437; 3256 24629 POLICY public activity_images activity_images: service role full access postgres
+5351; 0 24435 ROW SECURITY public activity_packages postgres
+5332; 0 23238 ROW SECURITY public activity_plan_seasons postgres
+5357; 0 24606 ROW SECURITY public activity_plan_tiers postgres
+5442; 3256 24638 POLICY public activity_plan_tiers activity_plan_tiers: guide manage own postgres
+5441; 3256 24637 POLICY public activity_plan_tiers activity_plan_tiers: service role full access postgres
+5315; 0 20160 ROW SECURITY public activity_plans postgres
+5440; 3256 24634 POLICY public activity_plans activity_plans: guide manage own postgres
+5378; 3256 20189 POLICY public activity_plans activity_plans: public read active plans postgres
+5461; 3256 24819 POLICY public activity_plans activity_plans: service role full access postgres
+5324; 0 22852 ROW SECURITY public activity_qa postgres
+5311; 0 17798 ROW SECURITY public activity_reviews postgres
+5302; 0 17620 ROW SECURITY public activity_schedules postgres
+5443; 3256 24641 POLICY public activity_schedules activity_schedules: guide manage own postgres
+5374; 3256 17642 POLICY public activity_schedules activity_schedules: public read postgres
+5453; 3256 24811 POLICY public activity_schedules activity_schedules: service role full access postgres
+5355; 0 24556 ROW SECURITY public admin_security postgres
+5307; 0 17730 ROW SECURITY public audit_logs postgres
+5457; 3256 24815 POLICY public audit_logs audit_logs: service role full access postgres
+5382; 3256 22865 POLICY public activity_qa authenticated_insert_pending_qa postgres
+5386; 3256 22905 POLICY public activity_qa authenticated_read_own_qa postgres
+5353; 0 24487 ROW SECURITY public booking_status_history postgres
+5319; 0 20296 ROW SECURITY public booking_status_logs postgres
+5465; 3256 24823 POLICY public booking_status_logs booking_status_logs: service role full access postgres
+5318; 0 20248 ROW SECURITY public bookings postgres
+5464; 3256 24822 POLICY public bookings bookings: service role full access postgres
+5348; 0 24385 ROW SECURITY public cron_job_controls postgres
+5349; 0 24395 ROW SECURITY public cron_run_log postgres
+5312; 0 18952 ROW SECURITY public events postgres
+5376; 3256 18982 POLICY public events events: service_role insert postgres
+5377; 3256 18983 POLICY public events events: service_role select postgres
+5313; 0 20115 ROW SECURITY public experiences postgres
+5306; 0 17715 ROW SECURITY public guide_applications postgres
+5456; 3256 24814 POLICY public guide_applications guide_applications: service role full access postgres
+5316; 0 20192 ROW SECURITY public guide_availability_rules postgres
+5462; 3256 24820 POLICY public guide_availability_rules guide_availability_rules: service role full access postgres
+5329; 0 22971 ROW SECURITY public guide_balances postgres
+5317; 0 20228 ROW SECURITY public guide_blackout_dates postgres
+5463; 3256 24821 POLICY public guide_blackout_dates guide_blackout_dates: service role full access postgres
+5347; 0 23703 ROW SECURITY public guide_line_bind_code postgres
+5421; 3256 23719 POLICY public guide_line_bind_code guide_line_bind_code: service role full access postgres
+5346; 0 23686 ROW SECURITY public guide_line_mapping postgres
+5420; 3256 23718 POLICY public guide_line_mapping guide_line_mapping: service role full access postgres
+5300; 0 17551 ROW SECURITY public guide_profiles postgres
+5372; 3256 17580 POLICY public guide_profiles guide_profiles: public read approved postgres
+5451; 3256 24809 POLICY public guide_profiles guide_profiles: service role full access postgres
+5333; 0 23305 ROW SECURITY public guide_slot_conflict_overrides postgres
+5334; 0 23340 ROW SECURITY public guide_trip_reports postgres
+5402; 3256 23368 POLICY public guide_trip_reports guide_trip_reports: service role full access postgres
+5336; 0 23440 ROW SECURITY public homepage_featured_settings postgres
+5406; 3256 23451 POLICY public homepage_featured_settings homepage_featured_settings: authenticated read postgres
+5405; 3256 23450 POLICY public homepage_featured_settings homepage_featured_settings: service_role full postgres
+5358; 0 24644 ROW SECURITY public incidents postgres
+5444; 3256 24655 POLICY public incidents incidents: service role full access postgres
+5309; 0 17772 ROW SECURITY public kpi_settings postgres
+5459; 3256 24817 POLICY public kpi_settings kpi_settings: service role full access postgres
+5310; 0 17787 ROW SECURITY public kpi_settings_history postgres
+5460; 3256 24818 POLICY public kpi_settings_history kpi_settings_history: service role full access postgres
+5343; 0 23639 ROW SECURITY public line_bind_code postgres
+5417; 3256 23654 POLICY public line_bind_code line_bind_code: service_role full postgres
+5344; 0 23655 ROW SECURITY public line_user_mapping postgres
+5418; 3256 23673 POLICY public line_user_mapping line_user_mapping: service role full access postgres
+5345; 0 23676 ROW SECURITY public line_webhook_events postgres
+5419; 3256 23684 POLICY public line_webhook_events line_webhook_events: service role full access postgres
+5370; 0 25792 ROW SECURITY public midao_availability_defaults postgres
+5371; 0 25810 ROW SECURITY public midao_day_overrides postgres
+5369; 0 25759 ROW SECURITY public midao_requests postgres
+5341; 0 23616 ROW SECURITY public notification_event_settings postgres
+5414; 3256 23627 POLICY public notification_event_settings notification_event_settings: authenticated read postgres
+5413; 3256 23626 POLICY public notification_event_settings notification_event_settings: service_role full postgres
+5342; 0 23628 ROW SECURITY public notification_event_settings_audit postgres
+5416; 3256 23638 POLICY public notification_event_settings_audit notification_event_settings_audit: authenticated read postgres
+5415; 3256 23637 POLICY public notification_event_settings_audit notification_event_settings_audit: service_role full postgres
+5308; 0 17747 ROW SECURITY public operations_tracking postgres
+5458; 3256 24816 POLICY public operations_tracking operations_tracking: service role full access postgres
+5367; 0 24966 ROW SECURITY public order_addons postgres
+5480; 3256 24989 POLICY public order_addons order_addons_service_all postgres
+5314; 0 20130 ROW SECURITY public order_events postgres
+5320; 0 20319 ROW SECURITY public order_items postgres
+5466; 3256 24824 POLICY public order_items order_items: service role full access postgres
+5363; 0 24717 ROW SECURITY public order_messages postgres
+5303; 0 17644 ROW SECURITY public orders postgres
+5454; 3256 24812 POLICY public orders orders: service role full access postgres
+5352; 0 24447 ROW SECURITY public package_activities postgres
+5322; 0 22682 ROW SECURITY public payment_booking_mismatch_governance postgres
+5321; 0 20339 ROW SECURITY public payment_events postgres
+5397; 3256 23089 POLICY public payment_events payment_events: service_role only postgres
+5354; 0 24535 ROW SECURITY public payment_logs postgres
+5304; 0 17673 ROW SECURITY public payments postgres
+5396; 3256 23088 POLICY public payments payments: service_role only postgres
+5330; 0 22984 ROW SECURITY public payout_items postgres
+5331; 0 23007 ROW SECURITY public payouts postgres
+5481; 3256 25012 POLICY public user_points_ledger points_ledger_select_own postgres
+5482; 3256 25013 POLICY public user_points_ledger points_ledger_service_all postgres
+5325; 0 22867 ROW SECURITY public promo_codes postgres
+5384; 3256 22902 POLICY public promo_codes promo_codes: service role full access postgres
+5326; 0 22886 ROW SECURITY public promo_redemptions postgres
+5385; 3256 22903 POLICY public promo_redemptions promo_redemptions: service role full access postgres
+5381; 3256 22864 POLICY public activity_qa public_read_approved_qa postgres
+5391; 3256 22953 POLICY public activity_reviews public_read_approved_reviews postgres
+5359; 0 24659 ROW SECURITY public refund_policies postgres
+5434; 3256 24676 POLICY public refund_policies refund_policies_service_role postgres
+5305; 0 17694 ROW SECURITY public refund_requests postgres
+5455; 3256 24813 POLICY public refund_requests refund_requests: service role full access postgres
+5364; 0 24736 ROW SECURITY public reschedule_requests postgres
+5449; 3256 24757 POLICY public reschedule_requests reschedule_requests_service_all postgres
+5335; 0 23369 ROW SECURITY public review_invitations postgres
+5404; 3256 23393 POLICY public review_invitations review_invitations: service role full access postgres
+5393; 3256 22983 POLICY public guide_balances service_role_all postgres
+5394; 3256 23006 POLICY public payout_items service_role_all postgres
+5395; 3256 23024 POLICY public payouts service_role_all postgres
+5392; 3256 22970 POLICY public settlement_rules service_role_all postgres
+5471; 3256 24829 POLICY public activity_availability_daily service_role_all_activity_availability_daily postgres
+5474; 3256 24832 POLICY public admin_security service_role_all_admin_security postgres
+5472; 3256 24830 POLICY public cron_job_controls service_role_all_cron_job_controls postgres
+5473; 3256 24831 POLICY public cron_run_log service_role_all_cron_run_log postgres
+5468; 3256 24826 POLICY public experiences service_role_all_experiences postgres
+5469; 3256 24827 POLICY public order_events service_role_all_order_events postgres
+5448; 3256 24735 POLICY public order_messages service_role_all_order_messages postgres
+5470; 3256 24828 POLICY public payment_booking_mismatch_governance service_role_all_payment_booking_mismatch_governance postgres
+5383; 3256 22866 POLICY public activity_qa service_role_all_qa postgres
+5375; 3256 17812 POLICY public activity_reviews service_role_all_reviews postgres
+5328; 0 22954 ROW SECURITY public settlement_rules postgres
+5361; 0 24690 ROW SECURITY public soft_launch_control_audit postgres
+5423; 3256 24700 POLICY public soft_launch_control_audit soft_launch_control_audit: authenticated read postgres
+5422; 3256 24699 POLICY public soft_launch_control_audit soft_launch_control_audit: service_role full postgres
+5360; 0 24677 ROW SECURITY public soft_launch_controls postgres
+5485; 3256 25091 POLICY public soft_launch_controls soft_launch_controls: anon read postgres
+5484; 3256 25090 POLICY public soft_launch_controls soft_launch_controls: authenticated read postgres
+5483; 3256 25089 POLICY public soft_launch_controls soft_launch_controls: service_role full postgres
+5362; 0 24701 ROW SECURITY public soft_launch_whitelist postgres
+5446; 3256 24714 POLICY public soft_launch_whitelist soft_launch_whitelist: authenticated read postgres
+5445; 3256 24713 POLICY public soft_launch_whitelist soft_launch_whitelist: service_role full postgres
+5338; 0 23573 ROW SECURITY public telegram_bind_code postgres
+5408; 3256 23592 POLICY public telegram_bind_code telegram_bind_code: service role full access postgres
+5337; 0 23557 ROW SECURITY public telegram_chat_mapping postgres
+5407; 3256 23591 POLICY public telegram_chat_mapping telegram_chat_mapping: service role full access postgres
+5339; 0 23583 ROW SECURITY public telegram_webhook_events postgres
+5409; 3256 23593 POLICY public telegram_webhook_events telegram_webhook_events: service role full access postgres
+5350; 0 24408 ROW SECURITY public tour_reminder_log postgres
+5424; 3256 24422 POLICY public tour_reminder_log tour_reminder_log: service role full access postgres
+5340; 0 23594 ROW SECURITY public traveler_profiles postgres
+5410; 3256 23611 POLICY public traveler_profiles traveler_profiles_select_own postgres
+5412; 3256 23614 POLICY public traveler_profiles traveler_profiles_service_all postgres
+5403; 3256 23613 POLICY public traveler_profiles traveler_profiles_update_own postgres
+5411; 3256 23612 POLICY public traveler_profiles traveler_profiles_upsert_own postgres
+5447; 3256 24734 POLICY public order_messages traveler_read_own_order_messages postgres
+5365; 0 24926 ROW SECURITY public user_notifications postgres
+5475; 3256 24943 POLICY public user_notifications user_notifications_select_own postgres
+5477; 3256 24945 POLICY public user_notifications user_notifications_service_all postgres
+5476; 3256 24944 POLICY public user_notifications user_notifications_update_own postgres
+5368; 0 24990 ROW SECURITY public user_points_ledger postgres
+5299; 0 17538 ROW SECURITY public users postgres
+5450; 3256 24808 POLICY public users users: service role full access postgres
+5467; 3256 24825 POLICY public users users:servicerolefullaccess postgres
+5327; 0 22906 ROW SECURITY public wishlists postgres
+5390; 3256 22926 POLICY public wishlists wishlists: service role full access postgres
+5389; 3256 22925 POLICY public wishlists wishlists: user delete own postgres
+5388; 3256 22924 POLICY public wishlists wishlists: user insert own postgres
+5387; 3256 22923 POLICY public wishlists wishlists: user select own postgres
+2722; 826 16494 DEFAULT ACL public DEFAULT PRIVILEGES FOR SEQUENCES postgres
+2723; 826 16495 DEFAULT ACL public DEFAULT PRIVILEGES FOR SEQUENCES supabase_admin
+2721; 826 16493 DEFAULT ACL public DEFAULT PRIVILEGES FOR FUNCTIONS postgres
+2725; 826 16497 DEFAULT ACL public DEFAULT PRIVILEGES FOR FUNCTIONS supabase_admin
+2744; 826 16492 DEFAULT ACL public DEFAULT PRIVILEGES FOR TABLES postgres
+2724; 826 16496 DEFAULT ACL public DEFAULT PRIVILEGES FOR TABLES supabase_admin

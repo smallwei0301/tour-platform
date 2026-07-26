@@ -1,1 +1,3 @@
 apps/web/tests/fixtures/database-baseline/supabase-dump-dry-run-redacted.txt whitespace=-blank-at-eof
+supabase/baselines/v1/baseline.sql -whitespace
+supabase/baselines/v1/managed-overlays.sql -whitespace
