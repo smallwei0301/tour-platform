@@ -942,7 +942,7 @@ export async function publishCaptureTransaction(input = {}) {
         assignments: descriptor.input.ownershipBoundary.assignments,
         tocOwnershipMap: descriptor.input.tocOwnershipMap,
         randomBytes: cryptoRandomBytes,
-        render: adapter.render,
+        renderBatch: adapter.renderBatch,
       });
       prepared = composeCapturePublicationPayloads({
         catalogBuffers: [sources[0].bytes, sources[1].bytes],

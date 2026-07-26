@@ -21,6 +21,42 @@ export const FIXED_RENDER_SCRIPT = `umask 077
 printf '%s' "$MIDAO_USE_LIST_B64" | /usr/bin/base64 --decode > /tmp/use-list.txt
 unset MIDAO_USE_LIST_B64
 exec /usr/bin/pg_restore --exit-on-error --schema-only --use-list=/tmp/use-list.txt --restrict-key="$1" --file=-`;
+export const FIXED_BATCH_RENDER_SCRIPT = `umask 077
+IFS= read -r magic
+[ "$magic" = MIDAO_BATCH_RENDER_INPUT_V1 ]
+IFS= read -r archive_size
+case "$archive_size" in ''|*[!0-9]*) exit 70;; esac
+[ "$archive_size" -ge 1 ] && [ "$archive_size" -le 67108864 ]
+/usr/bin/dd iflag=fullblock bs=1 count="$archive_size" of=/tmp/archive.dump status=none
+IFS= read -r separator
+[ -z "$separator" ]
+IFS= read -r job_count
+case "$job_count" in ''|*[!0-9]*) exit 70;; esac
+[ "$job_count" -ge 1 ] && [ "$job_count" -le 2000 ]
+printf 'MIDAO_BATCH_RENDER_OUTPUT_V1\\n%s\\n' "$job_count"
+i=0
+while [ "$i" -lt "$job_count" ]; do
+  IFS= read -r name
+  case "$name" in baseline|overlay) ;; toc-*) suffix=\${name#toc-}; case "$suffix" in ''|0|0*|*[!0-9]*) exit 70;; esac ;; *) exit 70;; esac
+  IFS= read -r use_size
+  case "$use_size" in ''|*[!0-9]*) exit 70;; esac
+  [ "$use_size" -ge 1 ] && [ "$use_size" -le 65536 ]
+  /usr/bin/dd iflag=fullblock bs=1 count="$use_size" of=/tmp/use-list.txt status=none
+  IFS= read -r separator
+  [ -z "$separator" ]
+  /usr/bin/pg_restore --exit-on-error --schema-only --use-list=/tmp/use-list.txt --restrict-key="$1" --file=/tmp/result.sql /tmp/archive.dump
+  result_size=$(/usr/bin/wc -c < /tmp/result.sql)
+  printf '%s\\n%s\\n' "$name" "$result_size"
+  /usr/bin/cat /tmp/result.sql
+  printf '\\n'
+  /usr/bin/rm -f /tmp/use-list.txt /tmp/result.sql
+  i=$((i + 1))
+done
+if IFS= read -r extra || [ -n "$extra" ]; then exit 70; fi`;
+const BATCH_INPUT_MAGIC = Buffer.from('MIDAO_BATCH_RENDER_INPUT_V1\n');
+const BATCH_OUTPUT_MAGIC = 'MIDAO_BATCH_RENDER_OUTPUT_V1';
+const MAX_BATCH_JOBS = 2000;
+const MAX_BATCH_OUTPUT_BYTES = 64 * 1024 * 1024;
 const FIXTURE_GRAMMAR_SHA256 = '36fe7a60fd33c50d9e3d34cb9fe0bda7b5eef38b347492d8bd1c43638b251a1f';
 const PINNED_PG17_IMAGE = 'postgres@sha256:0027bef26712baaee437a4ea48fdf3d2d2e2bc5f0d81615374408ca320f3c7e3';
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -449,6 +485,109 @@ export function buildPg17RestoreListInvocation({ toolchain, home }) {
   });
 }
 
+function validateBatchJobName(name) {
+  if (typeof name !== 'string' || !/^(?:baseline|overlay|toc-[1-9][0-9]*)$/u.test(name)) {
+    throw new Error('batch render job name invalid');
+  }
+  return name;
+}
+
+export function encodeBatchRenderInput({ archive, jobs }) {
+  if (!Buffer.isBuffer(archive) || archive.length < 1 || archive.length > MAX_ARCHIVE_BYTES
+    || !Array.isArray(jobs) || jobs.length < 1 || jobs.length > MAX_BATCH_JOBS) {
+    throw new Error('batch render input invalid');
+  }
+  const names = new Set();
+  const chunks = [BATCH_INPUT_MAGIC, Buffer.from(`${archive.length}\n`), archive, Buffer.from(`\n${jobs.length}\n`)];
+  let total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  for (const job of jobs) {
+    const name = validateBatchJobName(job?.name);
+    const useList = job?.useList;
+    if (names.has(name) || !Buffer.isBuffer(useList) || useList.length < 1 || useList.length > MAX_USE_LIST_BYTES
+      || useList.includes(0) || useList.includes(13) || useList.at(-1) !== 10) {
+      throw new Error('batch render job invalid');
+    }
+    names.add(name);
+    const header = Buffer.from(`${name}\n${useList.length}\n`);
+    chunks.push(header, useList, Buffer.from('\n'));
+    total += header.length + useList.length + 1;
+    if (total > MAX_ARCHIVE_BYTES + MAX_BATCH_JOBS * (MAX_USE_LIST_BYTES + 64)) throw new Error('batch render input too large');
+  }
+  return Buffer.concat(chunks, total);
+}
+
+function readBatchLine(buffer, state) {
+  const newline = buffer.indexOf(10, state.offset);
+  if (newline < state.offset || newline - state.offset > 128) throw new Error('batch render framing invalid');
+  const line = buffer.subarray(state.offset, newline);
+  if (line.includes(0) || line.includes(13) || [...line].some((byte) => byte > 0x7f)) throw new Error('batch render framing invalid');
+  state.offset = newline + 1;
+  return line.toString('ascii');
+}
+
+export function parseBatchRenderOutput(buffer, expectedNames) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 1 || buffer.length > MAX_BATCH_OUTPUT_BYTES
+    || !Array.isArray(expectedNames) || expectedNames.length < 1 || expectedNames.length > MAX_BATCH_JOBS) {
+    throw new Error('batch render output invalid');
+  }
+  const expected = expectedNames.map(validateBatchJobName);
+  if (new Set(expected).size !== expected.length) throw new Error('batch render expected jobs invalid');
+  const state = { offset: 0 };
+  const outputs = new Map();
+  try {
+    if (readBatchLine(buffer, state) !== BATCH_OUTPUT_MAGIC) throw new Error('batch render output magic invalid');
+    const count = readBatchLine(buffer, state);
+    if (!/^[1-9][0-9]*$/u.test(count) || Number(count) !== expected.length) throw new Error('batch render output count invalid');
+    for (const expectedName of expected) {
+      const name = readBatchLine(buffer, state);
+      if (name !== expectedName || outputs.has(name)) throw new Error('batch render output order invalid');
+      const rawSize = readBatchLine(buffer, state);
+      if (!/^(?:0|[1-9][0-9]*)$/u.test(rawSize)) throw new Error('batch render output size invalid');
+      const size = Number(rawSize);
+      if (!Number.isSafeInteger(size) || size < 1 || size > MAX_BATCH_OUTPUT_BYTES || state.offset + size >= buffer.length) {
+        throw new Error('batch render output size invalid');
+      }
+      const bytes = Buffer.from(buffer.subarray(state.offset, state.offset + size));
+      state.offset += size;
+      if (buffer[state.offset] !== 10) {
+        bytes.fill(0);
+        throw new Error('batch render output separator invalid');
+      }
+      state.offset += 1;
+      outputs.set(name, bytes);
+    }
+    if (state.offset !== buffer.length) throw new Error('batch render output trailing bytes');
+    return outputs;
+  } catch (error) {
+    for (const bytes of outputs.values()) bytes.fill(0);
+    outputs.clear();
+    if (error instanceof Error && /batch render/u.test(error.message)) throw error;
+    throw new Error('batch render output invalid', { cause: error });
+  }
+}
+
+export function buildPg17BatchRenderInvocation({ toolchain, home, restrictKey }) {
+  if (!TRUSTED_TOOLCHAINS.has(toolchain)) throw new Error('trusted toolchain required');
+  assertAbsoluteOwnedHome(home);
+  if (typeof restrictKey !== 'string' || !/^[0-9a-f]{64}$/u.test(restrictKey) || /^0+$/u.test(restrictKey)) {
+    throw new Error('restrict key invalid');
+  }
+  const env = Object.freeze({ HOME: home, LANG: 'C', LC_ALL: 'C' });
+  const containerName = newContainerName();
+  return Object.freeze({
+    executable: toolchain.dockerPath,
+    containerName,
+    args: Object.freeze([
+      'run', '--pull=never', '--rm', `--name=${containerName}`, '-i', '--network=none', '--read-only', '--security-opt=no-new-privileges', '--cap-drop=ALL',
+      '--tmpfs=/tmp:rw,noexec,nosuid,nodev,size=64m,mode=0700',
+      '--env=HOME=/tmp', '--env=LANG=C', '--env=LC_ALL=C',
+      toolchain.image, '/bin/sh', '-ceu', FIXED_BATCH_RENDER_SCRIPT, 'sh', restrictKey,
+    ]),
+    env,
+    stdin: 'pipe', stdout: 'pipe', stderr: 'pipe',
+  });
+}
+
 export function buildPg17RenderInvocation({ toolchain, useList, home, restrictKey }) {
   if (!TRUSTED_TOOLCHAINS.has(toolchain)) throw new Error('trusted toolchain required');
   assertAbsoluteOwnedHome(home);
@@ -753,6 +892,33 @@ export async function createLockedRenderAdapter({ toolchain, archivePaths, home,
     }
   }
 
+  async function renderBatch({ archiveIndex, jobs, restrictKey }) {
+    if (closed || ![0, 1].includes(archiveIndex) || !Array.isArray(jobs)) throw new Error('locked batch render request invalid');
+    const entry = archives[archiveIndex];
+    let archiveBytes;
+    let input;
+    let output;
+    let parsed;
+    try {
+      archiveBytes = await readPinnedFile(entry, `archive ${archiveIndex}`);
+      input = encodeBatchRenderInput({ archive: archiveBytes, jobs });
+      const invocation = buildPg17BatchRenderInvocation({ toolchain, home, restrictKey });
+      output = await runSuccessfulChild(runChild, invocation,
+        { stdinBuffer: input, maxBytes: MAX_BATCH_OUTPUT_BYTES, timeoutMs: 480_000 },
+        `archive ${archiveIndex} batch render`);
+      parsed = parseBatchRenderOutput(output, jobs.map((job) => job.name));
+      await verifyPinnedFile(entry, `archive ${archiveIndex}`);
+      return parsed;
+    } catch (error) {
+      if (parsed) for (const bytes of parsed.values()) bytes.fill(0);
+      throw error;
+    } finally {
+      archiveBytes?.fill?.(0);
+      input?.fill?.(0);
+      output?.fill?.(0);
+    }
+  }
+
   async function close() {
     if (closed) return;
     closed = true;
@@ -760,7 +926,7 @@ export async function createLockedRenderAdapter({ toolchain, archivePaths, home,
     for (const entry of archives) await entry.handle.close().catch((error) => errors.push(error));
     if (errors.length) throw new AggregateError(errors, 'render adapter close failed');
   }
-  return Object.freeze({ render, close });
+  return Object.freeze({ render, renderBatch, close });
 }
 
 export function parseCaptureCli(args) {

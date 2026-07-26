@@ -155,9 +155,9 @@ function assertPairEqual(left, right, label) {
   }
 }
 
-export async function renderArchivePair({ tocBuffers, assignments, tocOwnershipMap, randomBytes, render }) {
+export async function renderArchivePair({ tocBuffers, assignments, tocOwnershipMap, randomBytes, render, renderBatch }) {
   if (!Array.isArray(tocBuffers) || tocBuffers.length !== 2 || tocBuffers.some((entry) => !Buffer.isBuffer(entry))
-    || !Array.isArray(assignments) || typeof render !== 'function') {
+    || !Array.isArray(assignments) || (typeof render !== 'function' && typeof renderBatch !== 'function')) {
     throw new Error('A/B render input invalid');
   }
   const owned = new Set();
@@ -171,6 +171,86 @@ export async function renderArchivePair({ tocBuffers, assignments, tocOwnershipM
   const selectedIds = Object.keys(destinations).map(Number).sort((left, right) => left - right);
   const allUseLists = tocBuffers.map((buffer) => track(buildSelectedUseList(buffer, selectedIds)));
   assertPairEqual(allUseLists[0], allUseLists[1], 'selected use-list');
+
+  if (typeof renderBatch === 'function') {
+    const jobsByArchive = [[], []];
+    const destinationJobNames = new Map();
+    for (const destination of ['baseline.sql', 'managed-overlays.sql']) {
+      const ids = selectedIds.filter((tocId) => destinations[tocId] === destination);
+      if (ids.length === 0) continue;
+      const useLists = tocBuffers.map((buffer) => track(buildSelectedUseList(buffer, ids)));
+      assertPairEqual(useLists[0], useLists[1], `${destination} use-list`);
+      const name = destination === 'baseline.sql' ? 'baseline' : 'overlay';
+      destinationJobNames.set(destination, name);
+      for (const archiveIndex of [0, 1]) jobsByArchive[archiveIndex].push({ name, useList: useLists[archiveIndex] });
+    }
+    for (const tocId of selectedIds) {
+      const useLists = tocBuffers.map((buffer) => track(buildSelectedUseList(buffer, [tocId])));
+      assertPairEqual(useLists[0], useLists[1], `TOC ${tocId} use-list`);
+      for (const archiveIndex of [0, 1]) jobsByArchive[archiveIndex].push({ name: `toc-${tocId}`, useList: useLists[archiveIndex] });
+    }
+    const settled = await Promise.allSettled([0, 1].map((archiveIndex) => renderBatch({
+      archiveIndex, jobs: jobsByArchive[archiveIndex], restrictKey,
+    })));
+    const batchMaps = settled.filter((entry) => entry.status === 'fulfilled').map((entry) => entry.value);
+    const rejected = settled.find((entry) => entry.status === 'rejected');
+    if (rejected) {
+      for (const map of batchMaps) if (map instanceof Map) for (const bytes of map.values()) bytes?.fill?.(0);
+      throw rejected.reason;
+    }
+    if (batchMaps.some((map) => !(map instanceof Map))) {
+      for (const map of batchMaps) if (map instanceof Map) for (const bytes of map.values()) bytes?.fill?.(0);
+      throw new Error('batch render child output invalid');
+    }
+    const batchValues = batchMaps.flatMap((map) => [...map.values()]);
+    if (batchValues.some((bytes) => !Buffer.isBuffer(bytes))) {
+      for (const bytes of batchValues) bytes?.fill?.(0);
+      throw new Error('batch render child output invalid');
+    }
+    for (const bytes of batchValues) track(bytes);
+    function takeBatch(map, name) {
+      const framed = map.get(name);
+      if (!Buffer.isBuffer(framed)) throw new Error(`batch render result missing: ${name}`);
+      map.delete(name);
+      try { return track(stripExactRestrictEnvelope(framed, restrictKey)); }
+      finally { framed.fill(0); }
+    }
+    const rendered = {};
+    for (const destination of ['baseline.sql', 'managed-overlays.sql']) {
+      const name = destinationJobNames.get(destination);
+      if (!name) {
+        rendered[destination] = track(Buffer.alloc(0));
+        continue;
+      }
+      const pair = [takeBatch(batchMaps[0], name), takeBatch(batchMaps[1], name)];
+      assertPairEqual(pair[0], pair[1], destination);
+      rendered[destination] = pair[0];
+      pair[1].fill(0);
+    }
+    const entryDigests = new Map();
+    for (const tocId of selectedIds) {
+      const name = `toc-${tocId}`;
+      const pair = [takeBatch(batchMaps[0], name), takeBatch(batchMaps[1], name)];
+      assertPairEqual(pair[0], pair[1], `TOC ${tocId}`);
+      entryDigests.set(tocId, { captureASha256: sha256(pair[0]), captureBSha256: sha256(pair[1]) });
+      pair[0].fill(0);
+      pair[1].fill(0);
+    }
+    if (batchMaps.some((map) => map.size !== 0)) throw new Error('batch render result has extra jobs');
+    const dependencyClosure = computeDependencyClosure({ assignments, tocOwnershipMap, destinations })
+      .map((entry) => Object.freeze({ ...entry, ...entryDigests.get(entry.tocId) }));
+    const result = Object.freeze({
+      baselineSql: rendered['baseline.sql'],
+      managedOverlaysSql: rendered['managed-overlays.sql'],
+      useList: allUseLists[0],
+      tocNormalized: normalized[0],
+      destinations: Object.freeze(destinations),
+      dependencyClosure: Object.freeze(dependencyClosure),
+    });
+    const retained = new Set([result.baselineSql, result.managedOverlaysSql, result.useList, result.tocNormalized]);
+    for (const buffer of owned) if (!retained.has(buffer)) buffer.fill(0);
+    return result;
+  }
 
   async function invoke(archiveIndex, destination, useList) {
     const useListCopy = Buffer.from(useList);

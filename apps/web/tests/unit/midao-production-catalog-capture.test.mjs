@@ -612,6 +612,52 @@ test('restrict-key renderer uses only the locked PG17 container and preserves ar
   ]) assert.throws(() => stripExactRestrictEnvelope(invalid, key), /restrict|framing/iu);
 });
 
+test('batch render protocol is length-prefixed, exact, bounded and uses one locked container', async () => {
+  const {
+    buildPg17BatchRenderInvocation,
+    encodeBatchRenderInput,
+    parseBatchRenderOutput,
+    FIXED_BATCH_RENDER_SCRIPT,
+    loadCaptureToolchain,
+  } = await subject();
+  const loaded = await loadCaptureToolchain(toolchainPath);
+  const archive = Buffer.from([0x50, 0x47, 0x44, 0x4d, 0x00, 0xff, 0x0a]);
+  const jobs = [
+    { name: 'baseline', useList: Buffer.from('11; synthetic\n') },
+    { name: 'toc-14', useList: Buffer.from('14; synthetic\n') },
+  ];
+  const input = encodeBatchRenderInput({ archive, jobs });
+  assert.equal(input.subarray(0, 28).toString('ascii'), 'MIDAO_BATCH_RENDER_INPUT_V1\n');
+  const key = 'ab'.repeat(32);
+  const invocation = buildPg17BatchRenderInvocation({ toolchain: loaded.trusted, home: '/tmp/empty-capture-home', restrictKey: key });
+  assert.equal(invocation.executable, '/usr/bin/docker');
+  assert.equal(invocation.args.filter((value) => value === '--pull=never').length, 1);
+  for (const flag of ['--network=none', '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges']) {
+    assert.ok(invocation.args.includes(flag));
+  }
+  assert.equal(invocation.args.some((value) => value === '--mount' || value.startsWith('type=bind')), false);
+  assert.equal(invocation.stdin, 'pipe');
+  assert.deepEqual(Object.keys(invocation.env).sort(), ['HOME', 'LANG', 'LC_ALL']);
+  assert.match(FIXED_BATCH_RENDER_SCRIPT, /if IFS= read -r extra \|\| \[ -n "\$extra" \]; then exit 70; fi/u);
+
+  const framedA = Buffer.from(`--\n-- PostgreSQL database dump\n--\n\n\\restrict ${key}\nSELECT 1;\n\\unrestrict ${key}\n\n`);
+  const framedB = Buffer.concat([Buffer.from(`--\n-- PostgreSQL database dump\n--\n\n\\restrict ${key}\n`), Buffer.from([0xff, 0x00]), Buffer.from(`\n\\unrestrict ${key}\n\n`)]);
+  const output = Buffer.concat([
+    Buffer.from('MIDAO_BATCH_RENDER_OUTPUT_V1\n2\nbaseline\n'), Buffer.from(`${framedA.length}\n`), framedA, Buffer.from('\n'),
+    Buffer.from('toc-14\n'), Buffer.from(`${framedB.length}\n`), framedB, Buffer.from('\n'),
+  ]);
+  const parsed = parseBatchRenderOutput(output, ['baseline', 'toc-14']);
+  assert.deepEqual(parsed.get('baseline'), framedA);
+  assert.deepEqual(parsed.get('toc-14'), framedB);
+  for (const hostile of [
+    Buffer.concat([output, Buffer.from('x')]),
+    Buffer.from(output.toString('latin1').replace('toc-14\n', 'baseline\n'), 'latin1'),
+    Buffer.from(output.toString('latin1').replace('OUTPUT_V1\n2\n', 'OUTPUT_V1\n3\n'), 'latin1'),
+    Buffer.from(output.toString('latin1').replace(`${framedA.length}\n`, '999999999\n'), 'latin1'),
+  ]) assert.throws(() => parseBatchRenderOutput(hostile, ['baseline', 'toc-14']), /batch render/iu);
+  assert.throws(() => encodeBatchRenderInput({ archive, jobs: [...jobs, jobs[0]] }), /batch render/iu);
+});
+
 test('A/B render core compares normalized TOC, destination use-lists, combined SQL and per-entry digests', async () => {
   const { buildSelectedUseList, renderArchivePair } = await import(`${pathToFileURL(rendererPath).href}?t=${Date.now()}`);
   const toc = await readFile(tocFixturePath);
@@ -675,6 +721,28 @@ test('A/B render core compares normalized TOC, destination use-lists, combined S
     assert.equal(entry.captureASha256, entry.captureBSha256);
   }
 
+  const batchCalls = [];
+  const batchResult = await renderArchivePair({
+    ...input,
+    randomBytes: () => Buffer.alloc(32, 0xce),
+    render: async () => { throw new Error('single render path must not run'); },
+    renderBatch: async ({ archiveIndex, jobs, restrictKey }) => {
+      batchCalls.push({ archiveIndex, names: jobs.map((job) => job.name) });
+      return new Map(jobs.map((job) => {
+        const payload = Buffer.from(`SQL:${job.name}\n${job.useList.toString('utf8')}`);
+        return [job.name, Buffer.concat([
+          PG17_DUMP_HEADER, Buffer.from(`\\restrict ${restrictKey}\n`), payload,
+          Buffer.from(`\\unrestrict ${restrictKey}\n\n`),
+        ])];
+      }));
+    },
+  });
+  assert.equal(batchCalls.length, 2, 'exactly one batch child per archive');
+  assert.deepEqual(batchCalls.map((call) => call.archiveIndex), [0, 1]);
+  assert.equal(batchCalls.every((call) => call.names.length === 7), true, 'two destination jobs plus five TOC jobs');
+  assert.equal(batchResult.dependencyClosure.length, 5);
+  for (const bytes of [batchResult.baselineSql, batchResult.managedOverlaysSql, batchResult.useList, batchResult.tocNormalized]) bytes.fill(0);
+
   await assert.rejects(
     renderArchivePair({
       ...input,
@@ -710,6 +778,19 @@ test('locked render adapter positionally reads FD-pinned archives into stdin and
       runChild: async (invocation, options) => {
         calls.push(invocation);
         assert.equal(invocation.args.some((value) => value === '--mount' || value.startsWith('type=bind')), false);
+        const isBatch = invocation.args.some((value) => typeof value === 'string' && value.includes('MIDAO_BATCH_RENDER_INPUT_V1'));
+        if (isBatch) {
+          assert.equal(options.stdinBuffer.subarray(0, 28).toString('ascii'), 'MIDAO_BATCH_RENDER_INPUT_V1\n');
+          assert.deepEqual(Object.keys(invocation.env).sort(), ['HOME', 'LANG', 'LC_ALL']);
+          assert.equal(options.timeoutMs, 480_000);
+          const framed = Buffer.from(`\\restrict ${key}\nSELECT 2;\n\\unrestrict ${key}\n`);
+          return {
+            code: 0, signal: null, stderr: Buffer.alloc(0),
+            stdout: Buffer.concat([
+              Buffer.from(`MIDAO_BATCH_RENDER_OUTPUT_V1\n1\nbaseline\n${framed.length}\n`), framed, Buffer.from('\n'),
+            ]),
+          };
+        }
         assert.equal(options.stdinBuffer.toString('utf8'), 'archive-0\n');
         assert.equal(Buffer.from(invocation.env.MIDAO_USE_LIST_B64, 'base64').toString('utf8'), '11; synthetic\n');
         return {
@@ -724,6 +805,12 @@ test('locked render adapter positionally reads FD-pinned archives into stdin and
     assert.match(framed.toString('utf8'), /SELECT 1;/u);
     framed.fill(0);
     assert.equal(calls.length, 1);
+    const batch = await adapter.renderBatch({
+      archiveIndex: 0, jobs: [{ name: 'baseline', useList: Buffer.from('11; synthetic\n') }], restrictKey: key,
+    });
+    assert.match(batch.get('baseline').toString('utf8'), /SELECT 2;/u);
+    for (const bytes of batch.values()) bytes.fill(0);
+    assert.equal(calls.length, 2);
 
     await rename(archivePaths[0], `${archivePaths[0]}.original`);
     await writeFile(archivePaths[0], 'foreign replacement\n', { mode: 0o600, flag: 'wx' });
