@@ -124,6 +124,42 @@ export function validateCaptureLedger(ledger) {
   return ledger;
 }
 
+export const EXPECTED_TERMINAL_PAYLOAD_PATHS = Object.freeze([
+  'catalog.expected-terminal.normalized.json', 'catalog-expected-terminal.sha256',
+]);
+const EXPECTED_TERMINAL_DIGEST_KEYS = Object.freeze([...EXPECTED_TERMINAL_PAYLOAD_PATHS].sort());
+const EXPECTED_TERMINAL_MANIFEST_NAME = 'manifest.json';
+
+export function validateExpectedTerminalManifest(manifest) {
+  const keys = ['captureManifestSha256', 'captureTransactionId', 'historyVersions', 'kind', 'payloadDigests', 'postCutoffMigrations', 'schemaVersion', 'transactionId'];
+  exactKeys(manifest, keys, keys, 'expected-terminal manifest');
+  if (manifest.schemaVersion !== 1 || manifest.kind !== 'midao-expected-terminal-manifest') throw new Error('expected-terminal manifest identity invalid');
+  for (const key of ['transactionId', 'captureTransactionId', 'captureManifestSha256']) validateDigest(manifest[key], `expected-terminal ${key}`);
+  validatePayloadDigests(manifest.payloadDigests, EXPECTED_TERMINAL_DIGEST_KEYS);
+  if (!Array.isArray(manifest.historyVersions) || manifest.historyVersions.length !== 7
+    || manifest.historyVersions.some((version) => typeof version !== 'string' || !/^\d{14}$/u.test(version))) {
+    throw new Error('expected-terminal history invalid');
+  }
+  if (!Array.isArray(manifest.postCutoffMigrations) || manifest.postCutoffMigrations.length !== 6) throw new Error('expected-terminal migrations invalid');
+  for (const migration of manifest.postCutoffMigrations) {
+    exactKeys(migration, ['filename', 'sha256'], ['filename', 'sha256'], 'expected-terminal migration');
+    if (typeof migration.filename !== 'string' || !/^\d{14}_[a-z0-9_]+\.sql$/u.test(migration.filename)) throw new Error('expected-terminal migration filename invalid');
+    validateDigest(migration.sha256, 'expected-terminal migration');
+  }
+  rejectForbiddenMetadata(manifest);
+  return manifest;
+}
+
+export function validateExpectedTerminalLedger(ledger) {
+  const keys = ['captureManifestSha256', 'captureTransactionId', 'kind', 'manifestSha256', 'payloadDigests', 'schemaVersion', 'transactionId'];
+  exactKeys(ledger, keys, keys, 'expected-terminal ledger');
+  if (ledger.schemaVersion !== 1 || ledger.kind !== 'midao-expected-terminal-ledger') throw new Error('expected-terminal ledger identity invalid');
+  for (const key of ['transactionId', 'captureTransactionId', 'captureManifestSha256', 'manifestSha256']) validateDigest(ledger[key], `expected-terminal ledger ${key}`);
+  validatePayloadDigests(ledger.payloadDigests, EXPECTED_TERMINAL_DIGEST_KEYS);
+  rejectForbiddenMetadata(ledger);
+  return ledger;
+}
+
 function semanticJson(payloads, name, maxBytes = MAX_METADATA_BYTES, indent = null) {
   const bytes = payloads.get(name);
   if (!Buffer.isBuffer(bytes)) throw new Error(`semantic payload missing: ${name}`);
@@ -382,6 +418,97 @@ export async function verifyCaptureTransaction({ baselineDir, ledgerPath, journa
       for (const bytes of payloadMap.values()) bytes.fill(0);
       payloadMap.clear();
       throw new AggregateError(primaryError ? [primaryError, ...closeErrors] : closeErrors, 'capture verification close failed');
+    }
+  }
+}
+
+export async function verifyExpectedTerminalTransaction({
+  baselineDir, ledgerPath, captureLedgerPath, journalPath, onPayloadOpen = () => {},
+}) {
+  if (![baselineDir, ledgerPath, captureLedgerPath, journalPath].every((value) => typeof value === 'string' && path.isAbsolute(value) && !value.includes('\0'))
+    || typeof onPayloadOpen !== 'function') throw new Error('expected-terminal verifier paths invalid');
+  await assertAbsent(journalPath, 'expected-terminal publication journal');
+  const baselinePath = path.resolve(baselineDir);
+  const ledgerFilePath = path.resolve(ledgerPath);
+  const captureLedgerFilePath = path.resolve(captureLedgerPath);
+  const ledgerParentPath = path.dirname(ledgerFilePath);
+  const captureLedgerParentPath = path.dirname(captureLedgerFilePath);
+  let baselineHandle; let ledgerParentHandle; let captureLedgerParentHandle;
+  let ledgerPinned; let manifestPinned; let captureLedgerPinned;
+  let ledgerBytes; let manifestBytes; let captureLedgerBytes;
+  const payloadPinned = []; const payloadMap = new Map();
+  let primaryError;
+  try {
+    baselineHandle = await open(baselinePath, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+    ledgerParentHandle = await open(ledgerParentPath, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+    captureLedgerParentHandle = await open(captureLedgerParentPath, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+    const baselineStat = await baselineHandle.stat({ bigint: true });
+    const ledgerParentStat = await ledgerParentHandle.stat({ bigint: true });
+    const captureLedgerParentStat = await captureLedgerParentHandle.stat({ bigint: true });
+    if (![baselineStat, ledgerParentStat, captureLedgerParentStat].every((stat) => stat.isDirectory())) throw new Error('expected-terminal transaction parent is not a directory');
+    ledgerPinned = await openPinnedFile(ledgerParentHandle, ledgerParentPath, path.basename(ledgerFilePath), 'expected-terminal ledger');
+    manifestPinned = await openPinnedFile(baselineHandle, baselinePath, EXPECTED_TERMINAL_MANIFEST_NAME, 'expected-terminal manifest');
+    captureLedgerPinned = await openPinnedFile(captureLedgerParentHandle, captureLedgerParentPath, path.basename(captureLedgerFilePath), 'capture ledger reference');
+    if ([ledgerPinned, manifestPinned, captureLedgerPinned].some((pinned) => pinned.fdStat.size > BigInt(MAX_METADATA_BYTES))) throw new Error('expected-terminal metadata size limit exceeded');
+    ledgerBytes = await ledgerPinned.handle.readFile(); manifestBytes = await manifestPinned.handle.readFile(); captureLedgerBytes = await captureLedgerPinned.handle.readFile();
+    const ledger = validateExpectedTerminalLedger(parseCanonicalJson(ledgerBytes, 'expected-terminal ledger'));
+    if (sha256(manifestBytes) !== ledger.manifestSha256) throw new Error('expected-terminal manifest digest mismatch');
+    const manifest = validateExpectedTerminalManifest(parseCanonicalJson(manifestBytes, 'expected-terminal manifest'));
+    const captureLedger = validateCaptureLedger(parseCanonicalJson(captureLedgerBytes, 'capture ledger reference'));
+    if (manifest.transactionId !== ledger.transactionId || JSON.stringify(manifest.payloadDigests) !== JSON.stringify(ledger.payloadDigests)
+      || manifest.captureTransactionId !== ledger.captureTransactionId || manifest.captureManifestSha256 !== ledger.captureManifestSha256
+      || ledger.captureTransactionId !== captureLedger.transactionId || ledger.captureManifestSha256 !== captureLedger.captureManifestSha256) {
+      throw new Error('expected-terminal transaction metadata contract mismatch');
+    }
+    let totalBytes = 0;
+    for (const relative of EXPECTED_TERMINAL_PAYLOAD_PATHS) {
+      onPayloadOpen(relative);
+      const pinned = await openPinnedFile(baselineHandle, baselinePath, relative, `expected-terminal payload ${relative}`);
+      payloadPinned.push(pinned);
+      if (pinned.fdStat.size > BigInt(MAX_PAYLOAD_BYTES)) throw new Error(`expected-terminal payload size limit exceeded: ${relative}`);
+      const bytes = await pinned.handle.readFile(); totalBytes += bytes.length;
+      if (totalBytes > MAX_SNAPSHOT_BYTES) { bytes.fill(0); throw new Error('expected-terminal snapshot size limit exceeded'); }
+      if (sha256(bytes) !== manifest.payloadDigests[relative]) { bytes.fill(0); throw new Error(`expected-terminal payload digest mismatch: ${relative}`); }
+      payloadMap.set(relative, bytes);
+    }
+    const { validateExpectedTerminalPublicationSemantics } = await import('./build-expected-terminal.mjs');
+    validateExpectedTerminalPublicationSemantics({ payloads: payloadMap, manifestBytes, ledgerBytes }, captureLedgerBytes);
+    const [baselineAfter, ledgerParentAfter, captureLedgerParentAfter, ledgerAfter, manifestAfter, captureLedgerAfter, ...payloadAfter] = await Promise.all([
+      lstat(baselinePath, { bigint: true }), lstat(ledgerParentPath, { bigint: true }), lstat(captureLedgerParentPath, { bigint: true }),
+      lstat(ledgerFilePath, { bigint: true }), lstat(path.join(baselinePath, EXPECTED_TERMINAL_MANIFEST_NAME), { bigint: true }), lstat(captureLedgerFilePath, { bigint: true }),
+      ...payloadPinned.map((pinned) => lstat(pinned.path, { bigint: true })),
+    ]);
+    if (!sameIdentity(baselineStat, baselineAfter) || !sameIdentity(ledgerParentStat, ledgerParentAfter)
+      || !sameIdentity(captureLedgerParentStat, captureLedgerParentAfter) || !sameIdentity(ledgerPinned.fdStat, ledgerAfter)
+      || !sameIdentity(manifestPinned.fdStat, manifestAfter) || !sameIdentity(captureLedgerPinned.fdStat, captureLedgerAfter)
+      || payloadPinned.some((pinned, index) => !sameIdentity(pinned.fdStat, payloadAfter[index]))) throw new Error('expected-terminal transaction path identity changed during verification');
+    await assertAbsent(journalPath, 'expected-terminal publication journal');
+    let disposed = false;
+    return Object.freeze({
+      transactionId: manifest.transactionId,
+      manifest: Object.freeze(structuredClone(manifest)), ledger: Object.freeze(structuredClone(ledger)), payloads: readOnlyPayloadView(payloadMap),
+      dispose() {
+        if (disposed) return; disposed = true;
+        for (const bytes of payloadMap.values()) bytes.fill(0);
+        payloadMap.clear();
+      },
+    });
+  } catch (error) {
+    primaryError = error;
+    for (const bytes of payloadMap.values()) bytes.fill(0);
+    payloadMap.clear();
+    throw error;
+  } finally {
+    for (const bytes of [ledgerBytes, manifestBytes, captureLedgerBytes]) bytes?.fill(0);
+    const closeResults = await Promise.allSettled([
+      ...payloadPinned.map((pinned) => pinned.handle.close()), manifestPinned?.handle.close(), ledgerPinned?.handle.close(), captureLedgerPinned?.handle.close(),
+      captureLedgerParentHandle?.close(), ledgerParentHandle?.close(), baselineHandle?.close(),
+    ].filter(Boolean));
+    const closeErrors = closeResults.filter((entry) => entry.status === 'rejected').map((entry) => entry.reason);
+    if (closeErrors.length) {
+      for (const bytes of payloadMap.values()) bytes.fill(0);
+      payloadMap.clear();
+      throw new AggregateError(primaryError ? [primaryError, ...closeErrors] : closeErrors, 'expected-terminal verification close failed');
     }
   }
 }
