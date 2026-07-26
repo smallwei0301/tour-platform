@@ -1,0 +1,250 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import test from 'node:test';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, '../../../..');
+const subjectPath = path.join(root, 'scripts/database-baseline/build-expected-terminal.mjs');
+const baselineDir = path.join(root, 'supabase/baselines/v1');
+const captureLedgerPath = path.join(root, 'docs/operations/baseline-ledger.json');
+const terminalName = 'catalog.expected-terminal.normalized.json';
+const digestName = 'catalog-expected-terminal.sha256';
+const manifestName = 'manifest.json';
+const ledgerName = 'expected-terminal-ledger.json';
+const exactMigrations = [
+  ['20260723000000_midao_backend_mode.sql', 'fe108aa5ca68f135f49e22cbb5074941ce8ff5464a6d91a56f9f4cbdae437b17'],
+  ['20260723001000_midao_notification_outbox.sql', '6babce9053d6a3f7658276c9cfbbfc5ec0f10ffaeadf4fa07ed904b5f5c66569'],
+  ['20260723002000_midao_idempotency_records.sql', '051719cce046ce438668b9424a707b709f5bc1c254a537a525f07261b1a8d7db'],
+  ['20260723002500_midao_audit_events.sql', '62fa29d6d4d8fe119867ef05e69eba465f52b5cfa2ca96bddd83e93da9b9bcca'],
+  ['20260723003000_midao_atomic_backend_mode_switch.sql', 'c59afc5ee72da4d76ae77fb984db4b34d8f160198544ba233d0fb9f2190c90e5'],
+  ['20260723003500_midao_service_role_acl_hardening.sql', 'f16fd369b9ce0b405c38ec2df5a46676cc84ba2de087b3b010cc00e4415353e5'],
+];
+const historyVersions = ['00000000000001', ...exactMigrations.map(([name]) => name.slice(0, 14))];
+const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
+
+async function subject() {
+  assert.equal(existsSync(subjectPath), true, 'expected-terminal builder missing');
+  return import(`${pathToFileURL(subjectPath).href}?t=${Date.now()}`);
+}
+
+test('builder CLI accepts only the exact Task10 flag sequence and two runs', async () => {
+  const api = await subject();
+  const argv = [
+    '--runs', '2', '--baseline', 'supabase/baselines/v1', '--publish-dir', 'supabase/baselines/v1',
+    '--capture-ledger', 'docs/operations/baseline-ledger.json', '--ledger', 'docs/operations/expected-terminal-ledger.json',
+  ];
+  assert.deepEqual(api.parseBuilderArgs(argv, root), {
+    runs: 2,
+    baselineDir,
+    publishDir: baselineDir,
+    captureLedgerPath,
+    ledgerPath: path.join(root, 'docs/operations/expected-terminal-ledger.json'),
+  });
+  for (const hostile of [
+    [...argv, '--extra'],
+    argv.with(1, '1'),
+    ['--baseline', ...argv],
+    argv.with(3, '../foreign'),
+    argv.with(9, 'docs/operations/baseline-ledger.json'),
+  ]) assert.throws(() => api.parseBuilderArgs(hostile, root), /argument|CLI|path/iu);
+});
+
+test('local connection parser accepts only exact loopback PostgreSQL URLs without ambient or query overrides', async () => {
+  const api = await subject();
+  assert.deepEqual(api.parseLocalConnectionEnv('postgresql://postgres:local-only@127.0.0.1:54322/postgres'), {
+    PGHOST: '127.0.0.1', PGPORT: '54322', PGDATABASE: 'postgres', PGUSER: 'postgres', PGPASSWORD: 'local-only', PGSSLMODE: 'disable',
+  });
+  for (const url of [
+    'postgresql://postgres:x@example.com:54322/postgres',
+    'postgresql://postgres:x@localhost:54322/postgres',
+    'postgresql://postgres:x@127.0.0.1:54322/postgres?sslmode=require',
+    'http://postgres:x@127.0.0.1:54322/postgres',
+    'postgresql://postgres:x@127.0.0.1:54322/other',
+    'postgresql://postgres:x@127.0.0.1/postgres',
+  ]) assert.throws(() => api.parseLocalConnectionEnv(url), /local|loopback|connection/iu);
+  assert.throws(() => api.assertNoAmbientDatabaseEnv({ DATABASE_URL: 'postgresql://remote' }), /ambient/iu);
+  assert.doesNotThrow(() => api.assertNoAmbientDatabaseEnv({ PATH: '/bin' }));
+});
+
+test('local extract path normalizes PG17 catalog and reads exact migration history', async () => {
+  const api = await subject();
+  const raw = JSON.parse(await readFile(path.join(root, 'apps/web/tests/fixtures/database-baseline/catalog-unstable-a.json'), 'utf8'));
+  const calls = [];
+  class FakeClient {
+    async connect() { calls.push('connect'); }
+    async query(sql) {
+      calls.push(sql);
+      return { rows: historyVersions.map((version) => ({ version })) };
+    }
+    async end() { calls.push('end'); }
+  }
+  const result = await api.__internal.extractLocalTerminalAndHistory({
+    databaseUrl: 'postgresql://postgres:local-only@127.0.0.1:54322/postgres',
+    extractCatalogAdapter: async ({ connectionEnv }) => {
+      assert.equal(connectionEnv.PGHOST, '127.0.0.1');
+      return structuredClone(raw);
+    },
+    ClientClass: FakeClient,
+  });
+  try {
+    const normalized = JSON.parse(result.terminalBytes);
+    assert.equal(normalized.serverMajorVersion, 17);
+    assert.equal(normalized.normalizerVersion, 1);
+    assert.deepEqual(result.historyVersions, historyVersions);
+    assert.deepEqual(calls, [
+      'connect',
+      'SELECT version FROM supabase_migrations.schema_migrations ORDER BY version',
+      'end',
+    ]);
+  } finally { result.terminalBytes.fill(0); }
+});
+
+test('builder locks exact terminal transaction paths, history and source migrations', async () => {
+  const api = await subject();
+  assert.deepEqual(api.EXPECTED_TERMINAL_PAYLOAD_PATHS, [terminalName, digestName]);
+  assert.deepEqual(api.EXPECTED_HISTORY_VERSIONS, historyVersions);
+  assert.deepEqual(api.POST_CUTOFF_MIGRATIONS.map(({ filename, sha256: digest }) => [filename, digest]), exactMigrations);
+  assert.equal(api.EXPECTED_TERMINAL_MANIFEST_NAME, manifestName);
+  assert.equal(api.EXPECTED_TERMINAL_LEDGER_NAME, ledgerName);
+});
+
+test('terminal artifact requires canonical normalized JSON framing', async () => {
+  const api = await subject();
+  const terminal = await readFile(path.join(baselineDir, 'catalog.cutoff.normalized.json'));
+  const captureManifestBytes = await readFile(path.join(baselineDir, 'capture-manifest.json'));
+  const captureLedgerBytes = await readFile(captureLedgerPath);
+  try {
+    for (const hostile of [Buffer.concat([terminal, Buffer.from('\n')]), Buffer.from(JSON.stringify(JSON.parse(terminal)))]) {
+      assert.throws(() => api.prepareExpectedTerminalArtifacts({
+        terminalRuns: [hostile, Buffer.from(hostile)], captureManifestBytes, captureLedgerBytes,
+      }), /canonical|framing/iu);
+      hostile.fill(0);
+    }
+  } finally {
+    terminal.fill(0); captureManifestBytes.fill(0); captureLedgerBytes.fill(0);
+  }
+});
+
+test('two byte-identical terminal runs derive one canonical 2-path manifest and independent ledger', async () => {
+  const api = await subject();
+  const terminal = await readFile(path.join(baselineDir, 'catalog.cutoff.normalized.json'));
+  const captureManifestBytes = await readFile(path.join(baselineDir, 'capture-manifest.json'));
+  const captureLedgerBytes = await readFile(captureLedgerPath);
+  const result = api.prepareExpectedTerminalArtifacts({
+    terminalRuns: [Buffer.from(terminal), Buffer.from(terminal)],
+    captureManifestBytes,
+    captureLedgerBytes,
+  });
+  try {
+    assert.equal(result.payloads.size, 2);
+    assert.deepEqual([...result.payloads.keys()], [terminalName, digestName]);
+    assert.equal(result.payloads.get(terminalName).equals(terminal), true);
+    assert.equal(result.payloads.get(digestName).toString(), `${sha256(terminal)}  ${terminalName}\n`);
+
+    const manifest = JSON.parse(result.manifestBytes);
+    const ledger = JSON.parse(result.ledgerBytes);
+    assert.equal(manifest.kind, 'midao-expected-terminal-manifest');
+    assert.equal(ledger.kind, 'midao-expected-terminal-ledger');
+    assert.deepEqual(Object.keys(manifest.payloadDigests).sort(), [terminalName, digestName].sort());
+    assert.deepEqual(ledger.payloadDigests, manifest.payloadDigests);
+    assert.equal(ledger.manifestSha256, sha256(result.manifestBytes));
+    assert.equal(ledger.transactionId, manifest.transactionId);
+    assert.equal(ledger.captureTransactionId, JSON.parse(captureManifestBytes).transactionId);
+    assert.equal(ledger.captureManifestSha256, sha256(captureManifestBytes));
+    assert.deepEqual(manifest.historyVersions, historyVersions);
+    assert.deepEqual(manifest.postCutoffMigrations.map(({ filename, sha256: digest }) => [filename, digest]), exactMigrations);
+    assert.equal(Object.hasOwn(ledger, 'migrationApplyLedger'), false);
+  } finally {
+    result.dispose();
+    terminal.fill(0);
+    captureManifestBytes.fill(0);
+    captureLedgerBytes.fill(0);
+  }
+});
+
+test('publication semantic validator binds immutable capture reference and exact history', async () => {
+  const api = await subject();
+  const terminal = await readFile(path.join(baselineDir, 'catalog.cutoff.normalized.json'));
+  const captureManifestBytes = await readFile(path.join(baselineDir, 'capture-manifest.json'));
+  const captureLedgerBytes = await readFile(captureLedgerPath);
+  const prepared = api.prepareExpectedTerminalArtifacts({ terminalRuns: [terminal, Buffer.from(terminal)], captureManifestBytes, captureLedgerBytes });
+  try {
+    assert.equal(api.validateExpectedTerminalPublicationSemantics(prepared, captureLedgerBytes), true);
+    const hostile = JSON.parse(captureLedgerBytes);
+    hostile.transactionId = 'f'.repeat(64);
+    assert.throws(() => api.validateExpectedTerminalPublicationSemantics(prepared, Buffer.from(`${JSON.stringify(hostile)}\n`)), /capture|transaction|reference/iu);
+  } finally {
+    prepared.dispose(); terminal.fill(0); captureManifestBytes.fill(0); captureLedgerBytes.fill(0);
+  }
+});
+
+test('builder derives capture references only from verified capability and checks two clean histories', async () => {
+  const api = await subject();
+  const terminal = await readFile(path.join(baselineDir, 'catalog.cutoff.normalized.json'));
+  const manifest = JSON.parse(await readFile(path.join(baselineDir, 'capture-manifest.json'), 'utf8'));
+  const ledger = JSON.parse(await readFile(captureLedgerPath, 'utf8'));
+  const calls = [];
+  const prepared = await api.__internal.buildWithAdapters({
+    runs: 2,
+    verifyCapture: async () => ({
+      transactionId: manifest.transactionId,
+      manifest: structuredClone(manifest),
+      ledger: structuredClone(ledger),
+      dispose: () => calls.push('capture-dispose'),
+    }),
+    materialize: async ({ run }) => ({ id: `workdir-${run}`, cleanup: async () => calls.push(`cleanup-${run}`) }),
+    runLocal: async ({ materialized, run }) => ({ stack: `stack-${run}`, materialized }),
+    extractTerminal: async ({ run }) => ({ terminalBytes: Buffer.from(terminal), historyVersions: [...historyVersions], run }),
+  });
+  try {
+    const expectedCaptureDigest = sha256(Buffer.from(`${JSON.stringify(manifest)}\n`));
+    assert.equal(JSON.parse(prepared.manifestBytes).captureManifestSha256, expectedCaptureDigest);
+    assert.deepEqual(calls, ['cleanup-0', 'cleanup-1', 'capture-dispose']);
+  } finally {
+    prepared.dispose();
+    terminal.fill(0);
+  }
+});
+
+test('builder preserves extract primary and materializer cleanup failures together', async () => {
+  const api = await subject();
+  const manifest = JSON.parse(await readFile(path.join(baselineDir, 'capture-manifest.json'), 'utf8'));
+  const ledger = JSON.parse(await readFile(captureLedgerPath, 'utf8'));
+  await assert.rejects(api.__internal.buildWithAdapters({
+    runs: 2,
+    verifyCapture: async () => ({ transactionId: manifest.transactionId, manifest, ledger, dispose() {} }),
+    materialize: async () => ({ cleanup: async () => { throw new Error('MATERIALIZER_CLEANUP'); } }),
+    runLocal: async () => ({}),
+    extractTerminal: async () => { throw new Error('EXTRACT_PRIMARY'); },
+  }), (error) => error instanceof AggregateError
+    && error.errors.some((entry) => /EXTRACT_PRIMARY/u.test(entry.message))
+    && error.errors.some((entry) => /MATERIALIZER_CLEANUP/u.test(entry.message)));
+});
+
+test('builder rejects nondeterministic runs and hostile capture transaction before local run or terminal extraction', async () => {
+  const api = await subject();
+  const calls = { verify: 0, materialize: 0, local: 0, extract: 0, payload: 0 };
+  await assert.rejects(api.__internal.buildWithAdapters({
+    runs: 2,
+    verifyCapture: async () => { calls.verify += 1; throw new Error('capture transaction mismatch'); },
+    materialize: async () => { calls.materialize += 1; },
+    runLocal: async () => { calls.local += 1; },
+    extractTerminal: async () => { calls.extract += 1; },
+    onCapturePayloadRead: () => { calls.payload += 1; },
+  }), /capture transaction mismatch/iu);
+  assert.deepEqual(calls, { verify: 1, materialize: 0, local: 0, extract: 0, payload: 0 });
+
+  const first = Buffer.from('{"schemaVersion":1}\n');
+  const second = Buffer.from('{"schemaVersion":2}\n');
+  assert.throws(() => api.prepareExpectedTerminalArtifacts({
+    terminalRuns: [first, second],
+    captureManifestBytes: Buffer.from('{}\n'),
+    captureLedgerBytes: Buffer.from('{}\n'),
+  }), /deterministic|byte-identical/iu);
+  first.fill(0);
+  second.fill(0);
+});

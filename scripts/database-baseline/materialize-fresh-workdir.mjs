@@ -224,6 +224,10 @@ async function materializeWithPaths(options = {}) {
   const seedSource = path.resolve(options.seedSource ?? path.join(repoRoot, 'supabase/seed.sql'));
   const configSource = path.resolve(options.configSource ?? path.join(repoRoot, 'supabase/config.toml'));
   const outputParent = path.resolve(options.outputParent ?? path.join(repoRoot, '.hermes/tmp'));
+  const projectId = options.projectId;
+  if (projectId !== undefined && (typeof projectId !== 'string' || !/^[a-z0-9_-]{1,64}$/u.test(projectId))) {
+    throw new Error('materializer projectId invalid');
+  }
   const journalPath = path.resolve(options.journalPath ?? resolveRepositoryPublicationPaths().journalPath);
   const entries = options.entries ?? POST_CUTOFF_MIGRATIONS;
 
@@ -258,7 +262,12 @@ async function materializeWithPaths(options = {}) {
     if (!parentStat.isDirectory() || parentStat.uid !== process.getuid() || (parentStat.mode & 0o077) !== 0) {
       throw new Error('materializer output parent identity invalid');
     }
-    workdir = await mkdtemp(path.join(outputParent, 'midao-fresh-'));
+    if (projectId) {
+      workdir = path.join(outputParent, projectId);
+      await mkdir(workdir, { mode: 0o700 });
+    } else {
+      workdir = await mkdtemp(path.join(outputParent, 'midao-fresh-'));
+    }
     workdirIdentity = await lstat(workdir);
     await enforceDirectoryMode(workdir);
     await mkdir(path.join(workdir, 'supabase'), { mode: 0o700 });
@@ -317,7 +326,7 @@ async function materializeWithPaths(options = {}) {
 
 export async function materializeFreshWorkdir(options = {}) {
   const keys = Object.keys(options).sort();
-  if (keys.some((key) => !['outputParent', 'postCutoffManifest'].includes(key))) {
+  if (keys.some((key) => !['outputParent', 'postCutoffManifest', 'projectId'].includes(key))) {
     throw new Error('materializer public options contain forbidden path override');
   }
   if (Object.hasOwn(options, 'postCutoffManifest')) {
@@ -327,6 +336,7 @@ export async function materializeFreshWorkdir(options = {}) {
   return materializeWithPaths({
     repoRoot,
     outputParent: options.outputParent,
+    projectId: options.projectId,
     journalPath: resolveJournalForRepository(repoRoot),
   });
 }

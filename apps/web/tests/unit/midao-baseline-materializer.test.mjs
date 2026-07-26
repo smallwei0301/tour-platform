@@ -47,6 +47,21 @@ test('standalone CLI is library-only so cleanup ownership cannot cross a process
   assert.match(run.stderr, /LIBRARY_ONLY|library-only/iu);
 });
 
+test('public materializer can bind an exact lowercase Supabase project identity without arbitrary paths', async () => {
+  const api = await subject();
+  const parent = await mkdtemp(path.join(os.tmpdir(), 'midao-materializer-project-'));
+  try {
+    const result = await api.materializeFreshWorkdir({ outputParent: parent, projectId: 'midao-terminal-run' });
+    assert.equal(result.workdir, path.join(parent, 'midao-terminal-run'));
+    await result.cleanup();
+    for (const projectId of ['Uppercase', '../escape', 'has.dot', '', 'a'.repeat(65)]) {
+      await assert.rejects(api.materializeFreshWorkdir({ outputParent: parent, projectId }), /projectId|project identity/iu);
+    }
+  } finally {
+    await rm(parent, { recursive: true, force: true });
+  }
+});
+
 test('materializer verifies capture transaction then emits one marker, six migrations and separate seed', async () => {
   const api = await subject();
   const parent = await mkdtemp(path.join(os.tmpdir(), 'midao-materializer-green-'));

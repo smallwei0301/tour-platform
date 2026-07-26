@@ -11,6 +11,7 @@ const {
   parseSupabasePin,
   canonicalProjectId,
   classifySupabaseStatus,
+  validateSupabaseLifecycleStderr,
   validateCliWorkdirNotice,
   mapStatusEnvironment,
   confirmProjectContainers,
@@ -72,6 +73,9 @@ test('status classifier accepts only pinned exact two-line CRLF-aware missing fi
 
 test('CLI workdir notice accepts only the exact controlled path', () => {
   const expectedWorkdir = `/tmp/lock/${projectId}`;
+  assert.throws(() => createActualAdapter({
+    repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22', cliWorkdir: '/tmp/lock/foreign-project', commandRunner: async () => ({}),
+  }), /CLI_WORKDIR_PROJECT_IDENTITY_MISMATCH/u);
   assert.doesNotThrow(() => validateCliWorkdirNotice('', undefined));
   assert.doesNotThrow(() => validateCliWorkdirNotice(`Using workdir ${expectedWorkdir}\n`, expectedWorkdir));
   assert.doesNotThrow(() => validateCliWorkdirNotice(`Using workdir ${expectedWorkdir}\r\n`, expectedWorkdir));
@@ -320,6 +324,25 @@ test('actual adapter captures full immutable IDs and cleans containers, networks
   assert.equal(dockerApiVersions[1], '1.43');
 });
 
+test('actual adapter asset-only cleanup attempts network and volume and aggregates both failures', async () => {
+  const calls = [];
+  const adapter = createActualAdapter({
+    repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22',
+    commandRunner: async (command, args) => { calls.push([command, ...args]); return { exitCode: 1, stdout: '', stderr: 'failed' }; },
+  });
+  let observed;
+  await assert.rejects(adapter.stop([], {
+    networks: [{ id: 'owned-network', name: `supabase_network_${projectId}`, projectLabel: projectId }],
+    volumes: [{ name: `supabase_db_${projectId}`, projectLabel: projectId }],
+  }), (error) => { observed = error; return true; });
+  assert.deepEqual(calls, [
+    ['docker', 'network', 'rm', 'owned-network'],
+    ['docker', 'volume', 'rm', `supabase_db_${projectId}`],
+  ]);
+  assert.match(observed.errors.map(String).join('\n'), /OWNED_NETWORK_CLEANUP_FAILED/u);
+  assert.match(observed.errors.map(String).join('\n'), /OWNED_VOLUME_CLEANUP_FAILED/u);
+});
+
 test('successful start and reset reject any stderr beyond the exact controlled workdir notices', async () => {
   const expectedWorkdir = `/tmp/lock/db-only-workdir/${projectId}`;
   const migrationNames = [
@@ -403,6 +426,51 @@ test('lifecycle never stops foreign/reused stacks and cleans only confirmed owne
   adapter.status = async () => ({ exitCode: 0, stdout: '{}', stderr: '' });
   await assert.rejects(runWithLocalSupabase({ adapter, expectedProjectId: projectId, childArgs: [] }), /ALREADY_RUNNING/u);
   assert.equal(calls.includes('stop'), false);
+});
+
+test('lifecycle preserves start/reset primary with identity probe failures and cleans asset-only partial start', async () => {
+  const flatten = (error, seen = new Set()) => {
+    if (!error || seen.has(error)) return [];
+    seen.add(error);
+    return [String(error), ...flatten(error.cause, seen), ...(Array.isArray(error.errors) ? error.errors.flatMap((entry) => flatten(entry, seen)) : [])];
+  };
+  for (const phase of ['start', 'reset']) {
+    let containerReads = 0;
+    let observed;
+    await assert.rejects(runWithLocalSupabase({
+      expectedProjectId: projectId,
+      childArgs: [],
+      adapter: {
+        async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async start() { if (phase === 'start') throw new Error('START_PRIMARY'); },
+        async containers() {
+          containerReads += 1;
+          if (phase === 'start' || containerReads > 1) throw new Error('IDENTITY_SECONDARY');
+          return [{ id: 'owned', name: `supabase_db_${projectId}`, projectLabel: projectId }];
+        },
+        async reset() { throw new Error('RESET_PRIMARY'); },
+        async stop() {},
+      },
+    }), (error) => { observed = error; return true; });
+    const messages = flatten(observed).join('\n');
+    assert.match(messages, new RegExp(phase === 'start' ? 'START_PRIMARY' : 'RESET_PRIMARY', 'u'));
+    assert.match(messages, /IDENTITY_SECONDARY/u);
+  }
+
+  const calls = [];
+  const assets = { networks: [{ id: 'network-id', name: `supabase_network_${projectId}`, projectLabel: projectId }], volumes: [{ name: `supabase_db_${projectId}`, projectLabel: projectId }] };
+  await assert.rejects(runWithLocalSupabase({
+    expectedProjectId: projectId,
+    childArgs: [],
+    adapter: {
+      async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+      async start() { calls.push('start'); throw new Error('ASSET_ONLY_PRIMARY'); },
+      async containers() { calls.push('containers'); return []; },
+      async assets() { calls.push('assets'); return structuredClone(assets); },
+      async stop(identity, stoppedAssets) { calls.push(['stop', identity, stoppedAssets]); },
+    },
+  }), /ASSET_ONLY_PRIMARY/u);
+  assert.deepEqual(calls, ['start', 'containers', 'assets', 'containers', 'assets', ['stop', [], assets]]);
 });
 
 test('start failure before identity confirmation never stops and child failure cleans owned stack', async () => {
@@ -513,4 +581,80 @@ test('signal received during cleanup completes stop but runner rejects', async (
     },
   }), /RUNNER_SIGNALLED/u);
   assert.deepEqual(calls, ['stop']);
+});
+
+test('custom lifecycle contract accepts only exact Task9 marker and six original migration filenames', async () => {
+  const expectedWorkdir = `/tmp/lock/${projectId}`;
+  const migrationNames = [
+    '00000000000001_baseline_v1.sql',
+    '20260723000000_midao_backend_mode.sql',
+    '20260723001000_midao_notification_outbox.sql',
+    '20260723002000_midao_idempotency_records.sql',
+    '20260723002500_midao_audit_events.sql',
+    '20260723003000_midao_atomic_backend_mode_switch.sql',
+    '20260723003500_midao_service_role_acl_hardening.sql',
+  ];
+  const stderr = `${[
+    `Using workdir ${expectedWorkdir}`,
+    'Starting database...',
+    'Initialising schema...',
+    'Seeding globals from roles.sql...',
+    ...migrationNames.map((name) => `Applying migration ${name}...`),
+  ].join('\n')}\n`;
+  assert.doesNotThrow(() => validateSupabaseLifecycleStderr(stderr, {
+    expectedWorkdir, stage: 'start', migrationNames, noticesByMigration: {},
+  }));
+  const adapter = createActualAdapter({
+    repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22', cliWorkdir: expectedWorkdir,
+    lifecycleContract: { migrationNames, noticesByMigration: {} },
+    commandRunner: async (_command, args) => ({ exitCode: 0, stdout: '', stderr: args.includes('start') ? stderr : '' }),
+  });
+  await assert.doesNotReject(adapter.start());
+  assert.throws(() => validateSupabaseLifecycleStderr(stderr.replace('baseline_v1', 'midao_test_bootstrap'), {
+    expectedWorkdir, stage: 'start', migrationNames, noticesByMigration: {},
+  }), /CLI_UNEXPECTED_STDERR/u);
+  assert.throws(() => validateSupabaseLifecycleStderr(stderr.replace(`Applying migration ${migrationNames[2]}...\n`, ''), {
+    expectedWorkdir, stage: 'start', migrationNames, noticesByMigration: {},
+  }), /CLI_UNEXPECTED_STDERR/u);
+});
+
+test('start-only onReady skips reset, returns callback value and still cleans exact owned IDs', async () => {
+  const calls = [];
+  const owned = [{ id: 'owned', name: `supabase_db_${projectId}`, projectLabel: projectId }];
+  const result = await runWithLocalSupabase({
+    expectedProjectId: projectId,
+    initialize: 'start-only',
+    onReady: async ({ localEnv }) => { calls.push('ready-callback'); return localEnv.DATABASE_URL; },
+    adapter: {
+      async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+      async start() { calls.push('start'); },
+      async containers() { calls.push('containers'); return structuredClone(owned); },
+      async waitForDatabase() { calls.push('health'); },
+      async reset() { calls.push('reset'); },
+      async statusJson() { calls.push('status-json'); return { DATABASE_URL: 'postgres://local' }; },
+      async ready() { calls.push('ready'); },
+      async stop(identity) { calls.push(`stop:${identity[0].id}`); },
+    },
+  });
+  assert.equal(result.value, 'postgres://local');
+  assert.equal(calls.includes('reset'), false);
+  assert.deepEqual(calls, ['start', 'containers', 'health', 'status-json', 'ready', 'ready-callback', 'containers', 'stop:owned']);
+});
+
+test('onReady primary failure and cleanup failure are both retained', async () => {
+  const owned = [{ id: 'owned', name: `supabase_db_${projectId}`, projectLabel: projectId }];
+  await assert.rejects(runWithLocalSupabase({
+    expectedProjectId: projectId,
+    initialize: 'start-only',
+    onReady: async () => { throw new Error('READY_PRIMARY'); },
+    adapter: {
+      async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+      async start() {},
+      async containers() { return structuredClone(owned); },
+      async statusJson() { return { DATABASE_URL: 'postgres://local' }; },
+      async stop() { throw new Error('CLEANUP_SECONDARY'); },
+    },
+  }), (error) => error instanceof AggregateError
+    && error.errors.some((entry) => /READY_PRIMARY/u.test(entry.message))
+    && error.errors.some((entry) => /CLEANUP_SECONDARY/u.test(entry.message)));
 });

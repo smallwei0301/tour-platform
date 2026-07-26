@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { constants as fsConstants } from 'node:fs';
 import * as fsPromises from 'node:fs/promises';
 import { createConnection, createServer } from 'node:net';
-import { basename, join, resolve } from 'node:path';
+import { basename, isAbsolute, join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
@@ -164,15 +164,40 @@ function nonemptyLines(text) {
   return String(text || '').split(/\r?\n/u).filter((line) => line.length > 0);
 }
 
-export function validateSupabaseLifecycleStderr(stderr, expectedWorkdir, stage) {
+export function validateSupabaseLifecycleStderr(stderr, expectedWorkdirOrContract, legacyStage) {
+  let expectedWorkdir;
+  let stage;
+  let migrationNames;
+  let noticesByMigration;
+  if (expectedWorkdirOrContract && typeof expectedWorkdirOrContract === 'object' && !Array.isArray(expectedWorkdirOrContract)) {
+    const keys = Object.keys(expectedWorkdirOrContract).sort().join(',');
+    if (keys !== 'expectedWorkdir,migrationNames,noticesByMigration,stage') throw new Error('CLI_LIFECYCLE_CONTRACT_INVALID');
+    ({ expectedWorkdir, stage, migrationNames, noticesByMigration } = expectedWorkdirOrContract);
+  } else {
+    expectedWorkdir = expectedWorkdirOrContract;
+    stage = legacyStage;
+    migrationNames = [
+      '00000000000001_midao_test_bootstrap.sql',
+      ...FOUNDATION_MIGRATIONS.map((name, index) => `${String(index + 2).padStart(14, '0')}_${name}`),
+    ];
+    noticesByMigration = {
+      '00000000000001_midao_test_bootstrap.sql': ['NOTICE (42710): extension "pgcrypto" already exists, skipping'],
+    };
+  }
   if (!expectedWorkdir) {
     if (stderr !== '') throw new Error(`CLI_UNEXPECTED_STDERR: ${redactSupabaseOutput(stderr).trim()}`);
     return;
   }
-  const migrationNames = [
-    '00000000000001_midao_test_bootstrap.sql',
-    ...FOUNDATION_MIGRATIONS.map((name, index) => `${String(index + 2).padStart(14, '0')}_${name}`),
-  ];
+  if (!isAbsolute(expectedWorkdir) || !['start', 'reset'].includes(stage)
+    || !Array.isArray(migrationNames) || migrationNames.length < 1 || migrationNames.length > 256
+    || new Set(migrationNames).size !== migrationNames.length
+    || migrationNames.some((name) => typeof name !== 'string' || !/^\d{14}_[a-z0-9][a-z0-9_]*\.sql$/u.test(name))
+    || !noticesByMigration || typeof noticesByMigration !== 'object' || Array.isArray(noticesByMigration)
+    || Object.keys(noticesByMigration).some((name) => !migrationNames.includes(name))
+    || Object.values(noticesByMigration).some((lines) => !Array.isArray(lines) || lines.length > 64
+      || lines.some((line) => typeof line !== 'string' || line.length === 0 || /[\r\n\0]/u.test(line)))) {
+    throw new Error('CLI_LIFECYCLE_CONTRACT_INVALID');
+  }
   const common = [
     `Using workdir ${expectedWorkdir}`,
     ...(stage === 'start' ? ['Starting database...'] : ['Resetting local database...', 'Recreating database...']),
@@ -181,10 +206,7 @@ export function validateSupabaseLifecycleStderr(stderr, expectedWorkdir, stage) 
   ];
   const expectedLines = [
     ...common,
-    ...migrationNames.flatMap((name, index) => [
-      `Applying migration ${name}...`,
-      ...(index === 0 ? ['NOTICE (42710): extension "pgcrypto" already exists, skipping'] : []),
-    ]),
+    ...migrationNames.flatMap((name) => [`Applying migration ${name}...`, ...(noticesByMigration[name] ?? [])]),
     ...(stage === 'reset' ? ['Restarting containers...', 'Finished supabase db reset on branch main.'] : []),
   ];
   const lf = `${expectedLines.join('\n')}\n`;
@@ -349,9 +371,18 @@ export function redactSupabaseOutput(text, secrets = []) {
   return redacted;
 }
 
-export async function runWithLocalSupabase({ adapter, expectedProjectId, childArgs, signal, reportStage = () => {} }) {
+export async function runWithLocalSupabase({
+  adapter, expectedProjectId, childArgs, signal, reportStage = () => {},
+  initialize = 'start-then-reset', onReady,
+}) {
+  if (!['start-then-reset', 'start-only'].includes(initialize)
+    || (onReady !== undefined && typeof onReady !== 'function')
+    || (onReady && Array.isArray(childArgs) && childArgs.length > 0)) throw new Error('RUNNER_CALLBACK_CONTRACT_INVALID');
   let owned = null;
   let ownedAssets = null;
+  let localEnv;
+  let value;
+  let primaryError;
   try {
     reportStage('status');
     const status = await adapter.status();
@@ -362,69 +393,92 @@ export async function runWithLocalSupabase({ adapter, expectedProjectId, childAr
       await adapter.start();
     } catch (startError) {
       reportStage('start-failed-identity');
-      const partialContainers = await adapter.containers();
-      if (partialContainers.length > 0) {
-        const confirmedContainers = confirmProjectContainers({ expectedProjectId, containers: partialContainers });
-        const confirmedAssets = adapter.assets ? await adapter.assets({ allowEmpty: true }) : null;
-        owned = confirmedContainers;
-        ownedAssets = confirmedAssets;
+      try {
+        const partialContainers = await adapter.containers();
+        const partialAssets = adapter.assets ? await adapter.assets({ allowEmpty: true }) : null;
+        if (partialContainers.length > 0) {
+          owned = confirmProjectContainers({ expectedProjectId, containers: partialContainers });
+          ownedAssets = partialAssets;
+        } else if (partialAssets && (partialAssets.networks.length > 0 || partialAssets.volumes.length > 0)) {
+          owned = [];
+          ownedAssets = partialAssets;
+        }
+      } catch (identityError) {
+        throw new AggregateError([startError, identityError], 'start and partial ownership probe failed');
       }
       throw startError;
     }
-    reportStage('pre-reset-identity');
-    {
-      const confirmedContainers = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
-      const confirmedAssets = adapter.assets ? await adapter.assets() : null;
-      owned = confirmedContainers;
-      ownedAssets = confirmedAssets;
+    if (initialize === 'start-then-reset') {
+      reportStage('pre-reset-identity');
+      owned = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
+      ownedAssets = adapter.assets ? await adapter.assets() : null;
+      reportStage('pre-reset-health');
+      if (adapter.waitForDatabase) await adapter.waitForDatabase(owned);
+      reportStage('reset');
+      try { await adapter.reset(); }
+      catch (resetError) {
+        reportStage('post-reset-failed-identity');
+        try {
+          owned = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
+          ownedAssets = adapter.assets ? await adapter.assets() : null;
+        } catch (identityError) {
+          throw new AggregateError([resetError, identityError], 'reset and ownership probe failed');
+        }
+        throw resetError;
+      }
+      reportStage('post-reset-identity');
+      owned = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
+      ownedAssets = adapter.assets ? await adapter.assets() : null;
+      reportStage('post-reset-health');
+      if (adapter.waitForDatabase) await adapter.waitForDatabase(owned);
+    } else {
+      reportStage('post-start-identity');
+      owned = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
+      ownedAssets = adapter.assets ? await adapter.assets() : null;
+      reportStage('post-start-health');
+      if (adapter.waitForDatabase) await adapter.waitForDatabase(owned);
     }
-    reportStage('pre-reset-health');
-    if (adapter.waitForDatabase) await adapter.waitForDatabase(owned);
-    reportStage('reset');
-    try {
-      await adapter.reset();
-    } catch (resetError) {
-      reportStage('post-reset-failed-identity');
-      const confirmedContainers = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
-      const confirmedAssets = adapter.assets ? await adapter.assets() : null;
-      owned = confirmedContainers;
-      ownedAssets = confirmedAssets;
-      throw resetError;
-    }
-    reportStage('post-reset-identity');
-    {
-      const confirmedContainers = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
-      const confirmedAssets = adapter.assets ? await adapter.assets() : null;
-      owned = confirmedContainers;
-      ownedAssets = confirmedAssets;
-    }
-    reportStage('post-reset-health');
-    if (adapter.waitForDatabase) await adapter.waitForDatabase(owned);
     reportStage('status-json');
-    const localEnv = adapter.statusJson ? await adapter.statusJson() : {};
+    localEnv = adapter.statusJson ? await adapter.statusJson() : {};
     reportStage('ready');
     if (adapter.ready) await adapter.ready(localEnv);
-    if (adapter.child) {
+    if (onReady) {
+      reportStage('on-ready');
+      value = await onReady({ localEnv, ownedContainers: owned, ownedAssets });
+    } else if (adapter.child) {
       reportStage('child');
       const child = await adapter.child(childArgs, localEnv);
       if (child.exitCode !== 0) throw new Error(`CHILD_FAILED_${child.exitCode}`);
     }
     reportStage('complete');
-    return { exitCode: 0, localEnv };
-  } finally {
-    if (owned) {
+  } catch (error) {
+    primaryError = error;
+  }
+
+  let cleanupError;
+  if (owned || ownedAssets) {
+    try {
       reportStage('cleanup-identity');
-      const current = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
-      assertOwnershipUnchanged(owned, current);
+      const currentContainers = await adapter.containers();
+      if (owned.length === 0) {
+        if (currentContainers.length !== 0) throw new Error('OWNERSHIP_DRIFT');
+      } else {
+        const current = confirmProjectContainers({ expectedProjectId, containers: currentContainers });
+        assertOwnershipUnchanged(owned, current);
+      }
       if (ownedAssets) {
         const currentAssets = await adapter.assets({ allowEmpty: true });
         if (JSON.stringify(ownedAssets) !== JSON.stringify(currentAssets)) throw new Error('OWNERSHIP_DRIFT');
       }
       reportStage('cleanup');
       await adapter.stop(owned, ownedAssets);
-    }
-    if (signal?.aborted) throw new Error('RUNNER_SIGNALLED');
+    } catch (error) { cleanupError = error; }
   }
+  const signalError = signal?.aborted ? new Error('RUNNER_SIGNALLED') : null;
+  const errors = [primaryError, cleanupError, signalError].filter(Boolean);
+  if (errors.length > 1) throw new AggregateError(errors, 'local Supabase run and cleanup failed');
+  if (errors.length === 1) throw errors[0];
+  return { exitCode: 0, localEnv, value };
 }
 
 export function runCommand(command, args, { cwd, env = process.env, signal } = {}) {
@@ -478,7 +532,9 @@ export function mapStatusEnvironment(raw) {
   return environment;
 }
 
-export function createActualAdapter({ repoRoot, pin, nodeBin, signal, cliWorkdir, commandRunner = runCommand }) {
+export function createActualAdapter({ repoRoot, pin, nodeBin, signal, cliWorkdir, lifecycleContract, commandRunner = runCommand }) {
+  const expectedProjectId = canonicalProjectId(repoRoot);
+  if (cliWorkdir && basename(resolve(cliWorkdir)) !== expectedProjectId) throw new Error('CLI_WORKDIR_PROJECT_IDENTITY_MISMATCH');
   const cli = (args, { cleanup = false } = {}) => {
     const effectiveArgs = cliWorkdir ? [...args, '--workdir', cliWorkdir] : args;
     const invocation = buildSupabaseCliInvocation(pin, effectiveArgs);
@@ -555,7 +611,9 @@ export function createActualAdapter({ repoRoot, pin, nodeBin, signal, cliWorkdir
         const diagnostic = redactSupabaseOutput(result.stderr).trim();
         throw new Error(diagnostic ? `SUPABASE_START_FAILED: ${diagnostic}` : 'SUPABASE_START_FAILED');
       }
-      validateSupabaseLifecycleStderr(result.stderr, cliWorkdir, 'start');
+      validateSupabaseLifecycleStderr(result.stderr, lifecycleContract
+        ? { ...lifecycleContract, expectedWorkdir: cliWorkdir, stage: 'start' }
+        : cliWorkdir, lifecycleContract ? undefined : 'start');
     },
     containers,
     assets,
@@ -566,7 +624,9 @@ export function createActualAdapter({ repoRoot, pin, nodeBin, signal, cliWorkdir
         const diagnostic = redactSupabaseOutput(result.stderr).trim();
         throw new Error(diagnostic ? `SUPABASE_RESET_FAILED: ${diagnostic}` : 'SUPABASE_RESET_FAILED');
       }
-      validateSupabaseLifecycleStderr(result.stderr, cliWorkdir, 'reset');
+      validateSupabaseLifecycleStderr(result.stderr, lifecycleContract
+        ? { ...lifecycleContract, expectedWorkdir: cliWorkdir, stage: 'reset' }
+        : cliWorkdir, lifecycleContract ? undefined : 'reset');
     },
     statusJson: async () => {
       const result = await cli(['status', '-o', 'json']);
@@ -596,17 +656,21 @@ export function createActualAdapter({ repoRoot, pin, nodeBin, signal, cliWorkdir
       return result;
     },
     stop: async (owned, ownedAssets) => {
+      const errors = [];
       const containerIds = owned.map((container) => container.id);
-      const containerResult = await commandRunner('docker', ['rm', '--force', '--', ...containerIds], { cwd: repoRoot });
-      if (containerResult.exitCode !== 0) throw new Error('OWNED_CONTAINER_CLEANUP_FAILED');
+      if (containerIds.length > 0) {
+        const containerResult = await commandRunner('docker', ['rm', '--force', '--', ...containerIds], { cwd: repoRoot });
+        if (containerResult.exitCode !== 0) errors.push(new Error('OWNED_CONTAINER_CLEANUP_FAILED'));
+      }
       if (ownedAssets.networks.length > 0) {
         const networkResult = await commandRunner('docker', ['network', 'rm', ...ownedAssets.networks.map((network) => network.id)], { cwd: repoRoot });
-        if (networkResult.exitCode !== 0) throw new Error('OWNED_NETWORK_CLEANUP_FAILED');
+        if (networkResult.exitCode !== 0) errors.push(new Error('OWNED_NETWORK_CLEANUP_FAILED'));
       }
       if (ownedAssets.volumes.length > 0) {
         const volumeResult = await commandRunner('docker', ['volume', 'rm', ...ownedAssets.volumes.map((volume) => volume.name)], { cwd: repoRoot });
-        if (volumeResult.exitCode !== 0) throw new Error('OWNED_VOLUME_CLEANUP_FAILED');
+        if (volumeResult.exitCode !== 0) errors.push(new Error('OWNED_VOLUME_CLEANUP_FAILED'));
       }
+      if (errors.length > 0) throw new AggregateError(errors, 'owned Supabase asset cleanup failed');
     },
   };
 }
