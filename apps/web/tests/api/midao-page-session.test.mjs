@@ -17,6 +17,15 @@ function pair(value) { return value.split(';', 1)[0]; }
 function guideCookies(version = 7, name = 'mutable cookie name') {
   return createGuideSessionCookies(guideId, name, version).map(pair).join('; ');
 }
+function impersonatedGuideSetCookies(version = 7, name = 'mutable cookie name') {
+  return createGuideSessionCookies(guideId, name, version, false, {
+    sessionKind: 'admin-impersonation',
+    maxAgeSeconds: 60 * 60,
+  });
+}
+function impersonatedGuideCookies(version = 7, name = 'mutable cookie name') {
+  return impersonatedGuideSetCookies(version, name).map(pair).join('; ');
+}
 function request(cookie = '') {
   return new Request('https://example.test/midao', { headers: cookie ? { cookie } : {} });
 }
@@ -64,13 +73,28 @@ test('valid actor produces verified banner state; forged actor fails closed', as
   const actor = pair(createImpersonationActorCookie({
     adminEmail: 'admin@example.invalid', targetGuideId: guideId,
   }));
-  const valid = await resolveMidaoPageSession(request(`${guideCookies()}; ${actor}`), options());
+  const valid = await resolveMidaoPageSession(request(`${impersonatedGuideCookies()}; ${actor}`), options());
   assert.equal(valid.kind, 'ready');
   assert.deepEqual(valid.impersonation, { guideName: 'DB Canonical Guide' });
   assert.equal(valid.session.actorType, 'admin');
 
   const forged = `${actor.slice(0, -1)}${actor.endsWith('0') ? '1' : '0'}`;
-  assert.deepEqual(await resolveMidaoPageSession(request(`${guideCookies()}; ${forged}`), options()), {
+  assert.deepEqual(await resolveMidaoPageSession(request(`${impersonatedGuideCookies()}; ${forged}`), options()), {
     kind: 'redirect', reason: 'UNAUTHORIZED', location: '/guide/login?next=%2Fmidao',
   });
+});
+
+test('impersonation session cannot downgrade when actor proof disappears or attach to an ordinary guide token', async () => {
+  const actor = pair(createImpersonationActorCookie({
+    adminEmail: 'admin@example.invalid', targetGuideId: guideId,
+  }));
+  assert.deepEqual(await resolveMidaoPageSession(request(impersonatedGuideCookies()), options()), {
+    kind: 'redirect', reason: 'UNAUTHORIZED', location: '/guide/login?next=%2Fmidao',
+  });
+  assert.deepEqual(await resolveMidaoPageSession(request(`${guideCookies()}; ${actor}`), options()), {
+    kind: 'redirect', reason: 'UNAUTHORIZED', location: '/guide/login?next=%2Fmidao',
+  });
+  for (const cookie of impersonatedGuideSetCookies()) {
+    assert.match(cookie, /; Max-Age=3600(?:;|$)/u);
+  }
 });

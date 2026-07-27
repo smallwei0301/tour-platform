@@ -36,6 +36,23 @@ export function verifyGuideSessionSignature(
   return constantTimeEquals(signature, signGuideSession(guideId, sessionVersion));
 }
 
+const IMPERSONATED_GUIDE_SESSION_DOMAIN = 'midao:guide-session:admin-impersonation:v1';
+
+export function signImpersonatedGuideSession(guideId: string, sessionVersion: number): string {
+  return signDomainSeparatedValue(
+    IMPERSONATED_GUIDE_SESSION_DOMAIN,
+    `${guideId}:${sessionVersion}`,
+  );
+}
+
+export function verifyImpersonatedGuideSessionSignature(
+  guideId: string,
+  sessionVersion: number,
+  signature: string,
+): boolean {
+  return constantTimeEquals(signature, signImpersonatedGuideSession(guideId, sessionVersion));
+}
+
 function domainSeparatedMessage(domain: string, payload: string): string {
   return `${domain}\0${Buffer.byteLength(payload, 'utf8')}:${payload}`;
 }

@@ -740,9 +740,23 @@ export async function releaseKernelRunnerLock(lock) {
   if (failure) throw failure;
 }
 
-export function confirmProjectContainers({ expectedProjectId, containers }) {
+const SUPABASE_CONTAINER_ROLES = Object.freeze([
+  'analytics', 'auth', 'db', 'edge_runtime', 'imgproxy', 'inbucket', 'kong', 'meta',
+  'pg_meta', 'pooler', 'realtime', 'realtime_health', 'rest', 'storage', 'studio', 'vector',
+]);
+
+function expectedProjectResourceNames(expectedProjectId, resourceType) {
+  if (resourceType === 'container') {
+    return new Set(SUPABASE_CONTAINER_ROLES.map((role) => `supabase_${role}_${expectedProjectId}`));
+  }
+  if (resourceType === 'network') return new Set([`supabase_network_${expectedProjectId}`]);
+  if (resourceType === 'volume') return new Set([`supabase_db_${expectedProjectId}`]);
+  throw new Error('OWNERSHIP_RESOURCE_TYPE_INVALID');
+}
+
+export function confirmProjectContainers({ expectedProjectId, containers, resourceType = 'container' }) {
   if (!Array.isArray(containers) || containers.length === 0) throw new Error('OWNERSHIP_EMPTY');
-  const suffix = `_${expectedProjectId}`;
+  const expectedNames = expectedProjectResourceNames(expectedProjectId, resourceType);
   const seen = new Set();
   const normalized = containers.map((container) => {
     const row = {
@@ -750,7 +764,7 @@ export function confirmProjectContainers({ expectedProjectId, containers }) {
       name: String(container?.name || ''),
       projectLabel: String(container?.projectLabel || ''),
     };
-    if (!row.id || seen.has(row.id) || row.projectLabel !== expectedProjectId || !row.name.endsWith(suffix)) {
+    if (!row.id || seen.has(row.id) || row.projectLabel !== expectedProjectId || !expectedNames.has(row.name)) {
       throw new Error('OWNERSHIP_INVALID');
     }
     seen.add(row.id);
@@ -796,7 +810,7 @@ async function probeOwnedResources(adapter, expectedProjectId, { allowEmpty = fa
       return null;
     }
     if (allowEmpty && result.value.length === 0) return [];
-    try { return confirmProjectContainers({ expectedProjectId, containers: result.value }); }
+    try { return confirmProjectContainers({ expectedProjectId, containers: result.value, resourceType: label }); }
     catch (error) { errors.push(error); return null; }
   };
   if (typeof adapter.networks === 'function' || typeof adapter.volumes === 'function') {
@@ -880,6 +894,11 @@ export async function runWithLocalSupabase({
     const status = await adapter.status();
     const classification = classifySupabaseStatus({ ...status, expectedProjectId });
     if (classification === 'running') throw new Error('ALREADY_RUNNING');
+    if (typeof adapter.assertNoPreexistingResources !== 'function') {
+      throw new Error('RUNNER_PRESTART_OWNERSHIP_CONTRACT_MISSING');
+    }
+    reportStage('pre-start-residue');
+    await adapter.assertNoPreexistingResources();
     try {
       reportStage('start');
       await adapter.start();
@@ -1107,7 +1126,9 @@ export function createActualAdapter({
       }
       normalized.push({ id: row.id, name: `supabase_realtime_health_${projectId}`, projectLabel: projectId });
     }
-    return normalized;
+    return normalized.length === 0
+      ? []
+      : confirmProjectContainers({ expectedProjectId: projectId, containers: normalized, resourceType: 'container' });
   };
   const networks = async ({ allowEmpty = false } = {}) => {
     const projectId = canonicalProjectId(repoRoot);
@@ -1117,7 +1138,9 @@ export function createActualAdapter({
     ], { cwd: repoRoot });
     if (result.exitCode !== 0 || result.stderr.trim()) throw new Error('DOCKER_NETWORK_IDENTITY_FAILED');
     const rows = parseContainerRows(result.stdout, projectId);
-    return allowEmpty && rows.length === 0 ? [] : confirmProjectContainers({ expectedProjectId: projectId, containers: rows });
+    return allowEmpty && rows.length === 0 ? [] : confirmProjectContainers({
+      expectedProjectId: projectId, containers: rows, resourceType: 'network',
+    });
   };
   const volumes = async ({ allowEmpty = false } = {}) => {
     const projectId = canonicalProjectId(repoRoot);
@@ -1142,11 +1165,21 @@ export function createActualAdapter({
       if (name !== listed.name || projectLabel !== listed.projectLabel || !createdAt || !driver || !scope) throw new Error('DOCKER_VOLUME_IDENTITY_FAILED');
       rows.push({ id: createdAt, name, projectLabel, driver, scope });
     }
-    return allowEmpty && rows.length === 0 ? [] : confirmProjectContainers({ expectedProjectId: projectId, containers: rows });
+    return allowEmpty && rows.length === 0 ? [] : confirmProjectContainers({
+      expectedProjectId: projectId, containers: rows, resourceType: 'volume',
+    });
   };
   const assets = async ({ allowEmpty = false } = {}) => ({
     networks: await networks({ allowEmpty }), volumes: await volumes({ allowEmpty }),
   });
+  const assertNoPreexistingResources = async () => {
+    const [existingContainers, existingNetworks, existingVolumes] = await Promise.all([
+      containers(), networks({ allowEmpty: true }), volumes({ allowEmpty: true }),
+    ]);
+    if (existingContainers.length || existingNetworks.length || existingVolumes.length) {
+      throw new Error('PREEXISTING_PROJECT_RESOURCES');
+    }
+  };
   const waitForDatabase = async (owned) => {
     const expectedName = `supabase_db_${canonicalProjectId(repoRoot)}`;
     const database = owned.filter((container) => container.name === expectedName);
@@ -1235,6 +1268,7 @@ export function createActualAdapter({
     networks,
     volumes,
     assets,
+    assertNoPreexistingResources,
     waitForDatabase,
     reset: async () => {
       const result = await cli(['db', 'reset', '--local']);

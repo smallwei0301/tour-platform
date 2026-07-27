@@ -47,10 +47,12 @@ test('代入 route：僅允許代入 approved 的正式導遊，否則拒絕', (
   assert.match(src, /GUIDE_NOT_ACTIVE/, '非 approved 需回明確錯誤碼');
 });
 
-test('代入 route：以 createGuideSessionCookies 簽發合法 guide session cookie', () => {
+test('代入 route：以domain-separated impersonation session簽章並與actor共用一小時壽命', () => {
   const src = readFileSync(ROUTE, 'utf8');
-  assert.match(src, /import\s*\{[^}]*createGuideSessionCookies[^}]*\}/, '需重用既有 guide session 簽章工具');
+  assert.match(src, /import\s*\{[^}]*createGuideSessionCookies[^}]*\}/, '需重用既有 guide session簽章工具');
   assert.match(src, /createGuideSessionCookies\(/, '需實際呼叫簽發 cookie');
+  assert.match(src, /sessionKind:\s*['"]admin-impersonation['"]/u, '代入session必須不可移除地綁定purpose');
+  assert.match(src, /maxAgeSeconds:\s*MIDAO_IMPERSONATION_MAX_AGE_SECONDS/u, 'guide session與actor必須同壽命');
   assert.match(src, /set-cookie/, '需回寫 Set-Cookie');
 });
 

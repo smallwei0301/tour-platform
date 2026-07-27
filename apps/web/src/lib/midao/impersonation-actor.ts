@@ -6,7 +6,8 @@ import { isProductionRuntime } from '../../config/guide-session-env.mjs';
 
 export const MIDAO_IMPERSONATION_ACTOR_COOKIE_NAME = 'midao_impersonation_actor';
 const ACTOR_DOMAIN = 'midao:impersonation-actor:v1';
-const ACTOR_MAX_AGE_MS = 60 * 60 * 1000;
+export const MIDAO_IMPERSONATION_MAX_AGE_SECONDS = 60 * 60;
+const ACTOR_MAX_AGE_MS = MIDAO_IMPERSONATION_MAX_AGE_SECONDS * 1000;
 const GUIDE_SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface SignedActorPayload {

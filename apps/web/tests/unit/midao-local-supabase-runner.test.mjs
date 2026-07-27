@@ -373,10 +373,27 @@ test('project-scoped docker identity requires exact label and name suffix and ca
   ]);
   for (const containers of [
     [],
+    [{ id: 'x', name: `foreign_${projectId}`, projectLabel: projectId }],
     [{ id: 'x', name: `supabase_db_${projectId}-evil`, projectLabel: projectId }],
     [{ id: 'x', name: `supabase_db_${projectId}`, projectLabel: 'other' }],
     [{ id: '', name: `supabase_db_${projectId}`, projectLabel: projectId }],
   ]) assert.throws(() => confirmProjectContainers({ expectedProjectId: projectId, containers }));
+});
+
+test('pre-existing project resources block before start and are never adopted or cleaned', async () => {
+  const calls = [];
+  await assert.rejects(runWithLocalSupabase({
+    expectedProjectId: projectId,
+    childArgs: [],
+    adapter: {
+      async status() { calls.push('status'); return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+      async assertNoPreexistingResources() { calls.push('preflight'); throw new Error('PREEXISTING_PROJECT_RESOURCES'); },
+      async start() { calls.push('start'); },
+      async containers() { calls.push('containers'); return []; },
+      async stop() { calls.push('stop'); },
+    },
+  }), /PREEXISTING_PROJECT_RESOURCES/u);
+  assert.deepEqual(calls, ['status', 'preflight']);
 });
 
 test('cleanup ownership rejects any ID/name/label drift', () => {
@@ -502,6 +519,44 @@ test('browser adapter starts database-only, waits for health, then enables only 
     ['docker', 'inspect', '--format', '{{.State.Health.Status}}', 'db-id-2'],
     [...psql('db-id-2'), bootstrapVerify],
   ]);
+});
+
+test('actual adapter preflight rejects pre-existing exact project containers, networks, and volumes before start', async () => {
+  for (const occupied of ['container', 'network', 'volume']) {
+    const calls = [];
+    const adapter = createActualAdapter({
+      repoRoot: `/tmp/${projectId}`,
+      pin: '2.87.2',
+      nodeBin: '/node22',
+      commandRunner: async (command, args) => {
+        calls.push([command, ...args]);
+        if (command !== 'docker') return { exitCode: 0, stdout: '', stderr: '' };
+        if (args[0] === 'ps') return {
+          exitCode: 0,
+          stdout: occupied === 'container' ? `container-id\tsupabase_db_${projectId}\t${projectId}\n` : '',
+          stderr: '',
+        };
+        if (args[0] === 'network' && args[1] === 'ls') return {
+          exitCode: 0,
+          stdout: occupied === 'network' ? `network-id\tsupabase_network_${projectId}\t${projectId}\n` : '',
+          stderr: '',
+        };
+        if (args[0] === 'volume' && args[1] === 'ls') return {
+          exitCode: 0,
+          stdout: occupied === 'volume' ? `supabase_db_${projectId}\t${projectId}\n` : '',
+          stderr: '',
+        };
+        if (args[0] === 'volume' && args[1] === 'inspect') return {
+          exitCode: 0,
+          stdout: `supabase_db_${projectId}\t2026-07-27T00:00:00Z\tlocal\tlocal\t${projectId}\n`,
+          stderr: '',
+        };
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    });
+    await assert.rejects(adapter.assertNoPreexistingResources(), /PREEXISTING_PROJECT_RESOURCES/u);
+    assert.equal(calls.some((args) => args.includes('start')), false);
+  }
 });
 
 test('manual browser API uses the pinned PostgREST digest and local-only JWT credentials without CLI service start', () => {
@@ -697,6 +752,7 @@ test('lifecycle never stops foreign/reused stacks and cleans only confirmed owne
   const calls = [];
   const adapter = {
     async status() { calls.push('status'); return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+    async assertNoPreexistingResources() {},
     async start() { calls.push('start'); },
     async containers() { calls.push('containers'); return [{ id: '1', name: `supabase_db_${projectId}`, projectLabel: projectId }]; },
     async reset() { calls.push('reset'); throw new Error('reset failed'); },
@@ -725,6 +781,7 @@ test('lifecycle preserves start/reset primary with identity probe failures and c
       childArgs: [],
       adapter: {
         async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
         async start() { if (phase === 'start') throw new Error('START_PRIMARY'); },
         async containers() {
           containerReads += 1;
@@ -748,6 +805,7 @@ test('lifecycle preserves start/reset primary with identity probe failures and c
     childArgs: [],
     adapter: {
       async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
       async start() { calls.push('start'); throw new Error('ASSET_ONLY_PRIMARY'); },
       async containers() { calls.push('containers'); return []; },
       async assets() { calls.push('assets'); return structuredClone(assets); },
@@ -765,7 +823,11 @@ test('pre-reset and post-reset probes preserve independently confirmed resource 
     seen.add(error);
     return [String(error), ...flattenError(error.cause, seen), ...(Array.isArray(error.errors) ? error.errors.flatMap((entry) => flattenError(entry, seen)) : [])];
   };
-  const resource = (kind, phase) => ({ id: `${kind}-${phase}-identity`, name: `supabase_${kind}_${projectId}`, projectLabel: projectId });
+  const resource = (kind, phase) => ({
+    id: `${kind}-${phase}-identity`,
+    name: `supabase_${kind === 'volume' ? 'db' : kind}_${projectId}`,
+    projectLabel: projectId,
+  });
 
   {
     const calls = []; let networkReads = 0; let observed;
@@ -774,6 +836,7 @@ test('pre-reset and post-reset probes preserve independently confirmed resource 
       expectedProjectId: projectId, childArgs: [], initialize: 'start-then-reset',
       adapter: {
         async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
         async start() { calls.push('start'); },
         async reset() { calls.push('reset'); },
         async containers() { calls.push('containers'); return [container]; },
@@ -801,6 +864,7 @@ test('pre-reset and post-reset probes preserve independently confirmed resource 
       expectedProjectId: projectId, childArgs: [], initialize: 'start-then-reset',
       adapter: {
         async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
         async start() { calls.push('start'); },
         async reset() { calls.push('reset'); },
         async containers() { containerReads += 1; calls.push(`containers-${containerReads}`); return [containerReads === 1 ? containerPre : containerPost]; },
@@ -834,6 +898,7 @@ test('partial ownership probes clean each confirmed resource class and preserve 
     childArgs: [],
     adapter: {
       async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
       async start() { calls.push('start'); throw new Error('PARTIAL_START_PRIMARY'); },
       async containers() { calls.push('containers'); return [container]; },
       async networks() { networkReads += 1; calls.push(`networks-${networkReads}`); throw new Error(`NETWORK_PROBE_${networkReads}`); },
@@ -869,6 +934,7 @@ test('post-start partial probe failure still cleans every independently confirme
     expectedProjectId: projectId, childArgs: [], initialize: 'start-only',
     adapter: {
       async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
       async start() { calls.push('start'); },
       async containers() { calls.push('containers'); return [container]; },
       async networks() { networkReads += 1; calls.push(`networks-${networkReads}`); throw new Error(`POST_START_NETWORK_PROBE_${networkReads}`); },
@@ -893,6 +959,7 @@ test('start failure before identity confirmation never stops and child failure c
     childArgs: [],
     adapter: {
       async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
       async start() { startCalls.push('start'); throw new Error('start failed'); },
       async containers() { startCalls.push('containers'); return []; },
       async reset() {},
@@ -908,6 +975,7 @@ test('start failure before identity confirmation never stops and child failure c
     childArgs: [],
     adapter: {
       async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
       async start() { partialCalls.push('start'); throw new Error('start interrupted'); },
       async containers() { partialCalls.push('containers'); return structuredClone(partialOwned); },
       async assets() { partialCalls.push('assets'); return { networks: [], volumes: [] }; },
@@ -926,6 +994,7 @@ test('start failure before identity confirmation never stops and child failure c
     childArgs: ['test.mjs'],
     adapter: {
       async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
       async start() { childCalls.push('start'); },
       async containers() { childCalls.push('containers'); return structuredClone(owned); },
       async reset() { childCalls.push('reset'); },
@@ -944,6 +1013,7 @@ test('cleanup identity drift holds foreign stack and never calls stop', async ()
     childArgs: [],
     adapter: {
       async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
       async start() {},
       async containers() {
         reads += 1;
@@ -968,6 +1038,7 @@ test('cleanup passes exact captured IDs to destructive stop, never project redis
     childArgs: [],
     adapter: {
       async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
       async start() {},
       async containers() { return structuredClone(owned); },
       async reset() {},
@@ -987,6 +1058,7 @@ test('signal received during cleanup completes stop but runner rejects', async (
     signal: controller.signal,
     adapter: {
       async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
       async start() {},
       async containers() { return structuredClone(owned); },
       async reset() {},
@@ -1053,6 +1125,7 @@ test('start-only onReady skips reset, returns callback value and still cleans ex
     onReady: async ({ localEnv }) => { calls.push('ready-callback'); return localEnv.DATABASE_URL; },
     adapter: {
       async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
       async start() { calls.push('start'); },
       async containers() { calls.push('containers'); return structuredClone(owned); },
       async waitForDatabase() { calls.push('health'); },
@@ -1083,6 +1156,7 @@ test('onReady can adopt an exact auxiliary API container before child execution 
     },
     adapter: {
       async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
       async start() { calls.push('start'); },
       async containers() { calls.push('containers'); return apiStarted ? [db, rest] : [db]; },
       async statusJson() { calls.push('status-json'); return { DATABASE_URL: 'postgres://local' }; },
@@ -1103,6 +1177,7 @@ test('onReady primary failure and cleanup failure are both retained', async () =
     onReady: async () => { throw new Error('READY_PRIMARY'); },
     adapter: {
       async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async assertNoPreexistingResources() {},
       async start() {},
       async containers() { return structuredClone(owned); },
       async statusJson() { return { DATABASE_URL: 'postgres://local' }; },

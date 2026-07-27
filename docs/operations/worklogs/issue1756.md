@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-27 09:55 CST｜負責 session：Canary／2026-07-24
+> 最後更新：2026-07-27 21:13 CST｜負責 session：Canary／2026-07-24
 
 ## 目標
 建立Midao runtime foundation、responsive shell與catalog-verified as-built database baseline。既有production只走post-cutoff additive migrations；fresh環境走platform→baseline→post-cutoff→seed→catalog exact comparison。所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -15,13 +15,13 @@
 - Baseline implementation：`docs/plans/2026-07-24-as-built-database-baseline-implementation.md`
 
 ## AC 清單
-- [ ] 128支pre-cutoff migration bytes凍結且6支Midao只屬post-cutoff；baseline v1兩次production唯讀capture一致且無data／secret。
-- [ ] Fresh platform→baseline marker→6支post-cutoff→seed成功；existing rehearsal不執行baseline，terminal catalogs exact equivalent。
-- [ ] 五個additive foundation objects與atomic RPC以RED → minimal GREEN完成，catalog／ACL／RLS runtime PASS。
-- [ ] Durable idempotency、atomic mode switch、audit/outbox與exact RPC ACL/RLS contracts通過。
-- [ ] Canonical guide guard、signed impersonation actor、login/logout cookie cleanup與safe redirect contracts通過。
-- [ ] `/midao`五route responsive shell與Brand Book tokens完成。
-- [ ] Midao＋legacy Playwright真browser gates、focused/full suite、lint、typecheck、build全部有fresh evidence。
+- [x] 128支pre-cutoff migration bytes凍結且6支Midao只屬post-cutoff；baseline v1兩次production唯讀capture一致且無data／secret。
+- [x] Fresh platform→baseline marker→6支post-cutoff→seed成功；existing rehearsal不執行baseline，terminal catalogs exact equivalent。
+- [x] 五個additive foundation objects與atomic RPC以RED → minimal GREEN完成，catalog／ACL／RLS runtime PASS。
+- [x] Durable idempotency、atomic mode switch、audit/outbox與exact RPC ACL/RLS contracts通過。
+- [ ] Canonical guide guard、signed impersonation actor、login/logout cookie cleanup與safe redirect contracts通過。（actor-binding remediation待new-HEAD heavy/fresh review）
+- [ ] `/midao`五route responsive shell與Brand Book tokens完成。（F9 responsive/accessibility heavy gate待new-HEAD PASS）
+- [ ] Midao＋legacy Playwright真browser gates、focused/full suite、lint、typecheck、build全部有fresh evidence。（old SHA evidence保留；new HEAD待重跑）
 - [x] Fresh executable-plan spec與quality/security reviews雙PASS（anchor `bcb81b11`）。
 
 ## 已完成（附證據）
@@ -115,13 +115,21 @@
 - 2026-07-27 Task 12 existing-upgrade lane完成：checkpoint `e8bc74e2ff4bbc1698ad24126958b5c77c591b1e`，occupied cutoff-shaped local PG17 fixture建立128支pre-cutoff history；upgrade boundary後baseline execution count=0，只套exact 6支post-cutoff，terminal catalog逐byte等於published expected-terminal，history總數134且無synthetic marker，runtime／Docker／workdir residue 0。Fresh review首輪FAIL去重4項：materializer transaction未綁先驗capture、setup失敗可能殘留run parent、remote URL可能在loopback驗證前進DELETE、terminal bytes錯誤路徑未zero。四項均先補舊碼RED，再由remediation `ed563679ad220c02ae66568f7d3d3587e52f99fe`／tree `58efd61456adfefc6d5a67d6449b17bc22ee84a0`修正；contract `7/7 PASS`、actual PG17與ordinary／heavy staged evidence重跑PASS、residue 0，latest fresh narrow review PASS blocking 0。
 - 2026-07-27 Task 13 migration gates完成：source mode在PR／local驗capture→expected transaction及A→B binding後，驗128 frozen bytes與6支pinned post-cutoff source；verified mode在push/main、schedule、manual release lane讀獨立production apply ledger。Repo真實狀態仍因6支Midao尚未套production而HOLD，未把source PASS冒充production verified。Initial commit `28ec52ae698a57f65ca5f0a4609c9f8c514c30da`／tree `421935c32a05b64d8acac5a3ac950193aa16e194` focused `19/19 PASS`。
 - Task 13 fresh review首輪FAIL blocking 1：verified mode只信filename＋status，fake verified／baseline可授權release。有效RED證實fake kind原本被判verified；remediation `fffc926801c0e58a4baa16d1f3282725afacd95d`／tree `eec745415bf9e43018b0a6ead64386f52aabb643`加入production ledger kind/version、strict top-level schema、exact production evidence fields、存在的migration identity與hostile fake/incomplete/nonproduction/bad timestamp/fake baseline tests。Focused `20/20 PASS`、staged evidence/check-only PASS，latest fresh narrow review PASS blocking 0。
-
+- 2026-07-27 Task 14／E4 final code evidence SHA `54cee346b2797a89cd6c1cf6b15b5a22c218c6f7`。Node `22.23.1`、Supabase CLI `2.87.2`、PostgreSQL `17`；capture transaction `c90dfe6ce32f77010354615795df95c085f16f53f8a830ac8553196b5d178e13`／manifest `9834579fba9bd13cf4d0d35bfb6498ce1661f04a1d80ae8bfd5b29ea3cbe0cfd`，expected-terminal transaction `05b445553141f945e50682aac56252b47eaee024e67d6f74f3bec9903c8e4fde`／manifest `c18051e40a0e28daeebf41a7dde69286f1a0f31e3d688b25840bac09c6ae2c23`。Known security drift維持`known_drift`：59 tables／354 ACL entries，未以baseline exclusion冒充修復。
+- Task 14 cloud heavy authority為GitHub Actions run `30263368122`／job `89969021451`：`timeout --signal=TERM --kill-after=30s 600s node scripts/testing/run-ordinary-web-tests.mjs --portable-infrastructure`為`162/162 PASS`；`timeout --signal=TERM --kill-after=30s 1200s bash scripts/testing/run-midao-e2e.sh apps/web/e2e/midao-navigation.spec.ts apps/web/e2e/midao-auth-and-impersonation.spec.ts`為Midao baseline browser `10/10 PASS`；`timeout --signal=TERM --kill-after=30s 1200s bash scripts/testing/run-midao-legacy-e2e-compat.sh apps/web/e2e/t1-login.spec.ts`為legacy login compatibility `3/3 PASS`。同SHA CI test、smoke、probe、scan、migration source contracts、production schema drift與Vercel全部SUCCESS。
+- Browser remediation保留真實失敗鏈：PostgREST URL prefix、Next SSR hydration前click遺失與512MB Next dev memory watcher restart均以RED／trace／log定位後修正；最後真guide auth、canonical page-session、signed admin actor、DELETE impersonation、admin return與legacy login皆在baseline-backed stack通過。Public ECR一次`toomanyrequests`只在image provision前中止，同run rerun完整PASS，未冒充產品測試結果。
+- 2026-07-27 Task 15新增`apps/web/tests/unit/midao-baseline-final-gate.test.mjs`：先依序驗capture＋expected-terminal transactions及cross-binding，才讀worklog/package plan；unfinished journal或expected ledger mismatch在evidence read前HOLD。Focused RED因docs缺final SHA而`1/2 FAIL`，hostile gate `1/1 PASS`；GREEN與final exact-HEAD fresh reviews尚未成立。
+- Exact `54cee346b2797a89cd6c1cf6b15b5a22c218c6f7` fresh reviews：SECURITY與ACCEPTANCE皆FAIL。Blocking：(1) actor cookie一小時消失後七天guide token會降級成普通guide；(2) failed start可收編既存同project Docker resources；(3) F9缺390×844／1440×1000、active／visibility／overflow／safe-area／keyboard／focus browser assertions；(4) F10 positive未走真admin UI/API且缺fake-signature、forged/expired actor、ordinary-login cleanup與完整redirect matrix。
+- Dirty remediation：guide token維持三段格式但impersonation使用domain-separated HMAC並回傳session kind；canonical guard雙向綁定actor，所有impersonation cookies壽命統一3600秒。Runner新增mandatory pre-start residue gate與exact container/network/volume name集合；start前既存資源不start、不adopt、不cleanup。Changed-area Node regression `85/85 PASS`，runner完整 `38/38 PASS`；new F9/F10整理為12個browser tests、逐case assertions仍完整。Final heavy／fresh re-review仍PENDING。
+- 第一輪new browser run `proc_6c71aa7ca32c`在4GB host以41個serial tests cold compile，20分鐘timeout後exit `-9`，只跑到第10案；不宣稱PASS。SIGKILL落在cleanup後段，read-back發現exact-owned network/volume與Next process group殘留；已核對label/name/cwd/pgid後只清該project，最終containers/networks/volumes/process皆0。第二輪將相同逐案assertions整併為12 tests；`proc_59b22e1391d3`在available memory約429MB、swap使用3.56GB時連續兩次Playwright worker recycle，判定local 4GB lane INCONCLUSIVE後主動終止。再次以exact label/name read-back清除單一project network/volume，containers/networks/volumes/process最終皆0；new-HEAD browser authority改由GitHub Actions。
+- Remaining HOLD：owner已授權commit／push／PR／CI，但**merge HOLD：未授權**；production apply ledger仍缺exact六支post-cutoff verified records，push/main release gate會HOLD。本PR未執行production DDL/DML或deploy；production drift PASS不等於migration ledger verified。
 ## 下一步
-- Task 14 baseline-backed D3／Midao E2E／legacy E2E：雙transaction verifier必須在任何baseline／seed／E2E payload open前PASS；刪除synthetic bootstrap，使用Task 9 materializer並保留owned local lifecycle。
-- Task 15 final regression／review／雙寫後，Foundation E4、Dashboard、#1757–#1761與full browser acceptance依roadmap接續；Tasks 12／13完成不代表整體Goal完成。
+- 完成new-HEAD GitHub Actions 12-case Midao browser gate；實際FAIL就依CI trace逐案修，exit0後重跑legacy、G1–G4與final gate。
+- 建立new-HEAD checkpoint、push PR #1766、取CI evidence，再做fresh SECURITY＋ACCEPTANCE re-review；blocking未歸零不勾Task 15、不merge。
+- Production六支migration apply/ledger需要獨立owner授權與真實operator evidence；不得由schema drift或local rehearsal推論已apply。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan／A4／Phase B／Phase C／D1–D3a：對應anchors均已有fresh PASS；D3a final為`8a70f79e`。下一步只進D3b。
+- 不重跑或重審完整plan／A4／Phase B／Phase C／D1–D3a既有歷史anchors；但本輪針對fresh finding新增的actor／runner delta必須在new HEAD重新review，不得拿舊`8a70f79e` PASS代替。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。

@@ -31,6 +31,7 @@ interface SignedGuideSession {
   guideId: string;
   guideName: string;
   sessionVersion: number;
+  sessionKind: 'guide' | 'admin-impersonation';
 }
 
 interface ImpersonationState {
@@ -72,6 +73,8 @@ export function assertMidaoRuntimeAccess({
   if (requireMode && runtime.backendMode !== 'midao') deny('BACKEND_MODE_MISMATCH', 409);
 
   if (impersonation.present && !impersonation.actor) deny('UNAUTHORIZED', 401);
+  const sessionIsImpersonated = session.sessionKind === 'admin-impersonation';
+  if (sessionIsImpersonated !== Boolean(impersonation.actor)) deny('UNAUTHORIZED', 401);
   if (impersonation.actor && impersonation.actor.targetGuideId !== runtime.guideId) {
     deny('UNAUTHORIZED', 401);
   }

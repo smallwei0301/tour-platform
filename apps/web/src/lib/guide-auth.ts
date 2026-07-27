@@ -5,7 +5,12 @@
  */
 import { randomBytes, createHash, scryptSync } from 'crypto';
 import { constantTimeEquals } from './constant-time.mjs';
-import { signGuideSession, verifyGuideSessionSignature } from './guide/session-crypto.ts';
+import {
+  signGuideSession,
+  signImpersonatedGuideSession,
+  verifyGuideSessionSignature,
+  verifyImpersonatedGuideSessionSignature,
+} from './guide/session-crypto.ts';
 
 const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
@@ -95,6 +100,12 @@ export interface GuideSessionPayload {
   guideName: string;
   sessionVersion: number;
   isNew?: boolean;
+  sessionKind: 'guide' | 'admin-impersonation';
+}
+
+interface GuideSessionCookieOptions {
+  sessionKind?: 'guide' | 'admin-impersonation';
+  maxAgeSeconds?: number;
 }
 
 /**
@@ -106,10 +117,17 @@ export function createGuideSessionCookies(
   guideName: string,
   sessionVersion = 1,
   isNew = false,
+  options: GuideSessionCookieOptions = {},
 ): string[] {
-  const sig = signGuideSession(guideId, sessionVersion);
+  const sessionKind = options.sessionKind ?? 'guide';
+  const sig = sessionKind === 'admin-impersonation'
+    ? signImpersonatedGuideSession(guideId, sessionVersion)
+    : signGuideSession(guideId, sessionVersion);
   const token = `${guideId}:${sessionVersion}:${sig}`;
-  const maxAge = SESSION_MAX_AGE_SECONDS;
+  const maxAge = options.maxAgeSeconds ?? SESSION_MAX_AGE_SECONDS;
+  if (!Number.isSafeInteger(maxAge) || maxAge < 1 || maxAge > SESSION_MAX_AGE_SECONDS) {
+    throw new Error('guide session maxAgeSeconds is invalid');
+  }
   // Add Secure flag in production (HTTPS only)
   const securePart = process.env.NODE_ENV === 'production' ? '; Secure' : '';
   const cookieBase = `; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${securePart}`;
@@ -168,9 +186,14 @@ export function verifyGuideSession(req: Request): GuideSessionPayload | null {
   const version = Number(versionStr);
   if (isNaN(version)) return null;
 
-  if (!verifyGuideSessionSignature(guideId, version, sig)) return null;
+  const sessionKind = verifyGuideSessionSignature(guideId, version, sig)
+    ? 'guide' as const
+    : verifyImpersonatedGuideSessionSignature(guideId, version, sig)
+      ? 'admin-impersonation' as const
+      : null;
+  if (!sessionKind) return null;
 
-  return { guideId, guideName, sessionVersion: version, isNew };
+  return { guideId, guideName, sessionVersion: version, isNew, sessionKind };
 }
 
 /** Mask email: john@example.com → j***@example.com */

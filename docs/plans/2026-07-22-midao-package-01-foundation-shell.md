@@ -1,6 +1,6 @@
 # Issue #1756 — Midao Foundation + Shell TDD Micro-plan
 
-> **Status:** Active；2026-07-24依owner決策修訂D3b fresh-install架構。Frozen migration replay路線已停止，改採catalog-verified as-built baseline。
+> **Status:** Review remediation active；merge／release HOLD。F9/F10、actor binding與runner ownership修正正在新HEAD重驗；production verified ledger仍缺六支post-cutoff records。
 >
 > **Execution skill:** `subagent-driven-development`; one fresh implementer per task, then independent spec and quality review.
 >
@@ -1445,26 +1445,37 @@ Expected：四個commands皆exit 0。第一條保存repo harness evidence；lint
 
 Fresh spec reviewer逐條核對#1756 AC、read-back migration/runtime guard/actor/E2E seam，並重跑G1–G4。Fresh quality reviewer檢查security、PII、duplication、test quality、no bypass。任一FAIL回實作者修正，之後由fresh reviewer重驗。
 
+## Task 14／15 actual evidence（2026-07-27）
+
+- Heavy code evidence SHA：`54cee346b2797a89cd6c1cf6b15b5a22c218c6f7`；Node `22.23.1`、Supabase CLI `2.87.2`、PostgreSQL `17`。
+- Published capture transaction／manifest：`c90dfe6ce32f77010354615795df95c085f16f53f8a830ac8553196b5d178e13`／`9834579fba9bd13cf4d0d35bfb6498ce1661f04a1d80ae8bfd5b29ea3cbe0cfd`；expected-terminal transaction／manifest：`05b445553141f945e50682aac56252b47eaee024e67d6f74f3bec9903c8e4fde`／`c18051e40a0e28daeebf41a7dde69286f1a0f31e3d688b25840bac09c6ae2c23`。
+- Known security drift：`known_drift`，59 tables／354 ACL entries；此artifact不是security approval，也未被baseline exclusion隱藏。
+- GitHub Actions run `30263368122`／job `89969021451`：portable infrastructure `162/162 PASS`；Midao baseline browser `10/10 PASS`；legacy login compatibility `3/3 PASS`。同SHA CI test、smoke、probe、scan、migration contracts/drift與Vercel全部SUCCESS。
+- Exact cloud argv：`timeout --signal=TERM --kill-after=30s 600s node scripts/testing/run-ordinary-web-tests.mjs --portable-infrastructure`；`timeout --signal=TERM --kill-after=30s 1200s bash scripts/testing/run-midao-e2e.sh apps/web/e2e/midao-navigation.spec.ts apps/web/e2e/midao-auth-and-impersonation.spec.ts`；`timeout --signal=TERM --kill-after=30s 1200s bash scripts/testing/run-midao-legacy-e2e-compat.sh apps/web/e2e/t1-login.spec.ts`。
+- Task 15 final gate：`apps/web/tests/unit/midao-baseline-final-gate.test.mjs`先驗capture＋expected-terminal及cross-binding才讀evidence；hostile journal／ledger在evidence read前HOLD。TDD RED為`1/2 FAIL`（缺final docs anchors），hostile path `1/1 PASS`。
+- Fresh reviews（exact `54cee346b2797a89cd6c1cf6b15b5a22c218c6f7`）：SECURITY／ACCEPTANCE皆FAIL。Blocking：actor cookie消失後impersonation token降級、start-failure可收編既存Docker資源、F9/F10 browser matrix未完整。Dirty remediation已加入domain-separated impersonation token、pre-start residue gate與完整F9/F10；新HEAD re-review仍PENDING。
+- Remaining HOLD：merge未授權；production apply ledger缺exact六支post-cutoff verified records，push/main release gate會HOLD。本PR未執行production DDL/DML或deploy。
+
 ## Definition of Done for #1756
 
-- [ ] 128支pre-cutoff migrations SHA-256 manifest PASS，且6支Midao只存在post-cutoff集合；stash內8支frozen修改未恢復、未提交。
-- [ ] Baseline v1由兩次production read-only capture建立，normalized catalog／TOC／rendered SQL byte-identical；published `dependency-closure.json`逐selected entry完整且missing/extra/unknown/duplicate皆零；artifact無business rows／credentials，ownership manifest零unknown objects。
-- [ ] Fresh lane成功套platform→單一baseline marker（含managed overlay）→6支post-cutoff→seed；fresh與existing各自對expected-terminal exact compare，existing upgrade baseline execution count為零。
-- [ ] PR source gate與production release verified gate分離；baseline ledger不冒充production apply ledger。
-- [ ] Six post-cutoff foundation migrations source-contract＋local runtime PASS。
-- [ ] backend mode switch atomically updates mode/version/audit/outbox；fresh same-mode無business side effect；function只授權service_role。
-- [ ] durable idempotency schema exists and is service-role-only。
-- [ ] canonical guard checks HMAC/DB display_name/version/status/mode/flags。
-- [ ] signed impersonation actor survives into route context；cross-protocol/forgery denied；普通登入與logout清cookies。
-- [ ] forward mode switch default-off且受獨立gate；rollback不受flags阻擋。
-- [ ] guide login與admin impersonation `redirectTo`都由real UI consume，safe same-realm與hostile/malformed/encoded/cross-realm browser matrix必跑；unsafe paths fail closed且browser origin不離開runner-owned localhost。
-- [ ] `/midao` server layout does not depend on frozen middleware。
-- [ ] E2E uses real HMAC and seeded local DB row，no production bypass；Midao specs與unflagged legacy managed-server `t1-login.spec.ts`真browser gate都PASS。
-- [ ] five routes work on mobile/desktop with accessible shell。
-- [ ] G1–G4 actual commands exit 0，包含full suite與CI-recorder lint/typecheck/build；每條有獨立sanitized evidence，CI child使用rebuilt PATH/fixed locale/empty HOME且user/global npmrc disabled。
-- [ ] Staged evidence orchestrator分離exact child argv與derived semantic command；同tree evidence bundle覆蓋所有staged tests，拒絕untracked/unstaged code、unrelated-only tests與manifest drift。
-- [ ] Local Supabase runner持全repo排他lock、核對owned identity、redact logs且只stop owned stack；Playwright不reuse existing server。
-- [ ] ACL catalog、RLS policy catalog與temporary probe DML三層runtime驗證PASS。
+- [x] 128支pre-cutoff migrations SHA-256 manifest PASS，且6支Midao只存在post-cutoff集合；stash內8支frozen修改未恢復、未提交。
+- [x] Baseline v1由兩次production read-only capture建立，normalized catalog／TOC／rendered SQL byte-identical；published `dependency-closure.json`逐selected entry完整且missing/extra/unknown/duplicate皆零；artifact無business rows／credentials，ownership manifest零unknown objects。
+- [x] Fresh lane成功套platform→單一baseline marker（含managed overlay）→6支post-cutoff→seed；fresh與existing各自對expected-terminal exact compare，existing upgrade baseline execution count為零。
+- [x] PR source gate與production release verified gate分離；baseline ledger不冒充production apply ledger。
+- [x] Six post-cutoff foundation migrations source-contract＋local runtime PASS。
+- [x] backend mode switch atomically updates mode/version/audit/outbox；fresh same-mode無business side effect；function只授權service_role。
+- [x] durable idempotency schema exists and is service-role-only。
+- [x] canonical guard checks HMAC/DB display_name/version/status/mode/flags。
+- [ ] signed impersonation actor survives into route context；cross-protocol/forgery denied；普通登入與logout清cookies。（新domain-separated remediation待browser／fresh review）
+- [x] forward mode switch default-off且受獨立gate；rollback不受flags阻擋。
+- [ ] guide login與admin impersonation `redirectTo`都由real UI consume，safe same-realm與hostile/malformed/encoded/cross-realm browser matrix必跑；unsafe paths fail closed且browser origin不離開runner-owned localhost。（新F10待heavy evidence）
+- [x] `/midao` server layout does not depend on frozen middleware。
+- [ ] E2E uses real HMAC and seeded local DB row，no production bypass；Midao specs與unflagged legacy managed-server `t1-login.spec.ts`真browser gate都PASS。（新HEAD待重跑）
+- [ ] five routes work on mobile/desktop with accessible shell。（新F9待heavy evidence）
+- [ ] G1–G4 actual commands exit 0，包含full suite與CI-recorder lint/typecheck/build；每條有獨立sanitized evidence，CI child使用rebuilt PATH/fixed locale/empty HOME且user/global npmrc disabled。（新HEAD待重跑）
+- [x] Staged evidence orchestrator分離exact child argv與derived semantic command；同tree evidence bundle覆蓋所有staged tests，拒絕untracked/unstaged code、unrelated-only tests與manifest drift。
+- [ ] Local Supabase runner持全repo排他lock、核對owned identity、redact logs且只stop owned stack；Playwright不reuse existing server。（pre-start residue remediation待fresh review）
+- [x] ACL catalog、RLS policy catalog與temporary probe DML三層runtime驗證PASS。
 - [ ] Independent spec＋quality reviews PASS。
 - [ ] Worklog/issue contain exact commands、exit codes、commit SHA、remaining blockers。
 - [ ] No push/PR/merge/deploy/production mutation without separate authorization。
