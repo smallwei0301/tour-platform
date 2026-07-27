@@ -91,6 +91,49 @@ export function normalizeRichPlanPayload(input = {}) {
   return rich;
 }
 
+// 每個 rich DB 欄位對應的輸入來源鍵（snake_case 與 camelCase 別名）。
+// 給 normalizeRichPlanPatch 判斷「呼叫端到底有沒有提供這個欄位」用。
+const RICH_FIELD_SOURCES = {
+  legacy_plan_id: ['legacy_plan_id', 'legacyPlanId'],
+  details_link_text: ['details_link_text', 'detailsLinkText'],
+  booking_btn_text: ['booking_btn_text', 'bookingBtnText'],
+  highlights: ['highlights'],
+  language: ['language'],
+  earliest_departure: ['earliest_departure', 'earliestDeparture'],
+  confirm_by_days: ['confirm_by_days', 'confirmByDays'],
+  free_cancel_days: ['free_cancel_days', 'freeCancelDays'],
+  plan_inclusions: ['plan_inclusions', 'planInclusions'],
+  plan_exclusions: ['plan_exclusions', 'planExclusions'],
+  plan_itinerary: ['plan_itinerary', 'planItinerary'],
+  plan_itinerary_image_url: ['plan_itinerary_image_url'],
+  meeting_point_name: ['meeting_point_name', 'meetingPointName'],
+  meeting_address: ['meeting_address', 'meetingAddress'],
+  experience_point_name: ['experience_point_name', 'experiencePointName'],
+  experience_address: ['experience_address', 'experienceAddress'],
+  plan_notices: ['plan_notices', 'planNotices'],
+  plan_refund_rules: ['plan_refund_rules', 'planRefundRules'],
+};
+
+/**
+ * 部分更新（PATCH 語意）版的 rich 欄位 normalize：只回傳 input 中「實際出現」的欄位。
+ *
+ * normalizeRichPlanPayload 是全量語意（未提供的欄位回 null／[]），適用於 insert／匯入；
+ * 若把它直接 Object.assign 進 UPDATE payload，status-only 的「啟用／停用」請求會把
+ * plan_itinerary、highlights、集合點等既有內容全部洗成 null（#1376 類 bug，admin 版）。
+ * UPDATE 路徑一律改用本函式。
+ */
+export function normalizeRichPlanPatch(input = {}) {
+  const patch = {};
+  if (!input || typeof input !== 'object') return patch;
+  const full = normalizeRichPlanPayload(input);
+  for (const [column, sources] of Object.entries(RICH_FIELD_SOURCES)) {
+    if (sources.some((key) => input[key] !== undefined)) {
+      patch[column] = full[column];
+    }
+  }
+  return patch;
+}
+
 function toPositivePriceOrNull(value) {
   const num = Number(value);
   if (!Number.isFinite(num) || num <= 0) return null;
