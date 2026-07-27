@@ -72,9 +72,17 @@ jobs:
           printf '%s  %s\n' "$binary_sha" "$tmp/supabase" | sha256sum --check --strict
           sudo install --directory --owner=root --group=root --mode=0755 /root/.hermes/toolchains/supabase/2.87.2
           sudo install --owner=root --group=root --mode=0755 "$tmp/supabase" /root/.hermes/toolchains/supabase/2.87.2/supabase
-          printf '%s  %s\n' "$binary_sha" /root/.hermes/toolchains/supabase/2.87.2/supabase | sudo sha256sum --check --strict
-          test "$(sudo /root/.hermes/toolchains/supabase/2.87.2/supabase --version)" = '2.87.2'
-          sudo git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          if ! command -v setfacl >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends acl
+          fi
+          runner_user="$(id -un)"
+          sudo setfacl -m "u:$runner_user:--x" /root
+          sudo setfacl -m "u:$runner_user:r-x" /root/.hermes /root/.hermes/toolchains /root/.hermes/toolchains/supabase /root/.hermes/toolchains/supabase/2.87.2
+          sudo setfacl -m "u:$runner_user:r-x" /root/.hermes/toolchains/supabase/2.87.2/supabase
+          getfacl --absolute-names /root/.hermes/toolchains/supabase/2.87.2/supabase | grep -F "user:$runner_user:r-x"
+          printf '%s  %s\n' "$binary_sha" /root/.hermes/toolchains/supabase/2.87.2/supabase | sha256sum --check --strict
+          test "$(/root/.hermes/toolchains/supabase/2.87.2/supabase --version)" = '2.87.2'
 
       - name: Provision digest-bound database and API images
         shell: bash
@@ -105,23 +113,15 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run baseline-backed Midao browser gate
-        shell: bash
-        run: |
-          set -euo pipefail
-          NODE_BIN="$(command -v node)"
-          sudo env -i HOME=/root PATH="$PATH" CI=1 NODE22_BIN="$NODE_BIN" LANG=C.UTF-8 LC_ALL=C.UTF-8 \
-            timeout --signal=TERM 1200s bash scripts/testing/run-midao-e2e.sh \
-            apps/web/e2e/midao-navigation.spec.ts \
-            apps/web/e2e/midao-auth-and-impersonation.spec.ts
+        run: >-
+          timeout --signal=TERM 1200s bash scripts/testing/run-midao-e2e.sh
+          apps/web/e2e/midao-navigation.spec.ts
+          apps/web/e2e/midao-auth-and-impersonation.spec.ts
 
       - name: Run baseline-backed legacy login compatibility
-        shell: bash
-        run: |
-          set -euo pipefail
-          NODE_BIN="$(command -v node)"
-          sudo env -i HOME=/root PATH="$PATH" CI=1 NODE22_BIN="$NODE_BIN" LANG=C.UTF-8 LC_ALL=C.UTF-8 \
-            timeout --signal=TERM 1200s bash scripts/testing/run-midao-legacy-e2e-compat.sh \
-            apps/web/e2e/t1-login.spec.ts
+        run: >-
+          timeout --signal=TERM 1200s bash scripts/testing/run-midao-legacy-e2e-compat.sh
+          apps/web/e2e/t1-login.spec.ts
 
       - name: Upload Playwright failure evidence
         if: failure()
