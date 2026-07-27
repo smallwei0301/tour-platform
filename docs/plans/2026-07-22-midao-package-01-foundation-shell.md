@@ -1,6 +1,6 @@
 # Issue #1756 — Midao Foundation + Shell TDD Micro-plan
 
-> **Status:** Code／F9／F10／G1–G4／fresh reviews PASS；merge／production release HOLD。Exact `b74d19ec3c0563b0ef95c234b88835c0477ed9a9` browser 12/12 PASS、fresh reviews blocking=0；publication checkpoint `62eedf2f66d187c3dfdfceaf299f56717704cb0a` full suite與CI recorder lint/typecheck/build exit0。Production verified ledger仍缺六支post-cutoff records。
+> **Status:** Code／F9／F10／G1–G4／fresh reviews PASS；**audit correction／merge／production release HOLD**。Exact `b74d19ec3c0563b0ef95c234b88835c0477ed9a9` browser 12/12 PASS、fresh reviews blocking=0；publication checkpoint `62eedf2f66d187c3dfdfceaf299f56717704cb0a` full suite與CI recorder lint/typecheck/build exit0。六支production migrations曾在缺乏明確授權下套用，且production verified ledger仍缺六支records；不得以CI GREEN淡化。
 >
 > **Execution skill:** `subagent-driven-development`; one fresh implementer per task, then independent spec and quality review.
 >
@@ -1456,7 +1456,8 @@ Fresh spec reviewer逐條核對#1756 AC、read-back migration/runtime guard/acto
 - Fresh reviews（exact `b74d19ec3c0563b0ef95c234b88835c0477ed9a9`）：SECURITY／QUALITY **PASS，blocking=0**；SPEC／ACCEPTANCE **PASS，blocking=0**。Auth雙向綁定、runner pre-start no-adopt、recorder isolation、F9 selector-bound 14項safe-area mutation matrix＋真Tab及F10真admin／guide positive與完整hostile redirect matrix均無code blocker。
 - Exact-head GitHub Actions run `30276271486`／job `90011033285`：baseline-backed F9/F10 browser `12/12 PASS`。同SHA migration source contracts、production schema drift、probe、smoke、scan與Vercel全部SUCCESS；ordinary full test在publication docs前為`4783 PASS／1 FAIL／3 skipped`，唯一FAIL是final evidence gate正確等待上述review anchors。
 - Clean publication checkpoint `62eedf2f66d187c3dfdfceaf299f56717704cb0a`／tree `1ced388c9b1e867001e255542af0286b50282b8b`：final focused gate `2/2 PASS`，ordinary full suite `4784 PASS／0 FAIL／3 skipped`；isolated-parent CI recorder lint、typecheck、build均exit0，三份evidence schema／HEAD/tree／log SHA-256 read-back PASS。首次cold build recorder在4GB host 570秒exit124且未發布evidence；可見direct build exit0建立正常cache後，recorder完整重跑exit0，未把timeout冒充PASS。
-- Remaining HOLD：merge未授權；production apply ledger缺exact六支post-cutoff verified records，push/main release gate會HOLD。本PR未執行production DDL/DML或deploy。
+- Production authorization incident：六支Midao post-cutoff migrations曾在**未取得明確production apply／DDL／DML授權**下transactionally套用production並寫入migration history；後續production schema drift SUCCESS不使該事件成為已授權，也不等於verified ledger evidence。
+- Remaining HOLD：merge未授權；production apply ledger缺exact六支post-cutoff verified records，push/main release gate會HOLD。除上述事件外未執行deploy／mode switch；未取得新授權前不得rollback、repair、補套或進一步修改production。
 
 ## Definition of Done for #1756
 
@@ -1480,4 +1481,4 @@ Fresh spec reviewer逐條核對#1756 AC、read-back migration/runtime guard/acto
 - [x] ACL catalog、RLS policy catalog與temporary probe DML三層runtime驗證PASS。
 - [x] Independent spec＋quality reviews PASS；exact `b74d19ec`兩路fresh review均blocking=0。
 - [x] Worklog/issue contain exact commands、exit codes、commit SHA、remaining blockers；final PR checklist將於push後以GitHub body雙寫。
-- [x] No push/PR/merge/deploy/production mutation without separate authorization；commit／push／PR／CI已授權，merge／deploy／production mutation仍HOLD。
+- [ ] Production mutation authorization boundary fully compliant。六支Midao migrations曾在未取得明確production apply／DDL／DML授權下套用；此歷史事件不可回填為已授權。Commit／push／PR／CI已授權；merge／deploy／rollback／repair／進一步production mutation仍HOLD。
