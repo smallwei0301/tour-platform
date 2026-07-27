@@ -32,6 +32,17 @@ function canonicalSha256(value) {
   try { return sha256(bytes); } finally { bytes.fill(0); }
 }
 
+function stableCanonicalSha256(value) {
+  const bytes = Buffer.from(`${JSON.stringify(stable(value))}\n`);
+  try { return sha256(bytes); } finally { bytes.fill(0); }
+}
+
+function stable(value) {
+  if (Array.isArray(value)) return value.map(stable);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map((key) => [key, stable(value[key])]));
+  return value;
+}
+
 function exactKeys(value, allowed, required, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} must be an object`);
   const allowedSet = new Set(allowed);
@@ -129,6 +140,18 @@ export const EXPECTED_TERMINAL_PAYLOAD_PATHS = Object.freeze([
 ]);
 const EXPECTED_TERMINAL_DIGEST_KEYS = Object.freeze([...EXPECTED_TERMINAL_PAYLOAD_PATHS].sort());
 const EXPECTED_TERMINAL_MANIFEST_NAME = 'manifest.json';
+const EXPECTED_TERMINAL_HISTORY = Object.freeze([
+  '00000000000001', '20260723000000', '20260723001000', '20260723002000',
+  '20260723002500', '20260723003000', '20260723003500',
+]);
+const EXPECTED_TERMINAL_MIGRATIONS = Object.freeze([
+  Object.freeze({ filename: '20260723000000_midao_backend_mode.sql', sha256: 'fe108aa5ca68f135f49e22cbb5074941ce8ff5464a6d91a56f9f4cbdae437b17' }),
+  Object.freeze({ filename: '20260723001000_midao_notification_outbox.sql', sha256: '6babce9053d6a3f7658276c9cfbbfc5ec0f10ffaeadf4fa07ed904b5f5c66569' }),
+  Object.freeze({ filename: '20260723002000_midao_idempotency_records.sql', sha256: '051719cce046ce438668b9424a707b709f5bc1c254a537a525f07261b1a8d7db' }),
+  Object.freeze({ filename: '20260723002500_midao_audit_events.sql', sha256: '62fa29d6d4d8fe119867ef05e69eba465f52b5cfa2ca96bddd83e93da9b9bcca' }),
+  Object.freeze({ filename: '20260723003000_midao_atomic_backend_mode_switch.sql', sha256: 'c59afc5ee72da4d76ae77fb984db4b34d8f160198544ba233d0fb9f2190c90e5' }),
+  Object.freeze({ filename: '20260723003500_midao_service_role_acl_hardening.sql', sha256: 'f16fd369b9ce0b405c38ec2df5a46676cc84ba2de087b3b010cc00e4415353e5' }),
+]);
 
 export function validateExpectedTerminalManifest(manifest) {
   const keys = ['captureManifestSha256', 'captureTransactionId', 'historyVersions', 'kind', 'payloadDigests', 'postCutoffMigrations', 'schemaVersion', 'transactionId'];
@@ -136,16 +159,17 @@ export function validateExpectedTerminalManifest(manifest) {
   if (manifest.schemaVersion !== 1 || manifest.kind !== 'midao-expected-terminal-manifest') throw new Error('expected-terminal manifest identity invalid');
   for (const key of ['transactionId', 'captureTransactionId', 'captureManifestSha256']) validateDigest(manifest[key], `expected-terminal ${key}`);
   validatePayloadDigests(manifest.payloadDigests, EXPECTED_TERMINAL_DIGEST_KEYS);
-  if (!Array.isArray(manifest.historyVersions) || manifest.historyVersions.length !== 7
-    || manifest.historyVersions.some((version) => typeof version !== 'string' || !/^\d{14}$/u.test(version))) {
-    throw new Error('expected-terminal history invalid');
+  if (JSON.stringify(manifest.historyVersions) !== JSON.stringify(EXPECTED_TERMINAL_HISTORY)) {
+    throw new Error('expected-terminal exact history invalid');
   }
-  if (!Array.isArray(manifest.postCutoffMigrations) || manifest.postCutoffMigrations.length !== 6) throw new Error('expected-terminal migrations invalid');
-  for (const migration of manifest.postCutoffMigrations) {
+  if (!Array.isArray(manifest.postCutoffMigrations) || manifest.postCutoffMigrations.length !== EXPECTED_TERMINAL_MIGRATIONS.length) throw new Error('expected-terminal migrations invalid');
+  for (const [index, migration] of manifest.postCutoffMigrations.entries()) {
     exactKeys(migration, ['filename', 'sha256'], ['filename', 'sha256'], 'expected-terminal migration');
-    if (typeof migration.filename !== 'string' || !/^\d{14}_[a-z0-9_]+\.sql$/u.test(migration.filename)) throw new Error('expected-terminal migration filename invalid');
-    validateDigest(migration.sha256, 'expected-terminal migration');
+    if (migration.filename !== EXPECTED_TERMINAL_MIGRATIONS[index].filename
+      || migration.sha256 !== EXPECTED_TERMINAL_MIGRATIONS[index].sha256) throw new Error('expected-terminal exact migration invalid');
   }
+  const { transactionId, ...core } = manifest;
+  if (stableCanonicalSha256(core) !== transactionId) throw new Error('expected-terminal content-derived transaction mismatch');
   rejectForbiddenMetadata(manifest);
   return manifest;
 }

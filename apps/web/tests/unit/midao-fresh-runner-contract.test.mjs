@@ -61,13 +61,36 @@ test('capture and expected transactions verify before materialization or payload
   }
 });
 
+test('fresh lifecycle binds expected capture references to the immediately verified capture capability', async () => {
+  const api = await subject(); let consumers = 0;
+  await assert.rejects(api.__internal.runFreshInstallWithAdapters({
+    testPath: path.join(root, integrationPath),
+    verifyCapture: async () => ({
+      transactionId: 'a'.repeat(64), ledger: { captureManifestSha256: 'b'.repeat(64) }, dispose() {},
+    }),
+    verifyExpected: async () => ({
+      transactionId: 'c'.repeat(64),
+      manifest: { captureTransactionId: 'd'.repeat(64), captureManifestSha256: 'e'.repeat(64), historyVersions: expectedHistory },
+      dispose() {},
+    }),
+    materialize: async () => { consumers += 1; }, runLocal: async () => { consumers += 1; }, compare: async () => { consumers += 1; },
+  }), /capture|transaction|reference|binding/iu);
+  assert.equal(consumers, 0);
+});
+
 test('verified fresh lifecycle materializes single-marker history then exact-compares terminal truth', async () => {
   const api = await subject(); const calls = [];
   const result = await api.__internal.runFreshInstallWithAdapters({
     testPath: path.join(root, integrationPath),
-    verifyCapture: async () => ({ transactionId: 'capture', dispose: () => calls.push('dispose-capture') }),
+    verifyCapture: async () => ({
+      transactionId: 'capture', ledger: { captureManifestSha256: 'capture-manifest' },
+      dispose: () => calls.push('dispose-capture'),
+    }),
     verifyExpected: async () => ({
-      transactionId: 'expected', manifest: { historyVersions: expectedHistory },
+      transactionId: 'expected',
+      manifest: {
+        captureTransactionId: 'capture', captureManifestSha256: 'capture-manifest', historyVersions: expectedHistory,
+      },
       payloads: { get: () => Buffer.from('terminal') },
       dispose: () => calls.push('dispose-expected'),
     }),

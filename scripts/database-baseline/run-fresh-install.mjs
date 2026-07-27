@@ -52,6 +52,10 @@ async function runFreshInstallWithAdapters(options = {}) {
     expected = await options.verifyExpected({ capture });
     if (!capture || typeof capture.dispose !== 'function' || !expected || typeof expected.dispose !== 'function'
       || !Array.isArray(expected.manifest?.historyVersions)) throw new Error('fresh-install verified capabilities invalid');
+    if (expected.manifest.captureTransactionId !== capture.transactionId
+      || expected.manifest.captureManifestSha256 !== capture.ledger?.captureManifestSha256) {
+      throw new Error('fresh-install capture transaction binding mismatch');
+    }
     materialized = await options.materialize({ capture, expected });
     if (!materialized || !Array.isArray(materialized.history) || typeof materialized.cleanup !== 'function') {
       throw new Error('fresh-install materialized capability invalid');
@@ -105,12 +109,20 @@ export async function runFreshInstallActual({ testPath, repoRoot = REPO_ROOT, si
         ledgerPath: path.join(canonicalRoot, 'docs/operations/baseline-ledger.json'),
         journalPath: captureJournalPath,
       }),
-      verifyExpected: () => verifyExpectedTerminalTransaction({
-        baselineDir: path.join(canonicalRoot, 'supabase/baselines/v1'),
-        ledgerPath: path.join(canonicalRoot, 'docs/operations/expected-terminal-ledger.json'),
-        captureLedgerPath: path.join(canonicalRoot, 'docs/operations/baseline-ledger.json'),
-        journalPath: expectedJournalPath,
-      }),
+      verifyExpected: async ({ capture }) => {
+        const verified = await verifyExpectedTerminalTransaction({
+          baselineDir: path.join(canonicalRoot, 'supabase/baselines/v1'),
+          ledgerPath: path.join(canonicalRoot, 'docs/operations/expected-terminal-ledger.json'),
+          captureLedgerPath: path.join(canonicalRoot, 'docs/operations/baseline-ledger.json'),
+          journalPath: expectedJournalPath,
+        });
+        if (verified.manifest.captureTransactionId !== capture.transactionId
+          || verified.manifest.captureManifestSha256 !== capture.ledger.captureManifestSha256) {
+          verified.dispose();
+          throw new Error('fresh-install verified capture publication changed');
+        }
+        return verified;
+      },
       materialize: async () => {
         const runParent = path.join(LOCK_PATH, 'fresh-install-run');
         await mkdir(runParent, { mode: 0o700 });
