@@ -1,7 +1,7 @@
 # midao2 直接預約（instant booking）設計規格
 
 > 日期：2026-07-27（Asia/Taipei）。前置：Plan 1–3 已完成（分支 `claude/superpowers-midao-backend-x90czx`，PR #1763 未 merge）。
-> Owner 決策（2026-07-27 對話拍板）：①單位＝三時段＋「全天」便捷鈕（一鍵選滿三時段）；②撞單自動轉一般需求單；③取消後單位自動恢復開放；④新增獨立狀態 `confirmed`／`cancelled`。另：Navbar 保留不隱藏。
+> Owner 決策（2026-07-27 對話拍板）：①單位＝三時段＋「全天」便捷鈕（一鍵選滿三時段）；②撞單自動轉一般需求單；③取消後單位自動恢復開放；④新增獨立狀態 `confirmed`／`cancelled`；⑤**只有 `confirmed` 的直接預約消耗單位**——待確認的單（一般需求單、撞單轉出的需求單、new/pending_reply/replied 全部）一律不消耗、不鎖任何時段。另：Navbar 保留不隱藏；Migration D 生產套用已獲 SQL-OVERRIDE 授權（落檔＋CI 綠後執行）。
 
 ## 1. 概念模型
 
@@ -11,6 +11,7 @@
 - 「全天」便捷鈕：僅當該日三時段全開時可選，按下＝一次選滿三時段（消耗 3 個單位），入單 `preferred_period='full_day'`。
 - 導遊「再開單位」：在行事曆把被消耗的時段重新打開 → 可收第二筆直接預約；原預約不受影響。
 - 另兩種模式（`confirm_first`／`line_inquiry`）行為完全不變（輕量需求單，日期自由填）。
+- **硬規則（owner 決策⑤）：只有 `status='confirmed'` 的 instant 單消耗單位。** 任何待確認的單——一般需求單、撞單降級轉出的需求單、new/pending_reply/replied 各狀態——都不寫消耗列、不關時段、不影響公開可用性；導遊後續與旅客談成也只走 closed_won，不回頭消耗單位（時段管理權完全在導遊手上）。
 
 ## 2. 資料模型（Migration D，只增不改既有檔）
 
