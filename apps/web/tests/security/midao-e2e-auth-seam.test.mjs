@@ -74,7 +74,7 @@ test('managed Midao Playwright lane is explicit, local-only, non-reusing, and se
     'MIDAO_E2E_LOCAL', 'PLAYWRIGHT_NO_WEBSERVER', 'reuseExistingServer: false',
     'MIDAO_E2E_PORT', 'SUPABASE_SERVICE_ROLE_KEY', 'GUIDE_SESSION_SECRET',
     'ADMIN_ACCESS_TOKEN', 'ADMIN_EMAIL_ALLOWLIST',
-    "NODE_OPTIONS: '--max-old-space-size=512'", "CHOKIDAR_USEPOLLING: '1'",
+    "NODE_OPTIONS: '--max-old-space-size=1024'", "CHOKIDAR_USEPOLLING: '1'",
     "WATCHPACK_POLLING: 'true'", "CHOKIDAR_INTERVAL: '1000'", "NEXT_TELEMETRY_DISABLED: '1'",
   ]) assert.ok(configSource.includes(required), `missing ${required}`);
   assert.match(configSource, /MIDAO_E2E_LOCAL[\s\S]*SUPABASE_ANON_KEY:[\s\S]*requireEnv\('SUPABASE_ANON_KEY'\)/u);
