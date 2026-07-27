@@ -69,10 +69,13 @@ async function runExistingWithAdapters(options = {}) {
   return result;
 }
 
-async function useAdmin(databaseUrl, operation) {
+async function useAdmin(databaseUrl, operation, { ClientClass } = {}) {
+  parseLocalConnectionEnv(databaseUrl);
   const admin = new URL(databaseUrl); admin.username = 'supabase_admin';
-  const { default: pg } = await import('pg');
-  const client = new pg.Client({ connectionString: admin.toString() });
+  parseLocalConnectionEnv(admin.toString());
+  let EffectiveClient = ClientClass;
+  if (!EffectiveClient) { const { default: pg } = await import('pg'); EffectiveClient = pg.Client; }
+  const client = new EffectiveClient({ connectionString: admin.toString() });
   let value; let primaryError;
   try { await client.connect(); value = await operation(client); } catch (error) { primaryError = error; }
   let closeError; try { await client.end(); } catch (error) { closeError = error; }
@@ -92,19 +95,86 @@ async function psqlFile(databaseUrl, file, cwd, signal) {
   }
 }
 
-async function extractExistingTerminal(databaseUrl) {
-  const raw = await extractCatalog({ connectionEnv: parseLocalConnectionEnv(databaseUrl) });
-  const terminalBytes = Buffer.from(normalizeCatalog(raw));
-  validateNormalizedCatalog(JSON.parse(terminalBytes));
-  const history = await useAdmin(databaseUrl, async (client) => {
-    const { rows } = await client.query('SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version');
-    return rows;
-  });
-  if (history.length !== 134 || history.some(({ version }) => version === '00000000000001')
-    || JSON.stringify(history.slice(-6).map(({ version }) => version)) !== JSON.stringify(POST_VERSIONS)) {
-    terminalBytes.fill(0); throw new Error('existing rehearsal exact history invalid');
+async function extractExistingTerminal(databaseUrl, {
+  extractCatalogFn = extractCatalog,
+  normalizeFn = normalizeCatalog,
+  terminalBytesFactory = (value) => Buffer.from(value),
+  validateFn = validateNormalizedCatalog,
+  useAdminFn = useAdmin,
+} = {}) {
+  let terminalBytes;
+  try {
+    const raw = await extractCatalogFn({ connectionEnv: parseLocalConnectionEnv(databaseUrl) });
+    terminalBytes = terminalBytesFactory(normalizeFn(raw));
+    if (!Buffer.isBuffer(terminalBytes)) throw new Error('existing terminal bytes invalid');
+    validateFn(JSON.parse(terminalBytes));
+    const history = await useAdminFn(databaseUrl, async (client) => {
+      const { rows } = await client.query('SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version');
+      return rows;
+    });
+    if (history.length !== 134 || history.some(({ version }) => version === '00000000000001')
+      || JSON.stringify(history.slice(-6).map(({ version }) => version)) !== JSON.stringify(POST_VERSIONS)) {
+      throw new Error('existing rehearsal exact history invalid');
+    }
+    return { terminalBytes, history };
+  } catch (error) {
+    terminalBytes?.fill(0);
+    throw error;
   }
-  return { terminalBytes, history };
+}
+
+async function prepareFrozenActual(canonicalRoot) {
+  const frozen = await collectFrozenMigrations({ repoRoot: canonicalRoot });
+  const trackedFrozen = await readFile(path.join(canonicalRoot, 'supabase/baselines/v1/frozen-migrations.sha256'));
+  const renderedFrozen = Buffer.from(renderFrozenManifest(frozen));
+  try { if (!renderedFrozen.equals(trackedFrozen)) throw new Error('existing frozen migration manifest drifted'); }
+  finally { trackedFrozen.fill(0); renderedFrozen.fill(0); }
+  return frozen;
+}
+
+async function buildCutoffFixtureActual({ canonicalRoot, projectId, capture, expected, dependencies = {} }) {
+  if (expected?.manifest?.captureTransactionId !== capture?.transactionId) throw new Error('existing fixture verified transaction binding invalid');
+  const prepareFrozen = dependencies.prepareFrozen ?? prepareFrozenActual;
+  const mkdirFn = dependencies.mkdir ?? mkdir;
+  const lstatFn = dependencies.lstat ?? lstat;
+  const rmdirFn = dependencies.rmdir ?? rmdir;
+  const materialize = dependencies.materialize ?? materializeFreshWorkdir;
+  const frozen = await prepareFrozen(canonicalRoot);
+  const runParent = path.join(LOCK_PATH, 'existing-rehearsal-run');
+  let parentCreated = false; let parentIdentity; let materialized;
+  try {
+    await mkdirFn(runParent, { mode: 0o700 }); parentCreated = true;
+    parentIdentity = await lstatFn(runParent);
+    materialized = await materialize({ outputParent: runParent, projectId });
+    if (materialized?.transactionId !== capture.transactionId) throw new Error('existing materializer capture transaction binding mismatch');
+  } catch (primary) {
+    const cleanup = [];
+    if (materialized) { try { await materialized.cleanup(); } catch (error) { cleanup.push(error); } }
+    if (parentCreated) {
+      try {
+        if (parentIdentity) {
+          const current = await lstatFn(runParent);
+          if (!sameIdentity(current, parentIdentity) || !current.isDirectory()) throw new Error('existing setup parent identity changed');
+        }
+        await rmdirFn(runParent);
+      } catch (error) { cleanup.push(error); }
+    }
+    if (cleanup.length) throw new AggregateError([primary, ...cleanup], 'existing fixture setup and rollback failed');
+    throw primary;
+  }
+  return {
+    occupied: true, hasBaselineMarker: false, localOnly: true, frozen, materialized,
+    async cleanup() {
+      let first;
+      try { await materialized.cleanup(); } catch (error) { first = error; }
+      try {
+        const current = await lstatFn(runParent);
+        if (!sameIdentity(current, parentIdentity) || !current.isDirectory()) throw new Error('existing run parent identity changed');
+        await rmdirFn(runParent);
+      } catch (error) { if (first) throw new AggregateError([first, error], 'existing fixture cleanup failed'); throw error; }
+      if (first) throw first;
+    },
+  };
 }
 
 export async function runExistingActual({ testPath, repoRoot = REPO_ROOT, signal } = {}) {
@@ -139,31 +209,11 @@ export async function runExistingActual({ testPath, repoRoot = REPO_ROOT, signal
         }
         return verified;
       },
-      buildCutoffFixture: async () => {
-        const frozen = await collectFrozenMigrations({ repoRoot: canonicalRoot });
-        const trackedFrozen = await readFile(path.join(canonicalRoot, 'supabase/baselines/v1/frozen-migrations.sha256'));
-        const renderedFrozen = Buffer.from(renderFrozenManifest(frozen));
-        try { if (!renderedFrozen.equals(trackedFrozen)) throw new Error('existing frozen migration manifest drifted'); }
-        finally { trackedFrozen.fill(0); renderedFrozen.fill(0); }
-        const runParent = path.join(LOCK_PATH, 'existing-rehearsal-run'); await mkdir(runParent, { mode: 0o700 });
-        const parentIdentity = await lstat(runParent);
-        const materialized = await materializeFreshWorkdir({ outputParent: runParent, projectId });
-        return {
-          occupied: true, hasBaselineMarker: false, localOnly: true, frozen, materialized,
-          async cleanup() {
-            let first;
-            try { await materialized.cleanup(); } catch (error) { first = error; }
-            try {
-              const current = await lstat(runParent);
-              if (!sameIdentity(current, parentIdentity) || !current.isDirectory()) throw new Error('existing run parent identity changed');
-              await rmdir(runParent);
-            } catch (error) { if (first) throw new AggregateError([first, error], 'existing fixture cleanup failed'); throw error; }
-            if (first) throw first;
-          },
-        };
-      },
+      buildCutoffFixture: ({ capture, expected }) => buildCutoffFixtureActual({
+        canonicalRoot, projectId, capture, expected,
+      }),
       upgrade: async ({ fixture, expected, testPath: exactTestPath }) => {
-        const replay = await fixture.materialized.stageCliReplay(); let local; let runError;
+        const replay = await fixture.materialized.stageCliReplay(); let local; let runError; let producedTerminalBytes;
         try {
           local = await runWithLocalSupabase({
             adapter: createActualAdapter({
@@ -203,10 +253,12 @@ export async function runExistingActual({ testPath, repoRoot = REPO_ROOT, signal
                 cwd: canonicalRoot, env: { ...process.env, ...localEnv }, signal,
               });
               if (integration.exitCode !== 0 || integration.signal !== null) throw new Error(`existing integration failed: ${redactSupabaseOutput(`${integration.stdout}\n${integration.stderr}`).slice(-8000).trim()}`);
-              return { ...(await extractExistingTerminal(localEnv.DATABASE_URL)), baselineExecutionCount };
+              const extracted = await extractExistingTerminal(localEnv.DATABASE_URL);
+              producedTerminalBytes = extracted.terminalBytes;
+              return { ...extracted, baselineExecutionCount };
             },
           });
-        } catch (error) { runError = error; }
+        } catch (error) { runError = error; producedTerminalBytes?.fill(0); }
         const cleanupErrors = [];
         try { await replay.restore(); } catch (error) { cleanupErrors.push(error); }
         if (cleanupErrors.length === 0) { try { await fixture.materialized.cleanupCliMetadata(); } catch (error) { cleanupErrors.push(error); } }
@@ -234,7 +286,7 @@ export async function runExistingActual({ testPath, repoRoot = REPO_ROOT, signal
 }
 
 function sameIdentity(left, right) { return left.dev === right.dev && left.ino === right.ino && left.uid === right.uid && left.nlink === right.nlink; }
-export const __internal = Object.freeze({ runExistingWithAdapters });
+export const __internal = Object.freeze({ runExistingWithAdapters, buildCutoffFixtureActual, useAdmin, extractExistingTerminal });
 export const __dependencies = Object.freeze({ verifyCaptureTransaction, verifyExpectedTerminalTransaction });
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {

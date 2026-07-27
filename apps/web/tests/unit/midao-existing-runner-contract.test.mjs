@@ -57,6 +57,53 @@ test('existing lifecycle requires and binds capture references before fixture co
   assert.equal(consumers, 0);
 });
 
+test('actual fixture binds materializer transaction and rolls back setup failures', async () => {
+  const api = await subject();
+  assert.equal(typeof api.__internal.buildCutoffFixtureActual, 'function');
+  for (const scenario of ['mismatch', 'lstat-failure', 'materialize-failure']) {
+    const calls = [];
+    await assert.rejects(api.__internal.buildCutoffFixtureActual({
+      canonicalRoot: root, projectId: 'fixture', capture: captureCapability(), expected: expectedCapability(),
+      dependencies: {
+        prepareFrozen: async () => [],
+        mkdir: async () => calls.push('mkdir'),
+        lstat: async () => {
+          if (scenario === 'lstat-failure') throw new Error('LSTAT_FAIL');
+          return { dev: 1, ino: 2, uid: 0, nlink: 1, mode: 0o40700, isDirectory: () => true };
+        },
+        rmdir: async () => calls.push('rmdir'),
+        materialize: async () => {
+          if (scenario === 'materialize-failure') throw new Error('MATERIALIZE_FAIL');
+          return { transactionId: 'f'.repeat(64), cleanup: async () => calls.push('cleanup-materialized') };
+        },
+      },
+    }), {
+      mismatch: /transaction|binding/iu,
+      'lstat-failure': /LSTAT_FAIL/u,
+      'materialize-failure': /MATERIALIZE_FAIL/u,
+    }[scenario]);
+    assert.equal(calls.includes('rmdir'), true);
+    if (scenario === 'mismatch') assert.equal(calls.includes('cleanup-materialized'), true);
+  }
+});
+
+test('admin connection rejects remote URL before constructing a database client', async () => {
+  const api = await subject(); let constructed = 0;
+  class Client { constructor() { constructed += 1; } }
+  await assert.rejects(api.__internal.useAdmin('postgresql://user:pass@production.example.com:5432/postgres', async () => {}, { ClientClass: Client }), /local|loopback|host|connection/iu);
+  assert.equal(constructed, 0);
+});
+
+test('terminal bytes are zeroed when validation or history extraction fails', async () => {
+  const api = await subject(); const bytes = Buffer.from('{}');
+  await assert.rejects(api.__internal.extractExistingTerminal('postgresql://postgres:pass@127.0.0.1:54322/postgres', {
+    extractCatalogFn: async () => ({}), normalizeFn: () => '{}', terminalBytesFactory: () => bytes,
+    validateFn: () => { throw new Error('VALIDATE_FAIL'); },
+    useAdminFn: async () => { throw new Error('history must not run'); },
+  }), /VALIDATE_FAIL/u);
+  assert.equal(bytes.every((value) => value === 0), true);
+});
+
 test('upgrade requires an occupied cutoff fixture and executes no baseline during upgrade', async () => {
   const api = await subject(); const calls = [];
   const result = await api.__internal.runExistingWithAdapters({
