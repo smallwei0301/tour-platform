@@ -146,6 +146,14 @@
       "applied_at": "2026-07-24T08:35:00+08:00",
       "status": "verified",
       "note": "經 Supabase MCP apply_migration 套用（SQL-OVERRIDE 使用者於對話授權）；ADD COLUMN IF NOT EXISTS ×2 冪等、皆可空、零資料列變動；backup: Supabase 每日自動備份；rollback: 同名 .rollback.sql；驗證: information_schema 查詢＝2 欄就位（midao2 Plan 3，worklog issue-midao2）。"
+    },
+    {
+      "filename": "20260727120000_midao2_instant_booking.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301) + Claude Code agent",
+      "applied_at": "2026-07-27T14:20:00+08:00",
+      "status": "verified",
+      "note": "經 Supabase MCP apply_migration 套用（SQL-OVERRIDE 使用者於對話授權 2026-07-27）；status CHECK 擴 7 值＋preferred_period 擴 full_day＋kind 欄（NOT NULL DEFAULT，metadata-only）＋midao_slot_consumptions 表＋uq_midao_slot_active partial unique index＋RLS（service-role only）；套用前以 pg_constraint 驗證兩約束實名一致；套用後驗證＝7 值/4 值 CHECK、kind 欄、表＋2 索引＋RLS 全就位，既有 2 筆 midao_requests 零影響；backup: Supabase 每日自動備份；rollback: 同名 .rollback.sql（前置條件：超集值資料需先清理，見 sdd ledger Minor (v)）。（midao2 Plan 4，worklog issue-midao2）"
     }
   ]
 }
