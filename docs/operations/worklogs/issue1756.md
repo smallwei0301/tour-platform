@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-27 22:47 CST｜負責 session：Canary／2026-07-24
+> 最後更新：2026-07-27 23:20 CST｜負責 session：Canary／2026-07-24
 
 ## 目標
 建立Midao runtime foundation、responsive shell與catalog-verified as-built database baseline。既有production只走post-cutoff additive migrations；fresh環境走platform→baseline→post-cutoff→seed→catalog exact comparison。所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -130,10 +130,11 @@
 - Final exact-head browser authority：`b74d19ec3c0563b0ef95c234b88835c0477ed9a9` GitHub Actions run `30276271486`／job `90011033285`，baseline-backed F9/F10 **12/12 PASS**；migration source、production drift、probe、smoke、scan與Vercel全部SUCCESS。Ordinary full test仍為`4783 PASS／1 FAIL／3 skipped`，唯一FAIL是本次final docs publication前的evidence gate HOLD。
 - Fresh reviews（exact `b74d19ec3c0563b0ef95c234b88835c0477ed9a9`）：SECURITY／QUALITY **PASS，blocking=0**；SPEC／ACCEPTANCE **PASS，blocking=0**。兩者均read-only核對auth雙向綁定、runner no-adopt、recorder isolation、F9 selector-bound safe-area／真Tab與F10真實positive／hostile matrices；production ledger缺六筆明確分離為release HOLD。
 - Publication docs寫入後本機Node22 final gate `2/2 PASS`，CI同集合 `npm run test -w @tour/web`為`4784 PASS／0 FAIL／3 skipped`（4787 tests，exit0）；相較publication前CI唯一final-docs gate FAIL已轉GREEN。
+- Clean publication checkpoint `62eedf2f66d187c3dfdfceaf299f56717704cb0a`／tree `1ced388c9b1e867001e255542af0286b50282b8b`的isolated-parent CI recorder：lint exit0、typecheck exit0。首次build recorder在4GB主機570秒exit124，未產生／未冒充evidence；量測無殘留build process、available RAM約2043MB／swap已用2906MB。相同`npm run build -w @tour/web`可見診斷完整exit0並正常建立Next cache後，recorder完整重跑exit0。三份evidence read-back均schema exact、HEAD/tree一致、log SHA-256 PASS；lint/typecheck各14個allowlisted env names，build 16個。
 - Remaining HOLD：owner已授權commit／push／PR／CI，但**merge HOLD：未授權**；production apply ledger仍缺exact六支post-cutoff verified records，push/main release gate會HOLD。本PR未執行production DDL/DML或deploy；production drift PASS不等於migration ledger verified。
 ## 下一步
-- Publication docs寫入final exact SHA／CI／fresh review後，重跑final gate、ordinary full test與CI recorder G4；全部exit0才提交final evidence checkpoint。
-- Push final evidence checkpoint並讀回PR #1766 exact head、checks與checklist；未獲merge授權，不merge。
+- 重跑final focused gate後提交最後docs-only evidence checkpoint，push PR #1766並等待exact final-head CI。
+- 讀回PR exact head、mergeability、所有checks與checklist；未獲merge授權，不merge。
 - Production六支migration apply/ledger需要獨立owner授權與真實operator evidence；不得由schema drift或local rehearsal推論已apply。
 
 ## 絕不重做（Do-NOT-redo）
