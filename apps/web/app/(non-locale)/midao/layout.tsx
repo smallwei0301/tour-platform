@@ -1,6 +1,7 @@
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { MidaoShell } from '../../../src/features/midao/shell/MidaoShell';
+import { isMidaoE2ELocal } from '../../../src/config/feature-flags.mjs';
 import { resolveMidaoPageSession } from '../../../src/lib/midao/page-session';
 import '../../../src/features/midao/styles/tokens.css';
 import '../../../src/features/midao/styles/shell.css';
@@ -11,7 +12,7 @@ export default async function MidaoLayout({ children }: { children: React.ReactN
     headers: { cookie: incoming.get('cookie') || '' },
   });
   const result = await resolveMidaoPageSession(request);
-  if (process.env.MIDAO_E2E_LOCAL === '1' && result.kind !== 'ready') {
+  if (isMidaoE2ELocal() && result.kind !== 'ready') {
     console.error(`MIDAO_E2E_PAGE_SESSION=${result.reason}`);
   }
   if (result.kind === 'redirect') redirect(result.location);

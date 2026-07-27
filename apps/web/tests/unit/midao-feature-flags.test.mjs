@@ -5,6 +5,7 @@ const {
   isMidaoBackendEnabled,
   isMidaoBackendMutationsEnabled,
   isMidaoBackendModeSwitchEnabled,
+  isMidaoE2ELocal,
 } = await import('../../src/config/feature-flags.mjs');
 
 const flags = [
@@ -31,6 +32,16 @@ test('backend, mutation, and mode-switch flags do not imply one another', () => 
     for (const [, readFlag] of flags) {
       assert.equal(readFlag(env), readFlag === enabledFlag, `${enabledName} must only enable its own gate`);
     }
+  }
+});
+
+test('local Midao E2E diagnostics use the centralized default-off truthy contract', () => {
+  assert.equal(isMidaoE2ELocal({}), false);
+  for (const value of [undefined, '', '0', 'false', 'no', 'off', 'enabled', '2']) {
+    assert.equal(isMidaoE2ELocal({ MIDAO_E2E_LOCAL: value }), false);
+  }
+  for (const value of ['1', 'true', 'yes', 'on', ' TRUE ', 'On']) {
+    assert.equal(isMidaoE2ELocal({ MIDAO_E2E_LOCAL: value }), true);
   }
 });
 

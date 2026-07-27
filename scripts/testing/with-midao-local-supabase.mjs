@@ -1252,6 +1252,7 @@ async function main() {
       'apps/web/tests/integration/midao-mode-switch-concurrency-postgres.test.mjs',
     );
     const { parseLocalConnectionEnv, replayExactMigrations } = await import('../database-baseline/build-expected-terminal.mjs');
+    const reportStage = (stage) => process.stderr.write(`MIDAO_STAGE=${stage}\n`);
     await runWithLocalSupabase({
       adapter: createActualAdapter({
         repoRoot, pin, nodeBin, signal: controller.signal, cliWorkdir: databaseWorkdir.workdir,
@@ -1324,7 +1325,7 @@ async function main() {
         if (child.exitCode !== 0 || child.signal !== null) throw new Error(`CHILD_FAILED_${child.exitCode}`);
       },
       signal: controller.signal,
-      reportStage: (stage) => process.stderr.write(`MIDAO_STAGE=${stage}\n`),
+      reportStage,
     });
   } catch (error) { primaryError = error; }
   process.removeListener('SIGTERM', abort);

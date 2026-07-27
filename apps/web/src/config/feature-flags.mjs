@@ -111,4 +111,9 @@ export function isMidaoBackendModeSwitchEnabled(env = process.env) {
   return isTruthy(env.MIDAO_BACKEND_MODE_SWITCH_ENABLED);
 }
 
+/** Local-only Midao E2E diagnostics gate. Default OFF. */
+export function isMidaoE2ELocal(env = process.env) {
+  return isTruthy(env.MIDAO_E2E_LOCAL);
+}
+
 export const __internal = { isTruthy };

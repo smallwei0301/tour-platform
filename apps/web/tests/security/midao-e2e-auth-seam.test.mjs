@@ -85,6 +85,9 @@ test('local runner verifies capture and expected transactions before materializi
   assert.match(localRunnerSource, /captureTransactionId/u);
   assert.match(localRunnerSource, /captureManifestSha256/u);
   assert.doesNotMatch(localRunnerSource, /FOUNDATION_BOOTSTRAP_SQL/u);
+  assert.match(localRunnerSource, /const reportStage = \(stage\) => process\.stderr\.write\(`MIDAO_STAGE=\$\{stage\}\\n`\)/u);
+  assert.match(localRunnerSource, /reportStage,\n\s*\}\);/u);
+  assert.doesNotMatch(localRunnerSource, /reportStage:\s*\(stage\)\s*=>/u);
 });
 
 test('transaction-bound canonical seed remains intact and local overlay contains a separate approved Midao guide', () => {
