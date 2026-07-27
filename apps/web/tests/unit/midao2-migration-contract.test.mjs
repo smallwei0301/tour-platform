@@ -37,3 +37,17 @@ test('midao2 migration C：midao_requests 方案欄位齊備', async () => {
   assert.match(sql, /ADD COLUMN IF NOT EXISTS plan_id uuid REFERENCES activity_plans\(id\)/);
   assert.match(sql, /ADD COLUMN IF NOT EXISTS plan_title_snapshot text/);
 });
+
+test('midao2 migration D：狀態機擴充＋消耗帳表齊備（含 rollback）', async () => {
+  const sql = await readFile(
+    path.join(MIGRATIONS, '20260727120000_midao2_instant_booking.sql'), 'utf8');
+  assert.match(sql, /CHECK \(status IN \('new','pending_reply','replied','closed_won','closed_done','confirmed','cancelled'\)\)/);
+  assert.match(sql, /CHECK \(preferred_period IN \('morning','afternoon','evening','full_day'\)\)/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'request'/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS midao_slot_consumptions/);
+  assert.match(sql, /WHERE released_at IS NULL/);
+
+  const rollback = await readFile(
+    path.join(MIGRATIONS, '20260727120000_midao2_instant_booking.rollback.sql'), 'utf8');
+  assert.match(rollback, /DROP TABLE IF EXISTS midao_slot_consumptions/);
+});
