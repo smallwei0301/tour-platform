@@ -24,6 +24,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveRepositoryPublicationPaths } from './database-baseline/publish-baseline.mjs';
+import { resolveExpectedTerminalPublicationPaths } from './database-baseline/publish-expected-terminal.mjs';
+import { verifyCaptureTransaction, verifyExpectedTerminalTransaction } from './database-baseline/verify-manifest.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -32,6 +35,7 @@ export const DEFAULT_MIGRATIONS_DIR = path.join(REPO_ROOT, 'supabase', 'migratio
 export const DEFAULT_LEDGER_PATH = path.join(REPO_ROOT, 'docs', 'operations', 'migration-ledger.json');
 
 const VALID_STATUSES = new Set(['verified', 'pending', 'baseline']);
+const SHA256 = /^[0-9a-f]{64}$/u;
 
 /** 列出需要 ledger 記錄的 migration 檔（排除 rollback 與非 .sql）。 */
 export function listMigrationFiles(migrationsDir) {
@@ -150,20 +154,69 @@ export function checkMigrationLedger({
   return result;
 }
 
+export async function runVerifiedGateWithAdapters({ verifyCapture, verifyExpected, checkLedger } = {}) {
+  if (![verifyCapture, verifyExpected, checkLedger].every((value) => typeof value === 'function')) throw new Error('verified gate adapter contract invalid');
+  let capture; let expected; let result; let primaryError;
+  try {
+    capture = await verifyCapture(); expected = await verifyExpected({ capture });
+    const values = [capture?.transactionId, capture?.ledger?.captureManifestSha256,
+      expected?.manifest?.captureTransactionId, expected?.manifest?.captureManifestSha256];
+    if (typeof capture?.dispose !== 'function' || typeof expected?.dispose !== 'function' || !values.every((value) => SHA256.test(value ?? ''))
+      || values[0] !== values[2] || values[1] !== values[3]) throw new Error('verified gate capture binding mismatch');
+    result = await checkLedger();
+  } catch (error) { primaryError = error; }
+  const cleanup = [];
+  try { expected?.dispose(); } catch (error) { cleanup.push(error); }
+  try { capture?.dispose(); } catch (error) { cleanup.push(error); }
+  const errors = [primaryError, ...cleanup].filter(Boolean);
+  if (errors.length > 1) throw new AggregateError(errors, 'verified gate and cleanup failed');
+  if (errors.length === 1) throw errors[0];
+  return result;
+}
+
+async function runVerifiedGate(options) {
+  return runVerifiedGateWithAdapters({
+    verifyCapture: () => verifyCaptureTransaction({
+      baselineDir: path.join(REPO_ROOT, 'supabase/baselines/v1'),
+      ledgerPath: path.join(REPO_ROOT, 'docs/operations/baseline-ledger.json'),
+      journalPath: resolveRepositoryPublicationPaths().journalPath,
+    }),
+    verifyExpected: ({ capture }) => verifyExpectedTerminalTransaction({
+      baselineDir: path.join(REPO_ROOT, 'supabase/baselines/v1'),
+      ledgerPath: path.join(REPO_ROOT, 'docs/operations/expected-terminal-ledger.json'),
+      captureLedgerPath: path.join(REPO_ROOT, 'docs/operations/baseline-ledger.json'),
+      journalPath: resolveExpectedTerminalPublicationPaths().journalPath,
+    }).then((expected) => {
+      if (expected.manifest.captureTransactionId !== capture.transactionId
+        || expected.manifest.captureManifestSha256 !== capture.ledger.captureManifestSha256) {
+        expected.dispose(); throw new Error('verified gate publication changed');
+      }
+      return expected;
+    }),
+    checkLedger: () => checkMigrationLedger(options),
+  });
+}
+
 function parseArgs(argv) {
-  const opts = { json: false };
+  const opts = { json: false, mode: null };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--json') opts.json = true;
+    else if (arg === '--mode') opts.mode = argv[++i];
     else if (arg === '--migrations-dir') opts.migrationsDir = argv[++i];
     else if (arg === '--ledger') opts.ledgerPath = argv[++i];
+    else throw new Error(`unknown verified gate argument: ${arg}`);
+  }
+  if (opts.mode !== 'verified') throw new Error('release gate requires exact --mode verified');
+  if (opts.ledgerPath && path.basename(path.resolve(opts.ledgerPath)) === 'baseline-ledger.json') {
+    throw new Error('baseline-ledger.json cannot serve as production migration ledger');
   }
   return opts;
 }
 
-function main() {
+async function main() {
   const opts = parseArgs(process.argv.slice(2));
-  const result = checkMigrationLedger(opts);
+  const result = await runVerifiedGate(opts);
 
   if (opts.json) {
     console.log(JSON.stringify(result, null, 2));
@@ -184,9 +237,12 @@ function main() {
     }
   }
 
-  process.exit(result.status === 'verified' ? 0 : 1);
+  process.exitCode = result.status === 'verified' ? 0 : 1;
 }
 
 const isMain =
   process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (isMain) main();
+if (isMain) main().catch((error) => {
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  process.exitCode = 1;
+});

@@ -41,7 +41,7 @@ function makeFixture({ migrations, ledger }) {
 function runCli({ migrationsDir, ledgerPath }) {
   return spawnSync(
     process.execPath,
-    [CHECK_SCRIPT, '--migrations-dir', migrationsDir, '--ledger', ledgerPath, '--json'],
+    [CHECK_SCRIPT, '--mode', 'verified', '--migrations-dir', migrationsDir, '--ledger', ledgerPath, '--json'],
     { encoding: 'utf8' }
   );
 }
@@ -220,32 +220,35 @@ describe('issue #1293 — ledger gate 合約（temp fixture）', () => {
   });
 });
 
-describe('issue #1293 — repo 現況 gate 綠燈（baseline 涵蓋現有 migrations）', () => {
-  it('對實際 supabase/migrations/ + docs/operations/migration-ledger.json → verified', () => {
-    const cli = runCli({
-      migrationsDir: path.join(REPO_ROOT, 'supabase', 'migrations'),
-      ledgerPath: LEDGER_PATH,
-    });
-    assert.equal(
-      cli.status,
-      0,
-      `repo 現況應 verified（baseline 需涵蓋現有全部 migration 檔）\n${cli.stdout}\n${cli.stderr}`
-    );
+describe('issue #1293 — repo現況verified release gate誠實HOLD', () => {
+  it('六支Midao post-cutoff未套production，因此verified mode exact列為missing', () => {
+    const cli = runCli({ migrationsDir: path.join(REPO_ROOT, 'supabase', 'migrations'), ledgerPath: LEDGER_PATH });
+    assert.equal(cli.status, 1, `repo verified gate應HOLD\n${cli.stdout}\n${cli.stderr}`);
+    const result = JSON.parse(cli.stdout);
+    assert.deepEqual(result.missing, [
+      '20260723000000_midao_backend_mode.sql',
+      '20260723001000_midao_notification_outbox.sql',
+      '20260723002000_midao_idempotency_records.sql',
+      '20260723002500_midao_audit_events.sql',
+      '20260723003000_midao_atomic_backend_mode_switch.sql',
+      '20260723003500_midao_service_role_acl_hardening.sql',
+    ]);
   });
 });
 
 describe('issue #1293 — gate 接線 source-contract', () => {
-  it('preflight-check.sh 有跑 check-migration-ledger.mjs', () => {
+  it('preflight-check.sh明示source mode', () => {
     const sh = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'preflight-check.sh'), 'utf8');
-    assert.match(sh, /check-migration-ledger\.mjs/);
+    assert.match(sh, /check-migration-source-gate\.mjs --mode source/u);
   });
 
-  it('migration-drift-detect.yml 的 static job 有跑 check-migration-ledger.mjs', () => {
+  it('migration-drift-detect.yml分開source與verified modes', () => {
     const yml = fs.readFileSync(
       path.join(REPO_ROOT, '.github', 'workflows', 'migration-drift-detect.yml'),
       'utf8'
     );
-    assert.match(yml, /check-migration-ledger\.mjs/);
+    assert.match(yml, /check-migration-source-gate\.mjs --mode source/u);
+    assert.match(yml, /check-migration-ledger\.mjs --mode verified/u);
   });
 
   it('SOP 文件存在且要求備份→套用→驗證→更新 ledger', () => {

@@ -5,12 +5,13 @@
 
 ## Gate 如何運作
 
-- `scripts/check-migration-ledger.mjs` 純靜態比對 `supabase/migrations/*.sql`（排除 `.rollback.sql`）vs ledger records，**不需任何 secrets、不對任何 DB 寫入**。
-- 每支 migration 檔必須有 `status: "verified"` 的 record，或被 `baseline` record 涵蓋（baseline 涵蓋「檔名排序 <= baseline filename」的全部歷史檔案；2026-07-02 的首筆 baseline 依據 #1560 drift 大清查與補套結果回填）。
+- **Source gate（PR／local）：** `node scripts/check-migration-source-gate.mjs --mode source`。先驗證capture＋expected-terminal transactions及其交叉綁定，才讀frozen manifest／migration source；固定128支pre-cutoff bytes不可變，已pin post-cutoff不可變，允許排序正確的新post-cutoff source尚未套production。
+- **Verified gate（release／post-apply／schedule／manual）：** `node scripts/check-migration-ledger.mjs --mode verified`。同樣先驗兩個publication transactions，才靜態比對 `supabase/migrations/*.sql`（排除 `.rollback.sql`）vs production apply ledger；**不需任何 secrets、不對任何 DB 寫入**。
+- 每支migration在verified mode必須有 `status: "verified"` 的record，或被歷史 `baseline` record涵蓋。`supabase/baselines/v1` publication ledger不得冒充production apply ledger。
 - 接線位置：
-  - `scripts/preflight-check.sh`（release preflight，CI `ci.yml` 最後一步會跑）
-  - `.github/workflows/migration-drift-detect.yml` 的 static job（PR/push/每日 cron）
-- 手動執行：`node scripts/check-migration-ledger.mjs`（`--json` 出機器可讀報告）。exit 1 = HOLD。
+  - `scripts/preflight-check.sh`與`.github/workflows/ci.yml`：explicit source mode。
+  - `.github/workflows/migration-drift-detect.yml`：PR source mode；push/main、每日schedule與manual dispatch另跑verified mode。
+- Exit 1 = HOLD。新migration PR可source PASS但verified HOLD；只有完成下列備份→套用→驗證→更新production ledger後，verified才可PASS。
 
 ## 套用一支新 migration 的四步驟（缺一不可）
 
