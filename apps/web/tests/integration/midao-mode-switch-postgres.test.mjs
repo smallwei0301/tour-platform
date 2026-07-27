@@ -5,6 +5,15 @@ import pg from 'pg';
 
 const databaseUrl = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
 assert.ok(databaseUrl, 'local Supabase runner must provide SUPABASE_DB_URL or DATABASE_URL');
+const parsedDatabaseUrl = new URL(databaseUrl);
+assert.ok(['postgres:', 'postgresql:'].includes(parsedDatabaseUrl.protocol));
+assert.deepEqual(
+  [parsedDatabaseUrl.hostname, parsedDatabaseUrl.port, parsedDatabaseUrl.pathname, parsedDatabaseUrl.search, parsedDatabaseUrl.hash],
+  ['127.0.0.1', '54322', '/postgres', '', ''],
+  'owner test connection must remain exact local loopback PostgreSQL',
+);
+parsedDatabaseUrl.username = 'supabase_admin';
+const ownerDatabaseUrl = parsedDatabaseUrl.toString();
 
 const activeGuideId = randomUUID();
 const rollbackGuideId = randomUUID();
@@ -15,24 +24,27 @@ const rpcSql = `SELECT public.midao_switch_guide_backend_mode($1,$2,$3,$4,$5,$6,
 const faultTrigger = 'midao_test_outbox_failure_trigger';
 const faultFunction = 'public.midao_test_raise_outbox_failure';
 let client;
+let ownerClient;
 
 before(async () => {
   client = new pg.Client({ connectionString: databaseUrl });
+  ownerClient = new pg.Client({ connectionString: ownerDatabaseUrl });
   await client.connect();
+  await ownerClient.connect();
   await client.query(`
-    INSERT INTO public.guide_profiles(id, verification_status, guide_session_version, backend_mode)
+    INSERT INTO public.guide_profiles(id, slug, display_name, verification_status, guide_session_version, backend_mode)
     VALUES
-      ($1, 'approved', 7, 'legacy'),
-      ($2, 'approved', 11, 'legacy'),
-      ($3, 'pending', 3, 'legacy')
+      ($1, 'd3c-active', 'D3c Active', 'approved', 7, 'legacy'),
+      ($2, 'd3c-rollback', 'D3c Rollback', 'approved', 11, 'legacy'),
+      ($3, 'd3c-inactive', 'D3c Inactive', 'pending', 3, 'legacy')
   `, [activeGuideId, rollbackGuideId, inactiveGuideId]);
 });
 
 after(async () => {
   if (!client) return;
-  try { await client.query(`DROP TRIGGER IF EXISTS ${faultTrigger} ON public.midao_notification_outbox`); } catch { /* disposable DB cleanup continues */ }
-  try { await client.query(`DROP FUNCTION IF EXISTS ${faultFunction}()`); } catch { /* disposable DB cleanup continues */ }
-  await client.end();
+  try { await ownerClient?.query(`DROP TRIGGER IF EXISTS ${faultTrigger} ON public.midao_notification_outbox`); } catch { /* disposable DB cleanup continues */ }
+  try { await ownerClient?.query(`DROP FUNCTION IF EXISTS ${faultFunction}()`); } catch { /* disposable DB cleanup continues */ }
+  await Promise.allSettled([client.end(), ownerClient?.end()].filter(Boolean));
 });
 
 async function callSwitch({ guideId, targetMode, reason, requestId = randomUUID(), key, hash }) {
@@ -54,6 +66,11 @@ async function effectCounts(guideId) {
       (SELECT count(*)::int FROM public.midao_idempotency_records WHERE scope_type = 'guide' AND scope_id = $1 AND state = 'processing') AS processing
   `, [guideId]);
   return result.rows[0];
+}
+
+async function asSupabaseAdmin(operation) {
+  if (!ownerClient) throw new Error('owner test connection unavailable');
+  return operation(ownerClient);
 }
 
 async function expectRpcError(expectedMessage, invocation) {
@@ -193,19 +210,21 @@ test('outbox failure rolls back profile, audit, outbox and idempotency together'
   const key = 'd3c-fault-rollback';
   let triggerCreated = false;
   try {
-    await client.query(`
-      CREATE OR REPLACE FUNCTION ${faultFunction}()
-      RETURNS trigger LANGUAGE plpgsql AS $fault$
-      BEGIN
-        RAISE EXCEPTION 'MIDAO_TEST_OUTBOX_FAILURE';
-      END
-      $fault$
-    `);
-    await client.query(`
-      CREATE TRIGGER ${faultTrigger}
-      BEFORE INSERT ON public.midao_notification_outbox
-      FOR EACH ROW EXECUTE FUNCTION ${faultFunction}()
-    `);
+    await asSupabaseAdmin(async (adminClient) => {
+      await adminClient.query(`
+        CREATE OR REPLACE FUNCTION ${faultFunction}()
+        RETURNS trigger LANGUAGE plpgsql AS $fault$
+        BEGIN
+          RAISE EXCEPTION 'MIDAO_TEST_OUTBOX_FAILURE';
+        END
+        $fault$
+      `);
+      await adminClient.query(`
+        CREATE TRIGGER ${faultTrigger}
+        BEFORE INSERT ON public.midao_notification_outbox
+        FOR EACH ROW EXECUTE FUNCTION ${faultFunction}()
+      `);
+    });
     triggerCreated = true;
     await expectRpcError('MIDAO_TEST_OUTBOX_FAILURE', () => callSwitch({
       guideId: rollbackGuideId,
@@ -215,8 +234,10 @@ test('outbox failure rolls back profile, audit, outbox and idempotency together'
       hash: 'f'.repeat(64),
     }));
   } finally {
-    if (triggerCreated) await client.query(`DROP TRIGGER IF EXISTS ${faultTrigger} ON public.midao_notification_outbox`);
-    await client.query(`DROP FUNCTION IF EXISTS ${faultFunction}()`);
+    await asSupabaseAdmin(async (adminClient) => {
+      if (triggerCreated) await adminClient.query(`DROP TRIGGER IF EXISTS ${faultTrigger} ON public.midao_notification_outbox`);
+      await adminClient.query(`DROP FUNCTION IF EXISTS ${faultFunction}()`);
+    });
   }
 
   assert.deepEqual(await guideState(rollbackGuideId), beforeState);

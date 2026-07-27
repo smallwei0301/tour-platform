@@ -24,7 +24,12 @@ const {
   runCommand,
   parseDockerHostGateway,
   startLoopbackBridge,
+  resolvePinnedPostgrestRuntime,
+  createLocalSupabaseApiCredentials,
+  buildPinnedPostgrestRun,
+  buildMidaoE2ELocalConfig,
   prepareDatabaseOnlyWorkdir,
+  prepareBaselineWorkdirWithAdapters,
   runWithLocalSupabase,
 } = runner;
 
@@ -127,75 +132,95 @@ test('Docker-container gateway parsing and loopback-only TCP bridge are exact', 
   }
 });
 
-test('database-only workdir preserves project identity and disables service jobs only in the copy', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'midao-db-only-'));
-  const repoRoot = join(root, projectId);
-  const lockDir = join(root, 'lock');
-  const sourceConfig = '[db]\nport = 54322\n[storage]\nenabled = true\n[auth]\nenabled = true\n';
+test('baseline workdir verifies both transactions before materializer or full-service config consumers', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'midao-baseline-gate-'));
+  const repoRoot = join(root, projectId); const lockDir = join(root, 'lock');
+  await mkdir(repoRoot); await mkdir(lockDir, { mode: 0o700 });
+  const capture = () => ({
+    transactionId: 'a'.repeat(64), ledger: { captureManifestSha256: 'b'.repeat(64) }, dispose() {},
+  });
+  const expected = () => ({
+    transactionId: 'c'.repeat(64),
+    manifest: { captureTransactionId: 'a'.repeat(64), captureManifestSha256: 'b'.repeat(64) }, dispose() {},
+  });
   try {
-    await mkdir(join(repoRoot, 'supabase', 'migrations'), { recursive: true });
-    await mkdir(lockDir, { mode: 0o700 });
-    await writeFile(join(repoRoot, 'supabase', 'config.toml'), sourceConfig);
-    await writeFile(join(repoRoot, 'supabase', 'migrations', '001.sql'), 'select 1;\n');
-    await writeFile(join(repoRoot, 'supabase', 'migrations', '001_v2.sql'), 'select 2;\n');
-    await writeFile(join(repoRoot, 'supabase', 'migrations', '001.rollback.sql'), 'select 0;\n');
-    const midaoMigrations = [
-      '20260723000000_midao_backend_mode.sql',
-      '20260723001000_midao_notification_outbox.sql',
-      '20260723002000_midao_idempotency_records.sql',
-      '20260723002500_midao_audit_events.sql',
-      '20260723003000_midao_atomic_backend_mode_switch.sql',
-      '20260723003500_midao_service_role_acl_hardening.sql',
-    ];
-    for (const [index, name] of midaoMigrations.entries()) {
-      await writeFile(join(repoRoot, 'supabase', 'migrations', name), `select ${index + 10};\n`);
+    for (const failing of ['capture', 'expected']) {
+      let materializerReads = 0; let configReads = 0;
+      await assert.rejects(prepareBaselineWorkdirWithAdapters({
+        repoRoot, lockDir, fullServices: true,
+        verifyCapture: async () => { if (failing === 'capture') throw new Error('CAPTURE_HOLD'); return capture(); },
+        verifyExpected: async () => { if (failing === 'expected') throw new Error('EXPECTED_HOLD'); return expected(); },
+        materialize: async () => { materializerReads += 1; },
+        readFullConfig: async () => { configReads += 1; },
+        rewriteFullConfig: async () => {},
+      }), /HOLD/u);
+      assert.equal(materializerReads, 0); assert.equal(configReads, 0);
     }
-    const workdir = await prepareDatabaseOnlyWorkdir({ repoRoot, lockDir });
-    assert.equal(workdir.split('/').at(-1), projectId);
-    assert.equal(await readFile(join(repoRoot, 'supabase', 'config.toml'), 'utf8'), sourceConfig);
-    const copied = await readFile(join(workdir, 'supabase', 'config.toml'), 'utf8');
-    for (const section of ['storage', 'auth', 'realtime', 'db.seed']) {
-      assert.match(copied, new RegExp(`\\[${section}\\]\\nenabled = false`, 'u'));
-    }
-    assert.equal(await readFile(join(workdir, 'supabase', '.temp', 'cli-latest'), 'utf8'), 'v2.87.2');
-    const migrationNames = await readdir(join(workdir, 'supabase', 'migrations'));
-    assert.deepEqual(migrationNames.sort(), [
-      '00000000000001_midao_test_bootstrap.sql',
-      ...midaoMigrations.map((name, index) => `${String(index + 2).padStart(14, '0')}_${name}`),
-    ]);
-    assert.match(await readFile(join(workdir, 'supabase', 'migrations', migrationNames[0]), 'utf8'), /CREATE TABLE public\.guide_profiles/u);
-    assert.equal(await readFile(join(workdir, 'supabase', 'migrations', migrationNames[1]), 'utf8'), 'select 10;\n');
-    assert.equal(await readFile(join(repoRoot, 'supabase', 'migrations', '001.sql'), 'utf8'), 'select 1;\n');
-    assert.equal(await readFile(join(repoRoot, 'supabase', 'migrations', '001.rollback.sql'), 'utf8'), 'select 0;\n');
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
-test('database-only workdir rejects source symlinks before copying or modifying external bytes', async () => {
-  const root = await mkdtemp('/tmp/midao-db-source-link-');
-  const repoRoot = join(root, projectId);
-  const lockDir = join(root, 'lock');
-  const victim = join(root, 'victim.toml');
-  const migrationNames = [
-    '20260723000000_midao_backend_mode.sql',
-    '20260723001000_midao_notification_outbox.sql',
-    '20260723002000_midao_idempotency_records.sql',
-    '20260723002500_midao_audit_events.sql',
-    '20260723003000_midao_atomic_backend_mode_switch.sql',
-    '20260723003500_midao_service_role_acl_hardening.sql',
-  ];
+test('Midao E2E config disables unused Supabase service jobs while app-level auth stays in the real Next runtime', () => {
+  const canonical = '[api]\nenabled = true\n[storage]\nenabled = true\nfile_size_limit = "50MiB"\n[auth]\nenabled = true\n';
+  const rewritten = buildMidaoE2ELocalConfig(canonical);
+  assert.match(rewritten, /\[storage\]\nenabled = false\nfile_size_limit = "50MiB"/u);
+  assert.match(rewritten, /\[auth\]\nenabled = false/u);
+  assert.match(rewritten, /\[realtime\]\nenabled = false\n$/u);
+  assert.doesNotMatch(rewritten, /\[storage\]\nenabled = true/u);
+  assert.equal(canonical.includes('[storage]\nenabled = true'), true);
+  for (const hostile of [
+    '[storage]\nenabled = true\n[storage]\nenabled = true\n',
+    '[storage]\nenabled = true\n[realtime]\nenabled = true\n',
+    '[storage]\nfile_size_limit = "50MiB"\n',
+  ]) assert.throws(() => buildMidaoE2ELocalConfig(hostile), /MIDAO_E2E_LOCAL_CONFIG_AMBIGUOUS/u);
+});
+
+test('baseline workdir binds materializer capture, rewrites full config after verification, and cleans owned paths', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'midao-baseline-workdir-'));
+  const repoRoot = join(root, projectId); const lockDir = join(root, 'lock'); const calls = [];
+  await mkdir(repoRoot); await mkdir(lockDir, { mode: 0o700 });
+  const configBytes = Buffer.from('[api]\nenabled = true\n');
+  const capture = {
+    transactionId: 'a'.repeat(64), ledger: { captureManifestSha256: 'b'.repeat(64) }, dispose() { calls.push('capture-dispose'); },
+  };
+  const expected = {
+    transactionId: 'c'.repeat(64),
+    manifest: { captureTransactionId: capture.transactionId, captureManifestSha256: capture.ledger.captureManifestSha256 },
+    dispose() { calls.push('expected-dispose'); },
+  };
   try {
-    await mkdir(join(repoRoot, 'supabase', 'migrations'), { recursive: true });
-    await mkdir(lockDir, { mode: 0o700 });
-    await writeFile(victim, '[storage]\nenabled = true\n');
-    await symlink(victim, join(repoRoot, 'supabase', 'config.toml'));
-    for (const name of migrationNames) await writeFile(join(repoRoot, 'supabase', 'migrations', name), 'select 1;\n');
-    await assert.rejects(prepareDatabaseOnlyWorkdir({ repoRoot, lockDir }), /UNSAFE_SUPABASE_SOURCE/u);
-    assert.equal(await readFile(victim, 'utf8'), '[storage]\nenabled = true\n');
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
+    const capability = await prepareBaselineWorkdirWithAdapters({
+      repoRoot, lockDir, fullServices: true,
+      verifyCapture: async () => { calls.push('capture'); return capture; },
+      verifyExpected: async () => { calls.push('expected'); return expected; },
+      materialize: async ({ outputParent, projectId: id }) => {
+        calls.push('materialize'); const workdir = join(outputParent, id); await mkdir(join(workdir, 'supabase'), { recursive: true });
+        return {
+          workdir, transactionId: capture.transactionId, captureManifestSha256: capture.ledger.captureManifestSha256,
+          history: ['00000000000001_baseline_v1.sql'], seedPath: join(workdir, 'supabase/seed.sql'),
+          async stageCliReplay() {}, async cleanupCliMetadata() {},
+          async cleanup() { calls.push('materialized-cleanup'); await rm(workdir, { recursive: true }); },
+        };
+      },
+      readFullConfig: async () => { calls.push('config-read'); return configBytes; },
+      rewriteFullConfig: async () => { calls.push('config-write'); },
+    });
+    assert.deepEqual(calls, ['capture', 'expected', 'materialize', 'expected-dispose', 'capture-dispose']);
+    await capability.enableFullServices();
+    assert.deepEqual(calls.slice(-2), ['config-read', 'config-write']);
+    assert.equal(capability.captureTransactionId, capture.transactionId);
+    assert.equal(capability.expectedTransactionId, expected.transactionId);
+    assert.equal(configBytes.every((byte) => byte === 0), true);
+    assert.deepEqual(capability.migrationNames, ['00000000000001_baseline_v1.sql',
+      '20260723000000_midao_backend_mode.sql', '20260723001000_midao_notification_outbox.sql',
+      '20260723002000_midao_idempotency_records.sql', '20260723002500_midao_audit_events.sql',
+      '20260723003000_midao_atomic_backend_mode_switch.sql', '20260723003500_midao_service_role_acl_hardening.sql']);
+    await capability.cleanup();
+    await assert.rejects(readFile(join(lockDir, 'db-only-workdir')), /ENOENT/u);
+    assert.deepEqual(calls, [
+      'capture', 'expected', 'materialize', 'expected-dispose', 'capture-dispose',
+      'config-read', 'config-write', 'materialized-cleanup',
+    ]);
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test('same-process secure FD lock rejects contention and unsafe filesystem identities', async () => {
@@ -310,7 +335,7 @@ test('actual adapter captures full immutable IDs and cleans containers, networks
   assert.deepEqual(calls, [
     ['/root/.hermes/toolchains/supabase/2.87.2/supabase', 'status'],
     ['/root/.hermes/toolchains/supabase/2.87.2/supabase', 'db', 'start'],
-    ['docker', 'ps', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.ID}}\t{{.Names}}\t{{.Label "com.supabase.cli.project"}}'],
+    ['docker', 'ps', '-a', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.ID}}\t{{.Names}}\t{{.Label "com.supabase.cli.project"}}'],
     ['docker', 'network', 'ls', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.ID}}\t{{.Name}}\t{{.Label "com.supabase.cli.project"}}'],
     ['docker', 'volume', 'ls', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.Name}}\t{{.Label "com.supabase.cli.project"}}'],
     ['docker', 'volume', 'inspect', '--format', '{{.Name}}\t{{.CreatedAt}}\t{{.Driver}}\t{{.Scope}}\t{{index .Labels "com.supabase.cli.project"}}', '--', `supabase_db_${projectId}`],
@@ -322,6 +347,126 @@ test('actual adapter captures full immutable IDs and cleans containers, networks
   assert.match(paths[0], /^\/root\/\.hermes\/toolchains\/supabase\/2\.87\.2:/u);
   assert.equal(dockerApiVersions[0], '1.43');
   assert.equal(dockerApiVersions[1], '1.43');
+});
+
+test('browser adapter starts database-only, waits for health, then enables only REST and gateway services', async () => {
+  const calls = [];
+  let dockerPsCalls = 0;
+  const adapter = createActualAdapter({
+    repoRoot: `/tmp/${projectId}`,
+    pin: '2.87.2',
+    nodeBin: '/node22',
+    fullServices: true,
+    enableFullServices: async () => { calls.push(['enable-full-services']); },
+    commandRunner: async (command, args) => {
+      calls.push([command, ...args]);
+      if (command === 'docker' && args[0] === 'ps') {
+        dockerPsCalls += 1;
+        return { exitCode: 0, stdout: `db-id-${dockerPsCalls}\tsupabase_db_${projectId}\t${projectId}\n`, stderr: '' };
+      }
+      if (command === 'docker' && args[0] === 'inspect') {
+        return { exitCode: 0, stdout: 'healthy\n', stderr: '' };
+      }
+      if (command === 'docker' && args[0] === 'exec') {
+        if (args.at(-1).includes('to_regclass')) {
+          return { exitCode: 0, stdout: '--absent--\n', stderr: '' };
+        }
+        if (args.at(-1).startsWith('CREATE SCHEMA')) {
+          return { exitCode: 0, stdout: '', stderr: '' };
+        }
+        return {
+          exitCode: 0,
+          stdout: 'version|text|text|NO\nstatements|ARRAY|_text|YES\nname|text|text|YES\n--history--\n00000000000000\n',
+          stderr: '',
+        };
+      }
+      return { exitCode: 0, stdout: '', stderr: '' };
+    },
+  });
+
+  await adapter.start();
+
+  const bootstrapProbe = "SELECT COALESCE(to_regclass('supabase_migrations.schema_migrations')::text, '--absent--'); SELECT column_name || '|' || data_type || '|' || udt_name || '|' || is_nullable FROM information_schema.columns WHERE table_schema='supabase_migrations' AND table_name='schema_migrations' ORDER BY ordinal_position;";
+  const bootstrapCreate = "CREATE SCHEMA IF NOT EXISTS supabase_migrations; CREATE TABLE supabase_migrations.schema_migrations (version text NOT NULL PRIMARY KEY, statements text[], name text); INSERT INTO supabase_migrations.schema_migrations(version, statements, name) VALUES ('00000000000000', ARRAY[]::text[], 'midao_history_bootstrap');";
+  const bootstrapVerify = "SELECT column_name || '|' || data_type || '|' || udt_name || '|' || is_nullable FROM information_schema.columns WHERE table_schema='supabase_migrations' AND table_name='schema_migrations' ORDER BY ordinal_position; SELECT '--history--'; SELECT version FROM supabase_migrations.schema_migrations ORDER BY version;";
+  const psql = (id) => ['docker', 'exec', '--env', 'PGPASSWORD=postgres', id, 'psql', '--username', 'supabase_admin', '--dbname', 'postgres', '--set=ON_ERROR_STOP=1', '--tuples-only', '--no-align', '--command'];
+  assert.deepEqual(calls, [
+    [
+      '/root/.hermes/toolchains/supabase/2.87.2/supabase',
+      'start',
+      '--ignore-health-check',
+      '--exclude',
+      'gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor',
+    ],
+    ['docker', 'ps', '-a', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.ID}}\t{{.Names}}\t{{.Label "com.supabase.cli.project"}}'],
+    ['docker', 'inspect', '--format', '{{.State.Health.Status}}', 'db-id-1'],
+    [...psql('db-id-1'), bootstrapProbe],
+    [...psql('db-id-1'), bootstrapCreate],
+    [...psql('db-id-1'), bootstrapVerify],
+    ['enable-full-services'],
+    ['/root/.hermes/toolchains/supabase/2.87.2/supabase', 'stop'],
+    [
+      '/root/.hermes/toolchains/supabase/2.87.2/supabase',
+      'start',
+      '--exclude',
+      'realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor',
+    ],
+    ['docker', 'ps', '-a', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.ID}}\t{{.Names}}\t{{.Label "com.supabase.cli.project"}}'],
+    ['docker', 'inspect', '--format', '{{.State.Health.Status}}', 'db-id-2'],
+    [...psql('db-id-2'), bootstrapVerify],
+  ]);
+});
+
+test('manual browser API uses the pinned PostgREST digest and local-only JWT credentials without CLI service start', () => {
+  const runtime = resolvePinnedPostgrestRuntime(JSON.stringify({
+    images: [{
+      role: 'api',
+      repository: 'public.ecr.aws/supabase/postgrest',
+      tag: 'v14.8',
+      repoDigest: 'public.ecr.aws/supabase/postgrest@sha256:' + 'a'.repeat(64),
+      imageId: 'sha256:' + 'b'.repeat(64),
+      platform: 'linux/amd64',
+      architecture: 'amd64',
+    }],
+  }));
+  assert.deepEqual(runtime, {
+    repoDigest: 'public.ecr.aws/supabase/postgrest@sha256:' + 'a'.repeat(64),
+    imageId: 'sha256:' + 'b'.repeat(64),
+  });
+  for (const hostile of [
+    '{}',
+    JSON.stringify({ images: [] }),
+    JSON.stringify({ images: [{ role: 'api', repoDigest: 'latest', imageId: 'sha256:' + 'b'.repeat(64) }] }),
+  ]) assert.throws(() => resolvePinnedPostgrestRuntime(hostile), /POSTGREST_RUNTIME_LOCK_INVALID/u);
+
+  const credentials = createLocalSupabaseApiCredentials('http://127.0.0.1:54321');
+  assert.equal(credentials.publicEnv.SUPABASE_URL, 'http://127.0.0.1:54321');
+  assert.equal(credentials.publicEnv.NEXT_PUBLIC_SUPABASE_URL, 'http://127.0.0.1:54321');
+  assert.equal(credentials.publicEnv.SUPABASE_ANON_KEY.split('.').length, 3);
+  assert.equal(credentials.publicEnv.SUPABASE_SERVICE_ROLE_KEY.split('.').length, 3);
+  assert.equal(credentials.containerEnv.PGRST_JWT_SECRET.length >= 32, true);
+  assert.equal(JSON.stringify(credentials.publicEnv).includes(credentials.containerEnv.PGRST_JWT_SECRET), false);
+  const invocation = buildPinnedPostgrestRun({ expectedProjectId: projectId, runtime, credentials });
+  assert.equal(invocation.command, 'docker');
+  assert.deepEqual(invocation.args.slice(0, 12), [
+    'run', '--detach', '--pull', 'never', '--name', `supabase_rest_${projectId}`,
+    '--label', `com.supabase.cli.project=${projectId}`,
+    '--label', `com.docker.compose.project=${projectId}`,
+    '--network', `supabase_network_${projectId}`,
+  ]);
+  assert.equal(invocation.args.at(-1), runtime.repoDigest);
+  assert.equal(invocation.args.includes(credentials.containerEnv.PGRST_JWT_SECRET), false);
+  assert.equal(invocation.args.filter((value) => value === '--env').length, Object.keys(credentials.containerEnv).length);
+  assert.deepEqual(invocation.env, credentials.containerEnv);
+  const bridged = buildPinnedPostgrestRun({
+    expectedProjectId: projectId, runtime, credentials, publishHost: '172.20.0.1',
+  });
+  assert.equal(bridged.args.includes('172.20.0.1:54321:3000'), true);
+  for (const publishHost of ['0.0.0.0', '8.8.8.8', '172.32.0.1', 'invalid']) {
+    assert.throws(() => buildPinnedPostgrestRun({
+      expectedProjectId: projectId, runtime, credentials, publishHost,
+    }), /POSTGREST_RUN_CONTRACT_INVALID/u);
+  }
 });
 
 test('actual adapter asset-only cleanup attempts network and volume and aggregates both failures', async () => {
@@ -782,6 +927,34 @@ test('start-only onReady skips reset, returns callback value and still cleans ex
   assert.equal(result.value, 'postgres://local');
   assert.equal(calls.includes('reset'), false);
   assert.deepEqual(calls, ['start', 'containers', 'health', 'status-json', 'ready', 'ready-callback', 'containers', 'stop:owned']);
+});
+
+test('onReady can adopt an exact auxiliary API container before child execution and cleanup', async () => {
+  const calls = [];
+  let apiStarted = false;
+  const db = { id: 'db-id', name: `supabase_db_${projectId}`, projectLabel: projectId };
+  const rest = { id: 'rest-id', name: `supabase_rest_${projectId}`, projectLabel: projectId };
+  await runWithLocalSupabase({
+    expectedProjectId: projectId,
+    initialize: 'start-only',
+    onReady: async ({ refreshOwnership }) => {
+      apiStarted = true;
+      calls.push('api-start');
+      await refreshOwnership();
+      calls.push('api-adopted');
+    },
+    adapter: {
+      async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+      async start() { calls.push('start'); },
+      async containers() { calls.push('containers'); return apiStarted ? [db, rest] : [db]; },
+      async statusJson() { calls.push('status-json'); return { DATABASE_URL: 'postgres://local' }; },
+      async stop(identity) { calls.push(['stop', identity]); },
+    },
+  });
+  assert.deepEqual(calls, [
+    'start', 'containers', 'status-json', 'api-start', 'containers', 'api-adopted',
+    'containers', ['stop', [db, rest]],
+  ]);
 });
 
 test('onReady primary failure and cleanup failure are both retained', async () => {

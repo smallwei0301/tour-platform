@@ -5,13 +5,37 @@ import pg from 'pg';
 
 const databaseUrl = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
 assert.ok(databaseUrl, 'local Supabase runner must provide SUPABASE_DB_URL or DATABASE_URL');
+const parsedDatabaseUrl = new URL(databaseUrl);
+assert.ok(['postgres:', 'postgresql:'].includes(parsedDatabaseUrl.protocol));
+assert.deepEqual(
+  [parsedDatabaseUrl.hostname, parsedDatabaseUrl.port, parsedDatabaseUrl.pathname, parsedDatabaseUrl.search, parsedDatabaseUrl.hash],
+  ['127.0.0.1', '54322', '/postgres', '', ''],
+  'owner test connection must remain exact local loopback PostgreSQL',
+);
+parsedDatabaseUrl.username = 'supabase_admin';
+const ownerDatabaseUrl = parsedDatabaseUrl.toString();
 
 let client;
+let ownerClient;
 before(async () => {
   client = new pg.Client({ connectionString: databaseUrl });
+  ownerClient = new pg.Client({ connectionString: ownerDatabaseUrl });
   await client.connect();
+  await ownerClient.connect();
+  await client.query('CREATE ROLE midao_rls_probe NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS');
+  await client.query('GRANT midao_rls_probe TO postgres');
 });
-after(async () => { await client?.end(); });
+after(async () => {
+  try { await client?.query('RESET ROLE'); } catch { /* disposable DB cleanup continues */ }
+  if (ownerClient) {
+    for (const { table } of protectedTables) {
+      try { await ownerClient.query(`REVOKE ALL ON TABLE public.${table} FROM midao_rls_probe`); } catch { /* disposable DB cleanup continues */ }
+    }
+    try { await ownerClient.query('REVOKE ALL ON SCHEMA public FROM midao_rls_probe'); } catch { /* disposable DB cleanup continues */ }
+  }
+  try { await client?.query('DROP ROLE IF EXISTS midao_rls_probe'); } catch { /* disposable DB cleanup continues */ }
+  await Promise.allSettled([client?.end(), ownerClient?.end()].filter(Boolean));
+});
 
 const ownerTablePrivileges = ['DELETE', 'INSERT', 'MAINTAIN', 'REFERENCES', 'SELECT', 'TRIGGER', 'TRUNCATE', 'UPDATE'];
 const protectedTables = [
@@ -103,6 +127,7 @@ test('clean migrations expose the exact foundation schema, constraints, indexes 
     const rows = await aclRows('r', `public.${table}`);
     const expectedAcl = [
       ...ownerTablePrivileges.map((privilege_type) => ({ grantee: 'postgres', privilege_type })),
+      ...ownerTablePrivileges.map((privilege_type) => ({ grantee: 'supabase_admin', privilege_type })),
       ...servicePrivileges.map((privilege_type) => ({ grantee: 'service_role', privilege_type })),
     ].sort((left, right) => left.grantee.localeCompare(right.grantee) || left.privilege_type.localeCompare(right.privilege_type));
     assert.deepEqual(rows, expectedAcl, `${table} has an unexpected grantee or privilege`);
@@ -147,10 +172,8 @@ test('each service-only table independently proves RLS silent SELECT suppression
       await client.query(probe.ownerInsert, [sentinelId, `sentinel-${sentinelId}`]);
       const ownerRole = await client.query('SELECT current_user');
       assert.equal(ownerRole.rows[0].current_user, 'postgres');
-      await client.query('CREATE ROLE midao_rls_probe NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS');
-      await client.query('GRANT midao_rls_probe TO postgres');
-      await client.query('GRANT USAGE ON SCHEMA public TO midao_rls_probe');
-      await client.query(`GRANT SELECT, INSERT ON TABLE public.${probe.table} TO midao_rls_probe`);
+      await ownerClient.query('GRANT USAGE ON SCHEMA public TO midao_rls_probe');
+      await ownerClient.query(`GRANT SELECT, INSERT ON TABLE public.${probe.table} TO midao_rls_probe`);
       await client.query('SET LOCAL ROLE midao_rls_probe');
       const role = await client.query('SELECT current_user');
       assert.equal(role.rows[0].current_user, 'midao_rls_probe');
@@ -181,6 +204,7 @@ test('exact RPC identity has service-role-only EXECUTE and safe SECURITY DEFINER
   assert.deepEqual(acl, [
     { grantee: 'postgres', privilege_type: 'EXECUTE' },
     { grantee: 'service_role', privilege_type: 'EXECUTE' },
+    { grantee: 'supabase_admin', privilege_type: 'EXECUTE' },
   ]);
 
   const privileges = await client.query(`

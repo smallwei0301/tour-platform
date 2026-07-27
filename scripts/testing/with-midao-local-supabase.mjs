@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { constants as fsConstants } from 'node:fs';
 import * as fsPromises from 'node:fs/promises';
@@ -7,11 +7,16 @@ import { createConnection, createServer } from 'node:net';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { materializeFreshWorkdir } from '../database-baseline/materialize-fresh-workdir.mjs';
+import { resolveRepositoryPublicationPaths } from '../database-baseline/publish-baseline.mjs';
+import { resolveExpectedTerminalPublicationPaths } from '../database-baseline/publish-expected-terminal.mjs';
+import { verifyCaptureTransaction, verifyExpectedTerminalTransaction } from '../database-baseline/verify-manifest.mjs';
 
 export const LOCK_PATH = '/tmp/tour-platform-local-supabase.lock';
 const SUPABASE_TOOLCHAIN_DIR = '/root/.hermes/toolchains/supabase/2.87.2';
 const SUPABASE_TOOLCHAIN_BIN = `${SUPABASE_TOOLCHAIN_DIR}/supabase`;
 const SUPABASE_TOOLCHAIN_SHA256 = 'e325dd50b274e88fd1416f93b9e063902827ae326d356ab7f9dc604c3eba5c59';
+const MIDAO_E2E_JWT_SECRET = 'midao-local-postgrest-jwt-secret-0123456789abcdef';
 const HELP_LINE = 'Try rerunning the command with --debug to troubleshoot the error.';
 const FOUNDATION_MIGRATIONS = [
   '20260723000000_midao_backend_mode.sql',
@@ -21,17 +26,18 @@ const FOUNDATION_MIGRATIONS = [
   '20260723003000_midao_atomic_backend_mode_switch.sql',
   '20260723003500_midao_service_role_acl_hardening.sql',
 ];
-const FOUNDATION_BOOTSTRAP_SQL = `CREATE EXTENSION IF NOT EXISTS pgcrypto;
-CREATE TABLE public.guide_profiles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  verification_status TEXT NOT NULL DEFAULT 'pending',
-  guide_session_version INTEGER NOT NULL DEFAULT 1
-);
-`;
 const STOPPED_SERVICE_NAMES = [
   'kong', 'auth', 'inbucket', 'realtime', 'rest', 'storage', 'imgproxy',
   'pg_meta', 'studio', 'edge_runtime', 'analytics', 'vector', 'pooler',
 ];
+const MIDAO_E2E_EXCLUDED_SERVICES = [
+  'realtime', 'storage-api', 'imgproxy', 'mailpit', 'postgres-meta',
+  'studio', 'edge-runtime', 'logflare', 'vector', 'supavisor',
+].join(',');
+const MIDAO_DATABASE_ONLY_EXCLUDED_SERVICES = [
+  'gotrue', 'realtime', 'storage-api', 'imgproxy', 'kong', 'mailpit',
+  'postgrest', 'postgres-meta', 'studio', 'edge-runtime', 'logflare', 'vector', 'supavisor',
+].join(',');
 
 export function parseSupabasePin(lockText) {
   let lock;
@@ -39,6 +45,168 @@ export function parseSupabasePin(lockText) {
   const version = lock?.packages?.['node_modules/supabase']?.version;
   if (typeof version !== 'string' || !/^\d+\.\d+\.\d+$/u.test(version)) throw new Error('INVALID_SUPABASE_PIN');
   return version;
+}
+
+export function resolvePinnedPostgrestRuntime(lockText) {
+  let lock;
+  try { lock = JSON.parse(lockText); } catch { throw new Error('POSTGREST_RUNTIME_LOCK_INVALID'); }
+  const matches = Array.isArray(lock?.images) ? lock.images.filter((entry) => entry?.role === 'api') : [];
+  if (matches.length !== 1) throw new Error('POSTGREST_RUNTIME_LOCK_INVALID');
+  const image = matches[0];
+  if (Object.keys(image).sort().join(',') !== 'architecture,imageId,platform,repoDigest,repository,role,tag'
+    || image.repository !== 'public.ecr.aws/supabase/postgrest'
+    || !/^v\d+\.\d+$/u.test(image.tag)
+    || !/^public\.ecr\.aws\/supabase\/postgrest@sha256:[0-9a-f]{64}$/u.test(image.repoDigest)
+    || !/^sha256:[0-9a-f]{64}$/u.test(image.imageId)
+    || image.platform !== 'linux/amd64'
+    || image.architecture !== 'amd64') {
+    throw new Error('POSTGREST_RUNTIME_LOCK_INVALID');
+  }
+  return { repoDigest: image.repoDigest, imageId: image.imageId };
+}
+
+function createLocalSupabaseJwt(role) {
+  const encode = (value) => Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
+  const unsigned = `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({
+    role, iss: 'supabase', iat: 1_700_000_000, exp: 4_102_444_800,
+  })}`;
+  const signature = createHmac('sha256', MIDAO_E2E_JWT_SECRET).update(unsigned).digest('base64url');
+  return `${unsigned}.${signature}`;
+}
+
+export function createLocalSupabaseApiCredentials(apiUrl) {
+  if (!/^http:\/\/127\.0\.0\.1:\d{4,5}$/u.test(apiUrl)) throw new Error('MIDAO_LOCAL_API_URL_INVALID');
+  const anonKey = createLocalSupabaseJwt('anon');
+  const serviceRoleKey = createLocalSupabaseJwt('service_role');
+  return {
+    publicEnv: {
+      SUPABASE_URL: apiUrl,
+      NEXT_PUBLIC_SUPABASE_URL: apiUrl,
+      SUPABASE_ANON_KEY: anonKey,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
+      SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
+    },
+    containerEnv: {
+      PGRST_DB_URI: 'postgres://authenticator:postgres@db:5432/postgres',
+      PGRST_DB_SCHEMAS: 'public,storage,graphql_public',
+      PGRST_DB_EXTRA_SEARCH_PATH: 'public,extensions',
+      PGRST_DB_ANON_ROLE: 'anon',
+      PGRST_JWT_SECRET: MIDAO_E2E_JWT_SECRET,
+      PGRST_DB_USE_LEGACY_GUCS: 'false',
+    },
+  };
+}
+
+function isPrivateDockerBindHost(value) {
+  const octets = String(value).split('.').map(Number);
+  if (octets.length !== 4 || octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) return false;
+  return octets[0] === 127 || octets[0] === 10
+    || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31)
+    || (octets[0] === 192 && octets[1] === 168);
+}
+
+export function buildPinnedPostgrestRun({
+  expectedProjectId, runtime, credentials, publishHost = '127.0.0.1',
+}) {
+  if (!/^[a-z0-9_-]+$/u.test(expectedProjectId)
+    || !runtime || !/^public\.ecr\.aws\/supabase\/postgrest@sha256:[0-9a-f]{64}$/u.test(runtime.repoDigest)
+    || !/^sha256:[0-9a-f]{64}$/u.test(runtime.imageId)
+    || !credentials?.containerEnv || typeof credentials.containerEnv !== 'object'
+    || !isPrivateDockerBindHost(publishHost)) {
+    throw new Error('POSTGREST_RUN_CONTRACT_INVALID');
+  }
+  const envNames = Object.keys(credentials.containerEnv).sort();
+  if (envNames.join(',') !== [
+    'PGRST_DB_ANON_ROLE', 'PGRST_DB_EXTRA_SEARCH_PATH', 'PGRST_DB_SCHEMAS',
+    'PGRST_DB_URI', 'PGRST_DB_USE_LEGACY_GUCS', 'PGRST_JWT_SECRET',
+  ].join(',') || envNames.some((name) => typeof credentials.containerEnv[name] !== 'string'
+    || !credentials.containerEnv[name] || /[\r\n\0]/u.test(credentials.containerEnv[name]))) {
+    throw new Error('POSTGREST_RUN_CONTRACT_INVALID');
+  }
+  return {
+    command: 'docker',
+    args: [
+      'run', '--detach', '--pull', 'never',
+      '--name', `supabase_rest_${expectedProjectId}`,
+      '--label', `com.supabase.cli.project=${expectedProjectId}`,
+      '--label', `com.docker.compose.project=${expectedProjectId}`,
+      '--network', `supabase_network_${expectedProjectId}`,
+      '--publish', `${publishHost}:54321:3000`,
+      ...envNames.flatMap((name) => ['--env', name]),
+      runtime.repoDigest,
+    ],
+    env: { ...credentials.containerEnv },
+  };
+}
+
+export async function startPinnedPostgrest({
+  repoRoot, expectedProjectId, runtime, credentials, publishHost = '127.0.0.1', signal, commandRunner = runCommand,
+}) {
+  const invocation = buildPinnedPostgrestRun({ expectedProjectId, runtime, credentials, publishHost });
+  const image = await commandRunner('docker', [
+    'image', 'inspect', '--format', '{{.Id}}\t{{json .RepoDigests}}', '--', runtime.repoDigest,
+  ], { cwd: repoRoot, signal });
+  let imageDigests;
+  const [imageId, digestJson, ...extraImageFields] = String(image.stdout || '').trim().split('\t');
+  try { imageDigests = JSON.parse(digestJson); } catch { imageDigests = null; }
+  if (image.exitCode !== 0 || image.signal !== null || image.stderr.trim() || extraImageFields.length !== 0
+    || imageId !== runtime.imageId || !Array.isArray(imageDigests) || !imageDigests.includes(runtime.repoDigest)) {
+    throw new Error('POSTGREST_IMAGE_IDENTITY_INVALID');
+  }
+  const started = await commandRunner(invocation.command, invocation.args, {
+    cwd: repoRoot, signal, env: { ...process.env, ...invocation.env },
+  });
+  const containerId = String(started.stdout || '').trim();
+  if (started.exitCode !== 0 || started.signal !== null || started.stderr.trim()
+    || !/^[0-9a-f]{64}$/u.test(containerId)) throw new Error('POSTGREST_START_FAILED');
+  const inspected = await commandRunner('docker', ['inspect', '--format', '{{json .}}', '--', containerId], {
+    cwd: repoRoot, signal,
+  });
+  let identity;
+  try { identity = JSON.parse(inspected.stdout); } catch { identity = null; }
+  const networkName = `supabase_network_${expectedProjectId}`;
+  const expectedEnv = Object.entries(credentials.containerEnv).map(([key, value]) => `${key}=${value}`);
+  const portBinding = identity?.HostConfig?.PortBindings?.['3000/tcp'];
+  if (inspected.exitCode !== 0 || inspected.signal !== null || inspected.stderr.trim()
+    || identity?.Id !== containerId || identity?.Name !== `/supabase_rest_${expectedProjectId}`
+    || identity?.Image !== runtime.imageId || identity?.Config?.Image !== runtime.repoDigest
+    || identity?.Config?.Labels?.['com.supabase.cli.project'] !== expectedProjectId
+    || identity?.Config?.Labels?.['com.docker.compose.project'] !== expectedProjectId
+    || identity?.HostConfig?.NetworkMode !== networkName
+    || Object.keys(identity?.NetworkSettings?.Networks ?? {}).join(',') !== networkName
+    || !Array.isArray(portBinding) || portBinding.length !== 1
+    || portBinding[0]?.HostIp !== publishHost || portBinding[0]?.HostPort !== '54321'
+    || identity?.State?.Status !== 'running'
+    || expectedEnv.some((entry) => !identity?.Config?.Env?.includes(entry))) {
+    throw new Error('POSTGREST_CONTAINER_IDENTITY_INVALID');
+  }
+  return { containerId };
+}
+
+export async function waitForPostgrestApi({ apiUrl, serviceRoleKey, signal, attempts = 60 }) {
+  if (!/^http:\/\/127\.0\.0\.1:\d{4,5}$/u.test(apiUrl)
+    || typeof serviceRoleKey !== 'string' || serviceRoleKey.split('.').length !== 3
+    || !Number.isSafeInteger(attempts) || attempts < 1 || attempts > 120) {
+    throw new Error('POSTGREST_READY_CONTRACT_INVALID');
+  }
+  let lastStatus = 'unreachable';
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    if (signal?.aborted) throw new Error('RUNNER_SIGNALLED');
+    try {
+      const response = await fetch(apiUrl, {
+        headers: { apikey: serviceRoleKey, authorization: `Bearer ${serviceRoleKey}` },
+        signal: AbortSignal.timeout(2_000),
+      });
+      lastStatus = String(response.status);
+      const body = await response.text();
+      if (response.status === 200 && body.length > 2 && body.length < 10_000_000) return;
+    } catch (error) {
+      if (error?.name === 'AbortError' && signal?.aborted) throw new Error('RUNNER_SIGNALLED');
+      lastStatus = 'unreachable';
+    }
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
+  }
+  throw new Error(`POSTGREST_NOT_READY_${lastStatus}`);
 }
 
 export async function verifyPinnedSupabaseBinary() {
@@ -109,49 +277,163 @@ async function readSafeSourceFile(path) {
   }
 }
 
-export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir }) {
-  const projectId = canonicalProjectId(repoRoot);
-  const sourceSupabase = resolve(repoRoot, 'supabase');
-  const sourceMigrations = join(sourceSupabase, 'migrations');
-  await assertSafeSourceDirectory(sourceSupabase);
-  await assertSafeSourceDirectory(sourceMigrations);
-  const configText = await readSafeSourceFile(join(sourceSupabase, 'config.toml'));
-  const migrationContents = [];
-  for (const name of FOUNDATION_MIGRATIONS) {
-    migrationContents.push([name, await readSafeSourceFile(join(sourceMigrations, name))]);
-  }
-
-  const parent = join(lockDir, 'db-only-workdir');
-  const workdir = join(parent, projectId);
-  const targetSupabase = join(workdir, 'supabase');
-  const migrationsPath = join(targetSupabase, 'migrations');
-  await fsPromises.rm(parent, { recursive: true, force: true });
-  await fsPromises.mkdir(migrationsPath, { recursive: true, mode: 0o700 });
-  await fsPromises.writeFile(join(migrationsPath, '00000000000001_midao_test_bootstrap.sql'), FOUNDATION_BOOTSTRAP_SQL, { mode: 0o600 });
-  for (const [index, [name, content]] of migrationContents.entries()) {
-    const version = String(index + 2).padStart(14, '0');
-    await fsPromises.writeFile(join(migrationsPath, `${version}_${name}`), content, { mode: 0o600 });
-  }
-  const configPath = join(targetSupabase, 'config.toml');
-  const lines = configText.split('\n');
-  for (const section of ['storage', 'auth', 'realtime', 'db.seed']) {
-    let sectionIndex = lines.findIndex((line) => line.trim() === `[${section}]`);
-    if (sectionIndex < 0) {
-      if (lines.at(-1) !== '') lines.push('');
-      lines.push(`[${section}]`, 'enabled = false');
-      continue;
+async function overwriteSafeFile(filePath, bytes) {
+  const before = await fsPromises.lstat(filePath);
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1) throw new Error('UNSAFE_MATERIALIZED_CONFIG');
+  let handle;
+  try {
+    handle = await fsPromises.open(filePath, fsConstants.O_WRONLY | fsConstants.O_NOFOLLOW);
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.nlink !== 1 || opened.dev !== before.dev || opened.ino !== before.ino) {
+      throw new Error('UNSAFE_MATERIALIZED_CONFIG');
     }
-    let end = lines.findIndex((line, index) => index > sectionIndex && /^\s*\[/u.test(line));
-    if (end < 0) end = lines.length;
-    const enabledIndex = lines.findIndex((line, index) => index > sectionIndex && index < end && /^\s*enabled\s*=/u.test(line));
-    if (enabledIndex < 0) lines.splice(sectionIndex + 1, 0, 'enabled = false');
-    else lines[enabledIndex] = 'enabled = false';
+    await handle.truncate(0);
+    await handle.writeFile(bytes);
+    await handle.sync();
+  } finally { await handle?.close(); }
+}
+
+export function buildMidaoE2ELocalConfig(canonical) {
+  if (typeof canonical !== 'string' || canonical.includes('\0')) {
+    throw new Error('MIDAO_E2E_LOCAL_CONFIG_AMBIGUOUS');
   }
-  await fsPromises.writeFile(configPath, lines.join('\n'), { mode: 0o600 });
-  const tempPath = join(targetSupabase, '.temp');
-  await fsPromises.mkdir(tempPath, { mode: 0o700 });
-  await fsPromises.writeFile(join(tempPath, 'cli-latest'), 'v2.87.2', { mode: 0o600 });
-  return workdir;
+  const lines = canonical.split('\n');
+  const sectionIndexes = (name) => lines
+    .map((line, index) => (line.trim() === `[${name}]` ? index : -1))
+    .filter((index) => index >= 0);
+  if (sectionIndexes('realtime').length !== 0) {
+    throw new Error('MIDAO_E2E_LOCAL_CONFIG_AMBIGUOUS');
+  }
+  for (const section of ['storage', 'auth']) {
+    const indexes = sectionIndexes(section);
+    if (indexes.length !== 1) throw new Error('MIDAO_E2E_LOCAL_CONFIG_AMBIGUOUS');
+    const sectionEnd = lines.findIndex((line, index) => index > indexes[0] && /^\s*\[/u.test(line));
+    const end = sectionEnd < 0 ? lines.length : sectionEnd;
+    const enabled = lines
+      .map((line, index) => (index > indexes[0] && index < end && /^\s*enabled\s*=/u.test(line) ? index : -1))
+      .filter((index) => index >= 0);
+    if (enabled.length !== 1 || !/^\s*enabled\s*=\s*true\s*$/u.test(lines[enabled[0]])) {
+      throw new Error('MIDAO_E2E_LOCAL_CONFIG_AMBIGUOUS');
+    }
+    lines[enabled[0]] = 'enabled = false';
+  }
+  return `${lines.join('\n').trimEnd()}\n\n`
+    + '# Task 14 local E2E only: disable unused one-shot jobs that CLI 2.87.2 cannot stream to EOF\n'
+    + '# on Docker Engine API 1.43. App guide/admin auth, PostgREST, Kong, and PostgreSQL remain enabled.\n'
+    + '[realtime]\nenabled = false\n';
+}
+
+export async function prepareBaselineWorkdirWithAdapters({
+  repoRoot, lockDir, fullServices = false,
+  verifyCapture, verifyExpected, materialize, readFullConfig, rewriteFullConfig,
+}) {
+  for (const fn of [verifyCapture, verifyExpected, materialize]) {
+    if (typeof fn !== 'function') throw new Error('BASELINE_WORKDIR_ADAPTER_INVALID');
+  }
+  if (fullServices && (typeof readFullConfig !== 'function' || typeof rewriteFullConfig !== 'function')) {
+    throw new Error('BASELINE_WORKDIR_FULL_SERVICE_ADAPTER_INVALID');
+  }
+  const projectId = canonicalProjectId(repoRoot);
+  const parent = join(lockDir, 'db-only-workdir');
+  let capture; let expected; let materialized; let parentIdentity; let primary;
+  try {
+    try {
+      capture = await verifyCapture();
+    expected = await verifyExpected({ capture });
+    if (expected.manifest.captureTransactionId !== capture.transactionId
+      || expected.manifest.captureManifestSha256 !== capture.ledger.captureManifestSha256) {
+      throw new Error('BASELINE_EXPECTED_CAPTURE_BINDING_MISMATCH');
+    }
+    await fsPromises.rm(parent, { recursive: true, force: true });
+    await fsPromises.mkdir(parent, { mode: 0o700 });
+    parentIdentity = await fsPromises.lstat(parent);
+    if (!parentIdentity.isDirectory() || parentIdentity.isSymbolicLink() || (parentIdentity.mode & 0o777) !== 0o700) {
+      throw new Error('UNSAFE_BASELINE_WORKDIR_PARENT');
+    }
+    materialized = await materialize({ outputParent: parent, projectId });
+    if (materialized.transactionId !== capture.transactionId) {
+      throw new Error('BASELINE_MATERIALIZER_CAPTURE_BINDING_MISMATCH');
+    }
+    let fullServicesAttempted = false;
+    return {
+      workdir: materialized.workdir,
+      history: materialized.history,
+      seedPath: materialized.seedPath,
+      stageCliReplay: (...args) => materialized.stageCliReplay(...args),
+      cleanupCliMetadata: (...args) => materialized.cleanupCliMetadata(...args),
+      migrationNames: ['00000000000001_baseline_v1.sql', ...FOUNDATION_MIGRATIONS],
+      captureTransactionId: capture.transactionId,
+      expectedTransactionId: expected.transactionId,
+      async enableFullServices() {
+        if (!fullServices || fullServicesAttempted) throw new Error('BASELINE_WORKDIR_FULL_SERVICE_STATE_INVALID');
+        fullServicesAttempted = true;
+        const configBytes = await readFullConfig();
+        try {
+          if (!Buffer.isBuffer(configBytes)) throw new Error('BASELINE_WORKDIR_FULL_SERVICE_CONFIG_INVALID');
+          await rewriteFullConfig(materialized.workdir, configBytes);
+        } finally { if (Buffer.isBuffer(configBytes)) configBytes.fill(0); }
+      },
+      async cleanup() {
+        let first;
+        try { await materialized.cleanup(); } catch (error) { first = error; }
+        try {
+          const current = await fsPromises.lstat(parent);
+          if (current.dev !== parentIdentity.dev || current.ino !== parentIdentity.ino || !current.isDirectory()) {
+            throw new Error('BASELINE_WORKDIR_PARENT_IDENTITY_CHANGED');
+          }
+          await fsPromises.rmdir(parent);
+        } catch (error) {
+          if (first) throw new AggregateError([first, error], 'baseline workdir cleanup failed');
+          throw error;
+        }
+        if (first) throw first;
+      },
+    };
+  } catch (error) { primary = error; }
+  const cleanupErrors = [];
+  if (materialized) { try { await materialized.cleanup(); } catch (error) { cleanupErrors.push(error); } }
+  if (parentIdentity) {
+    try {
+      const current = await fsPromises.lstat(parent);
+      if (current.dev !== parentIdentity.dev || current.ino !== parentIdentity.ino || !current.isDirectory()) {
+        throw new Error('BASELINE_WORKDIR_PARENT_IDENTITY_CHANGED');
+      }
+      await fsPromises.rmdir(parent);
+    } catch (error) { cleanupErrors.push(error); }
+  }
+    if (cleanupErrors.length) throw new AggregateError([primary, ...cleanupErrors], 'baseline workdir setup failed and cleanup held');
+    throw primary;
+  } finally { expected?.dispose(); capture?.dispose(); }
+}
+
+export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir, fullServices = false }) {
+  return prepareBaselineWorkdirWithAdapters({
+    repoRoot, lockDir, fullServices,
+    verifyCapture: () => verifyCaptureTransaction({
+      baselineDir: join(repoRoot, 'supabase/baselines/v1'),
+      ledgerPath: join(repoRoot, 'docs/operations/baseline-ledger.json'),
+      journalPath: resolveRepositoryPublicationPaths().journalPath,
+    }),
+    verifyExpected: ({ capture }) => verifyExpectedTerminalTransaction({
+      baselineDir: join(repoRoot, 'supabase/baselines/v1'),
+      ledgerPath: join(repoRoot, 'docs/operations/expected-terminal-ledger.json'),
+      captureLedgerPath: join(repoRoot, 'docs/operations/baseline-ledger.json'),
+      journalPath: resolveExpectedTerminalPublicationPaths().journalPath,
+    }).then((verified) => {
+      if (verified.manifest.captureTransactionId !== capture.transactionId
+        || verified.manifest.captureManifestSha256 !== capture.ledger.captureManifestSha256) {
+        verified.dispose(); throw new Error('BASELINE_EXPECTED_CAPTURE_BINDING_MISMATCH');
+      }
+      return verified;
+    }),
+    materialize: materializeFreshWorkdir,
+    readFullConfig: () => readSafeSourceFile(join(repoRoot, 'supabase/config.toml')).then((text) => Buffer.from(text)),
+    rewriteFullConfig: async (workdir, bytes) => {
+      const canonical = bytes.toString('utf8');
+      const localOverlay = buildMidaoE2ELocalConfig(canonical);
+      await overwriteSafeFile(join(workdir, 'supabase/config.toml'), Buffer.from(localOverlay));
+    },
+  });
 }
 
 export function canonicalProjectId(repoRoot) {
@@ -446,6 +728,19 @@ function adoptRequiredOwnership(current, probe, label) {
   return requireOwnershipProbe(probe, label);
 }
 
+function extendRequiredOwnership(current, probe, label) {
+  requireOwnershipProbe(probe, label);
+  for (const resource of ['containers', 'networks', 'volumes']) {
+    if (probe[resource] === null) continue;
+    if (current[resource] !== null) {
+      const nextRows = new Set(probe[resource].map((row) => JSON.stringify(row)));
+      if (current[resource].some((row) => !nextRows.has(JSON.stringify(row)))) throw new Error('OWNERSHIP_DRIFT');
+    }
+    current[resource] = probe[resource];
+  }
+  return probe;
+}
+
 export async function runWithLocalSupabase({
   adapter, expectedProjectId, childArgs, signal, reportStage = () => {},
   initialize = 'start-then-reset', onReady,
@@ -502,7 +797,21 @@ export async function runWithLocalSupabase({
     if (adapter.ready) await adapter.ready(localEnv);
     if (onReady) {
       reportStage('on-ready');
-      value = await onReady({ localEnv, ownedContainers: ownership.containers, ownedAssets: ownershipAssets(ownership) });
+      const refreshOwnership = async () => {
+        reportStage('refresh-identity');
+        extendRequiredOwnership(
+          ownership,
+          await probeOwnedResources(adapter, expectedProjectId),
+          'refresh',
+        );
+        return { ownedContainers: ownership.containers, ownedAssets: ownershipAssets(ownership) };
+      };
+      value = await onReady({
+        localEnv,
+        ownedContainers: ownership.containers,
+        ownedAssets: ownershipAssets(ownership),
+        refreshOwnership,
+      });
     } else if (adapter.child) {
       reportStage('child');
       const child = await adapter.child(childArgs, localEnv);
@@ -593,9 +902,13 @@ export function mapStatusEnvironment(raw) {
   return environment;
 }
 
-export function createActualAdapter({ repoRoot, pin, nodeBin, signal, cliWorkdir, lifecycleContract, commandRunner = runCommand }) {
+export function createActualAdapter({
+  repoRoot, pin, nodeBin, signal, cliWorkdir, lifecycleContract,
+  fullServices = false, enableFullServices, commandRunner = runCommand,
+}) {
   const expectedProjectId = canonicalProjectId(repoRoot);
   if (cliWorkdir && basename(resolve(cliWorkdir)) !== expectedProjectId) throw new Error('CLI_WORKDIR_PROJECT_IDENTITY_MISMATCH');
+  if (fullServices && typeof enableFullServices !== 'function') throw new Error('FULL_SERVICE_CONFIG_ADAPTER_INVALID');
   const cli = (args, { cleanup = false } = {}) => {
     const effectiveArgs = cliWorkdir ? [...args, '--workdir', cliWorkdir] : args;
     const invocation = buildSupabaseCliInvocation(pin, effectiveArgs);
@@ -612,12 +925,40 @@ export function createActualAdapter({ repoRoot, pin, nodeBin, signal, cliWorkdir
     });
   };
   const containers = async () => {
+    const projectId = canonicalProjectId(repoRoot);
     const result = await commandRunner('docker', [
-      'ps', '--no-trunc', '--filter', `label=com.supabase.cli.project=${canonicalProjectId(repoRoot)}`,
+      'ps', '-a', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`,
       '--format', '{{.ID}}\t{{.Names}}\t{{.Label "com.supabase.cli.project"}}',
     ], { cwd: repoRoot });
     if (result.exitCode !== 0 || result.stderr.trim()) throw new Error('DOCKER_IDENTITY_FAILED');
-    return parseContainerRows(result.stdout, canonicalProjectId(repoRoot));
+    const listed = parseContainerRows(result.stdout, projectId);
+    const normalized = [];
+    let transientCount = 0;
+    for (const row of listed) {
+      if (row.name.endsWith(`_${projectId}`)) { normalized.push(row); continue; }
+      transientCount += 1;
+      const inspected = await commandRunner('docker', ['inspect', '--format', '{{json .}}', '--', row.id], { cwd: repoRoot });
+      if (transientCount > 1 || inspected.exitCode !== 0 || inspected.stderr.trim()) throw new Error('DOCKER_TRANSIENT_IDENTITY_FAILED');
+      let identity;
+      try { identity = JSON.parse(inspected.stdout); } catch { throw new Error('DOCKER_TRANSIENT_IDENTITY_FAILED'); }
+      const healthCommand = '{:ok, _} = Application.ensure_all_started(:realtime)\n{:ok, _} = Realtime.Tenants.health_check("realtime-dev")';
+      if (identity?.Id !== row.id || identity?.Name !== `/${row.name}`
+        || !/^\/[a-z]+_[a-z]+$/u.test(identity.Name)
+        || identity?.Config?.Image !== 'public.ecr.aws/supabase/realtime:v2.80.12'
+        || JSON.stringify(identity?.Config?.Cmd) !== JSON.stringify(['/app/bin/realtime', 'eval', healthCommand])
+        || JSON.stringify(identity?.Config?.Entrypoint) !== JSON.stringify(['/usr/bin/tini', '-s', '-g', '--', '/app/run.sh'])
+        || identity?.Config?.Labels?.['com.supabase.cli.project'] !== projectId
+        || identity?.Config?.Labels?.['com.docker.compose.project'] !== projectId
+        || Object.keys(identity?.Config?.Labels ?? {}).sort().join(',') !== 'com.docker.compose.project,com.supabase.cli.project'
+        || !Array.isArray(identity?.Mounts) || identity.Mounts.length !== 0
+        || identity?.HostConfig?.NetworkMode !== `supabase_network_${projectId}`
+        || identity?.HostConfig?.AutoRemove !== false
+        || identity?.State?.Status !== 'exited' || identity?.State?.ExitCode !== 0) {
+        throw new Error('DOCKER_TRANSIENT_IDENTITY_FAILED');
+      }
+      normalized.push({ id: row.id, name: `supabase_realtime_health_${projectId}`, projectLabel: projectId });
+    }
+    return normalized;
   };
   const networks = async ({ allowEmpty = false } = {}) => {
     const projectId = canonicalProjectId(repoRoot);
@@ -670,17 +1011,76 @@ export function createActualAdapter({ repoRoot, pin, nodeBin, signal, cliWorkdir
     }
     throw new Error('DATABASE_HEALTH_TIMEOUT');
   };
+  const bootstrapProbe = "SELECT COALESCE(to_regclass('supabase_migrations.schema_migrations')::text, '--absent--'); SELECT column_name || '|' || data_type || '|' || udt_name || '|' || is_nullable FROM information_schema.columns WHERE table_schema='supabase_migrations' AND table_name='schema_migrations' ORDER BY ordinal_position;";
+  const bootstrapCreate = "CREATE SCHEMA IF NOT EXISTS supabase_migrations; CREATE TABLE supabase_migrations.schema_migrations (version text NOT NULL PRIMARY KEY, statements text[], name text); INSERT INTO supabase_migrations.schema_migrations(version, statements, name) VALUES ('00000000000000', ARRAY[]::text[], 'midao_history_bootstrap');";
+  const bootstrapVerify = "SELECT column_name || '|' || data_type || '|' || udt_name || '|' || is_nullable FROM information_schema.columns WHERE table_schema='supabase_migrations' AND table_name='schema_migrations' ORDER BY ordinal_position; SELECT '--history--'; SELECT version FROM supabase_migrations.schema_migrations ORDER BY version;";
+  const expectedBootstrapSchema = 'version|text|text|NO\nstatements|ARRAY|_text|YES\nname|text|text|YES';
+  const expectedBootstrapHistory = `${expectedBootstrapSchema}\n--history--\n00000000000000`;
+  const runBootstrapQuery = (databaseId, query) => commandRunner('docker', [
+    'exec', '--env', 'PGPASSWORD=postgres', databaseId,
+    'psql', '--username', 'supabase_admin', '--dbname', 'postgres',
+    '--set=ON_ERROR_STOP=1', '--tuples-only', '--no-align', '--command', query,
+  ], { cwd: repoRoot });
+  const verifyBootstrapHistory = async (databaseId) => {
+    const result = await runBootstrapQuery(databaseId, bootstrapVerify);
+    if (result.exitCode !== 0 || result.stderr.trim() || result.stdout.trim() !== expectedBootstrapHistory) {
+      throw new Error('DATABASE_BOOTSTRAP_HISTORY_INVALID');
+    }
+  };
+  const ensureBootstrapHistory = async (owned) => {
+    const expectedName = `supabase_db_${canonicalProjectId(repoRoot)}`;
+    const database = owned.filter((container) => container.name === expectedName);
+    if (database.length !== 1) throw new Error('DATABASE_CONTAINER_IDENTITY_INVALID');
+    const probe = await runBootstrapQuery(database[0].id, bootstrapProbe);
+    if (probe.exitCode !== 0 || probe.stderr.trim()) {
+      const diagnostic = redactSupabaseOutput(probe.stderr).trim().slice(-1000);
+      throw new Error(diagnostic ? `DATABASE_BOOTSTRAP_HISTORY_PROBE_FAILED: ${diagnostic}` : 'DATABASE_BOOTSTRAP_HISTORY_PROBE_FAILED');
+    }
+    const observed = probe.stdout.trim();
+    if (observed === '--absent--') {
+      const created = await runBootstrapQuery(database[0].id, bootstrapCreate);
+      if (created.exitCode !== 0 || created.stderr.trim()) throw new Error('DATABASE_BOOTSTRAP_HISTORY_CREATE_FAILED');
+    } else if (observed !== `supabase_migrations.schema_migrations\n${expectedBootstrapSchema}`) {
+      throw new Error('DATABASE_BOOTSTRAP_HISTORY_PREEXISTING_INVALID');
+    }
+    await verifyBootstrapHistory(database[0].id);
+    return database[0].id;
+  };
   return {
     status: async () => ({ ...(await cli(['status'])), expectedWorkdir: cliWorkdir }),
     start: async () => {
-      const result = await cli(['db', 'start']);
-      if (result.exitCode !== 0) {
-        const diagnostic = redactSupabaseOutput(result.stderr).trim();
+      const databaseResult = await cli(fullServices
+        ? ['start', '--ignore-health-check', '--exclude', MIDAO_DATABASE_ONLY_EXCLUDED_SERVICES]
+        : ['db', 'start']);
+      if (databaseResult.exitCode !== 0) {
+        const diagnostic = redactSupabaseOutput(databaseResult.stderr).trim();
         throw new Error(diagnostic ? `SUPABASE_START_FAILED: ${diagnostic}` : 'SUPABASE_START_FAILED');
       }
-      validateSupabaseLifecycleStderr(result.stderr, lifecycleContract
-        ? { ...lifecycleContract, expectedWorkdir: cliWorkdir, stage: 'start' }
-        : cliWorkdir, lifecycleContract ? undefined : 'start');
+      if (!fullServices) {
+        validateSupabaseLifecycleStderr(databaseResult.stderr, lifecycleContract
+          ? { ...lifecycleContract, expectedWorkdir: cliWorkdir, stage: 'start' }
+          : cliWorkdir, lifecycleContract ? undefined : 'start');
+      }
+      if (!fullServices) return;
+      const databaseContainers = await containers();
+      await waitForDatabase(databaseContainers);
+      await ensureBootstrapHistory(databaseContainers);
+      await enableFullServices();
+      const stopped = await cli(['stop']);
+      if (stopped.exitCode !== 0) {
+        const diagnostic = redactSupabaseOutput(stopped.stderr).trim();
+        throw new Error(diagnostic ? `SUPABASE_DATABASE_HANDOFF_STOP_FAILED: ${diagnostic}` : 'SUPABASE_DATABASE_HANDOFF_STOP_FAILED');
+      }
+      const serviceResult = await cli(['start', '--exclude', MIDAO_E2E_EXCLUDED_SERVICES]);
+      if (serviceResult.exitCode !== 0) {
+        const diagnostic = redactSupabaseOutput(serviceResult.stderr).trim();
+        throw new Error(diagnostic ? `SUPABASE_SERVICE_START_FAILED: ${diagnostic}` : 'SUPABASE_SERVICE_START_FAILED');
+      }
+      const serviceContainers = await containers();
+      await waitForDatabase(serviceContainers);
+      const serviceDatabase = serviceContainers.filter((container) => container.name === `supabase_db_${canonicalProjectId(repoRoot)}`);
+      if (serviceDatabase.length !== 1) throw new Error('DATABASE_CONTAINER_IDENTITY_INVALID');
+      await verifyBootstrapHistory(serviceDatabase[0].id);
     },
     containers,
     networks,
@@ -750,6 +1150,10 @@ async function main() {
   const packageLock = await fsPromises.readFile(resolve(repoRoot, 'package-lock.json'), 'utf8');
   const pin = parseSupabasePin(packageLock);
   if (pin !== '2.87.2') throw new Error('SUPABASE_PIN_MISMATCH');
+  const postgrestRuntime = resolvePinnedPostgrestRuntime(await fsPromises.readFile(
+    resolve(repoRoot, 'supabase/baselines/v1/toolchain-lock.json'),
+    'utf8',
+  ));
   await verifyPinnedSupabaseBinary();
   const nodeBin = process.execPath;
   const stat = await fsPromises.readFile(`/proc/${process.pid}/stat`, 'utf8');
@@ -761,42 +1165,128 @@ async function main() {
   process.on('SIGINT', abort);
 
   let lock;
-  let bridge;
+  let databaseBridge;
+  let apiBridge;
   let databaseWorkdir;
+  let replay;
+  let primaryError;
   try {
     lock = await acquireKernelRunnerLock({ lockDir: LOCK_PATH, metadata });
     const gateway = parseDockerHostGateway(
       await fsPromises.readFile('/proc/net/route', 'utf8'),
       await fsPromises.readFile('/proc/1/cgroup', 'utf8'),
     );
-    if (gateway) bridge = await startLoopbackBridge({ listenPort: 54322, targetHost: gateway, targetPort: 54322 });
+    if (gateway) databaseBridge = await startLoopbackBridge({ listenPort: 54322, targetHost: gateway, targetPort: 54322 });
+    const invocationArgs = process.argv.slice(2);
+    const playwrightMode = invocationArgs[0] === '--playwright';
+    const childArgs = playwrightMode ? invocationArgs.slice(1) : invocationArgs;
+    if (gateway && playwrightMode) apiBridge = await startLoopbackBridge({ listenPort: 54321, targetHost: gateway, targetPort: 54321 });
+    if (playwrightMode && (childArgs.length === 0 || childArgs.some((entry) => typeof entry !== 'string'
+      || !/^apps\/web\/e2e\/[a-z0-9][a-z0-9-]*\.spec\.ts$/u.test(entry)))) {
+      throw new Error('MIDAO_PLAYWRIGHT_ARGS_INVALID');
+    }
     databaseWorkdir = await prepareDatabaseOnlyWorkdir({ repoRoot, lockDir: LOCK_PATH });
-    const childArgs = process.argv.slice(2);
-    if (childArgs.length === 0) childArgs.push(
+    replay = await databaseWorkdir.stageCliReplay();
+    if (!playwrightMode && childArgs.length === 0) childArgs.push(
       'apps/web/tests/integration/midao-foundation-schema-postgres.test.mjs',
       'apps/web/tests/integration/midao-mode-switch-postgres.test.mjs',
       'apps/web/tests/integration/midao-mode-switch-concurrency-postgres.test.mjs',
     );
+    const { parseLocalConnectionEnv, replayExactMigrations } = await import('../database-baseline/build-expected-terminal.mjs');
     await runWithLocalSupabase({
-      adapter: createActualAdapter({ repoRoot, pin, nodeBin, signal: controller.signal, cliWorkdir: databaseWorkdir }),
+      adapter: createActualAdapter({
+        repoRoot, pin, nodeBin, signal: controller.signal, cliWorkdir: databaseWorkdir.workdir,
+        lifecycleContract: { migrationNames: [replay.bootstrapName], noticesByMigration: {} },
+      }),
       expectedProjectId: projectId,
-      childArgs,
+      initialize: 'start-only',
+      onReady: async ({ localEnv, refreshOwnership }) => {
+        await replayExactMigrations({
+          databaseUrl: localEnv.DATABASE_URL,
+          pendingMigrationsDir: replay.pendingMigrationsDir,
+          history: databaseWorkdir.history,
+          signal: controller.signal,
+        });
+        const seed = await runCommand('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', databaseWorkdir.seedPath], {
+          cwd: databaseWorkdir.workdir, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
+        });
+        if (seed.exitCode !== 0 || seed.signal !== null) throw new Error(`MIDAO_SEED_FAILED: ${redactSupabaseOutput(seed.stderr).slice(-4000).trim()}`);
+        let child;
+        if (playwrightMode) {
+          const overlayPath = join(repoRoot, 'scripts/testing/midao-e2e-seed.sql');
+          const overlay = await runCommand('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', overlayPath], {
+            cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
+          });
+          if (overlay.exitCode !== 0 || overlay.signal !== null) throw new Error(`MIDAO_E2E_SEED_FAILED: ${redactSupabaseOutput(overlay.stderr).slice(-4000).trim()}`);
+          const apiUrl = 'http://127.0.0.1:54321';
+          const credentials = createLocalSupabaseApiCredentials(apiUrl);
+          let apiStartError;
+          try {
+            await startPinnedPostgrest({
+              repoRoot,
+              expectedProjectId: projectId,
+              runtime: postgrestRuntime,
+              credentials,
+              publishHost: gateway ?? '127.0.0.1',
+              signal: controller.signal,
+            });
+          } catch (error) { apiStartError = error; }
+          let apiAdoptionError;
+          try { await refreshOwnership(); } catch (error) { apiAdoptionError = error; }
+          const apiErrors = [apiStartError, apiAdoptionError].filter(Boolean);
+          if (apiErrors.length > 1) throw new AggregateError(apiErrors, 'PostgREST start and ownership adoption failed');
+          if (apiErrors.length === 1) throw apiErrors[0];
+          Object.assign(localEnv, credentials.publicEnv);
+          await waitForPostgrestApi({
+            apiUrl,
+            serviceRoleKey: credentials.publicEnv.SUPABASE_SERVICE_ROLE_KEY,
+            signal: controller.signal,
+          });
+          for (const name of ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
+            if (typeof localEnv[name] !== 'string' || !localEnv[name]) throw new Error(`MIDAO_E2E_LOCAL_ENV_MISSING:${name}`);
+          }
+          const e2eEnv = {
+            ...process.env, ...localEnv,
+            MIDAO_E2E_LOCAL: '1', MIDAO_E2E_PORT: '43127',
+            GUIDE_SESSION_SECRET: 'midao-e2e-local-guide-secret-0123456789abcdef',
+            ADMIN_ACCESS_TOKEN: 'midao-e2e-local-admin-token-0123456789abcdef',
+            ADMIN_EMAIL_ALLOWLIST: 'admin@example.invalid', ADMIN_EMAIL: 'admin@example.invalid',
+            MIDAO_BACKEND_ENABLED: '1', MIDAO_MUTATIONS_ENABLED: '1', MIDAO_MODE_SWITCH_ENABLED: '1',
+          };
+          delete e2eEnv.PLAYWRIGHT_NO_WEBSERVER;
+          child = await runCommand(join(repoRoot, 'node_modules/.bin/playwright'), [
+            'test', '--workers=1', ...childArgs.map((entry) => entry.slice('apps/web/'.length)),
+          ], { cwd: join(repoRoot, 'apps/web'), env: e2eEnv, signal: controller.signal });
+        } else {
+          child = await runCommand(nodeBin, ['--test', '--test-concurrency=1', ...childArgs], {
+            cwd: repoRoot, env: { ...process.env, ...localEnv, NODE_OPTIONS: '--experimental-strip-types' }, signal: controller.signal,
+          });
+        }
+        if (child.stdout) process.stdout.write(redactSupabaseOutput(child.stdout, Object.values(localEnv)));
+        if (child.stderr) process.stderr.write(redactSupabaseOutput(child.stderr, Object.values(localEnv)));
+        if (child.exitCode !== 0 || child.signal !== null) throw new Error(`CHILD_FAILED_${child.exitCode}`);
+      },
       signal: controller.signal,
       reportStage: (stage) => process.stderr.write(`MIDAO_STAGE=${stage}\n`),
     });
-  } finally {
-    process.removeListener('SIGTERM', abort);
-    process.removeListener('SIGINT', abort);
-    try {
-      try {
-        if (databaseWorkdir) await fsPromises.rm(join(LOCK_PATH, 'db-only-workdir'), { recursive: true, force: true });
-      } finally {
-        if (bridge) await bridge.close();
-      }
-    } finally {
-      if (lock) await releaseKernelRunnerLock(lock);
-    }
+  } catch (error) { primaryError = error; }
+  process.removeListener('SIGTERM', abort);
+  process.removeListener('SIGINT', abort);
+  const cleanupErrors = [];
+  let replayRestored = !replay;
+  if (replay) {
+    try { await replay.restore(); replayRestored = true; } catch (error) { cleanupErrors.push(error); }
   }
+  if (databaseWorkdir && replayRestored) {
+    try { await databaseWorkdir.cleanupCliMetadata(); } catch (error) { cleanupErrors.push(error); }
+  }
+  if (databaseWorkdir) { try { await databaseWorkdir.cleanup(); } catch (error) { cleanupErrors.push(error); } }
+  if (apiBridge) { try { await apiBridge.close(); } catch (error) { cleanupErrors.push(error); } }
+  if (databaseBridge) { try { await databaseBridge.close(); } catch (error) { cleanupErrors.push(error); } }
+  if (lock) { try { await releaseKernelRunnerLock(lock); } catch (error) { cleanupErrors.push(error); } }
+  const errors = [primaryError, ...cleanupErrors].filter(Boolean);
+  if (errors.length > 1) throw new AggregateError(errors, 'Midao baseline runner and cleanup failed');
+  if (errors.length === 1) throw errors[0];
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {

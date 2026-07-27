@@ -1,0 +1,126 @@
+name: midao-baseline-e2e
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/midao-baseline-e2e.yml'
+      - 'apps/web/e2e/helpers.ts'
+      - 'apps/web/e2e/midao-*.spec.ts'
+      - 'apps/web/e2e/t1-login.spec.ts'
+      - 'apps/web/playwright.config.ts'
+      - 'apps/web/src/lib/guide-auth.ts'
+      - 'apps/web/src/lib/guide-session-crypto.ts'
+      - 'apps/web/src/lib/midao/**'
+      - 'apps/web/tests/integration/midao-*.test.mjs'
+      - 'apps/web/tests/security/midao-e2e-auth-seam.test.mjs'
+      - 'apps/web/tests/unit/midao-e2e-ci-workflow.test.mjs'
+      - 'scripts/database-baseline/**'
+      - 'scripts/testing/midao-e2e-seed.sql'
+      - 'scripts/testing/run-midao-*.sh'
+      - 'scripts/testing/with-midao-local-supabase.mjs'
+      - 'supabase/baselines/v1/**'
+      - 'supabase/migrations/2026072300*.sql'
+      - 'supabase/seed.sql'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: midao-baseline-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
+
+      - name: Install PostgreSQL client when absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! test -x /usr/bin/psql; then
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends postgresql-client
+          fi
+          test -x /usr/bin/psql
+
+      - name: Install digest-verified Supabase CLI 2.87.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive_sha='57aedd36f41297d27cc642c9d7582e89994916e2d86be3c4aca87ab079980767'
+          binary_sha='e325dd50b274e88fd1416f93b9e063902827ae326d356ab7f9dc604c3eba5c59'
+          tmp="$(mktemp -d)"
+          trap 'rm -rf -- "$tmp"' EXIT
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            --output "$tmp/supabase.tar.gz" \
+            'https://github.com/supabase/cli/releases/download/v2.87.2/supabase_linux_amd64.tar.gz'
+          printf '%s  %s\n' "$archive_sha" "$tmp/supabase.tar.gz" | sha256sum --check --strict
+          tar --extract --gzip --file "$tmp/supabase.tar.gz" --directory "$tmp" supabase
+          printf '%s  %s\n' "$binary_sha" "$tmp/supabase" | sha256sum --check --strict
+          sudo install --directory --owner=root --group=root --mode=0755 /root/.hermes/toolchains/supabase/2.87.2
+          sudo install --owner=root --group=root --mode=0755 "$tmp/supabase" /root/.hermes/toolchains/supabase/2.87.2/supabase
+          printf '%s  %s\n' "$binary_sha" /root/.hermes/toolchains/supabase/2.87.2/supabase | sha256sum --check --strict
+          test "$(/root/.hermes/toolchains/supabase/2.87.2/supabase --version)" = '2.87.2'
+
+      - name: Provision digest-bound database and API images
+        shell: bash
+        run: |
+          set -euo pipefail
+          lock='supabase/baselines/v1/toolchain-lock.json'
+          provision() {
+            local role="$1"
+            local ref image_id repository tag observed_id observed_architecture
+            ref="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .repoDigest' "$lock")"
+            image_id="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .imageId' "$lock")"
+            repository="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .repository' "$lock")"
+            tag="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .tag' "$lock")"
+            docker pull "$ref"
+            observed_id="$(docker image inspect --format '{{.Id}}' "$ref")"
+            observed_architecture="$(docker image inspect --format '{{.Architecture}}' "$ref")"
+            test "$observed_id" = "$image_id"
+            test "$observed_architecture" = 'amd64'
+            docker image inspect --format '{{json .RepoDigests}}' "$ref" | jq -e --arg ref "$ref" 'index($ref) != null'
+            docker tag "$ref" "$repository:$tag"
+            test "$(docker image inspect --format '{{.Id}}' "$repository:$tag")" = "$image_id"
+          }
+          provision db
+          provision api
+
+      - name: Install Playwright Chromium
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run baseline-backed Midao browser gate
+        run: >-
+          timeout --signal=TERM 1200s bash scripts/testing/run-midao-e2e.sh
+          apps/web/e2e/midao-navigation.spec.ts
+          apps/web/e2e/midao-auth-and-impersonation.spec.ts
+
+      - name: Run baseline-backed legacy login compatibility
+        run: >-
+          timeout --signal=TERM 1200s bash scripts/testing/run-midao-legacy-e2e-compat.sh
+          apps/web/e2e/t1-login.spec.ts
+
+      - name: Upload Playwright failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: midao-baseline-e2e-${{ github.run_id }}
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          if-no-files-found: ignore
+          retention-days: 7

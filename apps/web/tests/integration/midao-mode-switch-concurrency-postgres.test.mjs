@@ -9,6 +9,7 @@ assert.ok(databaseUrl, 'local Supabase runner must provide SUPABASE_DB_URL or DA
 const rpcSql = `SELECT public.midao_switch_guide_backend_mode($1,$2,$3,$4,$5,$6,$7,$8) AS result`;
 const actorId = 'admin@example.com';
 let admin;
+let previousGuideIds = [];
 const openedClients = new Set();
 
 before(async () => {
@@ -25,13 +26,16 @@ async function resetFixture() {
   await admin.query('DELETE FROM public.midao_audit_events');
   await admin.query('DELETE FROM public.midao_notification_outbox');
   await admin.query('DELETE FROM public.midao_idempotency_records');
-  await admin.query('DELETE FROM public.guide_profiles');
+  if (previousGuideIds.length > 0) await admin.query('DELETE FROM public.guide_profiles WHERE id = ANY($1::uuid[])', [previousGuideIds]);
   const guideA = randomUUID();
   const guideB = randomUUID();
+  previousGuideIds = [guideA, guideB];
   await admin.query(`
-    INSERT INTO public.guide_profiles(id, verification_status, guide_session_version, backend_mode)
-    VALUES ($1, 'approved', 10, 'legacy'), ($2, 'approved', 10, 'legacy')
-  `, [guideA, guideB]);
+    INSERT INTO public.guide_profiles(id, slug, display_name, verification_status, guide_session_version, backend_mode)
+    VALUES
+      ($1, $3, 'D3d Guide A', 'approved', 10, 'legacy'),
+      ($2, $4, 'D3d Guide B', 'approved', 10, 'legacy')
+  `, [guideA, guideB, `d3d-${guideA}`, `d3d-${guideB}`]);
   return { guideA, guideB };
 }
 

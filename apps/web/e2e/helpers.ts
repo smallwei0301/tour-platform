@@ -1,4 +1,6 @@
 import { test as base, expect, Page, APIRequestContext } from '@playwright/test';
+import { signGuideSession } from '../src/lib/guide-session-crypto';
+import { createImpersonationActorCookie } from '../src/lib/midao/impersonation-actor';
 
 const ADMIN_TOKEN = process.env.ADMIN_ACCESS_TOKEN || 'test-token-123';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@tour-platform.com';
@@ -157,6 +159,59 @@ async function setGuideSession(page: Page, guideId: string): Promise<void> {
   ]);
 }
 
+interface MidaoGuideSessionInput {
+  guideId: string;
+  guideName: string;
+  sessionVersion: number;
+}
+
+interface MidaoImpersonationSessionInput extends MidaoGuideSessionInput {
+  adminEmail: string;
+  issuedAt?: number;
+}
+
+async function setMidaoGuideSession(page: Page, input: MidaoGuideSessionInput): Promise<void> {
+  const signature = signGuideSession(input.guideId, input.sessionVersion);
+  await page.context().addCookies([
+    {
+      name: 'guide_token',
+      value: `${input.guideId}:${input.sessionVersion}:${signature}`,
+      url: BASE_URL,
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+    { name: 'guide_id', value: input.guideId, url: BASE_URL, sameSite: 'Lax' },
+    { name: 'guide_name', value: input.guideName, url: BASE_URL, sameSite: 'Lax' },
+  ]);
+}
+
+async function setMidaoImpersonationSession(
+  page: Page,
+  input: MidaoImpersonationSessionInput,
+): Promise<void> {
+  await setMidaoGuideSession(page, input);
+  const actorSetCookie = createImpersonationActorCookie({
+    adminEmail: input.adminEmail,
+    targetGuideId: input.guideId,
+    issuedAt: input.issuedAt,
+  });
+  const actorPair = actorSetCookie.split(';', 1)[0];
+  const separator = actorPair.indexOf('=');
+  if (separator < 1 || !actorPair.slice(separator + 1)) {
+    throw new Error('setMidaoImpersonationSession: signed actor cookie was not created');
+  }
+  await page.context().addCookies([
+    {
+      name: actorPair.slice(0, separator),
+      value: actorPair.slice(separator + 1),
+      url: BASE_URL,
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+    { name: 'guide_impersonation', value: '1', url: BASE_URL, sameSite: 'Lax' },
+  ]);
+}
+
 /** Fixture: authenticated page + isMobile flag */
 const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   authedPage: async ({ page }, use) => {
@@ -169,4 +224,13 @@ const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   },
 });
 
-export { test, expect, adminLogin, ensureLoggedIn, setGuideSession, setTravelerSession };
+export {
+  test,
+  expect,
+  adminLogin,
+  ensureLoggedIn,
+  setGuideSession,
+  setTravelerSession,
+  setMidaoGuideSession,
+  setMidaoImpersonationSession,
+};
