@@ -19,6 +19,10 @@ const TEST = 'apps/web/tests/unit/midao-staged-evidence-verifier.test.mjs';
 const CHILD = ['.claude/hooks/run-checks.sh', '--typecheck', TEST];
 const CMD = `node --test ${TEST} && npm run typecheck`;
 const HEAVY = [...HEAVY_PREFIXES[0]];
+const FRESH_INTEGRATION = 'apps/web/tests/integration/midao-baseline-fresh-postgres.test.mjs';
+const FRESH_HEAVY = [
+  'timeout', '--signal=TERM', '570s', 'node', 'scripts/database-baseline/run-fresh-install.mjs', '--test', FRESH_INTEGRATION,
+];
 
 function snapshot(overrides = {}) {
   const untracked = overrides.untracked ?? [];
@@ -273,6 +277,19 @@ test('heavy allowlist requires each exact immutable prefix', () => {
     ['timeout', '--signal=TERM', '570s', 'bash', 'scripts/testing/not-heavy.sh'],
   ];
   for (const argv of mutations) assert.throws(() => classifyChild(argv, { runMode: 'heavy', tracked: snapshot().tracked }), /prefix|allow/i);
+});
+
+test('fresh-install heavy command is one exact literal prefix and covers its integration test', () => {
+  assert.equal(HEAVY_PREFIXES.some((prefix) => JSON.stringify(prefix) === JSON.stringify(FRESH_HEAVY)), true);
+  const state = snapshot({ tracked: [...snapshot().tracked, FRESH_INTEGRATION] });
+  const classified = classifyChild(FRESH_HEAVY, { runMode: 'heavy', tracked: state.tracked });
+  assert.deepEqual(classified.paths, [FRESH_INTEGRATION]);
+  for (const hostile of [
+    FRESH_HEAVY.with(3, '/alternate/node'),
+    FRESH_HEAVY.with(2, '571s'),
+    [...FRESH_HEAVY, '--extra'],
+    FRESH_HEAVY.with(6, '../foreign.test.mjs'),
+  ]) assert.throws(() => classifyChild(hostile, { runMode: 'heavy', tracked: state.tracked }), /prefix|allow|suffix|test/iu);
 });
 
 test('heavy suffixes are literal tracked tests but only staged suffixes are covered', () => {

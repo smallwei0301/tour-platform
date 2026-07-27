@@ -78,7 +78,7 @@ export function parseLocalConnectionEnv(rawUrl) {
   };
 }
 
-async function extractLocalTerminalAndHistory({ databaseUrl, extractCatalogAdapter = extractCatalog, ClientClass } = {}) {
+export async function extractLocalTerminalAndHistory({ databaseUrl, extractCatalogAdapter = extractCatalog, ClientClass } = {}) {
   const connectionEnv = parseLocalConnectionEnv(databaseUrl);
   const raw = await extractCatalogAdapter({ connectionEnv });
   const terminalBytes = Buffer.from(normalizeCatalog(raw));
@@ -111,7 +111,7 @@ async function extractLocalTerminalAndHistory({ databaseUrl, extractCatalogAdapt
   return { terminalBytes, historyVersions };
 }
 
-async function replayExactMigrations({
+export async function replayExactMigrations({
   databaseUrl, pendingMigrationsDir, history, signal,
   ClientClass, commandRunner = runCommand,
 } = {}) {

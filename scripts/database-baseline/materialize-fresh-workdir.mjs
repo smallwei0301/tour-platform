@@ -25,7 +25,7 @@ export const POST_CUTOFF_MIGRATIONS = Object.freeze([
 ]);
 
 export const CONFIG_SHA256 = '5289984d402959cd0d4596b056df9a3d27590b3abefa4d7551151ad54ae084ee';
-export const SEED_SHA256 = '0094ffd801b8d8a343e249e5362dc2bb7231ffab3b7454007a038d690d732e43';
+export const SEED_SHA256 = 'b603bc6f0c92b7cdd8da382adfbdaa28a26431dc6ff687ea51f06fa53810c8a5';
 
 const MAX_SOURCE_BYTES = 16 * 1024 * 1024;
 const MAX_POST_CUTOFF_ENTRIES = 256;

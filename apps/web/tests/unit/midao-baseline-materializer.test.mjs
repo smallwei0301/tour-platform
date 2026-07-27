@@ -15,6 +15,7 @@ const publisherPath = path.join(root, 'scripts/database-baseline/publish-baselin
 const baselineDir = path.join(root, 'supabase/baselines/v1');
 const ledgerPath = path.join(root, 'docs/operations/baseline-ledger.json');
 const migrationsDir = path.join(root, 'supabase/migrations');
+const seedPath = path.join(root, 'supabase/seed.sql');
 
 const exactPostCutoff = [
   ['20260723000000_midao_backend_mode.sql', 'fe108aa5ca68f135f49e22cbb5074941ce8ff5464a6d91a56f9f4cbdae437b17'],
@@ -38,7 +39,13 @@ test('materializer locks one baseline marker and exact post-cutoff manifest', as
   assert.equal(api.BASELINE_OVERLAY_BOUNDARY, '\n-- MIDAO BASELINE V1: BASELINE END --\n-- MIDAO BASELINE V1: MANAGED OVERLAYS BEGIN --\n');
   assert.equal(api.SYNTHETIC_BASELINE_FOOTER, '\n-- MIDAO BASELINE V1: MANAGED OVERLAYS END --\n');
   assert.equal(api.CONFIG_SHA256, '5289984d402959cd0d4596b056df9a3d27590b3abefa4d7551151ad54ae084ee');
-  assert.equal(api.SEED_SHA256, '0094ffd801b8d8a343e249e5362dc2bb7231ffab3b7454007a038d690d732e43');
+  assert.equal(api.SEED_SHA256, 'b603bc6f0c92b7cdd8da382adfbdaa28a26431dc6ff687ea51f06fa53810c8a5');
+  const seed = await readFile(seedPath, 'utf8');
+  const authFixture = seed.indexOf('insert into auth.users');
+  const publicFixture = seed.indexOf('insert into users');
+  assert.ok(authFixture >= 0 && publicFixture > authFixture, 'auth fixture must satisfy users_id_fkey before the public seed');
+  assert.match(seed, /andy-lee@example\.invalid/u);
+  assert.doesNotMatch(seed, /encrypted_password|password\s*=/iu);
 });
 
 test('standalone CLI is library-only so cleanup ownership cannot cross a process boundary', () => {

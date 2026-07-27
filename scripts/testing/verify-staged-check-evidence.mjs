@@ -19,6 +19,10 @@ export const HEAVY_PREFIXES = Object.freeze([
   Object.freeze(['timeout', '--signal=TERM', '570s', 'bash', 'scripts/testing/run-midao-foundation-postgres.sh']),
   Object.freeze(['timeout', '--signal=TERM', '570s', 'bash', 'scripts/testing/run-midao-e2e.sh']),
   Object.freeze(['timeout', '--signal=TERM', '570s', 'bash', 'scripts/testing/run-midao-legacy-e2e-compat.sh']),
+  Object.freeze([
+    'timeout', '--signal=TERM', '570s', 'node', 'scripts/database-baseline/run-fresh-install.mjs',
+    '--test', 'apps/web/tests/integration/midao-baseline-fresh-postgres.test.mjs',
+  ]),
 ]);
 const GLOB_META = /[*?\[\]{}]/u;
 const TEST_PATH = /(?:^|\/)(?:test|tests|e2e)\/.*\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/u;
@@ -125,7 +129,10 @@ export function classifyChild(childArgv, options = {}) {
   if (runMode !== 'heavy') fail('run mode is invalid');
   const prefix = HEAVY_PREFIXES.find((candidate) => candidate.every((part, index) => childArgv[index] === part));
   if (!prefix) fail('heavy child argv does not match an exact allowlisted prefix');
-  const paths = childArgv.slice(prefix.length);
+  const suffix = childArgv.slice(prefix.length);
+  const isFreshInstall = prefix[4] === 'scripts/database-baseline/run-fresh-install.mjs';
+  if (isFreshInstall && suffix.length !== 0) fail('fresh-install heavy command must match the exact complete prefix');
+  const paths = isFreshInstall ? [prefix.at(-1)] : suffix;
   const tracked = new Set(options.tracked ?? []);
   for (const file of paths) {
     if (GLOB_META.test(file)) fail(`heavy test suffix must be literal: ${file}`);

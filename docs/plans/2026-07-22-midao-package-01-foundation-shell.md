@@ -857,7 +857,7 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
 1. 凍結128支pre-cutoff migration hashes；明確排除6支Midao post-cutoff。
 2. 建secret-safe production catalog capture、normalizer、ownership validator與exact comparator，通過fresh security review。
 3. 以唯讀production capture兩次取得byte-identical catalog；raw dump不直接當真相。
-4. Materialize pinned Supabase/Postgres empty stack：platform→baseline marker→overlay→6支Midao→seed。
+4. Materialize pinned Supabase/Postgres empty stack：platform→單一baseline marker（`baseline.sql`＋`managed-overlays.sql`）→6支Midao→seed。
 5. Fresh terminal catalog exact compare；另跑existing-lane rehearsal，證明baseline execution count為零且terminal catalog等價。
 6. 再跑foundation ACL/RLS/exact function identity、D3c rollback與D3d concurrency。
 
@@ -871,6 +871,8 @@ node scripts/testing/verify-staged-check-evidence.mjs --check-only
 ```
 
 Expected：baseline＋post-cutoff＋seed exit 0、fresh/existing terminal catalog exact、ACL/RLS/RPC gates PASS、ownership-safe cleanup PASS。普通全歷史`db reset`成功或失敗均不得冒充此gate證據。
+
+**Task 11 fresh-lane evidence（2026-07-27）：** pinned Node `22.23.1`／Supabase CLI `2.87.2` actual runner exit 0；capture transaction `c90dfe6ce32f77010354615795df95c085f16f53f8a830ac8553196b5d178e13`與expected-terminal transaction `05b445553141f945e50682aac56252b47eaee024e67d6f74f3bec9903c8e4fde`均先驗證；history為單一`baseline_v1`＋6支post-cutoff；deterministic seed、fresh integration及terminal exact compare PASS；owned runtime/workdir residue為0。Existing-lane仍待Task 12，不以fresh結果代替。
 
 **Commit:** `test: 驗證 catalog-verified baseline與 Midao foundation schema`。
 
