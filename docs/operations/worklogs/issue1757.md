@@ -1,5 +1,5 @@
 # issue1757 — Requests projections and atomic decisions
-> 最後更新：2026-07-28 07:17 CST｜負責 session：Canary／2026-07-28
+> 最後更新：2026-07-28 07:46 CST｜負責 session：Canary／2026-07-28
 
 ## 目標
 在#1766 Foundation＋Shell之上交付首頁、旅客需求列表／詳情、booking/inquiry ref分流，以及request booking原子批准／婉拒；#1766未merge期間維持stacked branch。
@@ -24,9 +24,16 @@
 - 2026-07-28 Task 12 minimal GREEN：同一Node22 focused command在新增prefix白名單、完整UUID邊界、canonical lowercase及`INVALID_REQUEST_REF`安全錯誤後為`5/5 PASS`／exit0。首次`.claude/hooks/run-checks.sh apps/web/tests/unit/midao-request-ref.test.mjs`誤用ambient Node24，實際5/5但harness只解析Node22 `# tests`而正確exit1拒絕證據；以`PATH="$(dirname "$NODE22"):/usr/local/bin:/usr/bin:/bin" .claude/hooks/run-checks.sh apps/web/tests/unit/midao-request-ref.test.mjs`重跑，`5/5 PASS`／exit0並寫入30分鐘commit evidence。
 
 - 2026-07-28 Task 12 first review確認parser／tests PASS；唯一finding是review讀到更新前的stale worklog。補齊exact evidence後，fresh re-review以Node `22.23.1`重跑`5/5 PASS`／額外round-trip與deterministic rejection probe PASS；verdict **PASS、blocking=0**，code/tests三檔hash在review前後無漂移。
+- 2026-07-28 Task 12 checkpoint commit `8fc3ec380a30e0a22e75aa6afeced1e5913b6309`／tree `ee22e74617ef215b8a08bc024e4fe53a7ef45590`已push；GitHub issue雙寫：`https://github.com/smallwei0301/tour-platform/issues/1757#issuecomment-5097921235`。
+- 2026-07-28 建立stacked Draft PR #1769；base=`feat/midao-foundation-1756`／exact `551fbbaccafd1accf11dfe52192bc8f54bdbab5f`，head=`8fc3ec380a30e0a22e75aa6afeced1e5913b6309`，draft/open/mergeable。Repo public＋standard `ubuntu-latest` compute免費；billing API 403使artifact/cache quota未知，owner已明確授權本次standard CI並接受storage超額風險；不含Larger runner、merge、deploy或production。
+- 2026-07-28 Task 13 RED：正式Node `22.23.1`執行`midao-request-buckets.test.mjs`，因`request-buckets.mjs`不存在而`ERR_MODULE_NOT_FOUND`／exit1。Design review要求booking/inquiry discriminated input、禁generic `status`、跨表矛盾fail closed、terminal優先且保留secondary state。
+- 2026-07-28 Task 13 minimal GREEN：建立closed bucket／secondary vocabularies與pure resolver；首輪`6/7 PASS`因測試對generic `{status}`期待`kind`、實作更嚴格回`status`，修正測試expectation後同一矩陣`7/7 PASS`／exit0；未改鬆狀態或接受額外input。
+- 2026-07-28 第一個fresh Task 13 reviewer在600秒timeout且無summary／verdict，不算PASS或FAIL。受控re-review實跑Node22 combined `12/12 PASS`但發現**blocking=1**：booking會忽略`inquiryStatus`、inquiry會忽略booking lifecycle欄位。新增四個cross-domain污染case後focused RED為`6/7 PASS`／exit1；最小修正依kind拒絕另一domain lifecycle fields後`7/7 PASS`／exit0。
+- 2026-07-28 remediation combined Node22 `run-checks.sh`為`12/12 PASS`／exit0。Final bounded re-review確認cross-domain fields在分類前fail closed、四個regression cases具辨識力，其他bucket／secondary／precedence／determinism無回歸；verdict **PASS、blocking=0**。
 
 ## 下一步
-- Commit／push Task 12 checkpoint並雙寫GitHub issue；接著進Task 13 request bucket mapping RED。
+- Commit/push/double-write Task 13 checkpoint，更新Draft PR #1769；接著開始Task 14 requests read gateway RED，先完成booking branch的in-memory／Supabase projection shape contract且明列bookingId/orderId、不回admin_note。
+
 
 ## 絕不重做（Do-NOT-redo）
 - 不重做#1766 Foundation＋Shell已通過的auth、impersonation、runner、F9/F10與baseline gates；#1757只在stacked delta新增Requests功能。
