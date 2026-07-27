@@ -188,3 +188,13 @@ activity_plans：no_plan_exclusions=0, no_highlights=0, no_plan_inclusions=0,
 ### 回滾
 
 依 `audit_logs` id 243–283（action='xiaoye-copy-rewrite-backup'）之 metadata 按 activity_id/plan_id 寫回，status 依 old_plan_status 還原。
+
+### PR #1768 CI 證據（鐵律 6，2026-07-27 Asia/Taipei）
+
+head SHA `1ed79e8`（含 origin/main 合併與 worklog add/add 衝突解決，兩側內容皆保留）：
+
+- test：success — https://github.com/smallwei0301/tour-platform/actions/runs/30275478256/job/90008338004
+- scan：success — https://github.com/smallwei0301/tour-platform/actions/runs/30275476974/job/90008333891
+- Vercel Preview Comments：success — https://github.com/smallwei0301/tour-platform/runs/90009067780
+
+三項 conclusion=success 後執行 merge。
