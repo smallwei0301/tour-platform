@@ -78,6 +78,8 @@ Tracked heavy只允許五個完整literal commands：三個既有Bash runners，
 - `timeout --signal=TERM 570s node scripts/database-baseline/run-fresh-install.mjs --test apps/web/tests/integration/midao-baseline-fresh-postgres.test.mjs`
 - `timeout --signal=TERM 570s node scripts/database-baseline/run-existing-upgrade-rehearsal.mjs --test apps/web/tests/integration/midao-baseline-existing-postgres.test.mjs`
 
+> **Task 12 actual evidence（2026-07-27）：** occupied cutoff-shaped local PG17 fixture以authoritative `frozen-migrations.sha256` 128-entry inventory建立；fixture setup執行synthetic cutoff，upgrade boundary後只套exact六支post-cutoff migrations。Instrumented run回傳`baselineExecutionCount=0`，134-row fixture history無baseline marker，integration objects／history assertions與expected-terminal transaction `05b445553141f945e50682aac56252b47eaee024e67d6f74f3bec9903c8e4fde` exact catalog compare PASS；owned runtime residue 0。此為local rehearsal，不是production migration apply證據。
+
 Node prefixes只能帶上述唯一`--test`與exact path；拒絕env prefix、alternate node、extra flags、其他test path、path traversal與其他`database-baseline/*.mjs`。在Tasks 11／12以ordinary staged verifier tests先完成對應allowlist code change後，才可使用各Node heavy command。
 6. 它同時拒絕tracked unstaged code與 `git ls-files --others --exclude-standard`列出的untracked code/test/config/script；docs-only例外不得涵蓋 `.ts/.tsx/.mjs/.sql/.sh/.json/.toml`等可執行/config paths。
 7. Commit前最後執行：

@@ -23,6 +23,10 @@ const FRESH_INTEGRATION = 'apps/web/tests/integration/midao-baseline-fresh-postg
 const FRESH_HEAVY = [
   'timeout', '--signal=TERM', '570s', 'node', 'scripts/database-baseline/run-fresh-install.mjs', '--test', FRESH_INTEGRATION,
 ];
+const EXISTING_INTEGRATION = 'apps/web/tests/integration/midao-baseline-existing-postgres.test.mjs';
+const EXISTING_HEAVY = [
+  'timeout', '--signal=TERM', '570s', 'node', 'scripts/database-baseline/run-existing-upgrade-rehearsal.mjs', '--test', EXISTING_INTEGRATION,
+];
 
 function snapshot(overrides = {}) {
   const untracked = overrides.untracked ?? [];
@@ -289,6 +293,17 @@ test('fresh-install heavy command is one exact literal prefix and covers its int
     FRESH_HEAVY.with(2, '571s'),
     [...FRESH_HEAVY, '--extra'],
     FRESH_HEAVY.with(6, '../foreign.test.mjs'),
+  ]) assert.throws(() => classifyChild(hostile, { runMode: 'heavy', tracked: state.tracked }), /prefix|allow|suffix|test/iu);
+});
+
+test('existing rehearsal heavy command is one exact literal prefix and covers its integration test', () => {
+  assert.equal(HEAVY_PREFIXES.some((prefix) => JSON.stringify(prefix) === JSON.stringify(EXISTING_HEAVY)), true);
+  const state = snapshot({ tracked: [...snapshot().tracked, EXISTING_INTEGRATION] });
+  const classified = classifyChild(EXISTING_HEAVY, { runMode: 'heavy', tracked: state.tracked });
+  assert.deepEqual(classified.paths, [EXISTING_INTEGRATION]);
+  for (const hostile of [
+    EXISTING_HEAVY.with(3, '/alternate/node'), EXISTING_HEAVY.with(2, '571s'),
+    [...EXISTING_HEAVY, '--extra'], EXISTING_HEAVY.with(6, '../foreign.test.mjs'),
   ]) assert.throws(() => classifyChild(hostile, { runMode: 'heavy', tracked: state.tracked }), /prefix|allow|suffix|test/iu);
 });
 
