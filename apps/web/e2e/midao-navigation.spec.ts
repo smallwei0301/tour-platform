@@ -68,11 +68,12 @@ for (const viewport of viewports) {
         expect(layout.bottomPadding).toBeGreaterThanOrEqual(0);
       }
 
-      const loadedCss = await page.evaluate(() => {
-        const chunks: string[] = [];
+      const loadedRules = await page.evaluate(() => {
+        const rulesBySelector: Array<{ selector: string; cssText: string }> = [];
         const visit = (rules: CSSRuleList) => {
           for (const rule of Array.from(rules)) {
-            chunks.push(rule.cssText);
+            const selector = (rule as CSSStyleRule).selectorText;
+            if (selector) rulesBySelector.push({ selector, cssText: rule.cssText });
             const nested = (rule as CSSGroupingRule).cssRules;
             if (nested) visit(nested);
           }
@@ -84,20 +85,41 @@ for (const viewport of viewports) {
             // Cross-origin styles are irrelevant; Midao shell CSS is runner-owned.
           }
         }
-        return chunks.join('\n');
+        return rulesBySelector;
       });
-      for (const edge of ['top', 'right', 'bottom', 'left']) {
-        expect(loadedCss).toMatch(new RegExp(`--midao-safe-area-${edge}:\\s*env\\(safe-area-inset-${edge},\\s*0px\\)`, 'i'));
-      }
-      for (const wiring of [
+      const expectRuleWiring = (selector: string, ...patterns: RegExp[]) => {
+        const cssTexts = loadedRules.filter((rule) => rule.selector === selector).map((rule) => rule.cssText);
+        expect(cssTexts.length, `loaded CSS rule ${selector}`).toBeGreaterThan(0);
+        for (const pattern of patterns) {
+          expect(cssTexts.some((cssText) => pattern.test(cssText)), `${selector} must contain ${pattern}`).toBe(true);
+        }
+      };
+      expectRuleWiring(':root',
+        /--midao-safe-area-top:\s*env\(safe-area-inset-top,\s*0px\)/i,
+        /--midao-safe-area-right:\s*env\(safe-area-inset-right,\s*0px\)/i,
+        /--midao-safe-area-bottom:\s*env\(safe-area-inset-bottom,\s*0px\)/i,
+        /--midao-safe-area-left:\s*env\(safe-area-inset-left,\s*0px\)/i,
+      );
+      expectRuleWiring('.midao-theme',
         /padding-left:\s*var\(--midao-safe-area-left\)/i,
         /padding-right:\s*var\(--midao-safe-area-right\)/i,
+      );
+      expectRuleWiring('.midao-bottom-nav',
+        /padding-right:\s*var\(--midao-safe-area-right\)/i,
         /padding-bottom:\s*var\(--midao-safe-area-bottom\)/i,
+        /padding-left:\s*var\(--midao-safe-area-left\)/i,
+      );
+      expectRuleWiring('.midao-shell__content',
         /calc\(82px \+ var\(--midao-safe-area-bottom\)\)/i,
+        /calc\(48px \+ var\(--midao-safe-area-bottom\)\)/i,
+      );
+      expectRuleWiring('.midao-page-header',
         /calc\(18px \+ var\(--midao-safe-area-top\)\)/i,
         /calc\(28px \+ var\(--midao-safe-area-top\)\)/i,
-        /calc\(48px \+ var\(--midao-safe-area-bottom\)\)/i,
-      ]) expect(loadedCss).toMatch(wiring);
+      );
+      expectRuleWiring('.midao-desktop-sidebar',
+        /calc\(24px \+ var\(--midao-safe-area-top\)\)/i,
+      );
 
       await page.goto('/midao', { waitUntil: 'domcontentloaded' });
       const visibleNav = viewport.mobile
