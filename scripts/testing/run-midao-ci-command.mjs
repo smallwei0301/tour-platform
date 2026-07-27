@@ -214,7 +214,7 @@ function derivedSecret(randomBytes, label) {
 
 export function buildChildEnvironment({ mode, nodePath, npmPath, temp, parent = {}, randomBytes = crypto.randomBytes }) {
   if (!MODES.has(mode)) fail('mode is not allowlisted');
-  const pathParts = [...new Set([path.dirname(nodePath), path.dirname(npmPath), ...FIXED_SYSTEM_PATH])];
+  const pathParts = [...new Set([path.dirname(nodePath), ...FIXED_SYSTEM_PATH, path.dirname(npmPath)])];
   const env = {
     PATH: pathParts.join(':'),
     HOME: temp.home,

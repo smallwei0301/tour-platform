@@ -101,7 +101,7 @@ test('strict child env never spreads hostile parent values', () => {
   const parent = { PATH: SECRET, LANG: SECRET, DATABASE_URL: SECRET, API_TOKEN: SECRET, npm_config_registry: SECRET };
   const lint = buildChildEnvironment({ mode: 'lint', nodePath: NODE22, npmPath: '/usr/local/lib/node_modules/npm/bin/npm-cli.js', temp, parent, randomBytes: () => { throw new Error('must not generate'); } });
   assert.deepEqual(lint, {
-    PATH: `${path.dirname(NODE22)}:/usr/local/lib/node_modules/npm/bin:/usr/local/bin:/usr/bin:/bin`,
+    PATH: `${path.dirname(NODE22)}:/usr/local/bin:/usr/bin:/bin:/usr/local/lib/node_modules/npm/bin`,
     HOME: temp.home,
     LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8', TERM: 'dumb', NO_COLOR: '1', CI: '1', NODE_ENV: 'test',
     npm_config_userconfig: temp.userConfig,
