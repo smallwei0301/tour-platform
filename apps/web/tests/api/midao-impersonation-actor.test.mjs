@@ -4,7 +4,7 @@ import {
   signDomainSeparatedValue,
   signGuideSession,
   verifyDomainSeparatedValue,
-} from '../../src/lib/guide-session-crypto.ts';
+} from '../../src/lib/guide/session-crypto.ts';
 
 const moduleUrl = new URL('../../src/lib/midao/impersonation-actor.ts', import.meta.url);
 const actorModule = await import(moduleUrl.href);

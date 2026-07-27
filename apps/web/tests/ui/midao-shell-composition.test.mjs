@@ -11,7 +11,7 @@ const error = readFileSync(resolve(root, 'src/features/midao/ui/InlineError.tsx'
 const css = readFileSync(resolve(root, 'src/features/midao/styles/shell.css'), 'utf8');
 
 test('shell composes desktop/mobile navigation, header, verified banner and main landmark', () => {
-  for (const name of ['MidaoDesktopSidebar', 'MidaoBottomNav', 'MidaoPageHeader', 'MidaoImpersonationBanner']) {
+  for (const name of ['MidaoDesktopSidebar', 'MidaoBottomNav', 'MidaoPageHeader', 'ImpersonationBanner']) {
     assert.ok(shell.includes(name), `shell missing ${name}`);
   }
   assert.match(shell, /<main/u);

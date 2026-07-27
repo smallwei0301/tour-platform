@@ -1,4 +1,4 @@
-import { hasSupabaseEnv, getSupabase } from './supabase-env.mjs';
+import { hasSupabaseEnv, getSupabase } from '../supabase-env.mjs';
 
 const GUIDE_RUNTIME_PROJECTION = 'id, display_name, backend_mode, guide_session_version, verification_status';
 

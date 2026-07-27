@@ -28,6 +28,7 @@ import { dirname, join } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..', '..');
 const DETAIL_ROUTE = join(REPO_ROOT, 'app/api/admin/guides/[guideId]/route.ts');
+const DETAIL_GATEWAY = join(REPO_ROOT, 'src/lib/admin/guide-profile.mjs');
 const DETAIL_PAGE = join(REPO_ROOT, 'app/(non-locale)/admin/guides/[guideId]/page.tsx');
 const PROMOTE_ROUTE = join(REPO_ROOT, 'app/api/admin/guides/promote/route.ts');
 
@@ -35,9 +36,11 @@ const PROMOTE_ROUTE = join(REPO_ROOT, 'app/api/admin/guides/promote/route.ts');
 
 test('詳情 API：查 guide_profiles miss 後 fallback 查 guide_applications', () => {
   const src = readFileSync(DETAIL_ROUTE, 'utf8');
-  assert.match(src, /from\(\s*['"]guide_profiles['"]\s*\)/, '仍須先查 guide_profiles');
+  const gateway = readFileSync(DETAIL_GATEWAY, 'utf8');
+  assert.match(src, /getAdminGuideProfileDb\(supabase, guideId\)/, 'route 必須先走 profile gateway');
+  assert.match(gateway, /from\(\s*['"]guide_profiles['"]\s*\)/, 'gateway 仍須查 guide_profiles');
   assert.match(src, /from\(\s*['"]guide_applications['"]\s*\)/, 'miss 時必須查 guide_applications');
-  const profileIdx = src.indexOf("'guide_profiles'");
+  const profileIdx = src.indexOf('getAdminGuideProfileDb(supabase, guideId)');
   const applicationIdx = src.indexOf("'guide_applications'");
   assert.ok(profileIdx > 0 && applicationIdx > profileIdx, 'profiles 優先、applications 為 fallback');
 });
@@ -57,17 +60,17 @@ test('詳情 API：application fallback 用 canonical 欄位（full_name 等，�
 test('詳情 API：guide_profiles select 用 canonical 的 specialties（複數），不得用不存在的 specialty', () => {
   // 回歸：原本 select 了單數 `specialty`（schema 只有 jsonb `specialties`），
   // 整筆 profile 查詢以 42703 失敗、被誤判成「找不到導遊」→ 所有已上線導遊詳情 404。
-  const src = readFileSync(DETAIL_ROUTE, 'utf8');
-  const richDef = src.match(/profileRichSelect\s*=\s*['"`]([^'"`]+)['"`]/);
+  const src = readFileSync(DETAIL_GATEWAY, 'utf8');
+  const richDef = src.match(/PROFILE_RICH_SELECT\s*=\s*['"`]([^'"`]+)['"`]/);
   assert.ok(richDef, 'guide_profiles 查詢必須有明確 rich select 定義');
   assert.match(richDef[1], /\bspecialties\b/, 'profile select 必須用複數 specialties');
   assert.doesNotMatch(richDef[1], /specialty\b/, '不得 select 不存在的單數 specialty');
 });
 
 test('詳情 API：guide_profiles 查詢有 schema drift guard（缺欄退回 base，不直接 404）', () => {
-  const src = readFileSync(DETAIL_ROUTE, 'utf8');
-  assert.match(src, /profileBaseSelect\s*=/, '必須有 profile base select 作為 drift fallback');
-  assert.match(src, /isMissingColumn\(\s*profileError\s*\)/, 'profile 查詢錯誤需經 isMissingColumn 判斷後 fallback');
+  const src = readFileSync(DETAIL_GATEWAY, 'utf8');
+  assert.match(src, /PROFILE_BASE_SELECT\s*=/, '必須有 profile base select 作為 drift fallback');
+  assert.match(src, /isMissingColumn\(error\)/, 'profile 查詢錯誤需經 isMissingColumn 判斷後 fallback');
 });
 
 test('詳情 API：回應帶 kind 區分 profile / application', () => {

@@ -30,7 +30,7 @@ test('Midao helpers mint real guide and signed actor cookies with shared product
   assert.match(helpersSource, /setMidaoImpersonationSession[\s\S]{0,1200}createImpersonationActorCookie\(/u);
   assert.doesNotMatch(helpersSource, /setMidaoGuideSession[\s\S]{0,800}repeat\(64\)/u);
 
-  const crypto = await importFresh(resolve(webRoot, 'src/lib/guide-session-crypto.ts'));
+  const crypto = await importFresh(resolve(webRoot, 'src/lib/guide/session-crypto.ts'));
   const guideAuth = await importFresh(resolve(webRoot, 'src/lib/guide-auth.ts'));
   const actorCodec = await importFresh(resolve(webRoot, 'src/lib/midao/impersonation-actor.ts'));
   const signature = crypto.signGuideSession(guideId, 1);

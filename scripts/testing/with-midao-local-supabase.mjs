@@ -902,6 +902,32 @@ export function mapStatusEnvironment(raw) {
   return environment;
 }
 
+export function buildMidaoPlaywrightEnvironment({ parentEnv = process.env, localEnv, port = '43127' }) {
+  if (!localEnv || typeof localEnv !== 'object') throw new Error('MIDAO_E2E_LOCAL_ENV_REQUIRED');
+  const numericPort = Number(port);
+  if (!Number.isSafeInteger(numericPort) || numericPort < 1024 || numericPort > 65535) {
+    throw new Error('MIDAO_E2E_PORT_INVALID');
+  }
+  const baseUrl = `http://127.0.0.1:${numericPort}`;
+  const environment = {
+    ...parentEnv,
+    ...localEnv,
+    MIDAO_E2E_LOCAL: '1',
+    MIDAO_E2E_PORT: String(numericPort),
+    NEXT_PUBLIC_BASE_URL: baseUrl,
+    NEXT_PUBLIC_APP_URL: baseUrl,
+    GUIDE_SESSION_SECRET: 'midao-e2e-local-guide-secret-0123456789abcdef',
+    ADMIN_ACCESS_TOKEN: 'midao-e2e-local-admin-token-0123456789abcdef',
+    ADMIN_EMAIL_ALLOWLIST: 'admin@example.invalid',
+    ADMIN_EMAIL: 'admin@example.invalid',
+    MIDAO_BACKEND_ENABLED: '1',
+    MIDAO_BACKEND_MUTATIONS_ENABLED: '1',
+    MIDAO_BACKEND_MODE_SWITCH_ENABLED: '1',
+  };
+  delete environment.PLAYWRIGHT_NO_WEBSERVER;
+  return environment;
+}
+
 export function createActualAdapter({
   repoRoot, pin, nodeBin, signal, cliWorkdir, lifecycleContract,
   fullServices = false, enableFullServices, commandRunner = runCommand,
@@ -1245,15 +1271,7 @@ async function main() {
           for (const name of ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
             if (typeof localEnv[name] !== 'string' || !localEnv[name]) throw new Error(`MIDAO_E2E_LOCAL_ENV_MISSING:${name}`);
           }
-          const e2eEnv = {
-            ...process.env, ...localEnv,
-            MIDAO_E2E_LOCAL: '1', MIDAO_E2E_PORT: '43127',
-            GUIDE_SESSION_SECRET: 'midao-e2e-local-guide-secret-0123456789abcdef',
-            ADMIN_ACCESS_TOKEN: 'midao-e2e-local-admin-token-0123456789abcdef',
-            ADMIN_EMAIL_ALLOWLIST: 'admin@example.invalid', ADMIN_EMAIL: 'admin@example.invalid',
-            MIDAO_BACKEND_ENABLED: '1', MIDAO_MUTATIONS_ENABLED: '1', MIDAO_MODE_SWITCH_ENABLED: '1',
-          };
-          delete e2eEnv.PLAYWRIGHT_NO_WEBSERVER;
+          const e2eEnv = buildMidaoPlaywrightEnvironment({ localEnv });
           child = await runCommand(join(repoRoot, 'node_modules/.bin/playwright'), [
             'test', '--workers=1', ...childArgs.map((entry) => entry.slice('apps/web/'.length)),
           ], { cwd: join(repoRoot, 'apps/web'), env: e2eEnv, signal: controller.signal });

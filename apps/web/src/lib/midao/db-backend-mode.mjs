@@ -1,4 +1,4 @@
-import { getSupabase, hasSupabaseEnv } from './supabase-env.mjs';
+import { getSupabase, hasSupabaseEnv } from '../supabase-env.mjs';
 
 export class MidaoBackendModeDbError extends Error {
   constructor(code, message, status) {

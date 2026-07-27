@@ -4,7 +4,7 @@ import { errorV2, ok } from '../../../../../src/lib/api';
 // 健檢 v2 S1：收斂本地複製的 SHA-256 hashPassword → 共用 guide-auth 的 scrypt 實作
 import { hashPassword } from '../../../../../src/lib/guide-auth';
 import { classifyGuideAccountUpdateError } from '../../../../../src/lib/guide-account-error.mjs';
-import { getAdminGuideProfileDb } from '../../../../../src/lib/db-admin-guide-profile.mjs';
+import { getAdminGuideProfileDb } from '../../../../../src/lib/admin/guide-profile.mjs';
 import {
   deleteGuideProfileDb,
   deleteGuideApplicationDb,

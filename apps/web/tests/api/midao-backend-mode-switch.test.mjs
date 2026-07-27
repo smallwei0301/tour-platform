@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const routePath = resolve(here, '../../app/api/v2/admin/guides/[guideId]/backend-mode/route.ts');
-const { switchGuideBackendModeDb } = await import('../../src/lib/db-midao-backend-mode.mjs');
+const { switchGuideBackendModeDb } = await import('../../src/lib/midao/db-backend-mode.mjs');
 const { pickAdminCredentials } = await import('../../src/lib/admin-auth.mjs');
 
 function fakeClient(currentMode = 'legacy', rpcResult = { data: { backendMode: 'midao', sessionVersion: 8, changed: true, redirectTo: '/midao' }, error: null }) {

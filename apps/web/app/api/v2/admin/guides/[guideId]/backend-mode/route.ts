@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { isMidaoBackendEnabled, isMidaoBackendModeSwitchEnabled } from '../../../../../../../src/config/feature-flags.mjs';
 import { pickAdminCredentials } from '../../../../../../../src/lib/admin-auth.mjs';
 import { jsonError, jsonOk } from '../../../../../../../src/lib/api-response';
-import { switchGuideBackendModeDb } from '../../../../../../../src/lib/db-midao-backend-mode.mjs';
+import { switchGuideBackendModeDb } from '../../../../../../../src/lib/midao/db-backend-mode.mjs';
 import { hashIdempotentRequest, parseIdempotencyKey } from '../../../../../../../src/lib/midao/idempotency';
-import { handleMidaoRouteError } from '../../../../../../../src/lib/midao/route-errors';
+import { handleMidaoRouteError as handleRouteError } from '../../../../../../../src/lib/midao/route-errors';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const BODY_KEYS = ['backendMode', 'reason'];
@@ -56,6 +56,6 @@ export async function POST(
     });
     return jsonOk(result);
   } catch (error) {
-    return handleMidaoRouteError(error, { route: 'v2/admin/guides/backend-mode' });
+    return handleRouteError(error, { route: 'v2/admin/guides/backend-mode' });
   }
 }

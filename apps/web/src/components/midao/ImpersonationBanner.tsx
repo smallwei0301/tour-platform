@@ -3,24 +3,30 @@
 import { useEffect, useState } from 'react';
 import { csrfHeaders } from '../../lib/csrf-client';
 
-type VerifiedImpersonation = { active: boolean; guideName: string };
+export type VerifiedImpersonation = { guideName: string };
 
-export function ImpersonationBanner() {
-  const [impersonation, setImpersonation] = useState<VerifiedImpersonation | null>(null);
+interface ImpersonationBannerProps {
+  impersonation?: VerifiedImpersonation | null;
+}
+
+export function ImpersonationBanner({ impersonation: initialImpersonation }: ImpersonationBannerProps = {}) {
+  const shouldVerifyOnMount = initialImpersonation === undefined;
+  const [impersonation, setImpersonation] = useState<VerifiedImpersonation | null>(initialImpersonation ?? null);
   const [ending, setEnding] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!shouldVerifyOnMount) return;
     void fetch('/api/guide/auth/csrf', { cache: 'no-store' });
     void fetch('/api/guide/impersonation', { method: 'GET', cache: 'no-store' })
       .then((response) => response.ok ? response.json() : null)
       .then((json) => {
         if (json?.data?.active === true && typeof json?.data?.guideName === 'string') {
-          setImpersonation({ active: true, guideName: json.data.guideName });
+          setImpersonation({ guideName: json.data.guideName });
         }
       })
       .catch(() => undefined);
-  }, []);
+  }, [shouldVerifyOnMount]);
 
   async function endImpersonation() {
     if (ending) return;
@@ -40,10 +46,11 @@ export function ImpersonationBanner() {
     }
   }
 
-  if (!impersonation?.active) return null;
+  if (!impersonation) return null;
   return (
     <div
-      data-testid="guide-impersonation-banner"
+      className="midao-impersonation-banner"
+      data-testid={shouldVerifyOnMount ? 'guide-impersonation-banner' : 'midao-impersonation-banner'}
       role="status"
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,

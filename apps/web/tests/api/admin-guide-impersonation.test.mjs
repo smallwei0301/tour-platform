@@ -143,7 +143,8 @@ test('導遊後台 layout：使用共用代入橫幅與dedicated結束代入endp
   const layout = readFileSync(GUIDE_LAYOUT, 'utf8');
   const banner = readFileSync(IMPERSONATION_BANNER, 'utf8');
   assert.match(layout, /ImpersonationBanner/, '需掛載共用代入橫幅');
-  assert.match(banner, /guide_impersonation/, '需偵測代入標記 cookie');
+  assert.match(banner, /method:\s*'GET'/, '需向 dedicated endpoint 驗證代入狀態');
+  assert.doesNotMatch(banner, /document\.cookie/, '不得信任 client-readable marker cookie');
   assert.match(banner, /guide-impersonation-banner/, '需顯示代入橫幅');
   assert.match(banner, /\/api\/guide\/impersonation/, '結束代入需使用dedicated lifecycle endpoint');
   assert.match(banner, /\/admin\/guides/, '成功結束後導回管理後台');

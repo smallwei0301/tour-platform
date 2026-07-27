@@ -1,5 +1,5 @@
 import { test as base, expect, Page, APIRequestContext } from '@playwright/test';
-import { signGuideSession } from '../src/lib/guide-session-crypto';
+import { signGuideSession } from '../src/lib/guide/session-crypto';
 import { createImpersonationActorCookie } from '../src/lib/midao/impersonation-actor';
 
 const ADMIN_TOKEN = process.env.ADMIN_ACCESS_TOKEN || 'test-token-123';

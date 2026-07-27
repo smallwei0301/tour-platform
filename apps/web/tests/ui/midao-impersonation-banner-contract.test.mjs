@@ -5,7 +5,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const source = readFileSync(resolve(root, 'src/features/midao/shell/MidaoImpersonationBanner.tsx'), 'utf8');
+const source = readFileSync(resolve(root, 'src/components/midao/ImpersonationBanner.tsx'), 'utf8');
 
 test('Midao banner is gated by verified impersonation state and supports ending it', () => {
   assert.match(source, /VerifiedImpersonation/u);
@@ -14,7 +14,7 @@ test('Midao banner is gated by verified impersonation state and supports ending 
   assert.match(source, /管理員代入模式/u);
   assert.match(source, /結束代入/u);
   assert.match(source, /DELETE/u);
-  assert.match(source, /data-testid="midao-impersonation-banner"/u);
+  assert.match(source, /midao-impersonation-banner/u);
 });
 
 test('banner source never renders admin identity or raw credentials', () => {

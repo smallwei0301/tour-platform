@@ -1,7 +1,8 @@
 import {
   signDomainSeparatedValue,
   verifyDomainSeparatedValue,
-} from '../guide-session-crypto.ts';
+} from '../guide/session-crypto.ts';
+import { isProductionRuntime } from '../../config/guide-session-env.mjs';
 
 export const MIDAO_IMPERSONATION_ACTOR_COOKIE_NAME = 'midao_impersonation_actor';
 const ACTOR_DOMAIN = 'midao:impersonation-actor:v1';
@@ -47,7 +48,7 @@ function normalizeTargetGuideId(guideId: string): string {
 }
 
 function secureAttribute(): string {
-  return process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  return isProductionRuntime() ? '; Secure' : '';
 }
 
 function parseCookie(cookieHeader: string, name: string): string {

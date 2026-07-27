@@ -23,18 +23,11 @@ test('guide login submit flow uses bounded fetch timeout and timeout-specific er
 
 test('guide login redirect sanitizer blocks path-normalization escapes and keeps safe guide routes', async () => {
   const src = await readSource('app/(non-locale)/guide/login/page.tsx');
-
-  const match = src.match(/function sanitizeGuideNext\(next: string \| null\): string \{([\s\S]*?)\n\}/);
-  assert.ok(match, 'should define sanitizeGuideNext');
-
-  const sanitizeGuideNext = new Function(
-    'URL',
-    `return function sanitizeGuideNext(next){${match[1]}\n}`
-  )(URL);
-
-  assert.equal(sanitizeGuideNext('/guide/orders?tab=today'), '/guide/orders?tab=today');
-  assert.equal(sanitizeGuideNext('/guide/../admin'), '/guide/dashboard');
-  assert.equal(sanitizeGuideNext('/guide/%2e%2e/admin'), '/guide/dashboard');
-  assert.equal(sanitizeGuideNext('//evil.example/path'), '/guide/dashboard');
-  assert.equal(sanitizeGuideNext('https://evil.example/guide/dashboard'), '/guide/dashboard');
+  assert.match(src, /resolveGuideLoginRedirect/u, 'page should use the canonical shared redirect resolver');
+  const { resolveGuideLoginRedirect } = await import('../../src/lib/midao/login-redirect.ts');
+  assert.equal(resolveGuideLoginRedirect('/guide/dashboard', '/guide/orders?tab=today'), '/guide/orders?tab=today');
+  assert.equal(resolveGuideLoginRedirect('/guide/dashboard', '/guide/../admin'), '/guide/dashboard');
+  assert.equal(resolveGuideLoginRedirect('/guide/dashboard', '/guide/%2e%2e/admin'), '/guide/dashboard');
+  assert.equal(resolveGuideLoginRedirect('/guide/dashboard', '//evil.example/path'), '/guide/dashboard');
+  assert.equal(resolveGuideLoginRedirect('/guide/dashboard', 'https://evil.example/guide/dashboard'), '/guide/dashboard');
 });

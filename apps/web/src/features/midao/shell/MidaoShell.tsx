@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
+import { ImpersonationBanner, type VerifiedImpersonation } from '../../../components/midao/ImpersonationBanner';
 import { MidaoBottomNav } from './MidaoBottomNav';
 import { MidaoDesktopSidebar } from './MidaoDesktopSidebar';
-import { MidaoImpersonationBanner, type VerifiedImpersonation } from './MidaoImpersonationBanner';
 import { MidaoPageHeader } from './MidaoPageHeader';
 
 interface MidaoShellProps {
@@ -17,7 +17,7 @@ export function MidaoShell({ title, subtitle, action, impersonation = null, chil
     <div className="midao-theme midao-shell">
       <MidaoDesktopSidebar />
       <div className="midao-shell__workspace">
-        <MidaoImpersonationBanner impersonation={impersonation} />
+        <ImpersonationBanner impersonation={impersonation} />
         <MidaoPageHeader title={title} subtitle={subtitle} action={action} />
         <main className="midao-shell__content">{children}</main>
       </div>

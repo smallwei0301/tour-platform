@@ -1,10 +1,9 @@
 import { createHmac, randomBytes } from 'node:crypto';
-import { constantTimeEquals } from './constant-time.mjs';
+import { getGuideSessionSecurityEnv } from '../../config/guide-session-env.mjs';
+import { constantTimeEquals } from '../constant-time.mjs';
 
 function resolveGuideSessionSecret(): string {
-  const configured = String(process.env.GUIDE_SESSION_SECRET || '').trim();
-  const isProduction = process.env.NODE_ENV === 'production';
-  const isNextBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
+  const { secret: configured, isProduction, isNextBuildPhase } = getGuideSessionSecurityEnv();
 
   if (isProduction && !isNextBuildPhase) {
     if (!configured || configured.length < 32) {

@@ -3,7 +3,7 @@ import test from 'node:test';
 import { createGuideSessionCookies } from '../../src/lib/guide-auth.ts';
 import { createImpersonationActorCookie } from '../../src/lib/midao/impersonation-actor.ts';
 
-const dbModule = await import('../../src/lib/db-midao-runtime-access.mjs');
+const dbModule = await import('../../src/lib/midao/db-runtime-access.mjs');
 const guardModule = await import('../../src/lib/midao/canonical-guide-session.ts');
 const { getGuideRuntimeAccessDb } = dbModule;
 const {

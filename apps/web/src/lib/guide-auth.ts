@@ -5,7 +5,7 @@
  */
 import { randomBytes, createHash, scryptSync } from 'crypto';
 import { constantTimeEquals } from './constant-time.mjs';
-import { signGuideSession, verifyGuideSessionSignature } from './guide-session-crypto.ts';
+import { signGuideSession, verifyGuideSessionSignature } from './guide/session-crypto.ts';
 
 const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 

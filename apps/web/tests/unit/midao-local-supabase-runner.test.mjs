@@ -14,6 +14,7 @@ const {
   validateSupabaseLifecycleStderr,
   validateCliWorkdirNotice,
   mapStatusEnvironment,
+  buildMidaoPlaywrightEnvironment,
   confirmProjectContainers,
   assertOwnershipUnchanged,
   redactSupabaseOutput,
@@ -103,6 +104,23 @@ test('status JSON requires DB URL and maps optional API credentials only when co
     SUPABASE_URL: 'http://local', NEXT_PUBLIC_SUPABASE_URL: 'http://local',
     SUPABASE_ANON_KEY: 'anon', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon', SUPABASE_SERVICE_ROLE_KEY: 'service',
   });
+});
+
+test('Playwright child env binds cookies and web server to one exact loopback origin with canonical flags', () => {
+  const env = buildMidaoPlaywrightEnvironment({
+    parentEnv: { PLAYWRIGHT_NO_WEBSERVER: '1' },
+    localEnv: { SUPABASE_URL: 'http://127.0.0.1:54321' },
+    port: '43127',
+  });
+  assert.equal(env.MIDAO_E2E_PORT, '43127');
+  assert.equal(env.NEXT_PUBLIC_BASE_URL, 'http://127.0.0.1:43127');
+  assert.equal(env.NEXT_PUBLIC_APP_URL, 'http://127.0.0.1:43127');
+  assert.equal(env.MIDAO_BACKEND_ENABLED, '1');
+  assert.equal(env.MIDAO_BACKEND_MUTATIONS_ENABLED, '1');
+  assert.equal(env.MIDAO_BACKEND_MODE_SWITCH_ENABLED, '1');
+  assert.equal('MIDAO_MUTATIONS_ENABLED' in env, false);
+  assert.equal('MIDAO_MODE_SWITCH_ENABLED' in env, false);
+  assert.equal('PLAYWRIGHT_NO_WEBSERVER' in env, false);
 });
 
 test('Docker-container gateway parsing and loopback-only TCP bridge are exact', async () => {

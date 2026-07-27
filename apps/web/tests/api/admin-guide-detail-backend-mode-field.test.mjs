@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const routePath = resolve(here, '../../app/api/admin/guides/[guideId]/route.ts');
-const helperPath = resolve(here, '../../src/lib/db-admin-guide-profile.mjs');
+const helperPath = resolve(here, '../../src/lib/admin/guide-profile.mjs');
 const route = readFileSync(routePath, 'utf8');
 
 function fakeClient(results) {

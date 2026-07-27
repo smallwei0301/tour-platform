@@ -9,6 +9,7 @@ const routePath = resolve(here, '../../app/api/guide/impersonation/route.ts');
 const componentPath = resolve(here, '../../src/components/midao/ImpersonationBanner.tsx');
 const guideLayout = readFileSync(resolve(here, '../../app/(non-locale)/guide/layout.tsx'), 'utf8');
 const midaoLayoutPath = resolve(here, '../../app/(non-locale)/midao/layout.tsx');
+const midaoShellPath = resolve(here, '../../src/features/midao/shell/MidaoShell.tsx');
 
 test('status endpoint verifies canonical guide session and signed actor without exposing admin identity', () => {
   const route = readFileSync(routePath, 'utf8');
@@ -38,8 +39,8 @@ test('guide and midao realms use one banner implementation and one DELETE endpoi
   assert.equal(existsSync(componentPath), true);
   assert.equal(existsSync(midaoLayoutPath), true);
   const component = readFileSync(componentPath, 'utf8');
-  const midaoLayout = readFileSync(midaoLayoutPath, 'utf8');
-  for (const layout of [guideLayout, midaoLayout]) assert.match(layout, /ImpersonationBanner/u);
+  const midaoShell = readFileSync(midaoShellPath, 'utf8');
+  for (const layout of [guideLayout, midaoShell]) assert.match(layout, /ImpersonationBanner/u);
   assert.match(component, /fetch\('\/api\/guide\/impersonation'[\s\S]*method:\s*'GET'/u);
   assert.match(component, /json\?\.data\?\.active\s*===\s*true/u);
   assert.doesNotMatch(component, /document\.cookie[\s\S]*guide_impersonation/u);

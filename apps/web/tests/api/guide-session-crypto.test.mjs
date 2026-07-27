@@ -3,7 +3,7 @@ import { createHmac } from 'node:crypto';
 import test from 'node:test';
 import { spawnNodeEsm } from '../helpers/spawn-node.mjs';
 
-const moduleUrl = new URL('../../src/lib/guide-session-crypto.ts', import.meta.url);
+const moduleUrl = new URL('../../src/lib/guide/session-crypto.ts', import.meta.url);
 const cryptoModule = await import(moduleUrl.href);
 const guideAuthModule = await import(new URL('../../src/lib/guide-auth.ts', import.meta.url).href);
 const {

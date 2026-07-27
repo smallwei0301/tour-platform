@@ -1,5 +1,5 @@
 import { isMidaoBackendEnabled } from '../../config/feature-flags.mjs';
-import { getGuideRuntimeAccessDb } from '../db-midao-runtime-access.mjs';
+import { getGuideRuntimeAccessDb } from './db-runtime-access.mjs';
 import { verifyGuideSession } from '../guide-auth.ts';
 import {
   MIDAO_IMPERSONATION_ACTOR_COOKIE_NAME,
