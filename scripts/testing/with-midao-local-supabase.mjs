@@ -3,6 +3,7 @@ import { createHash, createHmac } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { constants as fsConstants } from 'node:fs';
 import * as fsPromises from 'node:fs/promises';
+import { createServer as createHttpServer, request as httpRequest } from 'node:http';
 import { createConnection, createServer } from 'node:net';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 import process from 'node:process';
@@ -300,6 +301,78 @@ export async function startLoopbackBridge({ listenPort, targetHost, targetPort }
     host: '127.0.0.1',
     port: address.port,
     async close() {
+      for (const socket of sockets) socket.destroy();
+      await new Promise((resolveClose, reject) => server.close((error) => error ? reject(error) : resolveClose()));
+    },
+  };
+}
+
+export async function startSupabaseRestCompatProxy({ listenPort = 0, targetUrl }) {
+  let target;
+  try { target = new URL(String(targetUrl)); } catch { target = null; }
+  const targetPort = Number(target?.port);
+  if ((!Number.isSafeInteger(listenPort) || listenPort < 0 || listenPort > 65535)
+    || !target || target.protocol !== 'http:' || target.hostname !== '127.0.0.1'
+    || !Number.isSafeInteger(targetPort) || targetPort < 1 || targetPort > 65535
+    || target.pathname !== '/' || target.search || target.hash || target.username || target.password) {
+    throw new Error('SUPABASE_REST_PROXY_CONTRACT_INVALID');
+  }
+  const sockets = new Set();
+  const upstreamRequests = new Set();
+  const server = createHttpServer((request, response) => {
+    let incoming;
+    try { incoming = new URL(request.url || '', 'http://127.0.0.1'); } catch { incoming = null; }
+    const allowedMethods = new Set(['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS']);
+    if (!incoming || !allowedMethods.has(request.method || '')
+      || (incoming.pathname !== '/rest/v1' && !incoming.pathname.startsWith('/rest/v1/'))) {
+      response.writeHead(404, { 'content-type': 'application/json' });
+      response.end('{"code":"SUPABASE_REST_PROXY_PATH_INVALID"}');
+      return;
+    }
+    const strippedPath = incoming.pathname.slice('/rest/v1'.length) || '/';
+    const upstreamUrl = new URL(target);
+    upstreamUrl.pathname = strippedPath;
+    upstreamUrl.search = incoming.search;
+    const headers = { ...request.headers, host: target.host };
+    delete headers.connection;
+    const upstream = httpRequest(upstreamUrl, { method: request.method, headers }, (upstreamResponse) => {
+      const responseHeaders = { ...upstreamResponse.headers };
+      delete responseHeaders.connection;
+      response.writeHead(upstreamResponse.statusCode || 502, responseHeaders);
+      upstreamResponse.once('error', () => response.destroy());
+      upstreamResponse.pipe(response);
+    });
+    upstreamRequests.add(upstream);
+    upstream.once('close', () => upstreamRequests.delete(upstream));
+    upstream.once('error', () => {
+      if (response.headersSent) response.destroy();
+      else {
+        response.writeHead(502, { 'content-type': 'application/json' });
+        response.end('{"code":"SUPABASE_REST_PROXY_UPSTREAM_FAILED"}');
+      }
+    });
+    request.once('aborted', () => upstream.destroy());
+    request.once('error', () => upstream.destroy());
+    response.once('close', () => {
+      if (!response.writableFinished) upstream.destroy();
+    });
+    request.pipe(upstream);
+  });
+  server.on('connection', (socket) => {
+    sockets.add(socket);
+    socket.once('close', () => sockets.delete(socket));
+  });
+  await new Promise((resolveListen, reject) => {
+    server.once('error', reject);
+    server.listen(listenPort, '127.0.0.1', resolveListen);
+  });
+  const address = server.address();
+  return {
+    host: '127.0.0.1',
+    port: address.port,
+    url: `http://127.0.0.1:${address.port}`,
+    async close() {
+      for (const request of upstreamRequests) request.destroy();
       for (const socket of sockets) socket.destroy();
       await new Promise((resolveClose, reject) => server.close((error) => error ? reject(error) : resolveClose()));
     },
@@ -1243,6 +1316,7 @@ async function main() {
   let lock;
   let databaseBridge;
   let apiBridge;
+  let apiCompatProxy;
   let databaseWorkdir;
   let replay;
   let primaryError;
@@ -1295,8 +1369,9 @@ async function main() {
             cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
           });
           if (overlay.exitCode !== 0 || overlay.signal !== null) throw new Error(`MIDAO_E2E_SEED_FAILED: ${redactSupabaseOutput(overlay.stderr).slice(-4000).trim()}`);
-          const apiUrl = 'http://127.0.0.1:54321';
-          const credentials = createLocalSupabaseApiCredentials(apiUrl);
+          const directApiUrl = 'http://127.0.0.1:54321';
+          apiCompatProxy = await startSupabaseRestCompatProxy({ listenPort: 0, targetUrl: directApiUrl });
+          const credentials = createLocalSupabaseApiCredentials(apiCompatProxy.url);
           let apiStartError;
           try {
             await startPinnedPostgrest({
@@ -1315,12 +1390,12 @@ async function main() {
           if (apiErrors.length === 1) throw apiErrors[0];
           Object.assign(localEnv, credentials.publicEnv);
           await waitForPostgrestApi({
-            apiUrl,
+            apiUrl: directApiUrl,
             serviceRoleKey: credentials.publicEnv.SUPABASE_SERVICE_ROLE_KEY,
             signal: controller.signal,
           });
           await verifyMidaoE2ERuntimeFixtures({
-            apiUrl,
+            apiUrl: directApiUrl,
             serviceRoleKey: credentials.publicEnv.SUPABASE_SERVICE_ROLE_KEY,
             signal: controller.signal,
           });
@@ -1356,6 +1431,7 @@ async function main() {
     try { await databaseWorkdir.cleanupCliMetadata(); } catch (error) { cleanupErrors.push(error); }
   }
   if (databaseWorkdir) { try { await databaseWorkdir.cleanup(); } catch (error) { cleanupErrors.push(error); } }
+  if (apiCompatProxy) { try { await apiCompatProxy.close(); } catch (error) { cleanupErrors.push(error); } }
   if (apiBridge) { try { await apiBridge.close(); } catch (error) { cleanupErrors.push(error); } }
   if (databaseBridge) { try { await databaseBridge.close(); } catch (error) { cleanupErrors.push(error); } }
   if (lock) { try { await releaseKernelRunnerLock(lock); } catch (error) { cleanupErrors.push(error); } }

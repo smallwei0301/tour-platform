@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { link, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { createServer as createHttpServer } from 'node:http';
 import { createServer, connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -25,6 +26,7 @@ const {
   runCommand,
   parseDockerHostGateway,
   startLoopbackBridge,
+  startSupabaseRestCompatProxy,
   resolvePinnedPostgrestRuntime,
   createLocalSupabaseApiCredentials,
   verifyMidaoE2ERuntimeFixtures,
@@ -149,6 +151,72 @@ test('Docker-container gateway parsing and loopback-only TCP bridge are exact', 
     await bridge.close();
     await new Promise((resolveClose) => upstream.close(resolveClose));
   }
+});
+
+test('Supabase REST compatibility proxy strips only the fixed /rest/v1 prefix on loopback', async () => {
+  const calls = [];
+  const upstream = createHttpServer((request, response) => {
+    const chunks = [];
+    request.on('data', (chunk) => chunks.push(chunk));
+    request.on('end', () => {
+      calls.push({ method: request.method, url: request.url, body: Buffer.concat(chunks).toString('utf8') });
+      response.writeHead(201, { 'content-type': 'application/json', 'x-upstream': 'yes' });
+      response.end('{"ok":true}');
+    });
+  });
+  await new Promise((resolveListen, reject) => {
+    upstream.once('error', reject);
+    upstream.listen(0, '127.0.0.1', resolveListen);
+  });
+  const targetUrl = `http://127.0.0.1:${upstream.address().port}`;
+  let proxy;
+  try {
+    proxy = await startSupabaseRestCompatProxy({ listenPort: 0, targetUrl });
+    const response = await fetch(`${proxy.url}/rest/v1/guide_profiles?id=eq.fixture`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', apikey: 'local-test-key' },
+      body: '{"backend_mode":"midao"}',
+    });
+    assert.equal(response.status, 201);
+    assert.equal(response.headers.get('x-upstream'), 'yes');
+    assert.equal(await response.text(), '{"ok":true}');
+    assert.deepEqual(calls, [{
+      method: 'PATCH',
+      url: '/guide_profiles?id=eq.fixture',
+      body: '{"backend_mode":"midao"}',
+    }]);
+
+    const doubleSlash = await fetch(`${proxy.url}/rest/v1//example.com/steal`);
+    assert.equal(doubleSlash.status, 201);
+    assert.equal(calls.at(-1).url, '//example.com/steal');
+
+    const rejected = await fetch(`${proxy.url}/auth/v1/user`);
+    assert.equal(rejected.status, 404);
+    assert.equal(calls.length, 2);
+  } finally {
+    await proxy?.close();
+    await new Promise((resolveClose) => upstream.close(resolveClose));
+  }
+  for (const invalidTarget of [
+    'http://example.com:54321',
+    'http://127.0.0.1:99999',
+    'http://127.0.0.1:54321/rest/v1',
+    'https://127.0.0.1:54321',
+  ]) {
+    await assert.rejects(
+      startSupabaseRestCompatProxy({ listenPort: 0, targetUrl: invalidTarget }),
+      /SUPABASE_REST_PROXY_CONTRACT_INVALID/u,
+    );
+  }
+});
+
+test('browser lifecycle separates direct PostgREST probes from Supabase client compatibility URL and closes the proxy', async () => {
+  const source = await readFile(new URL('../../../../scripts/testing/with-midao-local-supabase.mjs', import.meta.url), 'utf8');
+  assert.match(source, /const directApiUrl = 'http:\/\/127\.0\.0\.1:54321';/u);
+  assert.match(source, /startSupabaseRestCompatProxy\(\{ listenPort: 0, targetUrl: directApiUrl \}\)/u);
+  assert.match(source, /createLocalSupabaseApiCredentials\(apiCompatProxy\.url\)/u);
+  assert.equal((source.match(/apiUrl: directApiUrl,/gu) || []).length, 2);
+  assert.match(source, /if \(apiCompatProxy\) \{ try \{ await apiCompatProxy\.close\(\);/u);
 });
 
 test('baseline workdir verifies both transactions before materializer or full-service config consumers', async () => {
