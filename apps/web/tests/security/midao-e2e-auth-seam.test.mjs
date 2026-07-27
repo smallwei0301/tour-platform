@@ -18,6 +18,8 @@ const configSource = readFileSync(resolve(webRoot, 'playwright.config.ts'), 'utf
 const seedSource = readFileSync(resolve(repoRoot, 'supabase/seed.sql'), 'utf8');
 const e2eSeedSource = readFileSync(resolve(repoRoot, 'scripts/testing/midao-e2e-seed.sql'), 'utf8');
 const localRunnerSource = readFileSync(resolve(repoRoot, 'scripts/testing/with-midao-local-supabase.mjs'), 'utf8');
+const authSpecSource = readFileSync(resolve(webRoot, 'e2e/midao-auth-and-impersonation.spec.ts'), 'utf8');
+const navigationSpecSource = readFileSync(resolve(webRoot, 'e2e/midao-navigation.spec.ts'), 'utf8');
 
 async function importFresh(path) {
   return import(`${pathToFileURL(path).href}?e4=${Date.now()}-${Math.random()}`);
@@ -100,4 +102,12 @@ test('transaction-bound canonical seed remains intact and local overlay contains
     'guide_session_version = 1',
   ]) assert.ok(e2eSeedSource.includes(value), `E2E seed overlay missing ${value}`);
   assert.doesNotMatch(e2eSeedSource, /andy-lee/u);
+});
+
+test('Midao browser session versions match the canonical seeded guide row', () => {
+  assert.match(e2eSeedSource, /guide_session_version = 1;/u);
+  assert.match(authSpecSource, /sessionVersion: 1,/u);
+  assert.match(navigationSpecSource, /sessionVersion: 1,/u);
+  assert.doesNotMatch(authSpecSource, /sessionVersion: 7,/u);
+  assert.doesNotMatch(navigationSpecSource, /sessionVersion: 7,/u);
 });

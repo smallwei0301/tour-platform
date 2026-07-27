@@ -3,7 +3,7 @@ import { test, expect, setMidaoGuideSession } from './helpers';
 const guide = {
   guideId: '99999999-9999-4999-8999-999999999999',
   guideName: 'Midao E2E Guide',
-  sessionVersion: 7,
+  sessionVersion: 1,
 };
 
 const destinations = [

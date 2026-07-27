@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "node ../../scripts/check-lint-node.mjs && ESLINT_USE_FLAT_CONFIG=false eslint app src --ignore-pattern '.next/**'",
-    "test": "node --test tests/api/*.test.mjs tests/config/*.test.mjs tests/docs/*.test.mjs tests/e2e/*.test.mjs tests/ops/*.test.mjs tests/qa/*.test.mjs tests/security/*.test.mjs tests/ui/*.test.mjs tests/unit/*.test.mjs",
+    "test": "node ../../scripts/testing/run-ordinary-web-tests.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",

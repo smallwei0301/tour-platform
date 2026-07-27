@@ -13,7 +13,7 @@ on:
       - 'apps/web/src/lib/midao/**'
       - 'apps/web/tests/integration/midao-*.test.mjs'
       - 'apps/web/tests/security/midao-e2e-auth-seam.test.mjs'
-      - 'apps/web/tests/unit/midao-e2e-ci-workflow.test.mjs'
+      - 'apps/web/tests/unit/midao-*.test.mjs'
       - 'scripts/database-baseline/**'
       - 'scripts/testing/midao-e2e-seed.sql'
       - 'scripts/testing/run-midao-*.sh'
@@ -32,7 +32,7 @@ concurrency:
 jobs:
   browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -112,15 +112,21 @@ jobs:
         working-directory: apps/web
         run: npx playwright install --with-deps chromium
 
+      - name: Run Midao baseline infrastructure contracts
+        env:
+          NODE_ENV: test
+          GUIDE_SESSION_SECRET: ci-guide-session-secret-0123456789abcdef
+        run: timeout --signal=TERM --kill-after=30s 600s node scripts/testing/run-ordinary-web-tests.mjs --infrastructure
+
       - name: Run baseline-backed Midao browser gate
         run: >-
-          timeout --signal=TERM 1200s bash scripts/testing/run-midao-e2e.sh
+          timeout --signal=TERM --kill-after=30s 1200s bash scripts/testing/run-midao-e2e.sh
           apps/web/e2e/midao-navigation.spec.ts
           apps/web/e2e/midao-auth-and-impersonation.spec.ts
 
       - name: Run baseline-backed legacy login compatibility
         run: >-
-          timeout --signal=TERM 1200s bash scripts/testing/run-midao-legacy-e2e-compat.sh
+          timeout --signal=TERM --kill-after=30s 1200s bash scripts/testing/run-midao-legacy-e2e-compat.sh
           apps/web/e2e/t1-login.spec.ts
 
       - name: Upload Playwright failure evidence
