@@ -50,6 +50,10 @@ function sameObjectIdentity(left, right) {
   return left.dev === right.dev && left.ino === right.ino && left.uid === right.uid && left.nlink === right.nlink;
 }
 
+function sameDirectoryObjectIdentity(left, right) {
+  return left.dev === right.dev && left.ino === right.ino && left.uid === right.uid;
+}
+
 function sameIdentity(left, right) {
   return sameObjectIdentity(left, right) && left.mode === right.mode;
 }
@@ -264,7 +268,7 @@ async function removeOwnedWorkdir(workdir, identity, expectedMigrationNames) {
     if (error?.code === 'ENOENT') return;
     throw error;
   }
-  if (!current.isDirectory() || !sameObjectIdentity(current, identity)) {
+  if (!current.isDirectory() || !sameDirectoryObjectIdentity(current, identity)) {
     throw new Error('materialized workdir identity replaced by foreign pathname');
   }
   if (expectedMigrationNames) {
@@ -451,7 +455,7 @@ export async function materializeFreshWorkdir(options = {}) {
   });
 }
 
-export const __internal = Object.freeze({ materializeWithPaths, selectPostCutoffSources });
+export const __internal = Object.freeze({ materializeWithPaths, selectPostCutoffSources, sameDirectoryObjectIdentity });
 
 async function main(args) {
   if (args.length === 1 && args[0] === '--help') {

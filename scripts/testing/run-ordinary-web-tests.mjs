@@ -32,6 +32,19 @@ export const INFRASTRUCTURE_TESTS = Object.freeze([
   'tests/unit/midao-staged-evidence-verifier.test.mjs',
 ]);
 
+export const HOST_BOUND_INFRASTRUCTURE_TESTS = Object.freeze([
+  'tests/unit/midao-baseline-publisher.test.mjs',
+  'tests/unit/midao-baseline-toolchain-lock.test.mjs',
+  'tests/unit/midao-ci-command-runner.test.mjs',
+  'tests/unit/midao-expected-terminal-publisher.test.mjs',
+  'tests/unit/midao-production-catalog-capture.test.mjs',
+]);
+
+const hostBoundInfrastructure = new Set(HOST_BOUND_INFRASTRUCTURE_TESTS);
+export const PORTABLE_INFRASTRUCTURE_TESTS = Object.freeze(
+  INFRASTRUCTURE_TESTS.filter((file) => !hostBoundInfrastructure.has(file)),
+);
+
 export function listOrdinaryTests() {
   const excluded = new Set(INFRASTRUCTURE_TESTS);
   return ordinaryDirectories.flatMap((directory) => {
@@ -45,14 +58,18 @@ export function listOrdinaryTests() {
 export function buildInvocation(mode = 'ordinary') {
   if (mode === 'ordinary') return ['--test', ...listOrdinaryTests()];
   if (mode === 'infrastructure') return ['--test', '--test-concurrency=1', ...INFRASTRUCTURE_TESTS];
+  if (mode === 'portable-infrastructure') return ['--test', '--test-concurrency=1', ...PORTABLE_INFRASTRUCTURE_TESTS];
   throw new Error(`UNKNOWN_WEB_TEST_MODE:${mode}`);
 }
 
 export function main(argv = process.argv.slice(2)) {
-  if (argv.length > 1 || (argv.length === 1 && argv[0] !== '--infrastructure')) {
+  const allowed = new Set(['--infrastructure', '--portable-infrastructure']);
+  if (argv.length > 1 || (argv.length === 1 && !allowed.has(argv[0]))) {
     throw new Error('UNKNOWN_WEB_TEST_ARGUMENTS');
   }
-  const mode = argv[0] === '--infrastructure' ? 'infrastructure' : 'ordinary';
+  const mode = argv[0] === '--infrastructure'
+    ? 'infrastructure'
+    : argv[0] === '--portable-infrastructure' ? 'portable-infrastructure' : 'ordinary';
   const child = spawnSync(process.execPath, buildInvocation(mode), {
     cwd: webRoot,
     env: process.env,

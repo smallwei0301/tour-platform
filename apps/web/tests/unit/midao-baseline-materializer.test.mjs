@@ -308,3 +308,12 @@ test('cleanup refuses a foreign replacement and removes only the owned workdir i
     await rm(parent, { recursive: true, force: true });
   }
 });
+
+test('directory cleanup identity tolerates child-count nlink changes but rejects inode replacement', async () => {
+  const api = await subject();
+  const original = { dev: 11, ino: 22, uid: 33, nlink: 2 };
+  assert.equal(api.__internal.sameDirectoryObjectIdentity(original, { ...original, nlink: 3 }), true);
+  assert.equal(api.__internal.sameDirectoryObjectIdentity(original, { ...original, ino: 23, nlink: 2 }), false);
+  assert.equal(api.__internal.sameDirectoryObjectIdentity(original, { ...original, dev: 12, nlink: 2 }), false);
+  assert.equal(api.__internal.sameDirectoryObjectIdentity(original, { ...original, uid: 34, nlink: 2 }), false);
+});

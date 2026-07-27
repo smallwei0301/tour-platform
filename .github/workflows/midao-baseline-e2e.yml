@@ -116,7 +116,7 @@ jobs:
         env:
           NODE_ENV: test
           GUIDE_SESSION_SECRET: ci-guide-session-secret-0123456789abcdef
-        run: timeout --signal=TERM --kill-after=30s 600s node scripts/testing/run-ordinary-web-tests.mjs --infrastructure
+        run: timeout --signal=TERM --kill-after=30s 600s node scripts/testing/run-ordinary-web-tests.mjs --portable-infrastructure
 
       - name: Run baseline-backed Midao browser gate
         run: >-
