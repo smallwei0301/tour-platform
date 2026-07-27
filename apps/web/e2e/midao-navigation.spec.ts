@@ -105,12 +105,20 @@ for (const viewport of viewports) {
         : page.locator('.midao-desktop-sidebar');
       const runnerOrigin = new URL(page.url()).origin;
       const target = visibleNav.getByRole('link', { name: '需求' });
+      const tabBudget = await page.locator([
+        'a[href]:visible',
+        'button:visible',
+        'input:visible',
+        'select:visible',
+        'textarea:visible',
+        '[tabindex]:visible',
+      ].join(', ')).count() + 1;
       await page.evaluate(() => {
         document.body.tabIndex = -1;
         document.body.focus();
       });
       let reachedByTab = false;
-      for (let attempt = 0; attempt < 12; attempt += 1) {
+      for (let attempt = 0; attempt < tabBudget; attempt += 1) {
         await page.keyboard.press('Tab');
         reachedByTab = await target.evaluate((element) => element === document.activeElement);
         if (reachedByTab) break;
