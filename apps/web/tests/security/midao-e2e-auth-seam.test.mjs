@@ -25,12 +25,12 @@ async function importFresh(path) {
   return import(`${pathToFileURL(path).href}?e4=${Date.now()}-${Math.random()}`);
 }
 
-test('Midao helpers mint real guide and signed actor cookies with shared production codecs', async () => {
-  assert.match(helpersSource, /import\s*\{\s*signGuideSession\s*\}/u);
-  assert.match(helpersSource, /import\s*\{\s*createImpersonationActorCookie\s*\}/u);
-  assert.match(helpersSource, /setMidaoGuideSession[\s\S]{0,800}signGuideSession\(input\.guideId, input\.sessionVersion\)/u);
-  assert.match(helpersSource, /setMidaoImpersonationSession[\s\S]{0,1200}createImpersonationActorCookie\(/u);
-  assert.doesNotMatch(helpersSource, /setMidaoGuideSession[\s\S]{0,800}repeat\(64\)/u);
+test('Midao helpers obtain guide cookies from the real auth API and mint only the signed actor cookie locally', async () => {
+  assert.doesNotMatch(helpersSource, /import\s*\{\s*signGuideSession\s*\}/u);
+  assert.match(helpersSource, /loginMidaoGuideViaApi[\s\S]{0,2200}\/api\/guide\/auth\/csrf[\s\S]{0,2200}\/api\/guide\/auth\/session/u);
+  assert.match(helpersSource, /loginMidaoGuideViaApi[\s\S]{0,2600}guide_token[\s\S]{0,2600}guide_id/u);
+  assert.doesNotMatch(helpersSource, /setMidaoGuideSession/u);
+  assert.match(helpersSource, /setMidaoImpersonationActorCookie[\s\S]{0,1200}createImpersonationActorCookie\(/u);
 
   const crypto = await importFresh(resolve(webRoot, 'src/lib/guide/session-crypto.ts'));
   const guideAuth = await importFresh(resolve(webRoot, 'src/lib/guide-auth.ts'));
@@ -112,10 +112,12 @@ test('transaction-bound canonical seed remains intact and local overlay contains
   assert.doesNotMatch(e2eSeedSource, /andy-lee/u);
 });
 
-test('Midao browser session versions match the canonical seeded guide row', () => {
+test('Midao browser sessions come from the canonical seeded guide rows through the real login API', () => {
   assert.match(e2eSeedSource, /guide_session_version = 1;/u);
-  assert.match(authSpecSource, /sessionVersion: 1,/u);
-  assert.match(navigationSpecSource, /sessionVersion: 1,/u);
-  assert.doesNotMatch(authSpecSource, /sessionVersion: 7,/u);
-  assert.doesNotMatch(navigationSpecSource, /sessionVersion: 7,/u);
+  for (const source of [authSpecSource, navigationSpecSource]) {
+    assert.match(source, /loginMidaoGuideViaApi/u);
+    assert.doesNotMatch(source, /sessionVersion:/u);
+  }
+  assert.match(authSpecSource, /midao-e2e@example\.invalid[\s\S]*midao-e2e-only-password/u);
+  assert.match(authSpecSource, /legacy-e2e@example\.invalid[\s\S]*legacy-e2e-only-password/u);
 });

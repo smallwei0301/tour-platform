@@ -1,9 +1,11 @@
-import { test, expect, setMidaoGuideSession } from './helpers';
+import { test, expect, loginMidaoGuideViaApi } from './helpers';
 
 const guide = {
   guideId: '99999999-9999-4999-8999-999999999999',
   guideName: 'Midao E2E Guide',
-  sessionVersion: 1,
+  email: 'midao-e2e@example.invalid',
+  password: 'midao-e2e-only-password',
+  expectedRedirect: '/midao' as const,
 };
 
 const destinations = [
@@ -16,7 +18,7 @@ const destinations = [
 
 test.describe('Midao primary navigation on baseline-backed local Supabase', () => {
   test.beforeEach(async ({ page }) => {
-    await setMidaoGuideSession(page, guide);
+    await loginMidaoGuideViaApi(page, guide);
   });
 
   for (const [path, label] of destinations) {

@@ -1,5 +1,4 @@
 import { test as base, expect, Page, APIRequestContext } from '@playwright/test';
-import { signGuideSession } from '../src/lib/guide/session-crypto';
 import { createImpersonationActorCookie } from '../src/lib/midao/impersonation-actor';
 
 const ADMIN_TOKEN = process.env.ADMIN_ACCESS_TOKEN || 'test-token-123';
@@ -159,37 +158,51 @@ async function setGuideSession(page: Page, guideId: string): Promise<void> {
   ]);
 }
 
-interface MidaoGuideSessionInput {
+interface MidaoGuideLoginInput {
   guideId: string;
-  guideName: string;
-  sessionVersion: number;
+  email: string;
+  password: string;
+  expectedRedirect: '/midao' | '/guide/dashboard';
 }
 
-interface MidaoImpersonationSessionInput extends MidaoGuideSessionInput {
+interface MidaoImpersonationActorInput {
+  guideId: string;
   adminEmail: string;
   issuedAt?: number;
 }
 
-async function setMidaoGuideSession(page: Page, input: MidaoGuideSessionInput): Promise<void> {
-  const signature = signGuideSession(input.guideId, input.sessionVersion);
-  await page.context().addCookies([
-    {
-      name: 'guide_token',
-      value: `${input.guideId}:${input.sessionVersion}:${signature}`,
-      url: BASE_URL,
-      httpOnly: true,
-      sameSite: 'Lax',
-    },
-    { name: 'guide_id', value: input.guideId, url: BASE_URL, sameSite: 'Lax' },
-    { name: 'guide_name', value: input.guideName, url: BASE_URL, sameSite: 'Lax' },
-  ]);
+async function loginMidaoGuideViaApi(page: Page, input: MidaoGuideLoginInput): Promise<void> {
+  const csrfRes = await page.request.get('/api/guide/auth/csrf', { failOnStatusCode: false });
+  const csrfBody = await csrfRes.json().catch(() => ({} as Record<string, unknown>));
+  const csrfToken = (csrfBody as { data?: { csrfToken?: string } })?.data?.csrfToken ?? '';
+  if (!csrfRes.ok() || !csrfToken) {
+    throw new Error(`loginMidaoGuideViaApi: csrf failed with status ${csrfRes.status()}`);
+  }
+
+  const sessionRes = await page.request.post('/api/guide/auth/session', {
+    headers: { 'content-type': 'application/json', 'x-csrf-token': csrfToken },
+    data: { email: input.email, password: input.password },
+    failOnStatusCode: false,
+  });
+  const sessionBody = await sessionRes.json().catch(() => ({} as Record<string, unknown>));
+  const sessionData = (sessionBody as { data?: { created?: boolean; redirectTo?: string }; error?: { code?: string } }).data;
+  if (!sessionRes.ok() || sessionData?.created !== true || sessionData.redirectTo !== input.expectedRedirect) {
+    const errorCode = (sessionBody as { error?: { code?: string } }).error?.code ?? 'INVALID_RESPONSE';
+    throw new Error(`loginMidaoGuideViaApi: session failed with status ${sessionRes.status()} code ${errorCode}`);
+  }
+
+  const cookies = await page.context().cookies();
+  const token = cookies.find((cookie) => cookie.name === 'guide_token' && cookie.value);
+  const guideId = cookies.find((cookie) => cookie.name === 'guide_id' && cookie.value === input.guideId);
+  if (!token || !guideId) {
+    throw new Error(`loginMidaoGuideViaApi: canonical guide cookies missing; present=${cookies.map((cookie) => cookie.name).join(',')}`);
+  }
 }
 
-async function setMidaoImpersonationSession(
+async function setMidaoImpersonationActorCookie(
   page: Page,
-  input: MidaoImpersonationSessionInput,
+  input: MidaoImpersonationActorInput,
 ): Promise<void> {
-  await setMidaoGuideSession(page, input);
   const actorSetCookie = createImpersonationActorCookie({
     adminEmail: input.adminEmail,
     targetGuideId: input.guideId,
@@ -198,7 +211,7 @@ async function setMidaoImpersonationSession(
   const actorPair = actorSetCookie.split(';', 1)[0];
   const separator = actorPair.indexOf('=');
   if (separator < 1 || !actorPair.slice(separator + 1)) {
-    throw new Error('setMidaoImpersonationSession: signed actor cookie was not created');
+    throw new Error('setMidaoImpersonationActorCookie: signed actor cookie was not created');
   }
   await page.context().addCookies([
     {
@@ -231,6 +244,6 @@ export {
   ensureLoggedIn,
   setGuideSession,
   setTravelerSession,
-  setMidaoGuideSession,
-  setMidaoImpersonationSession,
+  loginMidaoGuideViaApi,
+  setMidaoImpersonationActorCookie,
 };
