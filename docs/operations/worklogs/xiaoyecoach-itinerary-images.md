@@ -156,3 +156,35 @@ activity_plans：no_plan_exclusions=0, no_highlights=0, no_plan_inclusions=0,
 - [x] 備份（audit_logs id 202–242）
 - [ ] 未變更：`activity_qa`（刻意保留真實旅客問答表，不插入假資料）
 - [ ] 未再開新 PR（本次為既有分支後續補強；如需併入 main 需使用者指示是否要開新 PR 或併入既有流程）
+
+## 第三輪：全文案重新潤飾＋方案全數啟用（2026-07-27，claude/xiaoyecoach-itinerary-images-n9mdwb）
+
+需求（owner 2026-07-27）：全部文案重新潤飾、不照抄官網、不得出現官網網址；該分行的要分行；啟用全部行程的方案，並確認啟用後方案詳情不消失；同時修復「啟用方案後方案詳情消失」bug。
+
+### Bug 修復（commit f8c5402，已含 run-checks 綠燈證據）
+
+根因：後台方案列表「啟用／停用」按鈕只送 `PUT {status}`，但 route 將全量語意的 `normalizeRichPlanPayload(body)` 直接 assign 進 UPDATE payload，導致未提供的 `plan_itinerary`／`highlights` 等 18 個 rich 欄位被洗成 null。修法：新增部分更新語意的 `normalizeRichPlanPatch()`（只覆蓋 body 有提供的欄位），route 改用之；新增 6 條契約測試 `tests/api/plan-status-toggle-preserves-rich-fields.test.mjs`。
+
+### 資料寫入（execute_sql，鐵律 2 逐批回報完成）
+
+備份：寫入前 `INSERT INTO audit_logs (action='xiaoye-copy-rewrite-backup')` 41 筆（id 243–283），含全部舊文案與 `old_plan_status`。
+
+| 批次 | 內容 | 影響 |
+|---|---|---|
+| lean_act_batch 1–5 | UPDATE `activities`（tagline/short_description/description/seo_title/seo_description/inclusions/notices/faq）——全數改寫，description 帶【行程特色】＋【景點／路線／課程／場域介紹】雙段落與 `\n` 分行 | 9+9+9+9+5＝41 筆 |
+| act_safety_it_batch 1–2 | UPDATE `activities`（safety_notice 依類別 5 套模板＋itinerary 潤飾、title「官網行程規劃」→「行程規劃」） | 21+20＝41 筆 |
+| plan_rich_batch 1–5 | UPDATE `activity_plans`（description/highlights/plan_notices/plan_inclusions/plan_itinerary/details_link_text/confirm_by_days） | 9+9+9+7+7＝41 筆 |
+| 啟用 | UPDATE `activity_plans` SET status='active'（原 39 inactive） | 39 筆 |
+
+補漏：雪山主東峰三日（plan 2426799a）與雪訓豪華團（plan 8ee22e7c）原 plan_itinerary 為空，本輪依 activities.itinerary 補建 17／10 步（含配圖）。另移除免費培訓課程殘留的「fb 粉專」導流字樣。
+
+### 驗證（實跑證據，2026-07-27）
+
+- 禁用字串掃描（ndclub/www./http:///官網/粉專/臉書/facebook/電話/匯款/合作金庫/加line/instagram 等）：activities＋activity_plans 全欄位 **0 筆命中**。
+- 啟用前：41 方案（39 inactive＋2 active）、plan_itinerary 共 302 步、rich 欄位空值 0。
+- 啟用後：41 方案全部 active、**302 步不變**、description/highlights/plan_inclusions/plan_notices/details_link_text 空值 0——方案詳情未消失。
+- plan_itinerary 302 步 imageUrl 缺漏 0。
+
+### 回滾
+
+依 `audit_logs` id 243–283（action='xiaoye-copy-rewrite-backup'）之 metadata 按 activity_id/plan_id 寫回，status 依 old_plan_status 還原。
