@@ -68,14 +68,56 @@ for (const viewport of viewports) {
         expect(layout.bottomPadding).toBeGreaterThanOrEqual(0);
       }
 
+      const loadedCss = await page.evaluate(() => {
+        const chunks: string[] = [];
+        const visit = (rules: CSSRuleList) => {
+          for (const rule of Array.from(rules)) {
+            chunks.push(rule.cssText);
+            const nested = (rule as CSSGroupingRule).cssRules;
+            if (nested) visit(nested);
+          }
+        };
+        for (const sheet of Array.from(document.styleSheets)) {
+          try {
+            if (sheet.cssRules) visit(sheet.cssRules);
+          } catch {
+            // Cross-origin styles are irrelevant; Midao shell CSS is runner-owned.
+          }
+        }
+        return chunks.join('\n');
+      });
+      for (const edge of ['top', 'right', 'bottom', 'left']) {
+        expect(loadedCss).toMatch(new RegExp(`--midao-safe-area-${edge}:\\s*env\\(safe-area-inset-${edge},\\s*0px\\)`, 'i'));
+      }
+      for (const wiring of [
+        /padding-left:\s*var\(--midao-safe-area-left\)/i,
+        /padding-right:\s*var\(--midao-safe-area-right\)/i,
+        /padding-bottom:\s*var\(--midao-safe-area-bottom\)/i,
+        /calc\(82px \+ var\(--midao-safe-area-bottom\)\)/i,
+        /calc\(18px \+ var\(--midao-safe-area-top\)\)/i,
+        /calc\(28px \+ var\(--midao-safe-area-top\)\)/i,
+        /calc\(48px \+ var\(--midao-safe-area-bottom\)\)/i,
+      ]) expect(loadedCss).toMatch(wiring);
+
       await page.goto('/midao', { waitUntil: 'domcontentloaded' });
       const visibleNav = viewport.mobile
         ? page.locator('.midao-bottom-nav')
         : page.locator('.midao-desktop-sidebar');
       const runnerOrigin = new URL(page.url()).origin;
       const target = visibleNav.getByRole('link', { name: '需求' });
-      await target.focus();
+      await page.evaluate(() => {
+        document.body.tabIndex = -1;
+        document.body.focus();
+      });
+      let reachedByTab = false;
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        await page.keyboard.press('Tab');
+        reachedByTab = await target.evaluate((element) => element === document.activeElement);
+        if (reachedByTab) break;
+      }
+      expect(reachedByTab).toBe(true);
       await expect(target).toBeFocused();
+      expect(await target.evaluate((element) => element.matches(':focus-visible'))).toBe(true);
       const focusStyle = await target.evaluate((element) => {
         const style = getComputedStyle(element);
         return { outlineStyle: style.outlineStyle, outlineWidth: Number.parseFloat(style.outlineWidth) || 0 };
