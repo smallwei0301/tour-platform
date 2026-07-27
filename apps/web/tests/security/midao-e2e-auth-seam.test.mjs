@@ -20,6 +20,7 @@ const e2eSeedSource = readFileSync(resolve(repoRoot, 'scripts/testing/midao-e2e-
 const localRunnerSource = readFileSync(resolve(repoRoot, 'scripts/testing/with-midao-local-supabase.mjs'), 'utf8');
 const authSpecSource = readFileSync(resolve(webRoot, 'e2e/midao-auth-and-impersonation.spec.ts'), 'utf8');
 const navigationSpecSource = readFileSync(resolve(webRoot, 'e2e/midao-navigation.spec.ts'), 'utf8');
+const guideSessionRouteSource = readFileSync(resolve(webRoot, 'app/api/guide/auth/session/route.ts'), 'utf8');
 
 async function importFresh(path) {
   return import(`${pathToFileURL(path).href}?e4=${Date.now()}-${Math.random()}`);
@@ -56,6 +57,16 @@ test('Midao helpers obtain guide cookies from the real auth API and mint only th
     targetGuideId: guideId,
     now: 1_800_000_000_500,
   })?.actorId, 'admin@example.invalid');
+});
+
+test('local guide auth diagnostics classify lookup and password failures without logging credentials', () => {
+  assert.match(guideSessionRouteSource, /isMidaoE2ELocal/u);
+  assert.match(guideSessionRouteSource, /MIDAO_E2E_GUIDE_AUTH=\$\{reason\}:\$\{code\}/u);
+  for (const reason of ['LOOKUP_ERROR', 'LOOKUP_MISS', 'PASSWORD_MISMATCH']) {
+    assert.ok(guideSessionRouteSource.includes(`'${reason}'`), `missing ${reason}`);
+  }
+  assert.match(guideSessionRouteSource, /\^\[A-Z0-9_\]\{1,32\}\$/u);
+  assert.doesNotMatch(guideSessionRouteSource, /MIDAO_E2E_GUIDE_AUTH=.*(?:email|password|guideId)/u);
 });
 
 test('managed Midao Playwright lane is explicit, local-only, non-reusing, and secret-safe', () => {

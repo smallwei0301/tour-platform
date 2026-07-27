@@ -13,6 +13,7 @@ import { getGuideAuthSupabaseClient, type GuideAuthSingleResult } from '../../..
 import { guideLoginLimiter, RateLimiter, createLoginRateLimitResponse } from '../../../../../src/lib/rate-limit';
 import { peekDistributed, recordDistributed } from '../../../../../src/lib/rate-limit-distributed';
 import { getSupabaseUrl } from '../../../../../src/config/supabase-service-env.mjs';
+import { isMidaoE2ELocal } from '../../../../../src/config/feature-flags.mjs';
 import { clearImpersonationActorCookie } from '../../../../../src/lib/midao/impersonation-actor';
 
 // #1599：登入限流跨實例層（記憶體版擋單實例、分散式版 provision 後擋跨實例）。皆 fail-open。
@@ -58,6 +59,17 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms = SUPABASE_QUERY_TIMEO
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+type MidaoE2EGuideAuthFailure = 'LOOKUP_ERROR' | 'LOOKUP_MISS' | 'PASSWORD_MISMATCH';
+
+function reportMidaoE2EGuideAuthFailure(reason: MidaoE2EGuideAuthFailure, error: unknown = null): void {
+  if (!isMidaoE2ELocal()) return;
+  const rawCode = error && typeof error === 'object' && 'code' in error
+    ? String((error as { code?: unknown }).code || '')
+    : '';
+  const code = /^[A-Z0-9_]{1,32}$/u.test(rawCode) ? rawCode : 'UNKNOWN';
+  console.error(`MIDAO_E2E_GUIDE_AUTH=${reason}:${code}`);
 }
 
 function canonicalGuideRedirect(backendMode: 'legacy' | 'midao', isNew: boolean): '/midao' | '/guide/profile' | '/guide/dashboard' {
@@ -132,6 +144,7 @@ export async function POST(req: Request) {
       );
 
       if (error || !guide) {
+        reportMidaoE2EGuideAuthFailure(error ? 'LOOKUP_ERROR' : 'LOOKUP_MISS', error);
         recordGuideLoginFailure();
         return Response.json(fail('INVALID_TOKEN', '邀請碼無效或已使用'), { status: 401 });
       }
@@ -176,6 +189,7 @@ export async function POST(req: Request) {
       );
 
       if (error || !guide) {
+        reportMidaoE2EGuideAuthFailure(error ? 'LOOKUP_ERROR' : 'LOOKUP_MISS', error);
         recordGuideLoginFailure();
         return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
       }
@@ -185,6 +199,7 @@ export async function POST(req: Request) {
       }
 
       if (!guide.guide_password_hash || !verifyPassword(password, guide.guide_password_hash)) {
+        reportMidaoE2EGuideAuthFailure('PASSWORD_MISMATCH');
         recordGuideLoginFailure();
         return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
       }
@@ -224,6 +239,7 @@ export async function POST(req: Request) {
       );
 
       if (error || !guide) {
+        reportMidaoE2EGuideAuthFailure(error ? 'LOOKUP_ERROR' : 'LOOKUP_MISS', error);
         recordGuideLoginFailure();
         return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
       }
@@ -233,6 +249,7 @@ export async function POST(req: Request) {
       }
 
       if (!guide.guide_password_hash || !verifyPassword(password, guide.guide_password_hash)) {
+        reportMidaoE2EGuideAuthFailure('PASSWORD_MISMATCH');
         recordGuideLoginFailure();
         return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
       }
