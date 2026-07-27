@@ -42,7 +42,7 @@ const managedWebServer = noWebServer
           MIDAO_E2E_LOCAL: '1',
           NEXT_PUBLIC_BASE_URL: baseURL,
           NEXT_PUBLIC_APP_URL: baseURL,
-          NODE_OPTIONS: '--max-old-space-size=1024',
+          NODE_OPTIONS: process.env.CI ? '--max-old-space-size=2048' : '--max-old-space-size=1024',
           CHOKIDAR_USEPOLLING: '1',
           WATCHPACK_POLLING: 'true',
           CHOKIDAR_INTERVAL: '1000',

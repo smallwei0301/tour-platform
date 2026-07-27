@@ -48,7 +48,7 @@ function observeNavigationOrigins(page: Page) {
 
 async function loginMidaoGuideViaUi(page: Page, next: string | null) {
   const query = next === null ? '' : `?next=${encodeURIComponent(next)}`;
-  await page.goto(`/guide/login${query}`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`/guide/login${query}`, { waitUntil: 'networkidle' });
   await page.getByLabel('電子信箱').fill(midaoGuide.email);
   await page.getByLabel('密碼').fill(midaoGuide.password);
   await page.getByRole('button', { name: '登入', exact: true }).click({ noWaitAfter: true });
@@ -60,7 +60,7 @@ async function beginRealAdminImpersonation(page: Page) {
   const enter = page.getByTestId('admin-enter-guide-backend');
   await expect(enter).toBeVisible({ timeout: 60_000 });
   await enter.click({ noWaitAfter: true });
-  await page.waitForURL(/\/midao\/?$/, { timeout: 60_000 });
+  await page.waitForURL(/\/midao\/?$/, { waitUntil: 'commit', timeout: 60_000 });
   const banner = page.getByTestId('midao-impersonation-banner');
   await expect(banner).toContainText('管理員代入模式');
   await expect(banner).toContainText(midaoGuide.guideName);
@@ -73,20 +73,20 @@ test.describe('Midao authentication and impersonation on baseline-backed local S
 
   test('missing guide session fails closed to same-origin login with a safe next', async ({ page }) => {
     await page.goto('/midao', { waitUntil: 'domcontentloaded' });
-    await page.waitForURL(/\/guide\/login\?next=%2Fmidao$/, { timeout: 60_000 });
+    await page.waitForURL(/\/guide\/login\?next=%2Fmidao$/, { waitUntil: 'commit', timeout: 60_000 });
     expect(new URL(page.url()).pathname).toBe('/guide/login');
   });
 
   test('legacy backend guide returns to the legacy dashboard', async ({ page }) => {
     await loginMidaoGuideViaApi(page, legacyGuide);
     await page.goto('/midao', { waitUntil: 'domcontentloaded' });
-    await page.waitForURL(/\/guide\/dashboard$/, { timeout: 60_000 });
+    await page.waitForURL(/\/guide\/dashboard$/, { waitUntil: 'commit', timeout: 60_000 });
   });
 
   test('fake 64-character guide signature cannot cross the real Midao server-auth boundary', async ({ page }) => {
     await setGuideSession(page, midaoGuide.guideId);
     await page.goto('/midao', { waitUntil: 'domcontentloaded' });
-    await page.waitForURL(/\/guide\/login\?next=%2Fmidao$/, { timeout: 60_000 });
+    await page.waitForURL(/\/guide\/login\?next=%2Fmidao$/, { waitUntil: 'commit', timeout: 60_000 });
   });
 
   test('valid Midao HMAC session renders canonical database identity without a banner', async ({ page }) => {
@@ -106,7 +106,7 @@ test.describe('Midao authentication and impersonation on baseline-backed local S
     const endButton = banner.getByRole('button', { name: '結束代入' });
     await expect(endButton).toBeEnabled();
     await endButton.click({ noWaitAfter: true });
-    await page.waitForURL(/\/admin\/guides$/, { timeout: 60_000 });
+    await page.waitForURL(/\/admin\/guides$/, { waitUntil: 'commit', timeout: 60_000 });
   });
 
   test('forged actor cookie rejects the cryptographically bound impersonation session', async ({ page }) => {
@@ -122,7 +122,7 @@ test.describe('Midao authentication and impersonation on baseline-backed local S
       sameSite: 'Lax',
     }]);
     await page.goto('/midao', { waitUntil: 'domcontentloaded' });
-    await page.waitForURL(/\/guide\/login\?next=%2Fmidao$/, { timeout: 60_000 });
+    await page.waitForURL(/\/guide\/login\?next=%2Fmidao$/, { waitUntil: 'commit', timeout: 60_000 });
   });
 
   test('expired actor cookie rejects the cryptographically bound impersonation session', async ({ page }) => {
@@ -133,20 +133,20 @@ test.describe('Midao authentication and impersonation on baseline-backed local S
       issuedAt: Date.now() - (60 * 60 * 1000) - 1,
     });
     await page.goto('/midao', { waitUntil: 'domcontentloaded' });
-    await page.waitForURL(/\/guide\/login\?next=%2Fmidao$/, { timeout: 60_000 });
+    await page.waitForURL(/\/guide\/login\?next=%2Fmidao$/, { waitUntil: 'commit', timeout: 60_000 });
   });
 
   test('ordinary seeded-account UI login clears actor and visible-banner cookies', async ({ page }) => {
     const banner = await beginRealAdminImpersonation(page);
     await banner.getByRole('button', { name: '結束代入' }).click({ noWaitAfter: true });
-    await page.waitForURL(/\/admin\/guides$/, { timeout: 60_000 });
+    await page.waitForURL(/\/admin\/guides$/, { waitUntil: 'commit', timeout: 60_000 });
 
     await setMidaoImpersonationActorCookie(page, {
       guideId: midaoGuide.guideId,
       adminEmail: 'admin@example.invalid',
     });
     await loginMidaoGuideViaUi(page, null);
-    await page.waitForURL(/\/midao\/?$/, { timeout: 60_000 });
+    await page.waitForURL(/\/midao\/?$/, { waitUntil: 'commit', timeout: 60_000 });
     const cookies = await page.context().cookies();
     expect(cookies.some((cookie) => cookie.name === 'midao_impersonation_actor')).toBe(false);
     expect(cookies.some((cookie) => cookie.name === 'guide_impersonation')).toBe(false);
@@ -159,13 +159,13 @@ test.describe('Midao authentication and impersonation on baseline-backed local S
     const { runnerOrigin, escaped } = observeNavigationOrigins(page);
 
     await loginMidaoGuideViaUi(page, '/midao/services?draft=1');
-    await page.waitForURL(/\/midao\/services\?draft=1$/, { timeout: 60_000 });
+    await page.waitForURL(/\/midao\/services\?draft=1$/, { waitUntil: 'commit', timeout: 60_000 });
     expect(new URL(page.url()).origin).toBe(runnerOrigin);
 
     for (const hostile of hostileRedirects) {
       await page.context().clearCookies();
       await loginMidaoGuideViaUi(page, hostile);
-      await page.waitForURL(/\/midao\/?$/, { timeout: 60_000 });
+      await page.waitForURL(/\/midao\/?$/, { waitUntil: 'commit', timeout: 60_000 });
       expect(new URL(page.url()).origin, hostile).toBe(runnerOrigin);
     }
     expect(escaped).toEqual([]);

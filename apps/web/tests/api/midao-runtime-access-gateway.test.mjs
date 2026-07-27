@@ -25,8 +25,8 @@ function cookiePair(setCookie) {
   return setCookie.split(';')[0];
 }
 
-function guideCookieHeader(version = 7, name = 'Public Cookie Name') {
-  return createGuideSessionCookies(guideId, name, version, false)
+function guideCookieHeader(version = 7, name = 'Public Cookie Name', options = {}) {
+  return createGuideSessionCookies(guideId, name, version, false, options)
     .map(cookiePair)
     .join('; ');
 }
@@ -121,7 +121,10 @@ test('valid signed impersonation becomes admin actor bound to target guide', asy
     adminEmail: 'ADMIN@EXAMPLE.COM',
     targetGuideId: guideId,
   }));
-  const request = requestWithCookies(`${guideCookieHeader()}; ${actorPair}`);
+  const request = requestWithCookies(`${guideCookieHeader(7, 'Public Cookie Name', {
+    sessionKind: 'admin-impersonation',
+    maxAgeSeconds: 60 * 60,
+  })}; ${actorPair}`);
   const context = await verifyCanonicalGuideSession(request, {
     requireMode: true,
     runtime: baseRuntime,
