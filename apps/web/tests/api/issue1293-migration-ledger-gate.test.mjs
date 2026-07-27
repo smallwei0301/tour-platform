@@ -34,7 +34,7 @@ function makeFixture({ migrations, ledger }) {
     fs.writeFileSync(path.join(migrationsDir, name), '-- fixture sql\nselect 1;\n');
   }
   const ledgerPath = path.join(dir, 'migration-ledger.json');
-  fs.writeFileSync(ledgerPath, JSON.stringify(ledger, null, 2));
+  fs.writeFileSync(ledgerPath, JSON.stringify({ kind: 'production-migration-apply-ledger', version: 1, ...ledger }, null, 2));
   return { dir, migrationsDir, ledgerPath };
 }
 
@@ -218,6 +218,27 @@ describe('issue #1293 — ledger gate 合約（temp fixture）', () => {
     const cli = runCli({ migrationsDir: fx.migrationsDir, ledgerPath: missingLedger });
     assert.equal(cli.status, 1);
   });
+});
+
+it('verified gate rejects fake ledger identity and fabricated verified or baseline records', async () => {
+  const { checkMigrationLedger } = await import(CHECK_SCRIPT);
+  const valid = record('20260801000000_new_feature.sql', 'verified');
+  const hostileLedgers = [
+    { kind: 'fake-ledger', version: 1, records: [valid] },
+    { kind: 'production-migration-apply-ledger', version: 2, records: [valid] },
+    { kind: 'production-migration-apply-ledger', version: 1, records: [{ filename: valid.filename, status: 'verified' }] },
+    { kind: 'production-migration-apply-ledger', version: 1, records: [{ ...valid, environment: 'staging' }] },
+    { kind: 'production-migration-apply-ledger', version: 1, records: [{ ...valid, operator: '' }] },
+    { kind: 'production-migration-apply-ledger', version: 1, records: [{ ...valid, applied_at: 'not-a-date' }] },
+    { kind: 'production-migration-apply-ledger', version: 1, records: [{ ...valid, note: '' }] },
+    { kind: 'production-migration-apply-ledger', version: 1, records: [record('20991231000000_nonexistent.sql', 'baseline')] },
+  ];
+  for (const ledger of hostileLedgers) {
+    const fx = makeFixture({ migrations: [valid.filename], ledger }); fixtures.push(fx);
+    const result = checkMigrationLedger({ migrationsDir: fx.migrationsDir, ledgerPath: fx.ledgerPath });
+    assert.equal(result.status, 'hold', JSON.stringify(ledger));
+    assert.equal(result.errors.length > 0, true, JSON.stringify(ledger));
+  }
 });
 
 describe('issue #1293 — repo現況verified release gate誠實HOLD', () => {

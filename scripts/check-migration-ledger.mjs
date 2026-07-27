@@ -89,18 +89,40 @@ export function checkMigrationLedger({
     result.errors.push(`無法讀取/解析 ledger ${ledgerPath}: ${err.message}`);
     return result;
   }
-  if (!ledger || !Array.isArray(ledger.records)) {
-    result.errors.push(`ledger 格式不合：records 必須是 array（${ledgerPath}）`);
+  const allowedLedgerKeys = new Set(['kind', 'version', 'description', 'grandfatheredLegacyFiles', 'records']);
+  if (!ledger || typeof ledger !== 'object' || Array.isArray(ledger)
+    || ledger.kind !== 'production-migration-apply-ledger' || ledger.version !== 1
+    || !Array.isArray(ledger.records) || Object.keys(ledger).some((key) => !allowedLedgerKeys.has(key))
+    || ('description' in ledger && (typeof ledger.description !== 'string' || !ledger.description.trim()))) {
+    result.errors.push(`production migration ledger identity/schema invalid（${ledgerPath}）`);
     return result;
   }
 
   const fileSet = new Set(files);
+  if ('grandfatheredLegacyFiles' in ledger) {
+    const names = ledger.grandfatheredLegacyFiles;
+    if (!Array.isArray(names) || new Set(names).size !== names.length
+      || names.some((name) => typeof name !== 'string' || !fileSet.has(name))) {
+      result.errors.push('ledger grandfatheredLegacyFiles invalid');
+      return result;
+    }
+  }
   const recordByFile = new Map();
   let baselineBoundary = null; // 最大的 baseline filename
 
   for (const record of ledger.records) {
-    if (!record || typeof record.filename !== 'string' || !VALID_STATUSES.has(record.status)) {
-      result.errors.push(`ledger record 格式不合：${JSON.stringify(record)}`);
+    const exactKeys = ['applied_at', 'environment', 'filename', 'note', 'operator', 'status'];
+    const timestamp = record?.applied_at;
+    if (!record || typeof record !== 'object' || Array.isArray(record)
+      || JSON.stringify(Object.keys(record).sort()) !== JSON.stringify(exactKeys)
+      || typeof record.filename !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_.-]*\.sql$/u.test(record.filename)
+      || record.filename.endsWith('.rollback.sql') || !fileSet.has(record.filename)
+      || record.environment !== 'production' || !VALID_STATUSES.has(record.status)
+      || typeof record.operator !== 'string' || !record.operator.trim() || record.operator.length > 512 || /[\r\n\0]/u.test(record.operator)
+      || typeof record.note !== 'string' || !record.note.trim() || record.note.length > 8192 || /[\0]/u.test(record.note)
+      || typeof timestamp !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/u.test(timestamp)
+      || !Number.isFinite(Date.parse(timestamp))) {
+      result.errors.push(`ledger record evidence invalid: ${JSON.stringify(record)}`);
       continue;
     }
     if (record.status === 'baseline') {
