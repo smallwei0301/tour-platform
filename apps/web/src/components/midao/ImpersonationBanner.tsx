@@ -12,8 +12,11 @@ interface ImpersonationBannerProps {
 export function ImpersonationBanner({ impersonation: initialImpersonation }: ImpersonationBannerProps = {}) {
   const shouldVerifyOnMount = initialImpersonation === undefined;
   const [impersonation, setImpersonation] = useState<VerifiedImpersonation | null>(initialImpersonation ?? null);
+  const [hydrated, setHydrated] = useState(false);
   const [ending, setEnding] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => setHydrated(true), []);
 
   useEffect(() => {
     if (!shouldVerifyOnMount) return;
@@ -29,7 +32,7 @@ export function ImpersonationBanner({ impersonation: initialImpersonation }: Imp
   }, [shouldVerifyOnMount]);
 
   async function endImpersonation() {
-    if (ending) return;
+    if (ending || !hydrated) return;
     setEnding(true);
     setError('');
     try {
@@ -62,11 +65,11 @@ export function ImpersonationBanner({ impersonation: initialImpersonation }: Imp
       <button
         type="button"
         onClick={endImpersonation}
-        disabled={ending}
+        disabled={ending || !hydrated}
         style={{
           padding: '4px 12px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.6)',
           background: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: 12,
-          fontWeight: 700, cursor: ending ? 'wait' : 'pointer', whiteSpace: 'nowrap',
+          fontWeight: 700, cursor: ending || !hydrated ? 'wait' : 'pointer', whiteSpace: 'nowrap',
         }}
       >
         {ending ? '結束中…' : '結束代入，返回管理後台'}
