@@ -27,6 +27,7 @@ const {
   startLoopbackBridge,
   resolvePinnedPostgrestRuntime,
   createLocalSupabaseApiCredentials,
+  verifyMidaoE2ERuntimeFixtures,
   buildPinnedPostgrestRun,
   buildMidaoE2ELocalConfig,
   prepareDatabaseOnlyWorkdir,
@@ -484,6 +485,44 @@ test('manual browser API uses the pinned PostgREST digest and local-only JWT cre
     assert.throws(() => buildPinnedPostgrestRun({
       expectedProjectId: projectId, runtime, credentials, publishHost,
     }), /POSTGREST_RUN_CONTRACT_INVALID/u);
+  }
+});
+
+test('browser runtime fixture probe validates the exact canonical Midao row and fails closed without leaking credentials', async () => {
+  const serviceRoleKey = `header.payload.${'a'.repeat(43)}`;
+  const calls = [];
+  const fetchImpl = async (url, options) => {
+    calls.push({ url: String(url), options });
+    return {
+      status: 200,
+      async json() {
+        return [{
+          id: '99999999-9999-4999-8999-999999999999',
+          display_name: 'Midao E2E Guide',
+          backend_mode: 'midao',
+          guide_session_version: 1,
+          verification_status: 'approved',
+        }];
+      },
+    };
+  };
+  await assert.doesNotReject(verifyMidaoE2ERuntimeFixtures({
+    apiUrl: 'http://127.0.0.1:54321', serviceRoleKey, fetchImpl,
+  }));
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].url, /^http:\/\/127\.0\.0\.1:54321\/guide_profiles\?/u);
+  assert.equal(calls[0].options.headers.apikey, serviceRoleKey);
+  assert.equal(calls[0].options.headers.authorization, `Bearer ${serviceRoleKey}`);
+
+  for (const [response, expected] of [
+    [{ status: 401, json: async () => ({}) }, /MIDAO_E2E_RUNTIME_FIXTURE_HTTP_401/u],
+    [{ status: 200, json: async () => [] }, /MIDAO_E2E_RUNTIME_FIXTURE_COUNT_0/u],
+    [{ status: 200, json: async () => [{ id: 'wrong' }] }, /MIDAO_E2E_RUNTIME_FIXTURE_INVALID/u],
+  ]) {
+    await assert.rejects(verifyMidaoE2ERuntimeFixtures({
+      apiUrl: 'http://127.0.0.1:54321', serviceRoleKey,
+      fetchImpl: async () => response,
+    }), expected);
   }
 });
 

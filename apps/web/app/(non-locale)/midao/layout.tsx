@@ -11,6 +11,9 @@ export default async function MidaoLayout({ children }: { children: React.ReactN
     headers: { cookie: incoming.get('cookie') || '' },
   });
   const result = await resolveMidaoPageSession(request);
+  if (process.env.MIDAO_E2E_LOCAL === '1' && result.kind !== 'ready') {
+    console.error(`MIDAO_E2E_PAGE_SESSION=${result.reason}`);
+  }
   if (result.kind === 'redirect') redirect(result.location);
   if (result.kind === 'denied') notFound();
 

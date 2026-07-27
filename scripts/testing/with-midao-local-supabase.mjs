@@ -209,6 +209,39 @@ export async function waitForPostgrestApi({ apiUrl, serviceRoleKey, signal, atte
   throw new Error(`POSTGREST_NOT_READY_${lastStatus}`);
 }
 
+export async function verifyMidaoE2ERuntimeFixtures({ apiUrl, serviceRoleKey, signal, fetchImpl = fetch }) {
+  if (!/^http:\/\/127\.0\.0\.1:\d{4,5}$/u.test(apiUrl)
+    || typeof serviceRoleKey !== 'string' || serviceRoleKey.split('.').length !== 3
+    || typeof fetchImpl !== 'function') {
+    throw new Error('MIDAO_E2E_RUNTIME_FIXTURE_CONTRACT_INVALID');
+  }
+  const endpoint = new URL('/guide_profiles', apiUrl);
+  endpoint.searchParams.set('select', 'id,display_name,backend_mode,guide_session_version,verification_status');
+  endpoint.searchParams.set('id', 'eq.99999999-9999-4999-8999-999999999999');
+  const requestSignal = signal
+    ? AbortSignal.any([signal, AbortSignal.timeout(2_000)])
+    : AbortSignal.timeout(2_000);
+  const response = await fetchImpl(endpoint, {
+    headers: { apikey: serviceRoleKey, authorization: `Bearer ${serviceRoleKey}` },
+    signal: requestSignal,
+  });
+  if (response.status !== 200) throw new Error(`MIDAO_E2E_RUNTIME_FIXTURE_HTTP_${response.status}`);
+  let rows;
+  try { rows = await response.json(); } catch { throw new Error('MIDAO_E2E_RUNTIME_FIXTURE_BODY_INVALID'); }
+  if (!Array.isArray(rows) || rows.length !== 1) {
+    throw new Error(`MIDAO_E2E_RUNTIME_FIXTURE_COUNT_${Array.isArray(rows) ? rows.length : 'INVALID'}`);
+  }
+  const row = rows[0];
+  if (!row || Object.keys(row).sort().join(',') !== 'backend_mode,display_name,guide_session_version,id,verification_status'
+    || row.id !== '99999999-9999-4999-8999-999999999999'
+    || row.display_name !== 'Midao E2E Guide'
+    || row.backend_mode !== 'midao'
+    || row.guide_session_version !== 1
+    || row.verification_status !== 'approved') {
+    throw new Error('MIDAO_E2E_RUNTIME_FIXTURE_INVALID');
+  }
+}
+
 export async function verifyPinnedSupabaseBinary() {
   const stat = await fsPromises.lstat(SUPABASE_TOOLCHAIN_BIN);
   if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || (stat.mode & 0o111) === 0) throw new Error('UNSAFE_SUPABASE_TOOLCHAIN');
@@ -1268,6 +1301,12 @@ async function main() {
             serviceRoleKey: credentials.publicEnv.SUPABASE_SERVICE_ROLE_KEY,
             signal: controller.signal,
           });
+          await verifyMidaoE2ERuntimeFixtures({
+            apiUrl,
+            serviceRoleKey: credentials.publicEnv.SUPABASE_SERVICE_ROLE_KEY,
+            signal: controller.signal,
+          });
+          reportStage('runtime-fixture-ready');
           for (const name of ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
             if (typeof localEnv[name] !== 'string' || !localEnv[name]) throw new Error(`MIDAO_E2E_LOCAL_ENV_MISSING:${name}`);
           }

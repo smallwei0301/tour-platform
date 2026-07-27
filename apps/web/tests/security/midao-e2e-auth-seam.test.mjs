@@ -100,6 +100,11 @@ test('transaction-bound canonical seed remains intact and local overlay contains
     "backend_mode = 'midao'",
     "verification_status = 'approved'",
     'guide_session_version = 1',
+    '77777777-7777-4777-8777-777777777777',
+    '00000000-0000-4000-8000-000000000001',
+    'legacy-e2e-guide',
+    'legacy-e2e@example.invalid',
+    "backend_mode = 'legacy'",
   ]) assert.ok(e2eSeedSource.includes(value), `E2E seed overlay missing ${value}`);
   assert.doesNotMatch(e2eSeedSource, /andy-lee/u);
 });

@@ -19,6 +19,8 @@ test('server layout calls the page-session boundary exactly once and composes th
   assert.match(layout, /<MidaoShell/u);
   assert.match(layout, /tokens\.css/u);
   assert.match(layout, /shell\.css/u);
+  assert.match(layout, /MIDAO_E2E_LOCAL === '1'[\s\S]{0,200}MIDAO_E2E_PAGE_SESSION=\$\{result\.reason\}/u);
+  assert.doesNotMatch(layout, /MIDAO_E2E_PAGE_SESSION=\$\{(?:request|incoming|session|cookie)/u);
   assert.doesNotMatch(layout, /getSupabase|guide_profiles/u);
 });
 
