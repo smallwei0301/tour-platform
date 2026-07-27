@@ -215,9 +215,30 @@ export async function verifyMidaoE2ERuntimeFixtures({ apiUrl, serviceRoleKey, si
     || typeof fetchImpl !== 'function') {
     throw new Error('MIDAO_E2E_RUNTIME_FIXTURE_CONTRACT_INVALID');
   }
+  const expectedRows = [
+    {
+      id: '00000000-0000-4000-8000-000000000001',
+      display_name: 'Legacy E2E Guide',
+      guide_email: 'legacy-e2e@example.invalid',
+      guide_password_hash: 'legacy-e2e-local-salt-20260727:d896145fe6dc47d2f618e7c086d5178bbdfbea29a7caa89a561a184f0c722029',
+      backend_mode: 'legacy',
+      guide_session_version: 1,
+      verification_status: 'approved',
+    },
+    {
+      id: '99999999-9999-4999-8999-999999999999',
+      display_name: 'Midao E2E Guide',
+      guide_email: 'midao-e2e@example.invalid',
+      guide_password_hash: 'midao-e2e-local-salt-20260724:d00368494263d0f8b0e57243c336ecc5d8420c1454bf4887b1b7e8d53b2dba35',
+      backend_mode: 'midao',
+      guide_session_version: 1,
+      verification_status: 'approved',
+    },
+  ];
   const endpoint = new URL('/guide_profiles', apiUrl);
-  endpoint.searchParams.set('select', 'id,display_name,backend_mode,guide_session_version,verification_status');
-  endpoint.searchParams.set('id', 'eq.99999999-9999-4999-8999-999999999999');
+  endpoint.searchParams.set('select', 'id,display_name,guide_email,guide_password_hash,backend_mode,guide_session_version,verification_status');
+  endpoint.searchParams.set('id', 'in.(00000000-0000-4000-8000-000000000001,99999999-9999-4999-8999-999999999999)');
+  endpoint.searchParams.set('order', 'id.asc');
   const requestSignal = signal
     ? AbortSignal.any([signal, AbortSignal.timeout(2_000)])
     : AbortSignal.timeout(2_000);
@@ -228,18 +249,14 @@ export async function verifyMidaoE2ERuntimeFixtures({ apiUrl, serviceRoleKey, si
   if (response.status !== 200) throw new Error(`MIDAO_E2E_RUNTIME_FIXTURE_HTTP_${response.status}`);
   let rows;
   try { rows = await response.json(); } catch { throw new Error('MIDAO_E2E_RUNTIME_FIXTURE_BODY_INVALID'); }
-  if (!Array.isArray(rows) || rows.length !== 1) {
+  if (!Array.isArray(rows) || rows.length !== expectedRows.length) {
     throw new Error(`MIDAO_E2E_RUNTIME_FIXTURE_COUNT_${Array.isArray(rows) ? rows.length : 'INVALID'}`);
   }
-  const row = rows[0];
-  if (!row || Object.keys(row).sort().join(',') !== 'backend_mode,display_name,guide_session_version,id,verification_status'
-    || row.id !== '99999999-9999-4999-8999-999999999999'
-    || row.display_name !== 'Midao E2E Guide'
-    || row.backend_mode !== 'midao'
-    || row.guide_session_version !== 1
-    || row.verification_status !== 'approved') {
-    throw new Error('MIDAO_E2E_RUNTIME_FIXTURE_INVALID');
-  }
+  const expectedKeys = Object.keys(expectedRows[0]).sort().join(',');
+  const valid = rows.every((row, index) => row
+    && Object.keys(row).sort().join(',') === expectedKeys
+    && Object.entries(expectedRows[index]).every(([key, value]) => row[key] === value));
+  if (!valid) throw new Error('MIDAO_E2E_RUNTIME_FIXTURE_INVALID');
 }
 
 export async function verifyPinnedSupabaseBinary() {

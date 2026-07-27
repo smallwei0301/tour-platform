@@ -488,7 +488,7 @@ test('manual browser API uses the pinned PostgREST digest and local-only JWT cre
   }
 });
 
-test('browser runtime fixture probe validates the exact canonical Midao row and fails closed without leaking credentials', async () => {
+test('browser runtime fixture probe validates exact Midao and legacy login rows and fails closed without leaking credentials', async () => {
   const serviceRoleKey = `header.payload.${'a'.repeat(43)}`;
   const calls = [];
   const fetchImpl = async (url, options) => {
@@ -496,13 +496,26 @@ test('browser runtime fixture probe validates the exact canonical Midao row and 
     return {
       status: 200,
       async json() {
-        return [{
-          id: '99999999-9999-4999-8999-999999999999',
-          display_name: 'Midao E2E Guide',
-          backend_mode: 'midao',
-          guide_session_version: 1,
-          verification_status: 'approved',
-        }];
+        return [
+          {
+            id: '00000000-0000-4000-8000-000000000001',
+            display_name: 'Legacy E2E Guide',
+            guide_email: 'legacy-e2e@example.invalid',
+            guide_password_hash: 'legacy-e2e-local-salt-20260727:d896145fe6dc47d2f618e7c086d5178bbdfbea29a7caa89a561a184f0c722029',
+            backend_mode: 'legacy',
+            guide_session_version: 1,
+            verification_status: 'approved',
+          },
+          {
+            id: '99999999-9999-4999-8999-999999999999',
+            display_name: 'Midao E2E Guide',
+            guide_email: 'midao-e2e@example.invalid',
+            guide_password_hash: 'midao-e2e-local-salt-20260724:d00368494263d0f8b0e57243c336ecc5d8420c1454bf4887b1b7e8d53b2dba35',
+            backend_mode: 'midao',
+            guide_session_version: 1,
+            verification_status: 'approved',
+          },
+        ];
       },
     };
   };
@@ -517,7 +530,7 @@ test('browser runtime fixture probe validates the exact canonical Midao row and 
   for (const [response, expected] of [
     [{ status: 401, json: async () => ({}) }, /MIDAO_E2E_RUNTIME_FIXTURE_HTTP_401/u],
     [{ status: 200, json: async () => [] }, /MIDAO_E2E_RUNTIME_FIXTURE_COUNT_0/u],
-    [{ status: 200, json: async () => [{ id: 'wrong' }] }, /MIDAO_E2E_RUNTIME_FIXTURE_INVALID/u],
+    [{ status: 200, json: async () => [{ id: 'wrong' }] }, /MIDAO_E2E_RUNTIME_FIXTURE_COUNT_1/u],
   ]) {
     await assert.rejects(verifyMidaoE2ERuntimeFixtures({
       apiUrl: 'http://127.0.0.1:54321', serviceRoleKey,
