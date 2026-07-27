@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-27 08:18 CST｜負責 session：Canary／2026-07-24
+> 最後更新：2026-07-27 09:55 CST｜負責 session：Canary／2026-07-24
 
 ## 目標
 建立Midao runtime foundation、responsive shell與catalog-verified as-built database baseline。既有production只走post-cutoff additive migrations；fresh環境走platform→baseline→post-cutoff→seed→catalog exact comparison。所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -112,10 +112,13 @@
 - Task 10 fresh review首輪有效verdict FAIL blocking 1：metadata只驗shape且未重算content-derived transaction ID。以舊碼payload opens=2的RED補exact 7-history、6 migration filenames/digests與transaction derivation pre-open gate；remediation納入`ca3024ea8f52d41c62e05b6b72dee74d6aa4418c`、tree `b45bf21cf698655d0987ada7a82ec08efd009beb`。Artifact `3/3 PASS`、combined affected regression `32/32 PASS`、fresh exact remediation review PASS blocking 0。
 - 2026-07-27 Task 11 fresh-install lane完成：commit `51061da910002fe8b6d1a39f8a82df946ed7b10a`；pinned Node22.23.1／Supabase CLI2.87.2，先驗capture＋expected transactions，再走owned loopback PG17、單一baseline marker＋6支post-cutoff＋deterministic non-secret seed、exact 7-history與terminal exact compare。Actual runner exit0，capture transaction `c90dfe6ce32f77010354615795df95c085f16f53f8a830ac8553196b5d178e13`、expected transaction `05b445553141f945e50682aac56252b47eaee024e67d6f74f3bec9903c8e4fde`；runtime residue 0、heavy staged evidence PASS。
 - Task 11 fresh review首輪FAIL blocking 1：capture A與expected/capture B間存在publication swap窗口。新增舊碼會進materialize的RED，於expected adapter return前及orchestrator materialize前雙重核對capture transaction／manifest digest，mismatch先dispose並HOLD。修正同樣落在`ca3024ea8f52d41c62e05b6b72dee74d6aa4418c`；fresh actual heavy重跑PASS、latest exact remediation review PASS blocking 0。未push／PR／merge／production migration apply。
+- 2026-07-27 Task 12 existing-upgrade lane完成：checkpoint `e8bc74e2ff4bbc1698ad24126958b5c77c591b1e`，occupied cutoff-shaped local PG17 fixture建立128支pre-cutoff history；upgrade boundary後baseline execution count=0，只套exact 6支post-cutoff，terminal catalog逐byte等於published expected-terminal，history總數134且無synthetic marker，runtime／Docker／workdir residue 0。Fresh review首輪FAIL去重4項：materializer transaction未綁先驗capture、setup失敗可能殘留run parent、remote URL可能在loopback驗證前進DELETE、terminal bytes錯誤路徑未zero。四項均先補舊碼RED，再由remediation `ed563679ad220c02ae66568f7d3d3587e52f99fe`／tree `58efd61456adfefc6d5a67d6449b17bc22ee84a0`修正；contract `7/7 PASS`、actual PG17與ordinary／heavy staged evidence重跑PASS、residue 0，latest fresh narrow review PASS blocking 0。
+- 2026-07-27 Task 13 migration gates完成：source mode在PR／local驗capture→expected transaction及A→B binding後，驗128 frozen bytes與6支pinned post-cutoff source；verified mode在push/main、schedule、manual release lane讀獨立production apply ledger。Repo真實狀態仍因6支Midao尚未套production而HOLD，未把source PASS冒充production verified。Initial commit `28ec52ae698a57f65ca5f0a4609c9f8c514c30da`／tree `421935c32a05b64d8acac5a3ac950193aa16e194` focused `19/19 PASS`。
+- Task 13 fresh review首輪FAIL blocking 1：verified mode只信filename＋status，fake verified／baseline可授權release。有效RED證實fake kind原本被判verified；remediation `fffc926801c0e58a4baa16d1f3282725afacd95d`／tree `eec745415bf9e43018b0a6ead64386f52aabb643`加入production ledger kind/version、strict top-level schema、exact production evidence fields、存在的migration identity與hostile fake/incomplete/nonproduction/bad timestamp/fake baseline tests。Focused `20/20 PASS`、staged evidence/check-only PASS，latest fresh narrow review PASS blocking 0。
 
 ## 下一步
-- Task 12 existing-lane actual：建立occupied cutoff-shaped local PG17 fixture，只在fixture setup執行synthetic cutoff，upgrade階段baseline execution count必為0；套6支post-cutoff後獨立exact compare expected-terminal並證明fresh↔existing等價。
-- Task 13–15及Foundation E4、Dashboard、#1757–#1761與full browser acceptance依roadmap接續；Task 10／11完成不代表整體Goal完成。
+- Task 14 baseline-backed D3／Midao E2E／legacy E2E：雙transaction verifier必須在任何baseline／seed／E2E payload open前PASS；刪除synthetic bootstrap，使用Task 9 materializer並保留owned local lifecycle。
+- Task 15 final regression／review／雙寫後，Foundation E4、Dashboard、#1757–#1761與full browser acceptance依roadmap接續；Tasks 12／13完成不代表整體Goal完成。
 
 ## 絕不重做（Do-NOT-redo）
 - 不重跑或重審完整plan／A4／Phase B／Phase C／D1–D3a：對應anchors均已有fresh PASS；D3a final為`8a70f79e`。下一步只進D3b。
