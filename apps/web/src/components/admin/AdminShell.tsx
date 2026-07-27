@@ -43,14 +43,26 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     void fetch('/api/admin/auth/csrf', { cache: 'no-store' });
 
     const originalFetch = window.fetch.bind(window);
-    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const method = (init?.method || 'GET').toUpperCase();
       const isMutation = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-      const isAdminApi = url.startsWith('/api/admin/');
+      // middleware 的 CSRF 雙提交同時守 /api/admin/** 與 /api/v2/admin/**（shouldRequireCsrf），
+      // patch 兩者都要涵蓋——先前漏了 v2，導遊代入等 v2 寫入在 cookie 失效時直接 403。
+      const isAdminApi = url.startsWith('/api/admin/') || url.startsWith('/api/v2/admin/');
 
       if (isMutation && isAdminApi) {
-        const token = readCsrfTokenFromCookie();
+        let token = readCsrfTokenFromCookie();
+        if (!token) {
+          // tp_csrf 壽命 24h，且行動瀏覽器從記憶體還原分頁不會重跑 mount priming；
+          // cookie 失效時就地補發，否則整個 admin 後台的寫入操作都會 CSRF 403。
+          try {
+            await originalFetch('/api/admin/auth/csrf', { cache: 'no-store' });
+          } catch {
+            // 補發失敗就照原樣送出，由伺服器回報錯誤
+          }
+          token = readCsrfTokenFromCookie();
+        }
         const headers = new Headers(init?.headers || {});
         if (token && !headers.get('x-csrf-token')) headers.set('x-csrf-token', token);
         return originalFetch(input, { ...init, headers });
