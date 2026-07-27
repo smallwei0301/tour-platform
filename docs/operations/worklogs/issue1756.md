@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-27 22:01 CST｜負責 session：Canary／2026-07-24
+> 最後更新：2026-07-27 22:47 CST｜負責 session：Canary／2026-07-24
 
 ## 目標
 建立Midao runtime foundation、responsive shell與catalog-verified as-built database baseline。既有production只走post-cutoff additive migrations；fresh環境走platform→baseline→post-cutoff→seed→catalog exact comparison。所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -124,11 +124,16 @@
 - 第一輪new browser run `proc_6c71aa7ca32c`在4GB host以41個serial tests cold compile，20分鐘timeout後exit `-9`，只跑到第10案；不宣稱PASS。SIGKILL落在cleanup後段，read-back發現exact-owned network/volume與Next process group殘留；已核對label/name/cwd/pgid後只清該project，最終containers/networks/volumes/process皆0。第二輪將相同逐案assertions整併為12 tests；`proc_59b22e1391d3`在available memory約429MB、swap使用3.56GB時連續兩次Playwright worker recycle，判定local 4GB lane INCONCLUSIVE後主動終止。再次以exact label/name read-back清除單一project network/volume，containers/networks/volumes/process最終皆0；new-HEAD browser authority改由GitHub Actions。
 - New-HEAD typecheck diagnostic：普通Node22與等價strict `env -i` child皆PASS，但CI recorder穩定exit1。只讀spawn hook定位其PATH把validated npm realpath dir排在`/usr/local/bin`前，nested workspace `npm run`誤抓internal shim並尋找不存在的`node/bin/node_modules/npm/bin/npm-prefix.js`。先改test取得RED，再將PATH固定為validated Node dir→system dirs→npm realpath fallback；runner unit `25/25 PASS`。Clean checkpoint `35b6952a6dd0a3c363078612eaae4c71aad5c240`／tree `080409237ab2991730872c254d7331d5140086f5`的isolated-parent recorder重跑exit0，evidence/log digest read-back PASS。
 - First new-SHA CI：migration source、production drift、probe、scan、smoke成功；`test`在4787 tests中`4781 PASS／3 FAIL／3 skipped`。兩項為新增`sessionKind`後的legacy exact fixture/expectation未更新，已修且affected `12/12 PASS`；第三項是fresh reviews尚未blocking 0時final gate正確HOLD，未冒充產品回歸。
-- First new-SHA browser run `30271913354`：真baseline-backed stack中F9 mobile/desktop、真admin positive、forged/expired actor、negative admin matrix等`10 PASS`；2 FAIL均在guide UI helper。Trace/log證實hydration前click走原生`GET /guide/login?`，safe next已到正確URL但default load wait超時，且Next 1024MB memory watcher重啟。Remediation：login page先等`networkidle`、URL gate只等`commit`、CI Next heap 2048MB而4GB local維持1024MB；Playwright compile/list 12 tests、affected Node `12/12 PASS`，待new SHA CI。
+- First new-SHA browser run `30271913354`：真baseline-backed stack中F9 mobile/desktop、真admin positive、forged/expired actor、negative admin matrix等`10 PASS`；2 FAIL均在guide UI helper。Trace/log證實hydration前click走原生`GET /guide/login?`，safe next已到正確URL但default load wait超時，且Next 1024MB memory watcher重啟。Remediation：login page先等`networkidle`、URL gate只等`commit`、CI Next heap 2048MB而4GB local維持1024MB；Playwright compile/list 12 tests、affected Node `12/12 PASS`。
+- Remediation checkpoint `6e4b35e56d6cb418846df8b5249f52047d35f56a` CI browser run `30273128961`／job `90000390105`：baseline-backed F9/F10 **12/12 PASS**。同SHA migration source、production drift、scan、smoke、probe皆SUCCESS；ordinary full test為`4783 PASS／1 FAIL／3 skipped`，唯一FAIL是final evidence gate在fresh review文字尚未blocking 0時正確HOLD。
+- F9 acceptance hardening保留完整RED鏈：`35b6952a` review指出safe-area `>=0`與程式`.focus()`無判別力；`5e5aeda4`加入loaded CSSOM與真Tab後，run `30275058705`為`11 PASS／1 FAIL`，trace證實desktop「需求」位於全站header後第15個tab stop；`3f247851`改用可見tabbables＋1完整有界循環，run `30275629474`／job `90008847122`為`12/12 PASS`。其fresh acceptance再指出全域CSS regex可被重複declaration遮蔽；final checkpoint `b74d19ec3c0563b0ef95c234b88835c0477ed9a9`改成`:root`、theme、bottom-nav、content、header、sidebar各自selector-bound rule matrix，14項逐一mutation皆RED。
+- Final exact-head browser authority：`b74d19ec3c0563b0ef95c234b88835c0477ed9a9` GitHub Actions run `30276271486`／job `90011033285`，baseline-backed F9/F10 **12/12 PASS**；migration source、production drift、probe、smoke、scan與Vercel全部SUCCESS。Ordinary full test仍為`4783 PASS／1 FAIL／3 skipped`，唯一FAIL是本次final docs publication前的evidence gate HOLD。
+- Fresh reviews（exact `b74d19ec3c0563b0ef95c234b88835c0477ed9a9`）：SECURITY／QUALITY **PASS，blocking=0**；SPEC／ACCEPTANCE **PASS，blocking=0**。兩者均read-only核對auth雙向綁定、runner no-adopt、recorder isolation、F9 selector-bound safe-area／真Tab與F10真實positive／hostile matrices；production ledger缺六筆明確分離為release HOLD。
+- Publication docs寫入後本機Node22 final gate `2/2 PASS`，CI同集合 `npm run test -w @tour/web`為`4784 PASS／0 FAIL／3 skipped`（4787 tests，exit0）；相較publication前CI唯一final-docs gate FAIL已轉GREEN。
 - Remaining HOLD：owner已授權commit／push／PR／CI，但**merge HOLD：未授權**；production apply ledger仍缺exact六支post-cutoff verified records，push/main release gate會HOLD。本PR未執行production DDL/DML或deploy；production drift PASS不等於migration ledger verified。
 ## 下一步
-- 完成new-HEAD GitHub Actions 12-case Midao browser gate；實際FAIL就依CI trace逐案修，exit0後重跑legacy、G1–G4與final gate。
-- 建立new-HEAD checkpoint、push PR #1766、取CI evidence，再做fresh SECURITY＋ACCEPTANCE re-review；blocking未歸零不勾Task 15、不merge。
+- Publication docs寫入final exact SHA／CI／fresh review後，重跑final gate、ordinary full test與CI recorder G4；全部exit0才提交final evidence checkpoint。
+- Push final evidence checkpoint並讀回PR #1766 exact head、checks與checklist；未獲merge授權，不merge。
 - Production六支migration apply/ledger需要獨立owner授權與真實operator evidence；不得由schema drift或local rehearsal推論已apply。
 
 ## 絕不重做（Do-NOT-redo）

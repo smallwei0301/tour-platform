@@ -1,6 +1,6 @@
 # Issue #1756 — Midao Foundation + Shell TDD Micro-plan
 
-> **Status:** Review remediation active；merge／release HOLD。F9/F10、actor binding與runner ownership修正正在新HEAD重驗；production verified ledger仍缺六支post-cutoff records。
+> **Status:** Code／F9／F10／fresh reviews PASS；merge／production release HOLD。Exact `b74d19ec3c0563b0ef95c234b88835c0477ed9a9` browser 12/12 PASS、fresh reviews blocking=0；publication docs與G4 final rerun進行中。Production verified ledger仍缺六支post-cutoff records。
 >
 > **Execution skill:** `subagent-driven-development`; one fresh implementer per task, then independent spec and quality review.
 >
@@ -1452,8 +1452,9 @@ Fresh spec reviewer逐條核對#1756 AC、read-back migration/runtime guard/acto
 - Known security drift：`known_drift`，59 tables／354 ACL entries；此artifact不是security approval，也未被baseline exclusion隱藏。
 - GitHub Actions run `30263368122`／job `89969021451`：portable infrastructure `162/162 PASS`；Midao baseline browser `10/10 PASS`；legacy login compatibility `3/3 PASS`。同SHA CI test、smoke、probe、scan、migration contracts/drift與Vercel全部SUCCESS。
 - Exact cloud argv：`timeout --signal=TERM --kill-after=30s 600s node scripts/testing/run-ordinary-web-tests.mjs --portable-infrastructure`；`timeout --signal=TERM --kill-after=30s 1200s bash scripts/testing/run-midao-e2e.sh apps/web/e2e/midao-navigation.spec.ts apps/web/e2e/midao-auth-and-impersonation.spec.ts`；`timeout --signal=TERM --kill-after=30s 1200s bash scripts/testing/run-midao-legacy-e2e-compat.sh apps/web/e2e/t1-login.spec.ts`。
-- Task 15 final gate：`apps/web/tests/unit/midao-baseline-final-gate.test.mjs`先驗capture＋expected-terminal及cross-binding才讀evidence；hostile journal／ledger在evidence read前HOLD。TDD RED為`1/2 FAIL`（缺final docs anchors），hostile path `1/1 PASS`。
-- Fresh reviews（exact `54cee346b2797a89cd6c1cf6b15b5a22c218c6f7`）：SECURITY／ACCEPTANCE皆FAIL。Blocking：actor cookie消失後impersonation token降級、start-failure可收編既存Docker資源、F9/F10 browser matrix未完整。Dirty remediation已加入domain-separated impersonation token、pre-start residue gate與完整F9/F10；新HEAD re-review仍PENDING。
+- Task 15 final gate：`apps/web/tests/unit/midao-baseline-final-gate.test.mjs`先驗capture＋expected-terminal及cross-binding才讀evidence；hostile journal／ledger在evidence read前HOLD。TDD RED為`1/2 FAIL`（缺final docs anchors），hostile path `1/1 PASS`；publication docs寫入後focused `2/2 PASS`，ordinary full suite `4784 PASS／0 FAIL／3 skipped`（4787 tests，exit0）。
+- Fresh reviews（exact `b74d19ec3c0563b0ef95c234b88835c0477ed9a9`）：SECURITY／QUALITY **PASS，blocking=0**；SPEC／ACCEPTANCE **PASS，blocking=0**。Auth雙向綁定、runner pre-start no-adopt、recorder isolation、F9 selector-bound 14項safe-area mutation matrix＋真Tab及F10真admin／guide positive與完整hostile redirect matrix均無code blocker。
+- Exact-head GitHub Actions run `30276271486`／job `90011033285`：baseline-backed F9/F10 browser `12/12 PASS`。同SHA migration source contracts、production schema drift、probe、smoke、scan與Vercel全部SUCCESS；ordinary full test在publication docs前為`4783 PASS／1 FAIL／3 skipped`，唯一FAIL是final evidence gate正確等待上述review anchors。
 - Remaining HOLD：merge未授權；production apply ledger缺exact六支post-cutoff verified records，push/main release gate會HOLD。本PR未執行production DDL/DML或deploy。
 
 ## Definition of Done for #1756
@@ -1466,16 +1467,16 @@ Fresh spec reviewer逐條核對#1756 AC、read-back migration/runtime guard/acto
 - [x] backend mode switch atomically updates mode/version/audit/outbox；fresh same-mode無business side effect；function只授權service_role。
 - [x] durable idempotency schema exists and is service-role-only。
 - [x] canonical guard checks HMAC/DB display_name/version/status/mode/flags。
-- [ ] signed impersonation actor survives into route context；cross-protocol/forgery denied；普通登入與logout清cookies。（新domain-separated remediation待browser／fresh review）
+- [x] signed impersonation actor survives into route context；cross-protocol/forgery denied；普通登入與logout清cookies。Exact `b74d19ec` auth regression＋browser PASS。
 - [x] forward mode switch default-off且受獨立gate；rollback不受flags阻擋。
-- [ ] guide login與admin impersonation `redirectTo`都由real UI consume，safe same-realm與hostile/malformed/encoded/cross-realm browser matrix必跑；unsafe paths fail closed且browser origin不離開runner-owned localhost。（新F10待heavy evidence）
+- [x] guide login與admin impersonation `redirectTo`都由real UI consume，safe same-realm與hostile/malformed/encoded/cross-realm browser matrix必跑；unsafe paths fail closed且browser origin不離開runner-owned localhost。Exact browser 12/12 PASS。
 - [x] `/midao` server layout does not depend on frozen middleware。
-- [ ] E2E uses real HMAC and seeded local DB row，no production bypass；Midao specs與unflagged legacy managed-server `t1-login.spec.ts`真browser gate都PASS。（新HEAD待重跑）
-- [ ] five routes work on mobile/desktop with accessible shell。（新F9待heavy evidence）
+- [x] E2E uses real HMAC and seeded local DB row，no production bypass；Midao specs exact-head `12/12 PASS`，unflagged legacy managed-server `t1-login.spec.ts` `3/3 PASS`。
+- [x] five routes work on mobile/desktop with accessible shell；390×844／1440×1000、selector-bound safe-area與真Tab／focus-visible／Enter exact-head browser PASS。
 - [ ] G1–G4 actual commands exit 0，包含full suite與CI-recorder lint/typecheck/build；每條有獨立sanitized evidence，CI child使用rebuilt PATH/fixed locale/empty HOME且user/global npmrc disabled。（新HEAD待重跑）
 - [x] Staged evidence orchestrator分離exact child argv與derived semantic command；同tree evidence bundle覆蓋所有staged tests，拒絕untracked/unstaged code、unrelated-only tests與manifest drift。
-- [ ] Local Supabase runner持全repo排他lock、核對owned identity、redact logs且只stop owned stack；Playwright不reuse existing server。（pre-start residue remediation待fresh review）
+- [x] Local Supabase runner持全repo排他lock、核對owned identity、redact logs且只stop owned stack；Playwright不reuse existing server。Pre-start container/network/volume residue gate no-adopt／no-cleanup fresh review PASS。
 - [x] ACL catalog、RLS policy catalog與temporary probe DML三層runtime驗證PASS。
-- [ ] Independent spec＋quality reviews PASS。
-- [ ] Worklog/issue contain exact commands、exit codes、commit SHA、remaining blockers。
-- [ ] No push/PR/merge/deploy/production mutation without separate authorization。
+- [x] Independent spec＋quality reviews PASS；exact `b74d19ec`兩路fresh review均blocking=0。
+- [ ] Worklog/issue contain exact commands、exit codes、commit SHA、remaining blockers。（final G4與PR雙寫待完成）
+- [x] No push/PR/merge/deploy/production mutation without separate authorization；commit／push／PR／CI已授權，merge／deploy／production mutation仍HOLD。
