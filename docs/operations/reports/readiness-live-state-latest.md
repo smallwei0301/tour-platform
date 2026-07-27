@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-07-26T06:01:52.700Z -->
+<!-- query_timestamp: 2026-07-27T06:08:47.488Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-26T06:01:52.700Z  
-**Commit SHA:** `32f7757d5791c702604d516890cc35c152e4baf2`
+**Query timestamp:** 2026-07-27T06:08:47.488Z  
+**Commit SHA:** `e1ec953d2e1d03c06204a0711c2f76191d3b3c51`
 
 ---
 
@@ -25,7 +25,7 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (55 total)
+## Open Issues (56 total)
 
 ### P0 (0)
 
@@ -69,10 +69,11 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (13)
+### P2 (14)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1765 | [[QA] Daily test checklist for recent merged PRs 2026-07-27 (no recent merged PRs)](https://github.com/smallwei0301/tour-platform/issues/1765) | triaged, priority:P2, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, auth, infra, admin |
 | #1764 | [[QA] Daily test checklist for recent merged PRs 2026-07-26 (no recent merged PRs)](https://github.com/smallwei0301/tour-platform/issues/1764) | triaged, priority:P2, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, auth, infra, admin |
 | #1706 | [[QA] Daily test checklist for recent merged PRs 2026-07-13 (no recent merged PRs)](https://github.com/smallwei0301/tour-platform/issues/1706) | triaged, priority:P2, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, auth, infra, admin |
 | #1670 | [[Frontend Daily Check] 2026-07-09 health check failures](https://github.com/smallwei0301/tour-platform/issues/1670) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:ready, traveler-booking |
