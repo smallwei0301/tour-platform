@@ -34,6 +34,9 @@ test('CI provisions only the digest-bound Supabase CLI and required Docker image
 
 test('CI runs real Midao and legacy browser gates with independent hard timeouts', () => {
   const source = workflowSource();
+  assert.match(source, /sudo git config --global --add safe\.directory "\$GITHUB_WORKSPACE"/u);
+  assert.match(source, /sudo env -i HOME=\/root PATH="\$PATH" CI=1 NODE22_BIN="\$NODE_BIN"/u);
+  assert.doesNotMatch(source, /sudo\s+(?:-E|--preserve-env)/u);
   assert.match(source, /timeout --signal=TERM 1200s bash scripts\/testing\/run-midao-e2e\.sh/u);
   assert.match(source, /apps\/web\/e2e\/midao-navigation\.spec\.ts/u);
   assert.match(source, /apps\/web\/e2e\/midao-auth-and-impersonation\.spec\.ts/u);
