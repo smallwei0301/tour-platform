@@ -349,6 +349,21 @@ describe('GH-1286 migration-drift-detect CI workflow', () => {
     );
   });
 
+  it('pull requests run source contracts but never query production apply state', () => {
+    const content = readText(WORKFLOW);
+    const driftJob = content.split(/^  drift-detect:\s*$/mu)[1] ?? '';
+    assert.match(
+      driftJob,
+      /^    if:\s*github\.event_name != 'pull_request'\s*$/mu,
+      'production drift job must be skipped on pull_request; new migrations cannot be required in production before merge/apply authorization',
+    );
+    assert.match(
+      content,
+      /^  source-contract:\s*$/mu,
+      'pull_request source-contract job must remain present',
+    );
+  });
+
   it('drift fail-gate does NOT use || true to swallow verify exit code (behaviour lock)', () => {
     // Behaviour assertion: the run block must not use || true after the verify command,
     // which would set verify_exit=0 regardless of real outcome and silently skip the gate.

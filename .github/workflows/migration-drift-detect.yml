@@ -67,6 +67,10 @@ jobs:
 
   drift-detect:
     name: Production schema drift detection
+    # Pull requests may introduce migrations that are intentionally not applied
+    # to production until after review and explicit owner authorization. PRs run
+    # source-contract checks above; live production drift remains a main/scheduled/manual gate.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     # Only run when credentials are available (secrets cannot be exposed for
     # untrusted PR forks — drift detection is best-effort on forks).
