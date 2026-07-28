@@ -72,7 +72,8 @@ test('actual fixture binds materializer transaction and rolls back setup failure
           return { dev: 1, ino: 2, uid: 0, nlink: 1, mode: 0o40700, isDirectory: () => true };
         },
         rmdir: async () => calls.push('rmdir'),
-        materialize: async () => {
+        materialize: async (options) => {
+          assert.equal(options.postCutoffManifest.captureTransactionId, 'a'.repeat(64));
           if (scenario === 'materialize-failure') throw new Error('MATERIALIZE_FAIL');
           return { transactionId: 'f'.repeat(64), cleanup: async () => calls.push('cleanup-materialized') };
         },
@@ -102,6 +103,33 @@ test('terminal bytes are zeroed when validation or history extraction fails', as
     useAdminFn: async () => { throw new Error('history must not run'); },
   }), /VALIDATE_FAIL/u);
   assert.equal(bytes.every((value) => value === 0), true);
+});
+
+test('existing terminal requires all 128 frozen migrations plus the exact seven-entry post-cutoff suffix', async () => {
+  const api = await subject();
+  const frozen = Array.from({ length: 128 }, (_, index) => ({
+    version: (10_000_000_000_000n + BigInt(index)).toString(),
+    name: `frozen_${index}`,
+  }));
+  const postCutoff = [
+    '20260723000000', '20260723001000', '20260723002000', '20260723002500',
+    '20260723003000', '20260723003500', '20260723004000',
+  ].map((version) => ({ version, name: `midao_${version}` }));
+  const result = await api.__internal.extractExistingTerminal('postgresql://postgres:***@127.0.0.1:54322/postgres', {
+    extractCatalogFn: async () => ({}),
+    normalizeFn: () => '{}',
+    validateFn: () => {},
+    useAdminFn: async () => [...frozen, ...postCutoff],
+  });
+  assert.equal(result.history.length, 135);
+  result.terminalBytes.fill(0);
+
+  await assert.rejects(api.__internal.extractExistingTerminal('postgresql://postgres:***@127.0.0.1:54322/postgres', {
+    extractCatalogFn: async () => ({}),
+    normalizeFn: () => '{}',
+    validateFn: () => {},
+    useAdminFn: async () => [...frozen, ...postCutoff.slice(0, -1)],
+  }), /exact history/iu);
 });
 
 test('upgrade requires an occupied cutoff fixture and executes no baseline during upgrade', async () => {

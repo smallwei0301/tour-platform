@@ -10,7 +10,9 @@ on:
       - 'apps/web/playwright.config.ts'
       - 'apps/web/src/lib/guide-auth.ts'
       - 'apps/web/src/lib/guide-session-crypto.ts'
+      - 'apps/web/src/lib/db-midao-requests.mjs'
       - 'apps/web/src/lib/midao/**'
+      - 'apps/web/tests/api/midao-*.test.mjs'
       - 'apps/web/tests/integration/midao-*.test.mjs'
       - 'apps/web/tests/security/midao-e2e-auth-seam.test.mjs'
       - 'apps/web/tests/unit/midao-*.test.mjs'
@@ -40,7 +42,7 @@ jobs:
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.23.1'
           cache: npm
 
       - name: Install dependencies
@@ -108,6 +110,28 @@ jobs:
           provision db
           provision api
 
+      - name: Build deterministic expected-terminal artifacts
+        run: >-
+          timeout --signal=TERM --kill-after=30s 1200s
+          node scripts/database-baseline/build-expected-terminal.mjs
+          --runs 2
+          --baseline supabase/baselines/v1
+          --publish-dir supabase/baselines/v1
+          --capture-ledger docs/operations/baseline-ledger.json
+          --ledger docs/operations/expected-terminal-ledger.json
+
+      - name: Upload deterministic expected-terminal artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: midao-expected-terminal-${{ github.sha }}
+          path: |
+            supabase/baselines/v1/manifest.json
+            supabase/baselines/v1/catalog.expected-terminal.normalized.json
+            supabase/baselines/v1/catalog-expected-terminal.sha256
+            docs/operations/expected-terminal-ledger.json
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Install Playwright Chromium
         working-directory: apps/web
         run: npx playwright install --with-deps chromium
@@ -117,6 +141,12 @@ jobs:
           NODE_ENV: test
           GUIDE_SESSION_SECRET: ci-guide-session-secret-0123456789abcdef
         run: timeout --signal=TERM --kill-after=30s 600s node scripts/testing/run-ordinary-web-tests.mjs --portable-infrastructure
+
+      - name: Run Task14 PostgreSQL and PostgREST request contracts
+        run: >-
+          timeout --signal=TERM --kill-after=30s 1200s
+          node scripts/testing/with-midao-local-supabase.mjs --postgrest
+          apps/web/tests/integration/midao-requests-postgrest.test.mjs
 
       - name: Run baseline-backed Midao browser gate
         run: >-

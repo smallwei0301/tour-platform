@@ -85,6 +85,8 @@ test('managed Midao Playwright lane is explicit, local-only, non-reusing, and se
   for (const runner of ['run-midao-e2e.sh', 'run-midao-legacy-e2e-compat.sh']) {
     const source = readFileSync(resolve(repoRoot, 'scripts/testing', runner), 'utf8');
     assert.match(source, /e2e\//u);
+    assert.match(source, /command -v node/u);
+    assert.match(source, /--version[\s\S]*v22\.23\.1/u);
     assert.doesNotMatch(source, /PLAYWRIGHT_NO_WEBSERVER=1/u);
   }
 });

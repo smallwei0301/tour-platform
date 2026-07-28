@@ -142,7 +142,7 @@ const EXPECTED_TERMINAL_DIGEST_KEYS = Object.freeze([...EXPECTED_TERMINAL_PAYLOA
 const EXPECTED_TERMINAL_MANIFEST_NAME = 'manifest.json';
 const EXPECTED_TERMINAL_HISTORY = Object.freeze([
   '00000000000001', '20260723000000', '20260723001000', '20260723002000',
-  '20260723002500', '20260723003000', '20260723003500',
+  '20260723002500', '20260723003000', '20260723003500', '20260723004000',
 ]);
 const EXPECTED_TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: '20260723000000_midao_backend_mode.sql', sha256: 'fe108aa5ca68f135f49e22cbb5074941ce8ff5464a6d91a56f9f4cbdae437b17' }),
@@ -151,6 +151,7 @@ const EXPECTED_TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: '20260723002500_midao_audit_events.sql', sha256: '62fa29d6d4d8fe119867ef05e69eba465f52b5cfa2ca96bddd83e93da9b9bcca' }),
   Object.freeze({ filename: '20260723003000_midao_atomic_backend_mode_switch.sql', sha256: 'c59afc5ee72da4d76ae77fb984db4b34d8f160198544ba233d0fb9f2190c90e5' }),
   Object.freeze({ filename: '20260723003500_midao_service_role_acl_hardening.sql', sha256: 'f16fd369b9ce0b405c38ec2df5a46676cc84ba2de087b3b010cc00e4415353e5' }),
+  Object.freeze({ filename: '20260723004000_midao_request_read_projection.sql', sha256: '36edefe11432f36088ddbb52e461c8d7b5bf6a7b3edfea6bf48cd51d42a21917' }),
 ]);
 
 export function validateExpectedTerminalManifest(manifest) {

@@ -833,9 +833,9 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
 >
 > 為權威。若本文其餘命令仍暗示全歷史重播，以新baseline plan為準並修正文檔後再執行。
 
-**Cutoff contract:** baseline v1代表active production project `pyoderxmpeyqjwkeliiu`於capture當下的catalog；128支pre-cutoff migrations凍結，6支`2026072300*` Midao migrations全部post-cutoff（目前forward inventory為128＋6＝134）。Fresh history exact set只記一支`baseline_v1` synthetic marker＋post-cutoff history；`baseline.sql`與`managed-overlays.sql`必須組成同一支synthetic migration，禁止額外overlay row或128筆fake cutoff history。
+**Cutoff contract:** baseline v1代表active production project `pyoderxmpeyqjwkeliiu`於capture當下的catalog；128支pre-cutoff migrations凍結，7支`2026072300*` Midao migrations全部post-cutoff（目前forward inventory為128＋7＝135）。Fresh history exact set只記一支`baseline_v1` synthetic marker＋post-cutoff history；`baseline.sql`與`managed-overlays.sql`必須組成同一支synthetic migration，禁止額外overlay row或128筆fake cutoff history。
 
-**Catalog truth contract:** `catalog.cutoff.normalized.json`只描述production cutoff；`catalog.expected-terminal.normalized.json`描述baseline＋6支Midao後的reviewed terminal truth。Fresh與existing rehearsal各自獨立exact compare expected-terminal，另彼此等價，不能拿cutoff catalog當terminal右側或只讓兩lane互比。
+**Catalog truth contract:** `catalog.cutoff.normalized.json`只描述production cutoff；`catalog.expected-terminal.normalized.json`描述baseline＋7支Midao後的reviewed terminal truth。Fresh與existing rehearsal各自獨立exact compare expected-terminal，另彼此等價，不能拿cutoff catalog當terminal右側或只讓兩lane互比。
 
 **Runner identity:** fresh／expected-terminal／existing rehearsal全部走D3a self-owned local wrapper，只接受loopback與owned container/project/port/database identity；拒絕production ref、`--linked`、remote URL及ambient DB env。Existing upgrade階段baseline execution count必為0。
 

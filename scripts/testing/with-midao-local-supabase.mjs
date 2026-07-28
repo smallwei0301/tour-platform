@@ -473,9 +473,17 @@ export async function prepareBaselineWorkdirWithAdapters({
     if (!parentIdentity.isDirectory() || parentIdentity.isSymbolicLink() || (parentIdentity.mode & 0o777) !== 0o700) {
       throw new Error('UNSAFE_BASELINE_WORKDIR_PARENT');
     }
-    materialized = await materialize({ outputParent: parent, projectId });
+    materialized = await materialize({
+      outputParent: parent,
+      projectId,
+      postCutoffManifest: expected.manifest,
+    });
     if (materialized.transactionId !== capture.transactionId) {
       throw new Error('BASELINE_MATERIALIZER_CAPTURE_BINDING_MISMATCH');
+    }
+    const materializedVersions = materialized.history.map((name) => name.slice(0, 14));
+    if (JSON.stringify(materializedVersions) !== JSON.stringify(expected.manifest.historyVersions)) {
+      throw new Error('BASELINE_MATERIALIZER_EXPECTED_HISTORY_MISMATCH');
     }
     let fullServicesAttempted = false;
     return {
@@ -484,7 +492,7 @@ export async function prepareBaselineWorkdirWithAdapters({
       seedPath: materialized.seedPath,
       stageCliReplay: (...args) => materialized.stageCliReplay(...args),
       cleanupCliMetadata: (...args) => materialized.cleanupCliMetadata(...args),
-      migrationNames: ['00000000000001_baseline_v1.sql', ...FOUNDATION_MIGRATIONS],
+      migrationNames: [...materialized.history],
       captureTransactionId: capture.transactionId,
       expectedTransactionId: expected.transactionId,
       async enableFullServices() {
@@ -549,7 +557,11 @@ export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir, fullServic
       }
       return verified;
     }),
-    materialize: materializeFreshWorkdir,
+    materialize: ({ outputParent, projectId: id, postCutoffManifest }) => materializeFreshWorkdir({
+      outputParent,
+      projectId: id,
+      postCutoffManifest,
+    }),
     readFullConfig: () => readSafeSourceFile(join(repoRoot, 'supabase/config.toml')).then((text) => Buffer.from(text)),
     rewriteFullConfig: async (workdir, bytes) => {
       const canonical = bytes.toString('utf8');
@@ -796,6 +808,55 @@ export function redactSupabaseOutput(text, secrets = []) {
     .replace(/(postgres(?:ql)?:\/\/[^:\s/]+:)[^@\s/]+(@)/giu, '$1[REDACTED]$2')
     .replace(/("?(?:anon_key|service_role_key|jwt_secret)"?\s*[:=]\s*"?)[^",\s]+/giu, '$1[REDACTED]');
   return redacted;
+}
+
+const SAFE_RUNNER_AGGREGATE_MESSAGES = new Set([
+  'baseline workdir cleanup failed',
+  'baseline workdir setup failed and cleanup held',
+  'start and partial ownership probe failed',
+  'reset and ownership probe failed',
+  'resource-class cleanup failed',
+  'local Supabase run and cleanup failed',
+  'owned Supabase asset cleanup failed',
+  'PostgREST start and ownership adoption failed',
+  'Midao baseline runner and cleanup failed',
+]);
+const SAFE_RUNNER_ERROR_CODES = new Set([
+  'OWNED_CONTAINER_CLEANUP_FAILED',
+  'OWNED_NETWORK_CLEANUP_FAILED',
+  'OWNED_VOLUME_CLEANUP_FAILED',
+  'REPLAY_RESTORE_FAILED',
+  'CLI_METADATA_CLEANUP_FAILED',
+  'DATABASE_WORKDIR_CLEANUP_FAILED',
+  'API_COMPAT_PROXY_CLOSE_FAILED',
+  'API_BRIDGE_CLOSE_FAILED',
+  'DATABASE_BRIDGE_CLOSE_FAILED',
+  'RUNNER_LOCK_RELEASE_FAILED',
+]);
+const SAFE_RUNNER_ERROR_PREFIX_CODES = Object.freeze([
+  'SUPABASE_START_FAILED',
+  'SUPABASE_DATABASE_HANDOFF_STOP_FAILED',
+  'SUPABASE_SERVICE_START_FAILED',
+]);
+
+export function formatMidaoRunnerFailure(error, secrets = []) {
+  const lines = [];
+  const seen = new Set();
+  const visit = (entry) => {
+    if (!entry || seen.has(entry)) return;
+    seen.add(entry);
+    const message = entry instanceof Error ? entry.message : String(entry);
+    const safePrefix = SAFE_RUNNER_ERROR_PREFIX_CODES.find((code) => message === code || message.startsWith(`${code}:`));
+    const safe = SAFE_RUNNER_AGGREGATE_MESSAGES.has(message) || SAFE_RUNNER_ERROR_CODES.has(message)
+      ? redactSupabaseOutput(message, secrets)
+      : safePrefix ?? '[REDACTED_ERROR]';
+    lines.push(safe);
+    if (entry instanceof AggregateError && Array.isArray(entry.errors)) {
+      for (const child of entry.errors) visit(child);
+    }
+  };
+  visit(error);
+  return lines.join('\n');
 }
 
 async function probeOwnedResources(adapter, expectedProjectId, { allowEmpty = false } = {}) {
@@ -1327,6 +1388,30 @@ export function createActualAdapter({
   };
 }
 
+export function parseMidaoRunnerInvocation(args) {
+  if (!Array.isArray(args) || args.some((entry) => typeof entry !== 'string')) {
+    throw new Error('MIDAO_RUNNER_ARGS_INVALID');
+  }
+  let mode = 'postgres';
+  let childArgs = [...args];
+  if (childArgs[0] === '--playwright') {
+    mode = 'playwright';
+    childArgs = childArgs.slice(1);
+  } else if (childArgs[0] === '--postgrest') {
+    mode = 'postgrest';
+    childArgs = childArgs.slice(1);
+  } else if (childArgs[0]?.startsWith('--')) {
+    throw new Error('MIDAO_RUNNER_ARGS_INVALID');
+  }
+  const pattern = mode === 'playwright'
+    ? /^apps\/web\/e2e\/[a-z0-9][a-z0-9-]*\.spec\.ts$/u
+    : /^apps\/web\/tests\/integration\/midao-[a-z0-9][a-z0-9-]*\.test\.mjs$/u;
+  if ((mode !== 'postgres' && childArgs.length === 0) || childArgs.some((entry) => !pattern.test(entry))) {
+    throw new Error(`MIDAO_${mode.toUpperCase()}_ARGS_INVALID`);
+  }
+  return { mode, childArgs };
+}
+
 async function main() {
   const repoRoot = process.cwd();
   const projectId = canonicalProjectId(repoRoot);
@@ -1361,13 +1446,12 @@ async function main() {
       await fsPromises.readFile('/proc/1/cgroup', 'utf8'),
     );
     if (gateway) databaseBridge = await startLoopbackBridge({ listenPort: 54322, targetHost: gateway, targetPort: 54322 });
-    const invocationArgs = process.argv.slice(2);
-    const playwrightMode = invocationArgs[0] === '--playwright';
-    const childArgs = playwrightMode ? invocationArgs.slice(1) : invocationArgs;
-    if (gateway && playwrightMode) apiBridge = await startLoopbackBridge({ listenPort: 54321, targetHost: gateway, targetPort: 54321 });
-    if (playwrightMode && (childArgs.length === 0 || childArgs.some((entry) => typeof entry !== 'string'
-      || !/^apps\/web\/e2e\/[a-z0-9][a-z0-9-]*\.spec\.ts$/u.test(entry)))) {
-      throw new Error('MIDAO_PLAYWRIGHT_ARGS_INVALID');
+    const invocation = parseMidaoRunnerInvocation(process.argv.slice(2));
+    const playwrightMode = invocation.mode === 'playwright';
+    const postgrestMode = invocation.mode === 'postgrest';
+    const childArgs = invocation.childArgs;
+    if (gateway && (playwrightMode || postgrestMode)) {
+      apiBridge = await startLoopbackBridge({ listenPort: 54321, targetHost: gateway, targetPort: 54321 });
     }
     databaseWorkdir = await prepareDatabaseOnlyWorkdir({ repoRoot, lockDir: LOCK_PATH });
     replay = await databaseWorkdir.stageCliReplay();
@@ -1397,7 +1481,7 @@ async function main() {
         });
         if (seed.exitCode !== 0 || seed.signal !== null) throw new Error(`MIDAO_SEED_FAILED: ${redactSupabaseOutput(seed.stderr).slice(-4000).trim()}`);
         let child;
-        if (playwrightMode) {
+        if (playwrightMode || postgrestMode) {
           const overlayPath = join(repoRoot, 'scripts/testing/midao-e2e-seed.sql');
           const overlay = await runCommand('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', overlayPath], {
             cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
@@ -1437,10 +1521,18 @@ async function main() {
           for (const name of ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
             if (typeof localEnv[name] !== 'string' || !localEnv[name]) throw new Error(`MIDAO_E2E_LOCAL_ENV_MISSING:${name}`);
           }
-          const e2eEnv = buildMidaoPlaywrightEnvironment({ localEnv });
-          child = await runCommand(join(repoRoot, 'node_modules/.bin/playwright'), [
-            'test', '--workers=1', ...childArgs.map((entry) => entry.slice('apps/web/'.length)),
-          ], { cwd: join(repoRoot, 'apps/web'), env: e2eEnv, signal: controller.signal });
+          if (playwrightMode) {
+            const e2eEnv = buildMidaoPlaywrightEnvironment({ localEnv });
+            child = await runCommand(join(repoRoot, 'node_modules/.bin/playwright'), [
+              'test', '--workers=1', ...childArgs.map((entry) => entry.slice('apps/web/'.length)),
+            ], { cwd: join(repoRoot, 'apps/web'), env: e2eEnv, signal: controller.signal });
+          } else {
+            child = await runCommand(nodeBin, ['--test', '--test-concurrency=1', ...childArgs], {
+              cwd: repoRoot,
+              env: { ...process.env, ...localEnv, NODE_OPTIONS: '--experimental-strip-types' },
+              signal: controller.signal,
+            });
+          }
         } else {
           child = await runCommand(nodeBin, ['--test', '--test-concurrency=1', ...childArgs], {
             cwd: repoRoot, env: { ...process.env, ...localEnv, NODE_OPTIONS: '--experimental-strip-types' }, signal: controller.signal,
@@ -1459,16 +1551,33 @@ async function main() {
   const cleanupErrors = [];
   let replayRestored = !replay;
   if (replay) {
-    try { await replay.restore(); replayRestored = true; } catch (error) { cleanupErrors.push(error); }
+    try { await replay.restore(); replayRestored = true; }
+    catch (error) { cleanupErrors.push(new Error('REPLAY_RESTORE_FAILED', { cause: error })); }
   }
   if (databaseWorkdir && replayRestored) {
-    try { await databaseWorkdir.cleanupCliMetadata(); } catch (error) { cleanupErrors.push(error); }
+    try { await databaseWorkdir.cleanupCliMetadata(); }
+    catch (error) { cleanupErrors.push(new Error('CLI_METADATA_CLEANUP_FAILED', { cause: error })); }
   }
-  if (databaseWorkdir) { try { await databaseWorkdir.cleanup(); } catch (error) { cleanupErrors.push(error); } }
-  if (apiCompatProxy) { try { await apiCompatProxy.close(); } catch (error) { cleanupErrors.push(error); } }
-  if (apiBridge) { try { await apiBridge.close(); } catch (error) { cleanupErrors.push(error); } }
-  if (databaseBridge) { try { await databaseBridge.close(); } catch (error) { cleanupErrors.push(error); } }
-  if (lock) { try { await releaseKernelRunnerLock(lock); } catch (error) { cleanupErrors.push(error); } }
+  if (databaseWorkdir) {
+    try { await databaseWorkdir.cleanup(); }
+    catch (error) { cleanupErrors.push(new Error('DATABASE_WORKDIR_CLEANUP_FAILED', { cause: error })); }
+  }
+  if (apiCompatProxy) {
+    try { await apiCompatProxy.close(); }
+    catch (error) { cleanupErrors.push(new Error('API_COMPAT_PROXY_CLOSE_FAILED', { cause: error })); }
+  }
+  if (apiBridge) {
+    try { await apiBridge.close(); }
+    catch (error) { cleanupErrors.push(new Error('API_BRIDGE_CLOSE_FAILED', { cause: error })); }
+  }
+  if (databaseBridge) {
+    try { await databaseBridge.close(); }
+    catch (error) { cleanupErrors.push(new Error('DATABASE_BRIDGE_CLOSE_FAILED', { cause: error })); }
+  }
+  if (lock) {
+    try { await releaseKernelRunnerLock(lock); }
+    catch (error) { cleanupErrors.push(new Error('RUNNER_LOCK_RELEASE_FAILED', { cause: error })); }
+  }
   const errors = [primaryError, ...cleanupErrors].filter(Boolean);
   if (errors.length > 1) throw new AggregateError(errors, 'Midao baseline runner and cleanup failed');
   if (errors.length === 1) throw errors[0];
@@ -1476,7 +1585,7 @@ async function main() {
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
   main().catch((error) => {
-    process.stderr.write(`${redactSupabaseOutput(error instanceof Error ? error.stack || error.message : String(error))}\n`);
+    process.stderr.write(`${formatMidaoRunnerFailure(error)}\n`);
     process.exitCode = 1;
   });
 }
