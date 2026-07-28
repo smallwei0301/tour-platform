@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 
 const wrapperModule = await import('../../src/lib/midao/with-guide-route.ts');
 const idempotencyModule = await import('../../src/lib/midao/idempotency.ts');
@@ -7,6 +8,8 @@ const errorModule = await import('../../src/lib/midao/route-errors.ts');
 const { withMidaoGuideQuery, withMidaoGuideCommand } = wrapperModule;
 const { parseIdempotencyKey, hashIdempotentRequest } = idempotencyModule;
 const { MidaoRouteError } = errorModule;
+const wrapperSource = readFileSync(new URL('../../src/lib/midao/with-guide-route.ts', import.meta.url), 'utf8');
+const routeErrorsSource = readFileSync(new URL('../../src/lib/midao/route-errors.ts', import.meta.url), 'utf8');
 
 const canonical = {
   guideId: 'guide-1',
@@ -28,6 +31,12 @@ function request(method = 'GET', body, headers = {}) {
 async function responseJson(response) {
   return { status: response.status, body: await response.json() };
 }
+
+test('unexpected wrapper errors stay on handleMidaoRouteError → default reportRouteError chain', () => {
+  assert.match(wrapperSource, /catch \(error\) \{\s*return handleMidaoRouteError\(error, \{/su);
+  assert.match(routeErrorsSource, /reportUnexpected = reportRouteError/u);
+  assert.match(routeErrorsSource, /await reportUnexpected\(error, \{ route \}\);/u);
+});
 
 test('query runs canonical guard before handler and emits only V2 success envelope', async () => {
   const order = [];
