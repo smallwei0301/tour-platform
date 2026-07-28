@@ -20,6 +20,10 @@ test('Task14 migration creates a service-role-only server-side booking request p
   assert.doesNotMatch(sql, /SECURITY DEFINER/iu);
 
   assert.match(sql, /JOIN public\.orders o\s+ON o\.booking_id = b\.id\s+AND o\.id = b\.order_id/iu);
+  assert.match(sql, /LEFT JOIN public\.orders canonical_order\s+ON canonical_order\.id = b\.order_id/iu);
+  assert.match(sql, /canonical_order\.booking_id IS DISTINCT FROM b\.id/iu);
+  assert.match(sql, /SELECT count\(\*\)\s+FROM public\.orders linked_order\s+WHERE linked_order\.booking_id = b\.id[\s\S]*<> 1/iu);
+  assert.match(sql, /MIDAO_REQUESTS_RELATION_INVALID/iu);
   assert.match(sql, /JOIN public\.activity_plans ap\s+ON ap\.id = b\.activity_plan_id\s+AND ap\.booking_type = 'request'/iu);
   assert.match(sql, /JOIN public\.activities a\s+ON a\.id = b\.activity_id/iu);
   assert.match(sql, /LEFT JOIN LATERAL\s*\([\s\S]*FROM public\.order_messages om[\s\S]*ORDER BY om\.created_at DESC, om\.id DESC\s+LIMIT 1/iu);
@@ -66,6 +70,12 @@ test('public standard-runner workflow pins Node 22.23.1 and executes the real Ta
   assert.match(workflow, /build-expected-terminal\.mjs\s+--runs 2\s+--baseline supabase\/baselines\/v1\s+--publish-dir supabase\/baselines\/v1/u);
   assert.match(workflow, /- name: Verify deterministic expected-terminal artifacts are committed[\s\S]*git diff --exit-code --[\s\S]*supabase\/baselines\/v1\/manifest\.json/u);
   assert.match(workflow, /name: midao-expected-terminal-\$\{\{ github\.sha \}\}[\s\S]*retention-days: 1/u);
+  const uploadStepIndex = workflow.indexOf('- name: Upload deterministic expected-terminal artifacts');
+  const verifyStepIndex = workflow.indexOf('- name: Verify deterministic expected-terminal artifacts are committed');
+  assert.ok(
+    uploadStepIndex >= 0 && uploadStepIndex < verifyStepIndex,
+    'successful builder output must upload before the fail-closed committed diff gate',
+  );
 });
 
 test('primary CI pins Node 22.23.1 and runs lock-backed typecheck before tests/build', () => {

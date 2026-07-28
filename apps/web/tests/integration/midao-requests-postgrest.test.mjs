@@ -27,6 +27,7 @@ const MESSAGE_IDS = [
   'cccccccc-1000-4000-8000-000000000002',
   'cccccccc-1000-4000-8000-000000000003',
 ];
+const EXTRA_ORDER_ID = 'bbbbbbbb-1000-4000-8000-000000000099';
 const UPDATED_AT = '2026-07-28T00:30:00.123Z';
 // Two rows share the exact microsecond and the third differs only below JS millisecond
 // precision. Without DB-side key normalization, the signed gateway cursor truncates
@@ -53,6 +54,7 @@ let previousGuideSessionSecret;
 
 async function cleanupFixtures() {
   await client.query('DELETE FROM public.order_messages WHERE id = ANY($1::uuid[])', [MESSAGE_IDS]);
+  await client.query('DELETE FROM public.orders WHERE id = $1', [EXTRA_ORDER_ID]);
   await client.query('UPDATE public.bookings SET order_id = NULL WHERE id = ANY($1::uuid[])', [BOOKING_IDS]);
   await client.query('UPDATE public.orders SET booking_id = NULL WHERE id = ANY($1::uuid[])', [ORDER_IDS]);
   await client.query('DELETE FROM public.bookings WHERE id = ANY($1::uuid[])', [BOOKING_IDS]);
@@ -252,6 +254,34 @@ test('NULL required parameters and partial cursor tuples reject with SQLSTATE 22
       assert.equal(error.message, probe.message);
       return true;
     });
+  }
+});
+
+test('real RPC fails closed for missing reciprocal and non-unique booking-order relations', async () => {
+  const assertRelationFailure = async (label) => {
+    const result = await rpc({ p_limit: 20 });
+    assert.equal(result.response.status, 400, `${label}: ${result.text}`);
+    assert.equal(result.payload?.code, '22023');
+    assert.equal(result.payload?.message, 'MIDAO_REQUESTS_RELATION_INVALID');
+  };
+
+  try {
+    await client.query('UPDATE public.orders SET booking_id = NULL WHERE id = $1', [ORDER_IDS[0]]);
+    await assertRelationFailure('missing reciprocal order.booking_id');
+  } finally {
+    await client.query('UPDATE public.orders SET booking_id = $1 WHERE id = $2', [BOOKING_IDS[0], ORDER_IDS[0]]);
+  }
+
+  await client.query(`
+    INSERT INTO public.orders(
+      id, activity_id, status, people_count, total_twd, contact_name,
+      created_at, updated_at, booking_id, source_channel
+    ) VALUES ($1, $2, 'pending_payment', 1, 1, 'Duplicate relation probe', $3, $3, $4, 'web')
+  `, [EXTRA_ORDER_ID, ACTIVITY_ID, UPDATED_AT, BOOKING_IDS[0]]);
+  try {
+    await assertRelationFailure('non-unique orders.booking_id');
+  } finally {
+    await client.query('DELETE FROM public.orders WHERE id = $1', [EXTRA_ORDER_ID]);
   }
 });
 

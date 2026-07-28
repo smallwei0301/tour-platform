@@ -69,6 +69,32 @@ BEGIN
     RAISE EXCEPTION 'MIDAO_REQUESTS_CURSOR_INVALID' USING ERRCODE = '22023';
   END IF;
 
+  -- Request-plan bookings must expose exactly one reciprocal canonical order.
+  -- The authoritative schema permits nullable/non-unique links, so validate from
+  -- the owner/request-plan domain before any INNER JOIN can silently drop rows.
+  IF EXISTS (
+    SELECT 1
+    FROM public.bookings b
+    JOIN public.activity_plans ap
+      ON ap.id = b.activity_plan_id
+     AND ap.booking_type = 'request'
+    LEFT JOIN public.orders canonical_order
+      ON canonical_order.id = b.order_id
+    WHERE b.guide_id = p_guide_id
+      AND (
+        b.order_id IS NULL
+        OR canonical_order.id IS NULL
+        OR canonical_order.booking_id IS DISTINCT FROM b.id
+        OR (
+          SELECT count(*)
+          FROM public.orders linked_order
+          WHERE linked_order.booking_id = b.id
+        ) <> 1
+      )
+  ) THEN
+    RAISE EXCEPTION 'MIDAO_REQUESTS_RELATION_INVALID' USING ERRCODE = '22023';
+  END IF;
+
   -- A request row outside the closed lifecycle vocabulary is corruption, not an
   -- item to silently omit. This preflight deliberately shares the same owner and
   -- request-plan boundary as the projection below.

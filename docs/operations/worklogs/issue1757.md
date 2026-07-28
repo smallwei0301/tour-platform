@@ -1,5 +1,5 @@
 # issue1757 — Requests projections and atomic decisions
-> 最後更新：2026-07-28 14:20 CST｜負責 session：Canary／2026-07-28
+> 最後更新：2026-07-28 14:40 CST｜負責 session：Canary／2026-07-28
 
 ## 目標
 在#1766 Foundation＋Shell之上交付首頁、旅客需求列表／詳情、booking/inquiry ref分流，以及request booking原子批准／婉拒；#1766未merge期間維持stacked branch。
@@ -51,6 +51,10 @@
 - 2026-07-28 artifact首次promote驗證精確抓到兩個test fixtures仍期待前一digest並自動還原；更新fixtures後第二次逐檔`cmp`與artifact/materializer/builder/existing/default-adapter矩陣`76/76 PASS`。其後正式Node `22.23.1` 10-file gate為`120/120 PASS`／exit0。bootstrap exact-head CI／baseline infra紅燈只代表commit刻意未含新artifact與fixtures，後續follow-up exact-head必須重跑；該舊紅燈不算Task14 verdict，typecheck及真PostgREST尚未執行。
 - 2026-07-28 follow-up exact-head `2df8d06a885eae4757cfcf41c5086dcbf5fb21de` CI run `30331088705`實際確認migration source gate、lint與lock-backed TypeScript `6.0.2` typecheck均PASS；Web tests為`4804/4815 PASS、8 FAIL、3 SKIP`。六個失敗同源於Task14 contract以process cwd找repo檔、workspace runner在`apps/web`執行；另兩項為新增gateway違反`src/lib`頂層179檔ratchet，以及expected-terminal final-gate仍綁前一transaction。baseline run `30331088760`兩輪builder與artifact upload均PASS，infra為`167/168 PASS`，唯一失敗是舊測試只接受浮動`node-version: '22'`而拒絕精確`22.23.1`；真PostgREST因此尚未進場。
 - 2026-07-28 上述四根因均以同一失敗命令本機重現RED後最小修正：contract改用`import.meta.url`定位repo；gateway依architecture guard搬至`src/lib/midao/db-requests.mjs`並修內部relative imports，plan/design/workflow同步；final-gate更新到transaction `10fb2d4954396a509fea295aefad90a7203d0e512b7f56e606db0d9aaad4f55d`／manifest `e6859cbb63c5f4c34e5a43da4d2a03192f300978c920f962240ffdefbe2ba0ed`；workflow contract鎖定exact Node `22.23.1`。另新增builder後`git diff --exit-code`四artifact gate，防止CI以覆寫未提交artifact取得假綠。focused GREEN：workspace cwd `6/6`、architecture `4/4`、final/workflow `5/5`、gateway `10/10`，Node `22.23.1`；第一次13-file正式commit gate為`129/129 PASS`／exit0，最終worklog同步後需在同一tree重跑再commit。
+- 2026-07-28 remediation commit `1a691e9243d90b1771cd8189db5ccea10c2df1bb`／tree `7ae550966991b525841e4008f4ddb48420ca18bc` exact-head全綠：CI run `30334672639`為migration/lint/TypeScript6、Web `4812/4815 PASS＋3 SKIP、0 FAIL`、build/ISR/preflight SUCCESS；baseline run `30334672625`為兩輪builder、committed artifact diff、infra `168/168`、真PostgreSQL/PostgREST `4/4`、Midao Browser與legacy compatibility全SUCCESS；Scan/RLS/migration/Vercel亦SUCCESS，production drift在PR正確SKIP。
+- 2026-07-28 exact-SHA fresh review：CI/runner/artifact/architecture reviewer **PASS／blocking=0**（Node22 `77/77`＋Task14 `16/16`）；security/schema reviewer **FAIL／blocking=1**。後者指出lifecycle preflight與projection都先INNER JOIN reciprocal order，故nullable `bookings.order_id`／`orders.booking_id`或非唯一`orders.booking_id`會被靜默漏列；baseline確認兩欄可NULL且`idx_orders_booking_id`非唯一，finding成立，前一CI綠燈不可抵銷。
+- 2026-07-28 relation/cardinality remediation：source contract要求request-plan owner domain先`LEFT JOIN` canonical order、reciprocal identity與linked order count=`1`，舊SQL RED／exit1；最小SQL修正後source `1/1`與migration/workflow全檔`6/6` GREEN。真PostgREST integration新增canonical reciprocal缺失及duplicate order兩個mutation，皆要求HTTP400／SQLSTATE `22023`／`MIDAO_REQUESTS_RELATION_INVALID`。migration新SHA-256=`639f430e666666c2ee9418f8dd2240d0d2c1b1038345378bee11436fc99aeabb`；expected-terminal尚待public builder重生，Task14維持HOLD。
+- 2026-07-28 artifact recovery workflow新增mutation-sensitive排序contract：成功builder輸出必先upload 1-day非機密artifact，再執行committed四檔`git diff --exit-code` fail-closed。舊順序RED／exit1，調整後GREEN；因此source-bootstrap輪可保留真artifact但仍在diff gate紅燈，不會假綠或卡死回收路徑。
 
 ## 下一步／未完成
 - [x] 修正上述四個Task14 blocking findings，逐項完成mutation-sensitive RED→GREEN並通過Node22正式test gate。
