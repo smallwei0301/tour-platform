@@ -163,6 +163,8 @@ jobs:
           timeout --signal=TERM --kill-after=30s 1200s bash scripts/testing/run-midao-e2e.sh
           apps/web/e2e/midao-navigation.spec.ts
           apps/web/e2e/midao-auth-and-impersonation.spec.ts
+          apps/web/e2e/midao-home.spec.ts
+          apps/web/e2e/midao-requests.spec.ts
 
       - name: Run baseline-backed legacy login compatibility
         run: >-
