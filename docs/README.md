@@ -1,116 +1,95 @@
-# Tour Platform 文件總覽
+# Tour Platform 文件總索引
 
-> 最後更新：2026-05-30（refs #846：移除已關閉 #621/#787/#640/#641 作為當前主線；指向 live-state 快照）
-> 當前主線：**Booking V2 已上線且為預設**（#621/#787 已 CLOSED）；當前優先事項請查閱 live-state 快照
-> 即時 live state 請看：[`operations/reports/readiness-live-state-latest.md`](./operations/reports/readiness-live-state-latest.md)（執行 `npm run readiness:snapshot` 刷新）
-> Snapshot auto-refreshed every 6h by CI; treat as stale if header timestamp is >12h old. Run `npm run readiness:snapshot` to refresh. Not live truth.
+> 本檔是 `docs/` 的穩定導航與任務路由。它不保存 open issue／PR 數量、當前 issue number、Phase 百分比或其他容易漂移的 live state。
+>
+> Agent 開工順序仍以 [`../CLAUDE.md`](../CLAUDE.md) → [`.cursor/harness/00_INDEX.md`](../.cursor/harness/00_INDEX.md) 為準；本檔負責把任務導到正確的文件類別與真值來源。
 
-本目錄的目的不是保存所有歷史，而是讓人快速找到：
-1. 現在專案在做什麼
-2. 哪些文件是當前主線
-3. 哪些文件是歷史背景 / 補充資料
+## 先看這些
 
----
+- [`../README.md`](../README.md) — 品牌與 repo 穩定入口
+- [`../CLAUDE.md`](../CLAUDE.md) — 工程治理、凍結區、migration 與測試鐵律
+- [`../BRAND_BOOK.md`](../BRAND_BOOK.md) — UI／文案／品牌真值
+- [`.cursor/harness/00_INDEX.md`](../.cursor/harness/00_INDEX.md) — session 開機順序與 harness 路由
+- [`04-tech/README.md`](04-tech/README.md) — 技術文件與 runtime 真值邊界
+- [`implementation/README.md`](implementation/README.md) — issue/date-bounded implementation contract
+- [`operations/README.md`](operations/README.md) — runbook、worklog、readiness 與 evidence
+- [`qa/README.md`](qa/README.md) — QA policy、測試指令與 dated evidence 邊界
+- [`security/README.md`](security/README.md) — incident/security 文件與 redaction 邊界
 
-## 先看這些（最高優先）
+## 文件狀態標籤
 
-### 專案總覽
-- `../README.md` - repo 根總覽
+使用下列固定詞彙閱讀文件；標籤描述文件用途，不代表文件內的每一段文字都仍然是最新狀態。
 
-### 轉型規劃 / 新商業模式
-- `07-transformation/midao-travel-hotcake-transformation-plan.md` — 祕島轉型為旅遊業 Hotcake：免費導遊管理工具、付費工具功能、前台曝光商業模式與 10/10 執行計畫
+| 狀態 | 用途 | 不可誤讀為 |
+|---|---|---|
+| `CURRENT EXECUTION` | live issue／PR、該任務 worklog、目前可執行交接 | 穩定 README 內的靜態 backlog |
+| `TECHNICAL CONTRACT` | 架構、API、資料模型、implementation contract 與治理規則 | production schema 或 runtime 行為的唯一真值 |
+| `QA` | testing playbook、package scripts、E2E、focused test 與帶 SHA 的驗證結果 | 沒有實跑證據的「應該會過」 |
+| `OPS` | runbook、worklog、release／rollback、operator evidence | 可自動執行的 production mutation 授權 |
+| `PRODUCT / BUSINESS CONTEXT` | strategy、product、design、business、legal、transformation 背景 | 沒有 owner decision 的工程 queue |
+| `AUTO-GENERATED` | bounded snapshot 或 generator 產出的狀態摘要 | live GitHub、live DB、runtime/provider console |
+| `ARCHIVE` | 歷史背景、closure、過往 evidence | 目前安全、目前 backlog 或目前 release 狀態 |
 
-### 當前主線：Booking V2 上線 / 觀察視窗
-- `../README.md` - repo 根總覽
-- `NEXT_PHASE_PLAN.md` - 當前下一步與就緒判斷
-- `operations/reports/readiness-live-state-latest.md` — **即時 live state 快照（自動生成，勿手改）**
-- `operations/issue-402-real-payment-refund-verification-runbook.md`（Issue #402：真實付款/退款/Email 證據 runbook，歷史參考）
-- `operations/booking-v2-daily-go-no-go.md`（Go/No-Go 節奏）
-- `operations/booking-v2-b3-rollout.md`（放量與風險控管）
-- `qa/booking-v2-rollout-manual-checklist.md`（手動回歸檢核）
-- `implementation/issue-96-rollout-contract.md`（readiness 契約參考）
+## 任務路由矩陣
 
-### 技術設計
-- `04-tech/04-tech-architecture/02-database-schema.md`
-- `04-tech/04-tech-architecture/03-api-spec.md`
-- `04-tech/04-tech-architecture/08-booking-pos-improvement-plan.md`
-- `04-tech/04-tech-architecture/09-booking-pos-migration-plan.md`
-- `04-tech/04-tech-architecture/10-api-spec-v2-booking-pos.md`
+從 root README 到本檔後，沿著「首讀 → 次讀 → 真值來源」走；最多兩跳即可抵達首讀文件。若首讀文件與現行實作衝突，停止猜測並回到真值來源。
 
-### 安全 / 收斂
-- `security/issue-119-evidence-2026-04-20.md`
-- `security/issue-119-history-rewrite-runbook.md`
-- `security/issue-56-secret-rotation-checklist.md`
-- `security/issue-56-blocker-followup-status.md`
-- `operations/github-actions-admin-credential-runbook.md` — Issue #1686：GitHub Actions 排程管理 credential、Vercel Production、受控 round-trip 與 redacted evidence
+| 任務類型 | 首讀 | 次讀 | 真值來源 |
+|---|---|---|---|
+| API／DB | [`../CLAUDE.md`](../CLAUDE.md) + [`04-tech/README.md`](04-tech/README.md) | [`implementation/README.md`](implementation/README.md)、[`../supabase/migrations/README.md`](../supabase/migrations/README.md)、對應 migration SOP | live issue／PR + `apps/web/app/api/**`、`apps/web/src/lib/**`、`supabase/migrations/**`、focused tests |
+| UI／互動 | [`../CLAUDE.md`](../CLAUDE.md) + [`../BRAND_BOOK.md`](../BRAND_BOOK.md) | [`.cursor/harness/07_testing_playbook.md`](../.cursor/harness/07_testing_playbook.md)、[`04-tech/04-tech-architecture/11-frontend-perf-pitfalls.md`](04-tech/04-tech-architecture/11-frontend-perf-pitfalls.md)、相關 product/design | live issue／PR + `apps/web/app/**`、components、Playwright／E2E output |
+| QA | [`.cursor/harness/07_testing_playbook.md`](../.cursor/harness/07_testing_playbook.md) + [`qa/README.md`](qa/README.md) | [`../apps/web/e2e/README.md`](../apps/web/e2e/README.md)、[`../scripts/qa/README.md`](../scripts/qa/README.md)、對應 dated report | issue AC + current head SHA + actual test／CI／preview result |
+| Ops／release | [`operations/README.md`](operations/README.md) + 對應 runbook | `operations/worklogs/`、`operations/reports/`、`operations/qa-reports/` | live issue／PR + runtime／provider console + fresh generated/evidence output；依 action domain 分流至 DML audit、schema `SQL-OVERRIDE`／migration SOP，或付款、credential、restore、incident 的既有 gate |
+| 產品／roadmap | [`07-transformation/midao-travel-hotcake-transformation-plan.md`](07-transformation/midao-travel-hotcake-transformation-plan.md) | [`01-strategy/README.md`](01-strategy/README.md)、`02-product/`、`05-business/`、`06-legal/` | owner-approved live issue／decision；未被接受的 roadmap 只作 context/proposal |
+| Incident／security | [`../CLAUDE.md`](../CLAUDE.md) + [`security/README.md`](security/README.md) | [`../.cursor/harness/01_diagnostics.md`](../.cursor/harness/01_diagnostics.md)、[`security/evidence-artifact-governance.md`](security/evidence-artifact-governance.md)、對應 runbook | live security issue + 現行 guards/config + redacted evidence；高風險 side effect 不得自行執行 |
 
----
+## CURRENT EXECUTION
 
-## 目前 docs 分層建議
+目前執行狀態應從 live GitHub issue／PR、Kanban task 與該任務 worklog 取得。`docs/` 的索引不複製 queue，也不把歷史 issue number 當成目前優先順序。
 
-### A. 當前有效主線文件
-這些文件與當前 open issues / rollout / main branch 狀態直接相關：
-- `implementation/*`
-- `operations/*`
-- `qa/*`
-- `security/*`
-- `04-tech/04-tech-architecture/08~10*`
+- Issue／PR：先用 live `gh issue view`／`gh pr view` 驗證狀態、AC、review 與 checks。
+- Worklog：依 [`operations/worklogs/README.md`](operations/worklogs/README.md) 建立或接續 `issueNNNN.md`；它是任務記憶錨點，不是產品 runtime truth。
+- 目前程式行為：回到 `apps/web/` 的現行 route、component、service、tests。
+- 目前資料庫：回到 `supabase/migrations/`、migration ledger、必要時使用核准的 live probe。
 
-### B. 歷史背景 / 早期規劃
-以下多數是早期 Phase 1~10 的背景資料，仍可參考，但不應被誤認為「當前執行主線」：
-- `01-strategy/**`
-- `02-product/**`
-- `03-design/**`
-- `05-business/**`
-- `06-legal/**`
-- `04-tech/03-dev-timeline/**`
+## TECHNICAL CONTRACT
 
-### C. 需要後續持續整理的區塊
-- `04-tech/03-dev-timeline/`：歷史很多，應逐步轉為「索引 + 關鍵里程碑」
-- `01-strategy/01-project-plan/`：部分 roadmap 與目前 issue reality 已不完全一致
-- `05-business/06-payment-plan/` / `07-operations-plan/`：部分文件仍偏空殼或待補
+- [`04-tech/README.md`](04-tech/README.md) 是技術文件入口，明確區分 design／contract 與 code／tests／migrations 真值。
+- [`implementation/README.md`](implementation/README.md) 收 issue/date-bounded contract；先核對 live issue／PR，再讀 contract。
+- [`../supabase/migrations/README.md`](../supabase/migrations/README.md) 定義新 migration 的 timestamp 命名與 rollback 期待；既有 migration 不因索引工作重寫。
+- 技術文件不能取代 production schema、現行 API wiring 或 focused regression tests。
 
----
+## QA
 
-## 目前 open issue 對應文件主線
+- QA policy 首指 [`.cursor/harness/07_testing_playbook.md`](../.cursor/harness/07_testing_playbook.md)。
+- [`qa/README.md`](qa/README.md) 定義 root／app scripts、E2E、QA script 與 dated evidence 的邊界。
+- `docs/qa/**` 與 `docs/operations/qa-reports/**` 多為帶日期的 checklist／evidence；只有與 current head SHA、CI、preview 或 live output 綁定時，才能支持目前驗收結論。
 
-> **Live-state 不在本文硬編碼，以防 drift。**
-> 即時 open issues / open PRs / latest merged PRs，請查閱：
-> **[`operations/reports/readiness-live-state-latest.md`](./operations/reports/readiness-live-state-latest.md)**
-> 或執行 `npm run readiness:snapshot` 刷新。
+## OPS
 
-**當前主線 issue：請以 live-state 快照為準（上方連結）**
+- [`operations/README.md`](operations/README.md) 定義 runbook、worklog、reports 與 auto-generated snapshot 的差異。
+- [`operations/reports/readiness-live-state-latest.md`](operations/reports/readiness-live-state-latest.md) 是產生器輸出的 bounded snapshot；先跑 `npm run readiness:check`，過期則執行 `npm run readiness:snapshot` 或查 live GitHub。
+- `operations/` 內的 production action 不使用 blanket approval 規則：DML 依 `CLAUDE.md` 走 `sql-guard` audit 並立即回報影響；schema apply 走 `SQL-OVERRIDE` 與 [`operations/migration-apply-ledger-sop.md`](operations/migration-apply-ledger-sop.md)；付款、credential、restore、incident 各自依對應 runbook、operator／owner approval、audit 與 rollback／containment 證據執行。
 
-**已完成，僅供參考（歷史）：**
-- **#621 CLOSED** — Booking / Availability V2 成為旅客主要流程（PR #800）
-- **#787 CLOSED** — Booking V2 沿用 legacy booking UI（PR #789）
-- **#640 / #641 CLOSED** — V2 Launch QA blocker checklist 與 rollback drill（已完成）；`qa/booking-v2-rollout-manual-checklist.md` 保留為歷史參考
-- **#642**（V2 觀察視窗 + legacy fallback 守護）— 狀態請以 live-state 快照為準
-- **#586 / #588 CLOSED** — docs readiness sync / evidence pack resync（PR #587/#589 merged）
-- **#402/#403 CLOSED** — 真實付款/退款/Email 證據；`operations/issue-402-real-payment-refund-verification-runbook.md` 保留為歷史/運維參考，非當前完成條件。
-- **#545 / #559 / #572 / #573 / #574 / #516 / #515 / #514 CLOSED** — 已關閉，非當前 blocker。
-- **#505 / #506 COMPLETE** — Go/No-Go evidence-driven（PR #557）、soft-launch 控制全套（PR #550 / #552 / #554）均已落地。
-- **#528 COMPLETE** — Node 22 pin（PR #548）
+## PRODUCT / BUSINESS CONTEXT
 
-**注意：** 以上為目前就緒路徑的 source-of-truth 指引，凡未有對應實際文件者，待 issue/PR 補齊後再更新。
+- [`01-strategy/README.md`](01-strategy/README.md)、[`02-product/README.md`](02-product/README.md)、[`03-design/README.md`](03-design/README.md)、[`05-business/README.md`](05-business/README.md)、[`06-legal/README.md`](06-legal/README.md)、[`07-transformation/midao-travel-hotcake-transformation-plan.md`](07-transformation/midao-travel-hotcake-transformation-plan.md) 保存 context／proposal／decision 背景。
+- 這些文件不自動形成 engineering backlog；執行優先順序必須回到 owner-approved live issue／decision。
 
----
+## AUTO-GENERATED
 
-## 2026-05-22 文件同步重點
-- **本次更新（PR 解決 #590）**：移除硬編碼 live-state，改以 `operations/reports/readiness-live-state-latest.md` 為 source of truth，防止下次 drift
-- #586/#588 已 CLOSED — 保留歷史指標；docs readiness sync 任務已收斂
-- Booking V2 已上線為主流程（PR #678 merged）
-- Soft-launch 控制機制全套落地；Go/No-Go 機制持續運行
-- Node 22 已 pin（PR #548）
+- [`operations/reports/readiness-live-state-latest.md`](operations/reports/readiness-live-state-latest.md) 由 `npm run readiness:snapshot` 產生，header timestamp 與 `npm run readiness:check` 決定 freshness。
+- Snapshot 過期時不得手改數字，也不得把舊數字寫回其他 README；請重生或直接查 live GitHub。
+- `operations/current-issue-priority.md` 是 bounded routing snapshot，使用前仍須重新查 live issue／PR。
 
+## ARCHIVE
 
----
+- [`99-archive/README.md`](99-archive/README.md) 與各 dated closure／evidence 文件只供考古、稽核與背景理解。
+- Archive 不可用來推論目前 backlog、目前安全狀態、目前 schema 或目前 release／rollout 狀態。
 
-## 文件維護原則
-1. 根 README 不再維護過長歷史流水帳
-2. `docs/README.md` 只負責導航與優先級，不複製全部內容
-3. issue 關閉時：更新對應文件與索引，不一定要改所有歷史檔
-4. 若主線改變，先更新：
-   - `../README.md`
-   - 本檔
-   - 對應 implementation / operations / security 文件
+## 維護規則
+
+1. 新增 README 前先確認它提供穩定路由，而不是複製 live state。
+2. 優先補領域索引與真值邊界，不批量重寫歷史文件。
+3. 相對 Markdown link 必須指向現存檔案或目錄；提交前執行 link scan 與 `git diff --check`。
+4. 任何與 production、付款、auth、security、RLS、migration 或 secrets 有關的文件，只能描述核准流程，不得在索引內放入 secrets、PII 或未核准操作指令。
