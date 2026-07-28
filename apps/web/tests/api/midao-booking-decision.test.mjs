@@ -302,6 +302,35 @@ test('Supabase known RPC errors map to the fixed public matrix while unknown or 
   );
 });
 
+test('Supabase relation corruption is sanitized as INTERNAL_ERROR while a missing booking remains NOT_FOUND', async () => {
+  process.env.SUPABASE_URL = 'http://example.test';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
+
+  const { client: corruptClient } = createSupabaseFake({
+    rpcError: { code: 'P0002', message: 'MIDAO_BOOKING_RELATION_INVALID: private booking data' },
+  });
+  __setSupabaseClientForTest(corruptClient);
+  const corruptResponse = await postDecision(requestForRoute({ action: 'approve' }));
+  const corruptPayload = await responseJson(corruptResponse);
+  assert.equal(corruptPayload.status, 500);
+  assert.deepEqual(corruptPayload.body.error, {
+    code: 'INTERNAL_ERROR',
+    message: '伺服器發生錯誤，請稍後再試',
+  });
+
+  const { client: missingClient } = createSupabaseFake({
+    rpcError: { code: 'P0002', message: 'BOOKING_NOT_FOUND: private booking data' },
+  });
+  __setSupabaseClientForTest(missingClient);
+  const missingResponse = await postDecision(requestForRoute({ action: 'approve' }));
+  const missingPayload = await responseJson(missingResponse);
+  assert.equal(missingPayload.status, 404);
+  assert.deepEqual(missingPayload.body.error, {
+    code: 'NOT_FOUND',
+    message: 'Resource not found',
+  });
+});
+
 test('Supabase projection validation rejects extra PII keys, wrong UUIDs, and invalid timestamps', async () => {
   process.env.SUPABASE_URL = 'http://example.test';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';

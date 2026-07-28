@@ -129,6 +129,16 @@ BEGIN
 
   IF v_order_count <> 1 THEN
     IF v_order_count = 0 THEN
+      SELECT b.*
+      INTO v_booking
+      FROM public.bookings AS b
+      WHERE b.id = p_booking_id
+      FOR UPDATE;
+
+      IF FOUND THEN
+        RAISE EXCEPTION USING ERRCODE = 'P0002', MESSAGE = 'MIDAO_BOOKING_RELATION_INVALID';
+      END IF;
+
       RAISE EXCEPTION USING ERRCODE = 'P0002', MESSAGE = 'BOOKING_NOT_FOUND';
     END IF;
     RAISE EXCEPTION USING ERRCODE = 'P0002', MESSAGE = 'MIDAO_BOOKING_RELATION_INVALID';

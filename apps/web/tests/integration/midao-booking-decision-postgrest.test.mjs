@@ -76,6 +76,22 @@ function assertDecisionContract(sql) {
   assert.ok(scheduleLock, 'activity schedule must be locked by canonical order schedule_id');
   assert.ok(orderLock.index < bookingLock.index, 'orders lock must precede bookings lock');
   assert.ok(bookingLock.index < scheduleLock.index, 'bookings lock must precede activity_schedules lock');
+  const zeroOrderStart = body.indexOf('IF V_ORDER_COUNT = 0 THEN');
+  const missingBookingRaise = "RAISE EXCEPTION USING ERRCODE = 'P0002', MESSAGE = 'BOOKING_NOT_FOUND';";
+  const missingBookingRaiseIndex = body.indexOf(missingBookingRaise, zeroOrderStart);
+  assert.ok(zeroOrderStart >= 0 && missingBookingRaiseIndex > zeroOrderStart, 'zero-order handling must classify the missing booking');
+  const zeroOrderHandling = body.slice(zeroOrderStart, missingBookingRaiseIndex + missingBookingRaise.length);
+  assert.match(
+    zeroOrderHandling,
+    /SELECT B\.\* INTO V_BOOKING FROM PUBLIC\.BOOKINGS AS B WHERE B\.ID = P_BOOKING_ID FOR UPDATE/u,
+    'zero reciprocal orders must probe the booking row before returning 404',
+  );
+  const relationInvalidIndex = zeroOrderHandling.indexOf("MESSAGE = 'MIDAO_BOOKING_RELATION_INVALID'");
+  const missingBookingMessageIndex = zeroOrderHandling.indexOf("MESSAGE = 'BOOKING_NOT_FOUND'");
+  assert.ok(
+    relationInvalidIndex >= 0 && relationInvalidIndex < missingBookingMessageIndex,
+    'an existing booking without a reciprocal order must fail closed as relation corruption',
+  );
   assert.match(body, /V_BOOKING\.GUIDE_ID IS DISTINCT FROM P_GUIDE_ID[\s\S]*?BOOKING_NOT_FOUND/u);
   assert.match(body, /MIDAO_BOOKING_RELATION_INVALID/u);
   assert.match(body, /MIDAO_SCHEDULE_RELATION_INVALID/u);
@@ -124,6 +140,14 @@ test('atomic decision source contract rejects idempotency, lock-order, ownership
     ['different idempotency scope', sql.replace("    'decide_booking_request',\n    'booking',\n    p_booking_id,", "    'decide_booking_request',\n    'order',\n    p_booking_id,")],
     ['different request hash no conflict', sql.replace('IF v_stored_hash <> v_request_hash THEN', 'IF v_stored_hash = v_request_hash THEN')],
     ['processing placeholder returned', sql.replace("MESSAGE = 'IDEMPOTENCY_IN_PROGRESS'", "MESSAGE = 'BOOKING_NOT_FOUND'")],
+    ['zero-order booking existence probe removed', sql.replace(
+      '      SELECT b.*\n      INTO v_booking\n      FROM public.bookings AS b\n      WHERE b.id = p_booking_id\n      FOR UPDATE;',
+      '      -- booking existence probe removed',
+    )],
+    ['zero-order corruption classified as missing', sql.replace(
+      "      IF FOUND THEN\n        RAISE EXCEPTION USING ERRCODE = 'P0002', MESSAGE = 'MIDAO_BOOKING_RELATION_INVALID';\n      END IF;",
+      "      IF FOUND THEN\n        RAISE EXCEPTION USING ERRCODE = 'P0002', MESSAGE = 'BOOKING_NOT_FOUND';\n      END IF;",
+    )],
     ['orders lock removed', sql.replace('    FOR UPDATE\n  LOOP', '    -- FOR UPDATE\n  LOOP')],
     ['business lock nowait', sql.replace('FOR UPDATE;', 'FOR UPDATE NOWAIT;')],
     ['ownership guard removed', sql.replace("IF v_booking.guide_id IS DISTINCT FROM p_guide_id THEN", 'IF FALSE THEN')],
