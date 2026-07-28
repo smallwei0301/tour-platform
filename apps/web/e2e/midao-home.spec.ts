@@ -84,7 +84,7 @@ test.describe('Midao home read-only dashboard', () => {
       await navigation;
 
       await expect(page.getByRole('heading', { name: '首頁' })).toBeVisible();
-      await expect(page.getByText(`歡迎回來，${guide.guideName}`)).toBeVisible();
+      await expect(page.locator('main .midao-home-welcome')).toHaveText(`歡迎回來，${guide.guideName}`);
       await expect(page.getByTestId('midao-home-counter-pending')).toContainText('2');
       await expect(page.getByTestId('midao-home-counter-messages')).toContainText('1');
       await expect(page.locator('[data-testid^="midao-home-counter-"]')).toHaveCount(2);
@@ -117,7 +117,7 @@ test.describe('Midao home read-only dashboard', () => {
     await expect(page.getByText('目前沒有最近進度')).toBeVisible();
     await expect(page.locator('[data-testid^="midao-home-counter-"]')).toHaveCount(2);
     await expect(page.locator('.midao-loading-skeleton')).toHaveCount(0);
-    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(page.locator('main .midao-inline-error')).toHaveCount(0);
 
     await attachScreenshot(page, testInfo, 'home-empty');
   });
@@ -132,7 +132,7 @@ test.describe('Midao home read-only dashboard', () => {
     await loginMidaoGuideViaApi(page, guide);
     await page.goto('/midao', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByRole('alert')).toContainText('目前無法載入導遊首頁');
+    await expect(page.locator('main .midao-inline-error')).toContainText('目前無法載入導遊首頁');
     await expect(page.getByText('2', { exact: true })).toHaveCount(0);
     await expect(page.getByText('目前沒有待處理需求')).toHaveCount(0);
     await attachScreenshot(page, testInfo, 'home-409-error');
@@ -142,7 +142,7 @@ test.describe('Midao home read-only dashboard', () => {
     await page.getByRole('button', { name: '再試一次' }).click();
 
     await expect(page.getByTestId('midao-home-counter-pending')).toContainText('2');
-    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(page.locator('main .midao-inline-error')).toHaveCount(0);
     expect(calls.count).toBe(2);
   });
 });

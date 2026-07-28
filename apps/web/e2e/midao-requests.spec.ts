@@ -240,7 +240,7 @@ test.describe('Midao requests list', () => {
     await loginMidaoGuideViaApi(page, guide);
     await page.goto('/midao/requests?bucket=completed', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('midao-request-empty')).toHaveText('這個分頁目前沒有需求');
-    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(page.locator('.midao-request-panel .midao-inline-error')).toHaveCount(0);
     await expect(page.getByTestId('midao-request-list')).toHaveCount(0);
 
     const screenshotPath = testInfo.outputPath('requests-empty.png');
@@ -266,8 +266,8 @@ test.describe('Midao requests list', () => {
 
     await loginMidaoGuideViaApi(page, guide);
     await page.goto('/midao/requests', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('alert')).toBeVisible();
-    await expect(page.getByText('目前無法載入需求清單')).toBeVisible();
+    await expect(page.locator('.midao-request-panel .midao-inline-error')).toBeVisible();
+    await expect(page.locator('.midao-request-panel .midao-inline-error')).toContainText('目前無法載入需求清單');
     await expect(page.getByTestId('midao-request-empty')).toHaveCount(0);
     await expect(page.getByTestId('midao-request-list')).toHaveCount(0);
 
@@ -277,6 +277,7 @@ test.describe('Midao requests list', () => {
 
     await page.getByRole('button', { name: '再試一次' }).click();
     await expect(page.getByTestId('midao-request-empty')).toHaveText('這個分頁目前沒有需求');
+    await expect(page.locator('.midao-request-panel .midao-inline-error')).toHaveCount(0);
     expect(attempts).toBe(2);
   });
 

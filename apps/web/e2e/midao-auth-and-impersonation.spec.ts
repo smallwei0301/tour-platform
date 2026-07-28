@@ -93,7 +93,7 @@ test.describe('Midao authentication and impersonation on baseline-backed local S
     await loginMidaoGuideViaApi(page, midaoGuide);
     await page.goto('/midao', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: '首頁' })).toBeVisible();
-    await expect(page.getByText(midaoGuide.guideName)).toBeVisible();
+    await expect(page.locator('main .midao-home-welcome')).toHaveText(`歡迎回來，${midaoGuide.guideName}`);
     await expect(page.getByTestId('midao-impersonation-banner')).toHaveCount(0);
   });
 
