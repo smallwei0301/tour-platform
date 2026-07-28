@@ -202,6 +202,12 @@ function resolveBookingProjection(value: unknown, detail: boolean) {
   const statusBookingStatus = requireNonEmptyString(status.bookingStatus);
   const statusGuideApprovalStatus = requireNonEmptyString(status.guideApprovalStatus);
   const statusOrderStatus = requireNonEmptyString(status.orderStatus);
+  const statusGuideApprovalDecidedAt = requireNullableTimestamp(status.guideApprovalDecidedAt);
+  const statusGuideApprovalNote = requireNullableString(status.guideApprovalNote);
+  if (guideApprovalStatus === 'pending'
+    && (statusGuideApprovalDecidedAt !== null || statusGuideApprovalNote !== null)) {
+    fail();
+  }
   if (statusBookingStatus !== bookingStatus
     || statusGuideApprovalStatus !== guideApprovalStatus
     || statusOrderStatus !== orderStatus) fail();

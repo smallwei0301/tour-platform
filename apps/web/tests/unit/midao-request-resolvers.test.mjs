@@ -230,6 +230,28 @@ test('detail resolver enables only approve and reject for the exact pending book
   });
 });
 
+test('detail resolver fails closed when pending status carries non-null approval decision metadata', () => {
+  const base = canonicalBookingDetailProjection();
+  const withDecidedAt = {
+    ...base,
+    status: {
+      ...base.status,
+      guideApprovalDecidedAt: '2026-07-28T00:15:00.000Z',
+    },
+  };
+  const withNote = {
+    ...base,
+    status: {
+      ...base.status,
+      guideApprovalDecidedAt: null,
+      guideApprovalNote: '行程已滿',
+    },
+  };
+
+  assertInvalidProjection(() => resolveMidaoRequestDetail(withDecidedAt));
+  assertInvalidProjection(() => resolveMidaoRequestDetail(withNote));
+});
+
 test('detail resolver returns false decision actions for every other known booking lifecycle', () => {
   const cases = [
     {
