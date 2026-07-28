@@ -32527,6 +32527,21 @@
         "canonicalKey": [
           "index",
           "public",
+          "idx_order_messages_order_latest"
+        ],
+        "definition": "CREATE INDEX idx_order_messages_order_latest ON public.order_messages USING btree (order_id, created_at DESC, id DESC)",
+        "name": "idx_order_messages_order_latest",
+        "primary": false,
+        "relation": "order_messages",
+        "replicaIdentity": false,
+        "schema": "public",
+        "unique": false,
+        "valid": true
+      },
+      {
+        "canonicalKey": [
+          "index",
+          "public",
           "idx_orders_booking_id"
         ],
         "definition": "CREATE INDEX idx_orders_booking_id ON public.orders USING btree (booking_id)",
@@ -36620,6 +36635,29 @@
         "securityDefiner": true,
         "strict": false,
         "volatility": "v"
+      },
+      {
+        "bodySha256": "b6c708132daa0e7eb4f126fdc20450ab9c25dfa8bcfb099b4fd5037d17b9fea6",
+        "canonicalKey": [
+          "routine",
+          "public",
+          "midao_list_booking_requests",
+          "p_guide_id uuid, p_bucket text, p_sort text, p_cursor_rank integer, p_cursor_at timestamp with time zone, p_cursor_id uuid, p_limit integer"
+        ],
+        "configuration": [
+          "search_path=pg_catalog, public"
+        ],
+        "identityArguments": "p_guide_id uuid, p_bucket text, p_sort text, p_cursor_rank integer, p_cursor_at timestamp with time zone, p_cursor_id uuid, p_limit integer",
+        "kind": "f",
+        "language": "plpgsql",
+        "leakProof": false,
+        "name": "midao_list_booking_requests",
+        "parallel": "u",
+        "result": "TABLE(booking_id uuid, guide_id uuid, order_id uuid, booking_no text, booking_status text, guide_approval_status text, order_status text, bucket text, secondary_state text, needs_reply boolean, display_name text, email_masked text, activity_id uuid, activity_plan_id uuid, activity_title text, plan_name text, booking_type text, start_at timestamp with time zone, end_at timestamp with time zone, timezone text, party_size integer, total_twd integer, payment_deadline_at timestamp with time zone, received_at timestamp with time zone, updated_at timestamp with time zone, last_message_at timestamp with time zone, priority_rank integer)",
+        "schema": "public",
+        "securityDefiner": false,
+        "strict": false,
+        "volatility": "s"
       },
       {
         "bodySha256": "2edcc2237c101c6f3c86a4f7d8a5241bcaa322efc9f1d2459454f677d14e6322",
@@ -101022,6 +101060,66 @@
           "acl",
           "routine",
           "public",
+          "midao_list_booking_requests(p_guide_id uuid, p_bucket text, p_sort text, p_cursor_rank integer, p_cursor_at timestamp with time zone, p_cursor_id uuid, p_limit integer)",
+          "supabase_admin",
+          "postgres",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_list_booking_requests(p_guide_id uuid, p_bucket text, p_sort text, p_cursor_rank integer, p_cursor_at timestamp with time zone, p_cursor_id uuid, p_limit integer)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "midao_list_booking_requests(p_guide_id uuid, p_bucket text, p_sort text, p_cursor_rank integer, p_cursor_at timestamp with time zone, p_cursor_id uuid, p_limit integer)",
+          "supabase_admin",
+          "service_role",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_list_booking_requests(p_guide_id uuid, p_bucket text, p_sort text, p_cursor_rank integer, p_cursor_at timestamp with time zone, p_cursor_id uuid, p_limit integer)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "midao_list_booking_requests(p_guide_id uuid, p_bucket text, p_sort text, p_cursor_rank integer, p_cursor_at timestamp with time zone, p_cursor_id uuid, p_limit integer)",
+          "supabase_admin",
+          "supabase_admin",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_list_booking_requests(p_guide_id uuid, p_bucket text, p_sort text, p_cursor_rank integer, p_cursor_at timestamp with time zone, p_cursor_id uuid, p_limit integer)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
           "midao_switch_guide_backend_mode(p_guide_id uuid, p_target_mode text, p_reason text, p_actor_type text, p_actor_id text, p_request_id uuid, p_idempotency_key text, p_request_hash text)",
           "supabase_admin",
           "postgres",
@@ -108733,6 +108831,19 @@
         "object": "handle_auth_user_sync()",
         "objectType": "routine",
         "owner": "postgres",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "owner",
+          "routine",
+          "public",
+          "midao_list_booking_requests",
+          "p_guide_id uuid, p_bucket text, p_sort text, p_cursor_rank integer, p_cursor_at timestamp with time zone, p_cursor_id uuid, p_limit integer"
+        ],
+        "object": "midao_list_booking_requests(p_guide_id uuid, p_bucket text, p_sort text, p_cursor_rank integer, p_cursor_at timestamp with time zone, p_cursor_id uuid, p_limit integer)",
+        "objectType": "routine",
+        "owner": "supabase_admin",
         "schema": "public"
       },
       {

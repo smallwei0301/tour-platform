@@ -22,7 +22,7 @@ const exactMigrations = [
   ['20260723002500_midao_audit_events.sql', '62fa29d6d4d8fe119867ef05e69eba465f52b5cfa2ca96bddd83e93da9b9bcca'],
   ['20260723003000_midao_atomic_backend_mode_switch.sql', 'c59afc5ee72da4d76ae77fb984db4b34d8f160198544ba233d0fb9f2190c90e5'],
   ['20260723003500_midao_service_role_acl_hardening.sql', 'f16fd369b9ce0b405c38ec2df5a46676cc84ba2de087b3b010cc00e4415353e5'],
-  ['20260723004000_midao_request_read_projection.sql', 'f1f9478f17e865a05864974cafafe52b8d5101f8e829ed5519e19ea151835352'],
+  ['20260723004000_midao_request_read_projection.sql', '36edefe11432f36088ddbb52e461c8d7b5bf6a7b3edfea6bf48cd51d42a21917'],
 ];
 const historyVersions = ['00000000000001', ...exactMigrations.map(([name]) => name.slice(0, 14))];
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
