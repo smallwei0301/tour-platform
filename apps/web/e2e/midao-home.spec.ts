@@ -75,9 +75,9 @@ test.describe('Midao home read-only dashboard', () => {
     test(`renders the populated home dashboard on ${viewport.name}`, async ({ page }, testInfo) => {
       test.setTimeout(180_000);
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
-      await loginMidaoGuideViaApi(page, guide);
       const calls = { count: 0 };
       await mockHome(page, { status: 200, body: { success: true, data: homeData } }, { delayMs: 250, calls });
+      await loginMidaoGuideViaApi(page, guide);
 
       const navigation = page.goto('/midao', { waitUntil: 'domcontentloaded' });
       await expect(page.locator('.midao-loading-skeleton')).toBeVisible();
@@ -107,8 +107,8 @@ test.describe('Midao home read-only dashboard', () => {
 
   test('shows a true empty state only for a successful empty envelope', async ({ page }, testInfo) => {
     test.setTimeout(180_000);
-    await loginMidaoGuideViaApi(page, guide);
     await mockHome(page, { status: 200, body: { success: true, data: emptyHomeData } });
+    await loginMidaoGuideViaApi(page, guide);
 
     await page.goto('/midao', { waitUntil: 'domcontentloaded' });
 
@@ -124,12 +124,12 @@ test.describe('Midao home read-only dashboard', () => {
 
   test('recovers a GET 409 with a real retry and does not render fallback data', async ({ page }, testInfo) => {
     test.setTimeout(180_000);
-    await loginMidaoGuideViaApi(page, guide);
     const calls = { count: 0 };
     await mockHome(page, {
       status: 409,
       body: { success: false, error: { code: 'BACKEND_MODE_MISMATCH', message: 'Guide backend mode conflict' } },
     }, { calls });
+    await loginMidaoGuideViaApi(page, guide);
     await page.goto('/midao', { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByRole('alert')).toContainText('目前無法載入導遊首頁');

@@ -12,6 +12,13 @@ const firstRequestRef = 'booking_11111111-1111-4111-8111-111111111111';
 const secondRequestRef = 'booking_22222222-2222-4222-8222-222222222222';
 const thirdRequestRef = 'booking_33333333-3333-4333-8333-333333333333';
 
+function isRequestsListUrl(url: URL): boolean {
+  return url.pathname === '/api/v2/guide/requests'
+    && url.searchParams.has('bucket')
+    && url.searchParams.has('sort')
+    && url.searchParams.has('limit');
+}
+
 function bookingListItem(
   requestRef: string,
   bookingId: string,
@@ -144,7 +151,7 @@ test.describe('Midao requests list', () => {
   test('renders masked cards and appends the server cursor page without changing canonical refs', async ({ page }, testInfo) => {
     test.setTimeout(180_000);
     const calls: Array<{ bucket: string | null; sort: string | null; limit: string | null; cursor: string | null }> = [];
-    await page.route('**/api/v2/guide/requests', async (route) => {
+    await page.route(isRequestsListUrl, async (route) => {
       const url = new URL(route.request().url());
       calls.push({
         bucket: url.searchParams.get('bucket'),
@@ -191,7 +198,7 @@ test.describe('Midao requests list', () => {
     test.setTimeout(180_000);
     await page.setViewportSize({ width: 390, height: 844 });
     const calls: string[] = [];
-    await page.route('**/api/v2/guide/requests', async (route) => {
+    await page.route(isRequestsListUrl, async (route) => {
       const url = new URL(route.request().url());
       const requestedBucket = url.searchParams.get('bucket') || 'all';
       calls.push(requestedBucket);
@@ -226,7 +233,7 @@ test.describe('Midao requests list', () => {
 
   test('renders a true empty state only for a successful empty envelope', async ({ page }, testInfo) => {
     test.setTimeout(180_000);
-    await page.route('**/api/v2/guide/requests', async (route) => {
+    await page.route(isRequestsListUrl, async (route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(emptyPage) });
     });
 
@@ -244,7 +251,7 @@ test.describe('Midao requests list', () => {
   test('uses the same non-mutating retry for a 409 envelope and never substitutes fake data', async ({ page }, testInfo) => {
     test.setTimeout(180_000);
     let attempts = 0;
-    await page.route('**/api/v2/guide/requests', async (route) => {
+    await page.route(isRequestsListUrl, async (route) => {
       attempts += 1;
       if (attempts === 1) {
         await route.fulfill({
