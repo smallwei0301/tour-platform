@@ -1,5 +1,5 @@
 # issue1757 — Requests projections and atomic decisions
-> 最後更新：2026-07-28 14:40 CST｜負責 session：Canary／2026-07-28
+> 最後更新：2026-07-28 14:51 CST｜負責 session：Canary／2026-07-28
 
 ## 目標
 在#1766 Foundation＋Shell之上交付首頁、旅客需求列表／詳情、booking/inquiry ref分流，以及request booking原子批准／婉拒；#1766未merge期間維持stacked branch。
@@ -55,6 +55,8 @@
 - 2026-07-28 exact-SHA fresh review：CI/runner/artifact/architecture reviewer **PASS／blocking=0**（Node22 `77/77`＋Task14 `16/16`）；security/schema reviewer **FAIL／blocking=1**。後者指出lifecycle preflight與projection都先INNER JOIN reciprocal order，故nullable `bookings.order_id`／`orders.booking_id`或非唯一`orders.booking_id`會被靜默漏列；baseline確認兩欄可NULL且`idx_orders_booking_id`非唯一，finding成立，前一CI綠燈不可抵銷。
 - 2026-07-28 relation/cardinality remediation：source contract要求request-plan owner domain先`LEFT JOIN` canonical order、reciprocal identity與linked order count=`1`，舊SQL RED／exit1；最小SQL修正後source `1/1`與migration/workflow全檔`6/6` GREEN。真PostgREST integration新增canonical reciprocal缺失及duplicate order兩個mutation，皆要求HTTP400／SQLSTATE `22023`／`MIDAO_REQUESTS_RELATION_INVALID`。migration新SHA-256=`639f430e666666c2ee9418f8dd2240d0d2c1b1038345378bee11436fc99aeabb`；expected-terminal尚待public builder重生，Task14維持HOLD。
 - 2026-07-28 artifact recovery workflow新增mutation-sensitive排序contract：成功builder輸出必先upload 1-day非機密artifact，再執行committed四檔`git diff --exit-code` fail-closed。舊順序RED／exit1，調整後GREEN；因此source-bootstrap輪可保留真artifact但仍在diff gate紅燈，不會假綠或卡死回收路徑。
+- 2026-07-28 relation source-bootstrap `673b5118d4a305181bd846bd30ead5f8695574dc`／tree `8b2ac302c9573bcddf36676e995d90d76270b17b`以Node22 commit gate `25/25 PASS`後push。baseline run `30335753574`精確依序為builder SUCCESS、artifact upload SUCCESS、committed diff預期FAIL，後續runtime steps正確SKIP；無其他失敗被誤分類。
+- 2026-07-28 artifact ID `8679062992`只含四個regular files、無symlink／額外檔；migration digest=`639f430e...aeabb`、transaction=`096201b552f96b1cc6918c2a6e1fb9086a90faa6ca4bec4ecdff419c6b9b81f3`、manifest SHA=`d229eb31f88e33d56956e6f8a24ac62c058ffdfa7b5683e7b9c0e64ea05934e9`、catalog SHA=`5b15fcbaf91596ebdb9778b06b9f04150de882454db0a524f98007df1e4d8d23`，ledger／payload digests自洽。四檔promote含失敗自動回滾trap、逐檔`cmp`及artifact/materializer/builder/existing/runner/final-gate矩陣`78/78 PASS`。
 
 ## 下一步／未完成
 - [x] 修正上述四個Task14 blocking findings，逐項完成mutation-sensitive RED→GREEN並通過Node22正式test gate。
