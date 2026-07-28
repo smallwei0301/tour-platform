@@ -1,5 +1,5 @@
 # issue1757 — Requests projections and atomic decisions
-> 最後更新：2026-07-28 14:51 CST｜負責 session：Canary／2026-07-28
+> 最後更新：2026-07-28 15:00 CST｜負責 session：Canary／2026-07-28
 
 ## 目標
 在#1766 Foundation＋Shell之上交付首頁、旅客需求列表／詳情、booking/inquiry ref分流，以及request booking原子批准／婉拒；#1766未merge期間維持stacked branch。
@@ -57,13 +57,16 @@
 - 2026-07-28 artifact recovery workflow新增mutation-sensitive排序contract：成功builder輸出必先upload 1-day非機密artifact，再執行committed四檔`git diff --exit-code` fail-closed。舊順序RED／exit1，調整後GREEN；因此source-bootstrap輪可保留真artifact但仍在diff gate紅燈，不會假綠或卡死回收路徑。
 - 2026-07-28 relation source-bootstrap `673b5118d4a305181bd846bd30ead5f8695574dc`／tree `8b2ac302c9573bcddf36676e995d90d76270b17b`以Node22 commit gate `25/25 PASS`後push。baseline run `30335753574`精確依序為builder SUCCESS、artifact upload SUCCESS、committed diff預期FAIL，後續runtime steps正確SKIP；無其他失敗被誤分類。
 - 2026-07-28 artifact ID `8679062992`只含四個regular files、無symlink／額外檔；migration digest=`639f430e...aeabb`、transaction=`096201b552f96b1cc6918c2a6e1fb9086a90faa6ca4bec4ecdff419c6b9b81f3`、manifest SHA=`d229eb31f88e33d56956e6f8a24ac62c058ffdfa7b5683e7b9c0e64ea05934e9`、catalog SHA=`5b15fcbaf91596ebdb9778b06b9f04150de882454db0a524f98007df1e4d8d23`，ledger／payload digests自洽。四檔promote含失敗自動回滾trap、逐檔`cmp`及artifact/materializer/builder/existing/runner/final-gate矩陣`78/78 PASS`。
+- 2026-07-28 relation-safe terminal final candidate `33dbdf05e66212237241aaf6b4d83b92323c6d8b`／tree `8515c33b78dac9df7f20df0927fbd017ae874379`：本機Node22正式13-file gate `129/129 PASS`；exact-head CI run `30336339400`之migration/lint/TypeScript6/Web `4812/4815 PASS＋3 SKIP、0 FAIL`/build/ISR/preflight全SUCCESS。baseline run `30336339191`之builder/upload/committed diff/infra `168/168`/真PostgreSQL/PostgREST **`5/5 PASS`**（含reciprocal缺失＋duplicate linked order mutation）/Midao Browser/legacy全SUCCESS；scan、RLS、source-contract、Vercel亦SUCCESS，production drift在PR正確SKIP。
+- 2026-07-28 final exact-SHA雙review均完成且前後clean：security/schema reviewer **PASS／blocking=0**、Node22 `30/30`；CI/runner/artifact/architecture reviewer **PASS／blocking=0**、Node22 `93/93`。兩者均核實前次relation blocker已解除、artifact transaction/digests自洽、沒有修改檔案或漂移HEAD/tree。
 
 ## 下一步／未完成
 - [x] 修正上述四個Task14 blocking findings，逐項完成mutation-sensitive RED→GREEN並通過Node22正式test gate。
-- [ ] 取得final fresh雙review `blocking=0`；任何逾時／無verdict仍算INCONCLUSIVE。
-- [ ] 由GitHub public standard runner以exact lock完成TypeScript 6.0.2 typecheck及完整真PostgreSQL/PostgREST `4/4 PASS`；本機因資源窗口僅有部分真runtime證據，不宣稱完整PASS。
-- [ ] checkpoint/push後驗證exact-head Test/Browser/Scan實際觸發集合；Browser cleanup需以新safe diagnostic收斂。
-- [ ] Task 14 gates全綠後才更新AC／Issue／PR並進Task15 resolvers；Task15–21（resolvers、V2 APIs、Home、UI/E2E、atomic approval migration/API/UI與package final gate）全部未完成。
+- [x] 取得final fresh雙review `blocking=0`；security/schema `30/30`與CI/runner/artifact/architecture `93/93`均綁exact code SHA/tree。
+- [x] GitHub public standard runner以exact Node `22.23.1`完成TypeScript6、完整Web tests及真PostgreSQL/PostgREST `5/5 PASS`。
+- [x] exact-head Test/Browser/Scan/RLS/migration/Vercel均SUCCESS；Browser cleanup與artifact committed-diff已收斂。
+- [x] Task 14 code/runtime/review gates全綠；docs-only closeout checkpoint後雙寫Issue／PR證據並標記Task14完成。
+- [ ] Task15–21（resolvers、V2 APIs、Home、UI/E2E、atomic approval migration/API/UI與package final gate）尚未完成，Task14收尾後依序推進。
 - [ ] PR #1766／#1769均保持open/draft，不merge；new read RPC migration未apply production，production release HOLD。
 
 
