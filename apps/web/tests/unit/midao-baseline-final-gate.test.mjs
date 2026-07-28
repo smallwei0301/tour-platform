@@ -23,8 +23,8 @@ const expectedJournalPath = resolveExpectedTerminalPublicationPaths().journalPat
 
 const CAPTURE_TRANSACTION = 'c90dfe6ce32f77010354615795df95c085f16f53f8a830ac8553196b5d178e13';
 const CAPTURE_MANIFEST = '9834579fba9bd13cf4d0d35bfb6498ce1661f04a1d80ae8bfd5b29ea3cbe0cfd';
-const EXPECTED_TRANSACTION = '05b445553141f945e50682aac56252b47eaee024e67d6f74f3bec9903c8e4fde';
-const EXPECTED_MANIFEST = 'c18051e40a0e28daeebf41a7dde69286f1a0f31e3d688b25840bac09c6ae2c23';
+const EXPECTED_TRANSACTION = '10fb2d4954396a509fea295aefad90a7203d0e512b7f56e606db0d9aaad4f55d';
+const EXPECTED_MANIFEST = 'e6859cbb63c5f4c34e5a43da4d2a03192f300978c920f962240ffdefbe2ba0ed';
 const CODE_EVIDENCE_SHA = '54cee346b2797a89cd6c1cf6b15b5a22c218c6f7';
 
 async function verifyTransactionsThenReadEvidence({

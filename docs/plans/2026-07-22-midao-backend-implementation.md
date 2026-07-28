@@ -572,7 +572,7 @@ formatRequestRef(kind, id)
 ## Task 14: 建立 requests read gateway
 
 **Files:**
-- Create: `apps/web/src/lib/db-midao-requests.mjs`
+- Create: `apps/web/src/lib/midao/db-requests.mjs`
 - Create: `apps/web/tests/api/midao-requests-gateway.test.mjs`
 - Create: `supabase/migrations/20260723004000_midao_request_read_projection.sql`
 - Create: `apps/web/tests/api/midao-requests-read-migration.test.mjs`

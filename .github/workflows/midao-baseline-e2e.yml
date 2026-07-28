@@ -10,7 +10,7 @@ on:
       - 'apps/web/playwright.config.ts'
       - 'apps/web/src/lib/guide-auth.ts'
       - 'apps/web/src/lib/guide-session-crypto.ts'
-      - 'apps/web/src/lib/db-midao-requests.mjs'
+      - 'apps/web/src/lib/midao/db-requests.mjs'
       - 'apps/web/src/lib/midao/**'
       - 'apps/web/tests/api/midao-*.test.mjs'
       - 'apps/web/tests/integration/midao-*.test.mjs'
@@ -119,6 +119,16 @@ jobs:
           --publish-dir supabase/baselines/v1
           --capture-ledger docs/operations/baseline-ledger.json
           --ledger docs/operations/expected-terminal-ledger.json
+
+      - name: Verify deterministic expected-terminal artifacts are committed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- \
+            supabase/baselines/v1/manifest.json \
+            supabase/baselines/v1/catalog.expected-terminal.normalized.json \
+            supabase/baselines/v1/catalog-expected-terminal.sha256 \
+            docs/operations/expected-terminal-ledger.json
 
       - name: Upload deterministic expected-terminal artifacts
         uses: actions/upload-artifact@v4

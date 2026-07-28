@@ -14,7 +14,7 @@ test('Midao baseline E2E workflow is PR-triggered, bounded, and uses Node 22', (
   const source = workflowSource();
   assert.match(source, /pull_request:/u);
   assert.match(source, /timeout-minutes:\s*60/u);
-  assert.match(source, /node-version:\s*'22'/u);
+  assert.match(source, /node-version:\s*'22\.23\.1'/u);
   assert.match(source, /concurrency:/u);
   assert.match(source, /cancel-in-progress:\s*true/u);
 });

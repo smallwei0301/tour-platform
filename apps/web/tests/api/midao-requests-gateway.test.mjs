@@ -9,7 +9,7 @@ import {
   getMidaoBookingRequestDb,
   getMidaoInquiryRequestDb,
   listMidaoRequestsDb,
-} from '../../src/lib/db-midao-requests.mjs';
+} from '../../src/lib/midao/db-requests.mjs';
 import { resolveRequestBucket } from '../../src/lib/midao/request-buckets.mjs';
 import { __setSupabaseClientForTest } from '../../src/lib/supabase-env.mjs';
 

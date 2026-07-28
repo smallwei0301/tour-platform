@@ -5,7 +5,7 @@ import pg from 'pg';
 import {
   getMidaoBookingRequestDb,
   listMidaoRequestsDb,
-} from '../../src/lib/db-midao-requests.mjs';
+} from '../../src/lib/midao/db-requests.mjs';
 import { __setSupabaseClientForTest } from '../../src/lib/supabase-env.mjs';
 
 const GUIDE_ID = '99999999-9999-4999-8999-999999999999';

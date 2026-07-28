@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-const MIGRATION = 'supabase/migrations/20260723004000_midao_request_read_projection.sql';
+const REPO_ROOT = fileURLToPath(new URL('../../../../', import.meta.url));
+const repoFile = (relativePath) => join(REPO_ROOT, relativePath);
+const MIGRATION = repoFile('supabase/migrations/20260723004000_midao_request_read_projection.sql');
 
 test('Task14 migration creates a service-role-only server-side booking request projection', () => {
   assert.equal(existsSync(MIGRATION), true, `missing Task14 migration: ${MIGRATION}`);
@@ -52,25 +56,26 @@ test('Task14 read projection validates bucket, sort, cursor completeness, and li
 });
 
 test('public standard-runner workflow pins Node 22.23.1 and executes the real Task14 PostgREST contract', () => {
-  const workflow = readFileSync('.github/workflows/midao-baseline-e2e.yml', 'utf8');
+  const workflow = readFileSync(repoFile('.github/workflows/midao-baseline-e2e.yml'), 'utf8');
   assert.match(workflow, /runs-on: ubuntu-latest/u);
   assert.doesNotMatch(workflow, /runs-on:\s*\[[^\]]*(?:larger|self-hosted)|runs-on:\s*(?:larger|self-hosted)/iu);
   assert.match(workflow, /node-version: '22\.23\.1'/u);
-  assert.match(workflow, /- 'apps\/web\/src\/lib\/db-midao-requests\.mjs'/u);
+  assert.match(workflow, /- 'apps\/web\/src\/lib\/midao\/db-requests\.mjs'/u);
   assert.match(workflow, /- 'apps\/web\/tests\/api\/midao-\*\.test\.mjs'/u);
   assert.match(workflow, /with-midao-local-supabase\.mjs --postgrest\s+apps\/web\/tests\/integration\/midao-requests-postgrest\.test\.mjs/u);
   assert.match(workflow, /build-expected-terminal\.mjs\s+--runs 2\s+--baseline supabase\/baselines\/v1\s+--publish-dir supabase\/baselines\/v1/u);
+  assert.match(workflow, /- name: Verify deterministic expected-terminal artifacts are committed[\s\S]*git diff --exit-code --[\s\S]*supabase\/baselines\/v1\/manifest\.json/u);
   assert.match(workflow, /name: midao-expected-terminal-\$\{\{ github\.sha \}\}[\s\S]*retention-days: 1/u);
 });
 
 test('primary CI pins Node 22.23.1 and runs lock-backed typecheck before tests/build', () => {
-  const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
+  const workflow = readFileSync(repoFile('.github/workflows/ci.yml'), 'utf8');
   assert.match(workflow, /node-version: '22\.23\.1'/u);
   assert.match(workflow, /- name: Web typecheck\n\s+run: npm run typecheck -w @tour\/web/u);
 });
 
 test('migration drift workflow keeps pull requests source-only and cannot send external failure notifications', () => {
-  const workflow = readFileSync('.github/workflows/migration-drift-detect.yml', 'utf8');
+  const workflow = readFileSync(repoFile('.github/workflows/migration-drift-detect.yml'), 'utf8');
   assert.match(workflow, /\n  drift-detect:\n    if: github\.event_name != 'pull_request'\n/u);
   assert.match(workflow, /node-version: '22\.23\.1'/u);
   assert.match(workflow, /- name: Notify on failure \(Telegram \+ Email\)\n\s+if: failure\(\) && github\.event_name != 'pull_request'/u);
@@ -79,8 +84,8 @@ test('migration drift workflow keeps pull requests source-only and cannot send e
 test('trusted expected-terminal manifest pins and materializes the exact Task14 migration digest', () => {
   const bytes = readFileSync(MIGRATION);
   const digest = createHash('sha256').update(bytes).digest('hex');
-  const runner = readFileSync('scripts/testing/with-midao-local-supabase.mjs', 'utf8');
-  const materializer = readFileSync('scripts/database-baseline/materialize-fresh-workdir.mjs', 'utf8');
+  const runner = readFileSync(repoFile('scripts/testing/with-midao-local-supabase.mjs'), 'utf8');
+  const materializer = readFileSync(repoFile('scripts/database-baseline/materialize-fresh-workdir.mjs'), 'utf8');
   assert.match(materializer, new RegExp(`filename: '20260723004000_midao_request_read_projection\\.sql',[\\s\\S]*sha256: '${digest}'`, 'u'));
   assert.match(materializer, /validateExpectedTerminalManifest\(manifest\)/u);
   assert.match(runner, /postCutoffManifest: expected\.manifest/u);
