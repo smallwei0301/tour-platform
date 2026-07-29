@@ -15,7 +15,10 @@
  * Authentication: `x-internal-token` header must match INTERNAL_ALERT_TOKEN env var.
  * Returns 401 when the header is absent or mismatched.
  *
- * Idempotency: UNIQUE(order_id) on payout_items + ON CONFLICT DO NOTHING
+ * Writes（#1777 Phase 2）：ledger 分錄與導遊餘額由 fn_record_settlement_atomic
+ * 在單一 DB 交易內完成，本 route 不再直接寫 payout_items／guide_balances，也不做
+ * read-modify-write。冪等由 RPC 內的 UNIQUE(order_id, settlement_kind) ＋
+ * ON CONFLICT DO NOTHING 保證：只有真正插入新分錄時才動餘額，重跑不重複累加。
  *
  * Risk: HIGH (auth, db-write, financial, cron-safety)
  */
@@ -24,6 +27,7 @@ import { computeSweepPayoutItem, getSettlementConfig } from '../../../../../src/
 import { isOrderEligibleForSettlement, pickEffectiveStartAt } from '../../../../../src/lib/internal-sweep-time-source';
 import { isSettlementPaymentCollected } from '../../../../../src/lib/post-trip/payout-eligibility.mjs';
 import { isCronJobEnabled, recordCronRun } from '../../../../../src/lib/cron-job-controls.mjs';
+import { recordSettlementAtomicDb } from '../../../../../src/lib/db-settlement-atomic.mjs';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
 // ── Auth guard ─────────────────────────────────────────────────────────────────
@@ -191,59 +195,49 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, settled: 0, message: 'no orders to settle' });
     }
 
-    // Upsert payout_items — ON CONFLICT DO NOTHING（冪等）。
-    // onConflict 必須對齊 #449 後的 UNIQUE INDEX (order_id, settlement_kind)：
-    // 舊的單欄 UNIQUE(order_id) 已被 20260513_issue449 migration DROP，若沿用單欄
-    // 冪等鍵會讓 Postgres 回「no unique or exclusion constraint matching the
-    // ON CONFLICT specification」→ sweep 500（#1365 排上 cron 後首次暴露）。
-    // Supabase upsert with ignoreDuplicates=true maps to ON CONFLICT DO NOTHING in PostgREST
-    const { error: insertError } = await supabase
-      .from('payout_items')
-      .upsert(payoutItems, { onConflict: 'order_id,settlement_kind', ignoreDuplicates: true });
-
-    if (insertError) {
-      void recordCronRun({ jobKey: 'settlement_sweep', outcome: 'error', summary: { error: insertError.message.slice(0, 200) }, startedAt: cronStartedAt });
-      return NextResponse.json({ ok: false, error: insertError.message }, { status: 500 });
-    }
-
-    // Accumulate guide_balances: fetch existing → add delta → upsert new total
-    const balanceDeltas: Record<string, number> = {};
-    for (const item of payoutItems) {
-      balanceDeltas[item.guide_id] = (balanceDeltas[item.guide_id] ?? 0) + item.net_twd;
-    }
-
-    for (const [guide_id, delta] of Object.entries(balanceDeltas)) {
-      const { data: existing } = await supabase
-        .from('guide_balances')
-        .select('balance_twd')
-        .eq('guide_id', guide_id)
-        .single();
-
-      const newBalance = (existing?.balance_twd ?? 0) + delta;
-      const { error: balError } = await supabase
-        .from('guide_balances')
-        .upsert(
-          { guide_id, balance_twd: newBalance, last_settled_at: now, updated_at: now },
-          { onConflict: 'guide_id' }
-        );
-
-      if (balError) {
-        void recordCronRun({ jobKey: 'settlement_sweep', outcome: 'error', summary: { error: balError.message.slice(0, 200) }, startedAt: cronStartedAt });
-        return NextResponse.json({ ok: false, error: balError.message }, { status: 500 });
-      }
+    // #1777 Phase 2：ledger 分錄與導遊餘額改由單一 DB 交易完成
+    // （fn_record_settlement_atomic）。舊路徑先 upsert payout_items、再由此處
+    // 讀出 guide_balances 加 delta 後整列寫回——payout item 成功而 balance 失敗
+    // 時，重跑會因上方「已有 payout item 就排除」而永久跳過該訂單，餘額永久
+    // 漏加；整列回寫在 sweep × 紅沖 × confirm 併發下也必然 lost update。
+    //
+    // RPC 內會在交易中重驗資格（completed／已實收／四個 hold 旗標／未全額退款），
+    // 因此本次讀取與寫入之間才被標記爭議的訂單會落在 rejected 而非入帳。
+    //
+    // fail-closed：RPC 未部署（migration 尚未套用）時直接失敗並記錄，**不**退回
+    // 舊的非原子路徑——寧可停擺也不要重複扣款或漏加餘額。
+    let settlementResult;
+    try {
+      settlementResult = await recordSettlementAtomicDb(supabase, payoutItems, now);
+    } catch (settlementErr) {
+      const message = settlementErr instanceof Error ? settlementErr.message : 'settlement failed';
+      void recordCronRun({
+        jobKey: 'settlement_sweep',
+        outcome: 'error',
+        summary: { error: message.slice(0, 200) },
+        startedAt: cronStartedAt,
+      });
+      return NextResponse.json({ ok: false, error: message }, { status: 500 });
     }
 
     void recordCronRun({
       jobKey: 'settlement_sweep',
       outcome: 'success',
-      summary: { settled: payoutItems.length, guides_updated: Object.keys(balanceDeltas).length },
+      summary: {
+        settled: settlementResult.settled_count,
+        guides_updated: settlementResult.guides_updated,
+        skipped_existing: settlementResult.skipped_existing,
+        rejected_ineligible: settlementResult.rejected_ineligible,
+      },
       startedAt: cronStartedAt,
     });
     return NextResponse.json({
       ok: true,
-      settled: payoutItems.length,
-      guides_updated: Object.keys(balanceDeltas).length,
-      settlement_source: 'legacy_fallback',
+      settled: settlementResult.settled_count,
+      guides_updated: settlementResult.guides_updated,
+      skipped_existing: settlementResult.skipped_existing,
+      rejected_ineligible: settlementResult.rejected_ineligible,
+      settlement_source: 'atomic_rpc',
       time_source_policy: settlementSourcePolicy,
     });
   } catch (err) {

@@ -93,15 +93,17 @@ describe('#1777 — confirm route 的 HOLD gate 必須擋在扣款之前', () =>
     assert.match(src, /isPayoutConfirmAllowed/, 'confirm route 必須接上 payout-confirm-guard');
   });
 
-  it('guard 判定早於 Supabase client 建立與 confirmPayoutDb 呼叫', () => {
+  it('guard 判定早於 Supabase client 建立與出款扣款呼叫', () => {
     const gateAt = src.indexOf('isPayoutConfirmAllowed(');
     const clientAt = src.indexOf('createClient(');
-    const debitAt = src.indexOf('confirmPayoutDb(');
+    // #1777 Phase 2 起改走原子 RPC wrapper；比對「實際呼叫」而非註解提及，
+    // 因此鎖 `await confirmPayoutAtomicDb(` 這個呼叫形式。
+    const debitAt = src.indexOf('await confirmPayoutAtomicDb(');
 
     assert.ok(gateAt >= 0, 'guard 必須被呼叫');
-    assert.ok(clientAt >= 0 && debitAt >= 0, 'route 仍應保有原本的出款實作');
+    assert.ok(clientAt >= 0 && debitAt >= 0, 'route 仍應保有出款實作');
     assert.ok(gateAt < clientAt, 'guard 必須早於 Supabase client 建立');
-    assert.ok(gateAt < debitAt, 'guard 必須早於 confirmPayoutDb——否則餘額可能已被扣');
+    assert.ok(gateAt < debitAt, 'guard 必須早於扣款呼叫——否則餘額可能已被扣');
   });
 
   it('HOLD 時回 503 並帶穩定錯誤碼', () => {

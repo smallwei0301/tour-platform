@@ -36,10 +36,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
       getSupabaseServiceRoleKey()!
     );
 
-    const { confirmPayoutDb } = await import('../../../../../../../src/lib/db.mjs');
+    // #1777 Phase 2：改走 fn_confirm_payout_atomic —— 扣餘額、pending→paid、
+    // audit 三者在單一 DB 交易內同成同敗。舊的 confirmPayoutDb 是三次獨立呼叫，
+    // 扣款成功但 update 失敗時 payout 仍 pending 而餘額已扣，重試即重複扣款；
+    // 餘額不足也會被 Math.max(0, …) 靜默截成 0。新路徑餘額不足一律拋錯。
+    const { confirmPayoutAtomicDb } = await import('../../../../../../../src/lib/db-settlement-atomic.mjs');
 
     const body = await req.json().catch(() => ({}));
-    const result = await confirmPayoutDb(
+    const result = await confirmPayoutAtomicDb(
       supabase,
       payoutId,
       body.confirmed_by ?? 'admin',
