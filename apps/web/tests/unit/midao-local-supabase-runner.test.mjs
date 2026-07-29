@@ -59,9 +59,14 @@ test('package-lock pin and canonical repo basename are exact and fail closed', (
 
 test('runner invocation reserves an exact Node integration lane for the pinned PostgREST runtime', () => {
   const integration = 'apps/web/tests/integration/midao-requests-postgrest.test.mjs';
+  const decisionIntegration = 'apps/web/tests/integration/midao-booking-decision-postgrest.test.mjs';
   assert.deepEqual(parseMidaoRunnerInvocation(['--postgrest', integration]), {
     mode: 'postgrest',
     childArgs: [integration],
+  });
+  assert.deepEqual(parseMidaoRunnerInvocation(['--postgrest', decisionIntegration]), {
+    mode: 'postgrest',
+    childArgs: [decisionIntegration],
   });
   assert.deepEqual(parseMidaoRunnerInvocation(['--playwright', 'apps/web/e2e/midao-navigation.spec.ts']), {
     mode: 'playwright',

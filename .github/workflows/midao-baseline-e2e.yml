@@ -22,6 +22,8 @@ on:
       - 'scripts/testing/with-midao-local-supabase.mjs'
       - 'supabase/baselines/v1/**'
       - 'supabase/migrations/2026072300*.sql'
+      - 'supabase/migrations/20260723010000_midao_atomic_booking_approval.sql'
+      - 'supabase/migrations/20260723011000_midao_atomic_booking_decision_command.sql'
       - 'supabase/seed.sql'
 
 permissions:
@@ -157,6 +159,12 @@ jobs:
           timeout --signal=TERM --kill-after=30s 1200s
           node scripts/testing/with-midao-local-supabase.mjs --postgrest
           apps/web/tests/integration/midao-requests-postgrest.test.mjs
+
+      - name: Run Task20B booking decision PostgreSQL and PostgREST runtime contracts
+        run: >-
+          timeout --signal=TERM --kill-after=30s 1200s
+          node scripts/testing/with-midao-local-supabase.mjs --postgrest
+          apps/web/tests/integration/midao-booking-decision-postgrest.test.mjs
 
       - name: Run baseline-backed Midao browser gate
         run: >-
