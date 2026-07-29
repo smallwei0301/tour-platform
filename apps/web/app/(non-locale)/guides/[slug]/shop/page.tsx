@@ -113,6 +113,29 @@ export default async function GuideShopPage({ params }: { params: Promise<{ slug
         <span className="sib-cta-arrow"><ArrowRight style={{ color: '#f6ecd9' }} /></span>
       </Link>
 
+      {/* 付款與取消 FAQ：讓旅客在送出預約前先看懂流程與聯絡方式。 */}
+      <section data-testid="shop-policy" style={{ marginTop: 28 }}>
+        <div className="sib-sec-head"><span className="t">付款與取消</span><span className="line" /></div>
+        <div style={{ display: 'grid', gap: 8 }}>
+          <details>
+            <summary>如何預約？</summary>
+            <p>先選擇行程、日期與時段，再填寫聯絡資料；送出後即可在訂單頁查看進度。</p>
+          </details>
+          <details>
+            <summary>付款方式</summary>
+            <p>目前提供信用卡付款；若畫面顯示自行匯款，請依頁面提供的資訊完成匯款並回報。</p>
+          </details>
+          <details>
+            <summary>取消與退款</summary>
+            <p>取消與退款依祕島退款政策辦理，詳細規則請參閱 <Link href="/legal/refund">退款政策</Link>。</p>
+          </details>
+          <details>
+            <summary>如何聯絡導遊？</summary>
+            <p>預約送出後，請從訂單頁查看可用的聯絡方式；需要協助也可以聯絡祕島客服。</p>
+          </details>
+        </div>
+      </section>
+
       {/* 保護提示 */}
       <p className="sib-guard"><LockIcon size={10} /> 您的資料將受到妥善保護，僅用於預約聯繫</p>
     </main>

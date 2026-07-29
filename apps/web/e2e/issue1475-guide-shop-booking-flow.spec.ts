@@ -96,7 +96,10 @@ test('自行匯款：顯示匯款資訊並送出 transfer checkout，導向訂�
   await reachPaymentStep(page);
   await page.getByTestId('shop-pay-transfer').click();
   await expect(page.getByTestId('shop-transfer-info')).toContainText('0123456789');
+  await expect(page.getByTestId('shop-transfer-reconciliation-copy')).toContainText('1–2 個工作天');
   await page.getByRole('button', { name: /我已匯款/ }).click();
   await expect.poll(() => transferProvider).toBe('transfer');
   await expect(page).toHaveURL(/\/shop\/orders/);
+  await expect(page.getByTestId('shop-transfer-pending')).toBeVisible();
+  await expect(page.getByTestId('shop-transfer-pending')).toContainText('等待對帳確認');
 });

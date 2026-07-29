@@ -96,4 +96,12 @@ export function isTransferPaymentEnabled(env = process.env) {
   return isTruthy(env.NEXT_PUBLIC_TRANSFER_PAYMENT_ENABLED);
 }
 
+/**
+ * Client-side transfer beta flag. Keep the public env read in this shared
+ * config module so booking pages do not read process.env directly.
+ * Default: OFF.
+ */
+export const isTransferPaymentEnabledClient =
+  isTruthy(process.env.NEXT_PUBLIC_TRANSFER_PAYMENT_ENABLED);
+
 export const __internal = { isTruthy };
