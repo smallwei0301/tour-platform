@@ -175,19 +175,84 @@ export function buildOrderReconciliation({ orders = [], ledgerRows = [], commiss
 }
 
 /**
- * 彙整成一份可直接呈現的對帳結論。
- * `ok: true` 代表 ledger／餘額／出款三者一致，且每張訂單的淨額都等於決策 B 目標。
+ * 資格稽核：找出「已進 ledger 但當初不該被結算」的訂單。
+ *
+ * 為什麼金額對帳抓不到這種錯（2026-07-29 實例）：
+ *   生產上有一筆 `paid_at IS NULL`（平台從未實收）的訂單被結算成 net 6120。
+ *   它的金額完全正確——floor(7200 × 0.85) = 6120，ledger 與餘額也一致——
+ *   因此逐導遊與逐訂單的金額對帳全部判定「正常」。錯的不是金額，是**資格**。
+ *
+ * 這一層檢查的正是 fn_record_settlement_atomic 在交易內重驗的那組條件，
+ * 差別在於它回頭掃既有分錄，找出修復上線前留下的存量。
+ *
+ * 註：淨額已被 reversal 沖銷為 0 者不再列為待處理——帳已平，列出來只是雜訊。
+ *
+ * @param {{ orders: Array<{id: string, status?: string, paid_at?: string|null,
+ *   is_disputed?: boolean, is_safety_case?: boolean, has_complaint?: boolean,
+ *   has_oversell_issue?: boolean}>,
+ *   ledgerRows: Array<{order_id: string, net_twd: number}> }} input
  */
-export function buildReconciliationReport({ guideReconciliation, orderReconciliation }) {
+export function buildEligibilityAudit({ orders = [], ledgerRows = [] } = {}) {
+  const netByOrder = new Map();
+  for (const row of ledgerRows) {
+    if (!row?.order_id) continue;
+    netByOrder.set(row.order_id, (netByOrder.get(row.order_id) ?? 0) + (Number(row.net_twd) || 0));
+  }
+
+  const rows = orders
+    .filter((o) => netByOrder.has(o.id))
+    .map((o) => {
+      const reasons = [];
+      if (!o.paid_at) reasons.push('never_collected');
+      if (o.status && o.status !== 'completed') reasons.push(`status_${o.status}`);
+      if (o.is_disputed) reasons.push('payment_dispute');
+      if (o.is_safety_case) reasons.push('safety_review');
+      if (o.has_complaint) reasons.push('complaint_under_review');
+      if (o.has_oversell_issue) reasons.push('oversell_investigation');
+
+      const ledgerNetTwd = netByOrder.get(o.id) ?? 0;
+      return {
+        orderIdMasked: maskId(o.id),
+        ledgerNetTwd,
+        reasons,
+        // 淨額已沖銷為 0 = 帳面已平，僅供追溯，不需人工處理
+        alreadyReversed: reasons.length > 0 && ledgerNetTwd === 0,
+        needsAttention: reasons.length > 0 && ledgerNetTwd !== 0,
+      };
+    })
+    .filter((r) => r.reasons.length > 0)
+    .sort((a, b) => Math.abs(b.ledgerNetTwd) - Math.abs(a.ledgerNetTwd));
+
+  return {
+    orders: rows,
+    totals: {
+      flaggedCount: rows.length,
+      needsAttentionCount: rows.filter((r) => r.needsAttention).length,
+      alreadyReversedCount: rows.filter((r) => r.alreadyReversed).length,
+      outstandingTwd: rows.filter((r) => r.needsAttention).reduce((s, r) => s + r.ledgerNetTwd, 0),
+    },
+  };
+}
+
+/**
+ * 彙整成一份可直接呈現的對帳結論。
+ * `ok: true` 代表三方金額一致、每張訂單淨額等於決策 B 目標，且沒有不符資格
+ * 卻仍留有淨額的分錄。
+ */
+export function buildReconciliationReport({ guideReconciliation, orderReconciliation, eligibilityAudit }) {
   const guideMismatch = guideReconciliation?.mismatchCount ?? 0;
   const orderMismatch = orderReconciliation?.totals?.mismatchCount ?? 0;
+  const eligibilityIssues = eligibilityAudit?.totals?.needsAttentionCount ?? 0;
   return {
-    ok: guideMismatch === 0 && orderMismatch === 0,
+    ok: guideMismatch === 0 && orderMismatch === 0 && eligibilityIssues === 0,
     guideMismatchCount: guideMismatch,
     orderMismatchCount: orderMismatch,
+    eligibilityIssueCount: eligibilityIssues,
     guides: guideReconciliation?.guides ?? [],
     guideTotals: guideReconciliation?.totals ?? null,
     orders: orderReconciliation?.orders?.filter((o) => o.needsAttention) ?? [],
     orderTotals: orderReconciliation?.totals ?? null,
+    ineligibleSettlements: eligibilityAudit?.orders?.filter((o) => o.needsAttention) ?? [],
+    eligibilityTotals: eligibilityAudit?.totals ?? null,
   };
 }

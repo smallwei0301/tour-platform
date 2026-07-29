@@ -57,20 +57,32 @@ export async function getReconciliationDataDb(supabase, { limit = 5000 } = {}) {
   const orderIds = [...new Set(ledgerRows.map((r) => r.order_id).filter(Boolean))];
   let orders = [];
   if (orderIds.length > 0) {
+    // status／paid_at／四個 hold 旗標供資格稽核使用——金額對帳抓不到「金額算對
+    // 但當初根本不該結算」的分錄（#1777 Phase 4）。
     const [orderRes, opsRes] = await Promise.all([
-      supabase.from('orders').select('id, total_twd').in('id', orderIds),
-      supabase.from('operations_tracking').select('order_id, refund_amount_twd').in('order_id', orderIds),
+      supabase.from('orders').select('id, total_twd, status, paid_at').in('id', orderIds),
+      supabase
+        .from('operations_tracking')
+        .select('order_id, refund_amount_twd, is_disputed, is_safety_case, has_complaint, has_oversell_issue')
+        .in('order_id', orderIds),
     ]);
     if (orderRes.error) throw new Error(orderRes.error.message);
 
-    const refundByOrder = new Map(
-      (opsRes.data ?? []).map((r) => [r.order_id, Number(r.refund_amount_twd ?? 0)]),
-    );
-    orders = (orderRes.data ?? []).map((o) => ({
-      id: o.id,
-      total_twd: Number(o.total_twd ?? 0),
-      refund_amount_twd: refundByOrder.get(o.id) ?? 0,
-    }));
+    const opsByOrder = new Map((opsRes.data ?? []).map((r) => [r.order_id, r]));
+    orders = (orderRes.data ?? []).map((o) => {
+      const ops = opsByOrder.get(o.id);
+      return {
+        id: o.id,
+        total_twd: Number(o.total_twd ?? 0),
+        status: o.status ?? null,
+        paid_at: o.paid_at ?? null,
+        refund_amount_twd: Number(ops?.refund_amount_twd ?? 0),
+        is_disputed: ops?.is_disputed === true,
+        is_safety_case: ops?.is_safety_case === true,
+        has_complaint: ops?.has_complaint === true,
+        has_oversell_issue: ops?.has_oversell_issue === true,
+      };
+    });
   }
 
   return {
