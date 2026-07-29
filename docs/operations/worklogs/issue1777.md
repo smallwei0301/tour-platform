@@ -1,7 +1,7 @@
 # issue1777 — [Payments][P0] 修正結算／部分退款／出款非原子鏈，避免漏帳、重扣與錯誤撥款
 
 > 最後更新：2026-07-29 15:00 Asia/Taipei｜負責 session：claude-fable-5／2026-07-29
-> 本輪範圍：**只做檢查與計劃制定，不動任何程式碼**（依 issue #1777 owner 留言：「owner 明確要求本輪停留在 issue 制定／修改，後續將另行指定 agent，因此現在不得自動開工」）。
+> 本輪範圍：查核 → 計劃 → Phase 1–4 全部實作完成（owner 於對話中依序指示「開始執行程式碼修改」「進入 Phase 2，完成所有 phase 再開 PR」）。**production 寫入仍未授權**：未套用 migration、未執行任何 DML。
 
 ## 目標
 
@@ -195,11 +195,82 @@
 - [x] payout confirm fail-closed guard（production 維持 HOLD）
 - 其餘 AC 屬 Phase 2–4 範圍，未動。
 
+## Phase 2–4 執行紀錄（2026-07-29，owner 指示「進入 Phase 2，完成所有 phase 再開 PR」）
+
+### Phase 2 — 原子 settlement 與 payout confirm（commit `61be654`）
+
+| 檔案 | 變更 |
+|---|---|
+| `supabase/migrations/20260729160000_issue1777_atomic_settlement_and_payout_confirm.sql`（＋rollback） | `fn_record_settlement_atomic`、`fn_confirm_payout_atomic` |
+| `apps/web/src/lib/settlement/db-settlement-atomic.mjs`（新增） | RPC wrapper，唯一 writer；RPC 缺席時 fail-closed |
+| `sweep/route.ts`、`payouts/[payoutId]/confirm/route.ts` | 改走 RPC，移除所有 read-modify-write |
+
+關鍵設計：
+- **冪等以 ledger 為準**：`INSERT … ON CONFLICT DO NOTHING RETURNING`，只有真正插入新分錄才動餘額，重跑不重複累加。
+- **餘額以 SQL 層增減**（`balance_twd + delta`），不再整列覆寫 → 消除 lost update。
+- **交易內重驗資格**（completed／已實收／四個 hold 旗標／未全額退款）：JS 讀取後才被標記爭議的訂單會落在 `rejected` 而非入帳。
+- **餘額不足 RAISE**，不再 `Math.max(0, …)` 靜默截斷。
+- T+N 時間閘門仍由呼叫端計算（需要 booking／schedule 的 start_at 回退邏輯，且不會秒級反轉；在 SQL 重複實作反而有分歧風險）——已在 migration 註解說明。
+
+### Phase 3 — 退款差額 adjustment（commit `77bb178`）
+
+| 檔案 | 變更 |
+|---|---|
+| `supabase/migrations/20260729170000_issue1777_refund_adjustment_ledger.sql`（＋rollback） | `refund_adjustment` 分錄型別、`refund_event_id` 冪等鍵、部分索引、`fn_apply_refund_adjustment_atomic` |
+| `db-settlement-atomic.mjs` | `applyRefundAdjustmentAtomicDb`、`buildRefundEventId` |
+| `refund-execute/route.ts` | 在 `refund_amount_twd` 寫入**成功之後**呼叫 adjustment |
+
+**設計取捨（與原計劃不同，已驗證更安全）**：計劃原寫「取代 `recordRefundReversalDb`」。實作時評估發現該函式與 order 狀態機、修復路徑（`route.ts:172` 的 repair 分支依賴其 `reversed`／`repaired` 回傳）深度耦合，直接拆除風險高。改採**「把 ledger 調整到目標值」**：差額 = 目標 − ledger 現值。效果更好——不論前置狀態如何（含既有的全額紅沖）都收斂到正確的最終淨應付，並自動補回被紅沖過頭的部分，且天然冪等。代價是 ledger 會同時留下 reversal 與 adjustment 兩列，最終淨額正確且可追蹤；完全移除 reversal 路徑留待後續另案。
+
+**冪等鍵**：`${orderId}:cum:${累積退款額}`。同次退款重送得同鍵（不重複記帳），二次部分退款因累積額不同得新鍵（各記一次差額）——不需外部事件 id。
+
+### Phase 4 — 對帳與歷史 proposal（commit `b6e608b`）
+
+| 檔案 | 變更 |
+|---|---|
+| `src/lib/accounting/reconciliation.mjs`（新增） | 純函式：逐導遊、逐訂單對帳與結論彙整 |
+| `src/lib/accounting/db-reconciliation.mjs`（新增） | 唯讀資料存取 |
+| `report-service.mjs` | 月報表附帶 `reconciliation` 區塊；對帳失敗不影響月報主體 |
+| `scripts/admin/issue1777-reconciliation-preview.mjs`（新增） | privacy-safe read-only preview，含 #1647 三項 |
+| `docs/operations/issue1777-historical-data-proposal.md`（新增） | 三項的 DML proposal、rollback／compensation path、執行紀律 |
+
+不變量：`期望餘額 = Σ ledger 淨額 − Σ 已付出款`；訂單層 `ledger 淨額 = floor(max(0, total − 累積退款) × (1 − 分潤率))`。
+**唯讀由測試鎖住**：`db-reconciliation` 與 preview script 皆不得出現 `insert/update/upsert/delete/rpc`，避免日後有人在報表裡順手加「自動修復」。
+
+### 架構 ratchet 修正（commit `eaa99e1`）
+
+全套測試暴露兩個 `architecture-ratchet-guard` 違規，均照規範修正而非放寬天花板：
+- `src/lib` 頂層檔案數 → 兩個新模組移入 `src/lib/settlement/` 子資料夾
+- 直讀 `process.env` → 新增 `src/config/payout-env.mjs` getter（未觸碰凍結區的 `security-env.mjs`／`startup-env.mjs`）
+
+### 測試總計
+
+| 測試檔 | 條數 |
+|---|---|
+| `issue1777-dispute-safety-hold-projection` | 12 |
+| `issue1777-payout-confirm-fail-closed` | 9 |
+| `issue1777-atomic-settlement-payout` | 13 |
+| `issue1777-refund-adjustment` | 20 |
+| `issue1777-reconciliation` | 23 |
+| `issue1777-migration-contract` | 13 |
+| **合計** | **90** |
+
+**全套 `npm test`：4798/4802 pass、3 skipped。**
+
+### 唯一剩餘紅燈（預期且正確，不得修飾）
+
+`issue #1293 — migration ledger gate` **HOLD**。這是 fail-safe 設計正確運作：本分支新增的兩支 migration 尚未套用至 production，ledger 因此無 `verified` record。依 `docs/operations/migration-apply-ledger-sop.md`，該 record 必須在 owner 授權套用**並實際驗證**後才能補上；`pending` 狀態同樣會 HOLD。**不得為了讓 gate 轉綠而謊報 verified。**
+
 ## 下一步
 
-- **開 PR 並盯 CI**（Phase 1 為純程式碼、無 migration，可獨立 merge）。
-- Phase 2 起需 migration，套用前必須取得 `SQL-OVERRIDE` 授權；且因 sweep 由 GitHub Actions cron 每日 02:00 UTC 自動執行，**migration 必須先套用才能 merge 呼叫端切換**。
-- production payout confirm 在 Phase 2 驗收前維持 HOLD（未設 `PAYOUT_CONFIRM_ENABLED` 即為擋下狀態，無需額外操作）。
+1. **開 PR 並盯 CI**（CI 會因上述 ledger gate 亮 HOLD，屬預期；PR 說明已標示）。
+2. **套用 migration**（需 owner `SQL-OVERRIDE` 授權）：
+   - 先套 `20260729160000`，再套 `20260729170000`
+   - 套用後補 ledger record → 開 PR → CI 轉綠
+   - ⚠️ **順序硬規則**：sweep 由 GitHub Actions cron 每日 02:00 UTC 自動執行。migration 必須**先**套用才能部署呼叫端；順序顛倒會讓隔日排程整批失敗（呼叫端 fail-closed，不會退回非原子路徑）。
+3. **staging／fixture 驗證**：payment → settlement → partial refund → payout confirm 全鏈，含重送與 fault injection。
+4. **解除出款 HOLD**：Phase 2 驗收後才設 `PAYOUT_CONFIRM_ENABLED=true`。在此之前未設定即為擋下狀態，無需額外操作。
+5. **歷史資料**：依 `docs/operations/issue1777-historical-data-proposal.md`，先重新 read-only preview，再逐項取得 owner 授權。
 
 ## 絕不重做（Do-NOT-redo）
 
