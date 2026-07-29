@@ -85,9 +85,15 @@ export async function POST(req: NextRequest) {
     // - use booking.start_at as canonical cutoff for V2-linked rows,
     //   and fallback to activity_schedules.start_at for legacy rows
     // - join operations_tracking.refund_amount_twd for effective-amount math,
-    //   plus has_complaint / has_oversell_issue so computeSweepPayoutItem's
-    //   #1221 payout-hold gate can actually fire (#1106: completed orders with
-    //   an open complaint / oversell investigation must NOT be auto-settled).
+    //   plus the four #1221 payout-hold flags so computeSweepPayoutItem's gate
+    //   can actually fire (#1106: completed orders with an open complaint /
+    //   oversell investigation must NOT be auto-settled).
+    // - #1777 缺口 1：is_disputed / is_safety_case 自 migration
+    //   20260618_operations_tracking_dispute_safety_flags 起就是實體欄位，但一直
+    //   沒被投影——PostgREST 只回傳被 select 的欄位，這兩欄以 undefined 抵達
+    //   isPayoutOnHold 的 `=== true` 檢查，付款爭議／安全案件的 hold 從未觸發，
+    //   而導遊端 computeGuidePayoutEstimate 讀滿四旗標卻顯示 hold（跨介面分裂）。
+    //   四旗標必須與導遊端投影完全一致，否則錢會在爭議未決時被撥出去。
     // - bookings 嵌入必須指名 fk_bookings_order_id：#1560 後 orders↔bookings 有兩條
     //   FK，未指名時 PostgREST 回 PGRST201 歧義 → 整個 sweep 500（同 #1554 修法）。
     const { data: completedOrders, error: ordersError } = await supabase
@@ -100,7 +106,7 @@ export async function POST(req: NextRequest) {
         activities!inner(guide_id),
         bookings!fk_bookings_order_id(start_at, end_at, activity_plan_id, activity_id, guide_id),
         activity_schedules(start_at),
-        operations_tracking(refund_amount_twd, has_complaint, has_oversell_issue)
+        operations_tracking(refund_amount_twd, has_complaint, has_oversell_issue, is_disputed, is_safety_case)
       `)
       .eq('status', 'completed');
 
@@ -121,6 +127,16 @@ export async function POST(req: NextRequest) {
     const now = new Date().toISOString();
     const settlementSourcePolicy = 'booking_v2_then_legacy_fallback';
 
+    // 四個 hold 旗標必須與上方 select 投影、以及導遊端 computeGuidePayoutEstimate
+    // 讀取的欄位保持一致（#1777）。少一個都會讓對應的 hold 悄悄失效。
+    type OpsTrackingRow = {
+      refund_amount_twd?: number | null;
+      has_complaint?: boolean | null;
+      has_oversell_issue?: boolean | null;
+      is_disputed?: boolean | null;
+      is_safety_case?: boolean | null;
+    };
+
     type Order = {
       id: string;
       booking_id?: string | null;
@@ -129,10 +145,7 @@ export async function POST(req: NextRequest) {
       activities: { guide_id: string } | { guide_id: string }[];
       bookings?: { start_at?: string | null } | { start_at?: string | null }[] | null;
       activity_schedules?: { start_at: string } | { start_at: string }[] | null;
-      operations_tracking?:
-        | { refund_amount_twd?: number | null; has_complaint?: boolean | null; has_oversell_issue?: boolean | null }
-        | { refund_amount_twd?: number | null; has_complaint?: boolean | null; has_oversell_issue?: boolean | null }[]
-        | null;
+      operations_tracking?: OpsTrackingRow | OpsTrackingRow[] | null;
     };
 
     const eligibleOrders = (orders as Order[]).filter((order) => {
