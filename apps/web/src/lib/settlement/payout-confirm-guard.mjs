@@ -22,6 +22,7 @@
  * 解除方式：Phase 2 原子 RPC 上線並驗收後，於部署環境設 PAYOUT_CONFIRM_ENABLED=true
  * （或直接移除本 guard，由該 PR 決定）。
  */
+import { getPayoutConfirmEnabledRaw } from '../../config/payout-env.mjs';
 
 /** 穩定錯誤碼——前端顯示與稽核比對皆以此為準。 */
 export const PAYOUT_CONFIRM_HOLD_CODE = 'PAYOUT_CONFIRM_ON_HOLD';
@@ -34,25 +35,28 @@ const HOLD_REASON_ZH =
  * 現在是否允許執行真實的 payout confirm。
  *
  * @param {Record<string, string|undefined>|null|undefined} [env] 供測試注入；
- *        預設讀 process.env。
+ *        省略時經 src/config/payout-env.mjs 讀取。
  * @returns {{ allowed: boolean, code: string|null, reasonZh: string|null }}
  */
 export function isPayoutConfirmAllowed(env) {
+  const hold = { allowed: false, code: PAYOUT_CONFIRM_HOLD_CODE, reasonZh: HOLD_REASON_ZH };
   try {
-    const source = env === undefined ? process.env : env;
-    // null / 非物件 → 讀不到狀態 → 擋下
-    if (!source || typeof source !== 'object') {
-      return { allowed: false, code: PAYOUT_CONFIRM_HOLD_CODE, reasonZh: HOLD_REASON_ZH };
+    let raw;
+    if (env === undefined) {
+      raw = getPayoutConfirmEnabledRaw();
+    } else {
+      // null / 非物件 → 讀不到狀態 → 擋下
+      if (!env || typeof env !== 'object') return hold;
+      raw = env.PAYOUT_CONFIRM_ENABLED;
     }
 
-    const raw = source.PAYOUT_CONFIRM_ENABLED;
     if (typeof raw === 'string' && raw.trim().toLowerCase() === 'true') {
       return { allowed: true, code: null, reasonZh: null };
     }
 
-    return { allowed: false, code: PAYOUT_CONFIRM_HOLD_CODE, reasonZh: HOLD_REASON_ZH };
+    return hold;
   } catch {
     // 讀取本身拋錯（例如被代理的 env 物件）——fail-closed。
-    return { allowed: false, code: PAYOUT_CONFIRM_HOLD_CODE, reasonZh: HOLD_REASON_ZH };
+    return hold;
   }
 }

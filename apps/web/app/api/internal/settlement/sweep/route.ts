@@ -27,7 +27,7 @@ import { computeSweepPayoutItem, getSettlementConfig } from '../../../../../src/
 import { isOrderEligibleForSettlement, pickEffectiveStartAt } from '../../../../../src/lib/internal-sweep-time-source';
 import { isSettlementPaymentCollected } from '../../../../../src/lib/post-trip/payout-eligibility.mjs';
 import { isCronJobEnabled, recordCronRun } from '../../../../../src/lib/cron-job-controls.mjs';
-import { recordSettlementAtomicDb } from '../../../../../src/lib/db-settlement-atomic.mjs';
+import { recordSettlementAtomicDb } from '../../../../../src/lib/settlement/db-settlement-atomic.mjs';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
 // ── Auth guard ─────────────────────────────────────────────────────────────────

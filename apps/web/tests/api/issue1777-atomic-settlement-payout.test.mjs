@@ -187,7 +187,7 @@ describe('#1777 缺口 4 — 舊 confirmPayoutDb 在 payout update 失敗時已�
 
 describe('#1777 Phase 2 — recordSettlementAtomicDb 單一交易契約', () => {
   it('只發出一次 RPC，且完全不碰任何資料表', async () => {
-    const { recordSettlementAtomicDb } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { recordSettlementAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = makeMockClient({
       rpcResult: [{ settled_count: 1, skipped_existing: 0, rejected_ineligible: 0, guides_updated: 1, rejected_order_ids: [] }],
     });
@@ -202,7 +202,7 @@ describe('#1777 Phase 2 — recordSettlementAtomicDb 單一交易契約', () => 
   });
 
   it('空清單不呼叫 RPC（no-op）', async () => {
-    const { recordSettlementAtomicDb } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { recordSettlementAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = makeMockClient();
     const result = await recordSettlementAtomicDb(client, []);
     assert.equal(client.calls.rpc.length, 0);
@@ -210,7 +210,7 @@ describe('#1777 Phase 2 — recordSettlementAtomicDb 單一交易契約', () => 
   });
 
   it('重送回報 skipped_existing 而非重複累加', async () => {
-    const { recordSettlementAtomicDb } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { recordSettlementAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = makeMockClient({
       rpcResult: [{ settled_count: 0, skipped_existing: 1, rejected_ineligible: 0, guides_updated: 0, rejected_order_ids: [] }],
     });
@@ -221,7 +221,7 @@ describe('#1777 Phase 2 — recordSettlementAtomicDb 單一交易契約', () => 
   });
 
   it('交易內資格重驗不通過者回報 rejected（爭議訂單不入帳）', async () => {
-    const { recordSettlementAtomicDb } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { recordSettlementAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = makeMockClient({
       rpcResult: [{ settled_count: 0, skipped_existing: 0, rejected_ineligible: 1, guides_updated: 0, rejected_order_ids: ['o-1'] }],
     });
@@ -231,7 +231,7 @@ describe('#1777 Phase 2 — recordSettlementAtomicDb 單一交易契約', () => 
   });
 
   it('RPC 未部署時 fail-closed（不得退回非原子路徑）', async () => {
-    const { recordSettlementAtomicDb, RPC_MISSING_CODE } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { recordSettlementAtomicDb, RPC_MISSING_CODE } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = makeMockClient({ rpcError: { code: 'PGRST202', message: 'Could not find the function' } });
 
     await assert.rejects(
@@ -253,7 +253,7 @@ describe('#1777 Phase 2 — confirmPayoutAtomicDb 單一交易契約', () => {
   };
 
   it('只發出一次 RPC，不在應用層讀寫餘額或 payout', async () => {
-    const { confirmPayoutAtomicDb } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { confirmPayoutAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = makeMockClient({ rpcResult: [okRow] });
 
     const result = await confirmPayoutAtomicDb(client, 'p-1', 'admin', 'T-1');
@@ -266,7 +266,7 @@ describe('#1777 Phase 2 — confirmPayoutAtomicDb 單一交易契約', () => {
   });
 
   it('重送同一 payout 回 already_paid 且餘額不變（不重扣）', async () => {
-    const { confirmPayoutAtomicDb } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { confirmPayoutAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = makeMockClient({
       rpcResult: [{ ...okRow, already_paid: true, before_balance: 3500, after_balance: 3500 }],
     });
@@ -277,7 +277,7 @@ describe('#1777 Phase 2 — confirmPayoutAtomicDb 單一交易契約', () => {
   });
 
   it('餘額不足時錯誤往上拋，不得被截斷或吞掉', async () => {
-    const { confirmPayoutAtomicDb } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { confirmPayoutAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = makeMockClient({
       rpcError: { code: '22000', message: 'insufficient guide balance: have 1000, need 9000' },
     });
@@ -290,14 +290,14 @@ describe('#1777 Phase 2 — confirmPayoutAtomicDb 單一交易契約', () => {
   });
 
   it('payoutId 缺漏直接拒絕', async () => {
-    const { confirmPayoutAtomicDb } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { confirmPayoutAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = makeMockClient();
     await assert.rejects(() => confirmPayoutAtomicDb(client, '', 'admin', null), /payoutId is required/);
     assert.equal(client.calls.rpc.length, 0);
   });
 
   it('RPC 未部署時 fail-closed', async () => {
-    const { confirmPayoutAtomicDb, RPC_MISSING_CODE } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { confirmPayoutAtomicDb, RPC_MISSING_CODE } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = makeMockClient({ rpcError: { code: 'PGRST202', message: 'Could not find the function' } });
     await assert.rejects(
       () => confirmPayoutAtomicDb(client, 'p-1', 'admin', null),

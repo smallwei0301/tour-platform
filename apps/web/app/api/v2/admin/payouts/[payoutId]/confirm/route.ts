@@ -14,7 +14,7 @@
 import { reportRouteError } from '../../../../../../../src/lib/route-error';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../../src/config/supabase-service-env.mjs';
-import { isPayoutConfirmAllowed } from '../../../../../../../src/lib/payout-confirm-guard.mjs';
+import { isPayoutConfirmAllowed } from '../../../../../../../src/lib/settlement/payout-confirm-guard.mjs';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ payoutId: string }> }) {
   const { payoutId } = await params;
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
     // audit 三者在單一 DB 交易內同成同敗。舊的 confirmPayoutDb 是三次獨立呼叫，
     // 扣款成功但 update 失敗時 payout 仍 pending 而餘額已扣，重試即重複扣款；
     // 餘額不足也會被 Math.max(0, …) 靜默截成 0。新路徑餘額不足一律拋錯。
-    const { confirmPayoutAtomicDb } = await import('../../../../../../../src/lib/db-settlement-atomic.mjs');
+    const { confirmPayoutAtomicDb } = await import('../../../../../../../src/lib/settlement/db-settlement-atomic.mjs');
 
     const body = await req.json().catch(() => ({}));
     const result = await confirmPayoutAtomicDb(

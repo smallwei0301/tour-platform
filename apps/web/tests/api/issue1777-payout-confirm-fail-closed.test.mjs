@@ -21,7 +21,7 @@ import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 
 async function loadGuard() {
-  return import('../../src/lib/payout-confirm-guard.mjs');
+  return import('../../src/lib/settlement/payout-confirm-guard.mjs');
 }
 
 describe('#1777 — payout confirm guard 預設 fail-closed', () => {

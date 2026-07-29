@@ -77,12 +77,12 @@ describe('#1777 缺口 2 — 舊紅沖路徑不看本次退款金額', () => {
 
 describe('#1777 Phase 3 — 退款事件冪等鍵', () => {
   it('同一次退款重送得到相同鍵（不重複記帳）', async () => {
-    const { buildRefundEventId } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { buildRefundEventId } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     assert.equal(buildRefundEventId('o-1', 3000), buildRefundEventId('o-1', 3000));
   });
 
   it('第二次部分退款因累積額不同而得到新鍵（各記一次差額）', async () => {
-    const { buildRefundEventId } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { buildRefundEventId } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     assert.notEqual(
       buildRefundEventId('o-1', 3000),
       buildRefundEventId('o-1', 5000),
@@ -91,7 +91,7 @@ describe('#1777 Phase 3 — 退款事件冪等鍵', () => {
   });
 
   it('不同訂單不共用鍵', async () => {
-    const { buildRefundEventId } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { buildRefundEventId } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     assert.notEqual(buildRefundEventId('o-1', 3000), buildRefundEventId('o-2', 3000));
   });
 });
@@ -117,7 +117,7 @@ describe('#1777 Phase 3 — applyRefundAdjustmentAtomicDb 契約', () => {
   };
 
   it('單一 RPC 呼叫，帶上冪等鍵', async () => {
-    const { applyRefundAdjustmentAtomicDb } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { applyRefundAdjustmentAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = rpcClient({ result: [row] });
 
     const out = await applyRefundAdjustmentAtomicDb(client, {
@@ -132,7 +132,7 @@ describe('#1777 Phase 3 — applyRefundAdjustmentAtomicDb 契約', () => {
   });
 
   it('重送同一事件回 applied:false 且差額為 0', async () => {
-    const { applyRefundAdjustmentAtomicDb } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { applyRefundAdjustmentAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = rpcClient({ result: [{ ...row, applied: false, delta_twd: 0 }] });
     const out = await applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundEventId: 'o-1:cum:3000' });
     assert.equal(out.applied, false, '同一退款事件不得記第二次差額');
@@ -140,7 +140,7 @@ describe('#1777 Phase 3 — applyRefundAdjustmentAtomicDb 契約', () => {
   });
 
   it('缺冪等鍵直接拒絕（避免無鍵寫入導致重複記帳）', async () => {
-    const { applyRefundAdjustmentAtomicDb } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { applyRefundAdjustmentAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = rpcClient();
     await assert.rejects(
       () => applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundEventId: '' }),
@@ -150,7 +150,7 @@ describe('#1777 Phase 3 — applyRefundAdjustmentAtomicDb 契約', () => {
   });
 
   it('RPC 未部署時 fail-closed', async () => {
-    const { applyRefundAdjustmentAtomicDb, RPC_MISSING_CODE } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { applyRefundAdjustmentAtomicDb, RPC_MISSING_CODE } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = rpcClient({ error: { code: 'PGRST202', message: 'Could not find the function' } });
     await assert.rejects(
       () => applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundEventId: 'k' }),
@@ -159,7 +159,7 @@ describe('#1777 Phase 3 — applyRefundAdjustmentAtomicDb 契約', () => {
   });
 
   it('已出款而餘額轉負時回報 carry-forward（不靜默歸零）', async () => {
-    const { applyRefundAdjustmentAtomicDb } = await import('../../src/lib/db-settlement-atomic.mjs');
+    const { applyRefundAdjustmentAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = rpcClient({
       result: [{ ...row, target_net_twd: 0, delta_twd: -8500, balance_after: -8500, carry_forward_twd: 8500 }],
     });

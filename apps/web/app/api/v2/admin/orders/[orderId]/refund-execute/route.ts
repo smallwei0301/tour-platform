@@ -501,7 +501,7 @@ export async function POST(
           // 的最終淨應付，並自動補回被紅沖過頭的部分。
           try {
             const { applyRefundAdjustmentAtomicDb, buildRefundEventId } =
-              await import('../../../../../../../src/lib/db-settlement-atomic.mjs');
+              await import('../../../../../../../src/lib/settlement/db-settlement-atomic.mjs');
             await applyRefundAdjustmentAtomicDb(supabase, {
               orderId,
               refundEventId: buildRefundEventId(orderId, opsRefundTwd),
