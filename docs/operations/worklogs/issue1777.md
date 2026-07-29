@@ -1,7 +1,7 @@
 # issue1777 — [Payments][P0] 修正結算／部分退款／出款非原子鏈，避免漏帳、重扣與錯誤撥款
 
-> 最後更新：2026-07-29 21:50 Asia/Taipei｜負責 session：claude-fable-5／2026-07-29
-> 本輪範圍：查核 → 計劃 → Phase 1–4 實作 → 三支 migration 已套用 production 並驗證（owner 依序授權「開始執行程式碼修改」「進入 Phase 2，完成所有 phase 再開 PR」「SQL-OVERRIDE 授權」）。**DML 仍未授權**：未執行任何資料寫入、未動真實出款/退款。
+> 最後更新：2026-07-29 22:30 Asia/Taipei｜負責 session：claude-fable-5／2026-07-29
+> 本輪範圍：查核 → 計劃 → Phase 1–4 實作 → migration 套用並驗證 → PR #1778/#1779 merged → AC 11/11 sign-off。**DML 仍未授權**：未執行任何資料寫入、未動真實出款/退款。剩餘：端到端全鏈驗證、fresh independent review。
 
 ## 目標
 
@@ -18,7 +18,7 @@
 - [x] AC1 issue #1777 所列四個未完成缺口，逐一以現碼證據（檔案:行號）確認成立或推翻
 - [x] AC2 產出分期修改計劃，對齊 owner 已拍板的決策 A～D
 - [x] AC3 明確標示 production 授權邊界（本輪與後續皆未取得 production 寫入授權）
-- [x] AC4 worklog commit／push 至指定分支，並同步進度錨點留言至 issue #1777
+- [x] AC4 worklog commit／push，並同步進度錨點留言至 issue #1777（分支：#1778 merged 後改用 follow-up 分支，因 merged PR 不可重用且鐵律 10 禁 force-push）
 
 ---
 
@@ -307,16 +307,47 @@
 
 `npm test`：**4809/4812 pass、0 fail、3 skipped**（原本唯一的 ledger gate 紅燈已消除）。
 
-## 下一步
+## 收尾（2026-07-29 22:30 Asia/Taipei）
 
-1. **盯 CI 並 merge PR #1778**（ledger 已補，CI 應全綠）。
-2. **套用 migration**（需 owner `SQL-OVERRIDE` 授權）：
-   - 先套 `20260729160000`，再套 `20260729170000`
-   - 套用後補 ledger record → 開 PR → CI 轉綠
-   - ⚠️ **順序硬規則**：sweep 由 GitHub Actions cron 每日 02:00 UTC 自動執行。migration 必須**先**套用才能部署呼叫端；順序顛倒會讓隔日排程整批失敗（呼叫端 fail-closed，不會退回非原子路徑）。
-3. **staging／fixture 驗證**：payment → settlement → partial refund → payout confirm 全鏈，含重送與 fault injection。
-4. **解除出款 HOLD**：Phase 2 驗收後才設 `PAYOUT_CONFIRM_ENABLED=true`。在此之前未設定即為擋下狀態，無需額外操作。
-5. **歷史資料**：依 `docs/operations/issue1777-historical-data-proposal.md`，先重新 read-only preview，再逐項取得 owner 授權。
+### 已完成
+
+| 項目 | 結果 |
+|---|---|
+| PR #1778 | CI 6 checks 全綠 → **merged**（`49e448d`） |
+| PR #1779（收尾） | CI 3 checks 全綠 → **merged**（`1b80d42`） |
+| Migration 套用 | 三支已套用並驗證，ledger 補三筆 `verified`，gate 綠 |
+| Production 部署 | commit `49e448d` 的 production deployment **READY**。**順序正確**——migration 21:43 先套用、程式碼隨後上線，明天 02:00 UTC sweep 會呼叫已存在的 RPC |
+| AC sign-off | **11/11 PASS**，逐條證據見驗收報告與 issue 留言 |
+| 驗收報告 | `docs/operations/qa-reports/issue1777-financial-chain-atomicity-20260729.md` |
+| #1647 read-only preview | 三項實測完成（見下） |
+
+### 收尾階段發現的兩件事
+
+**1. 對帳有真實盲點（已修，PR #1779）**
+
+訂單 `1158aa21…`（NT$7,200、`paid_at IS NULL`、平台從未實收）曾被結算成 net 6120。它的**金額完全正確**（`floor(7200 × 0.85) = 6120`），ledger 與餘額也一致，因此逐導遊與逐訂單的金額對帳全部判「正常」。**錯的不是金額，是資格。**
+
+已新增 `buildEligibilityAudit`（`src/lib/accounting/reconciliation.mjs`）：回頭掃既有分錄，比對的正是 `fn_record_settlement_atomic` 在交易內重驗的那組條件。淨額已被 reversal 沖銷為 0 者標 `alreadyReversed` 但不列待處理——帳已平，列出來只是雜訊。`buildReconciliationReport` 的 `ok` 現在也要求資格無誤。
+
+**2. #1647 項目二已完成，與舊快照不同**
+
+| 項目 | 2026-07-06 舊快照 | **2026-07-29 實測** | 結論 |
+|---|---|---|---|
+| 一：`paid` 卡單 | 14 筆 NT$23,838 | 14 筆 NT$23,838，**全部 `paid_at` 非空** | 仍待處理，全數符合候選 |
+| 二：未實收卻入帳 | NT$6,120 待沖銷 | **ledger 淨額 0** | ✅ **已完成**（`20260622120000` 已沖銷） |
+| 三：過期 pending 出款 | NT$7,168 | 1 筆，餘額 NT$21,814 足夠 | 仍待處理 |
+
+三方對帳：唯一導遊 ledger 淨額 = 餘額 = NT$21,814，**差異 0**。
+
+## 下一步（剩餘兩項，issue 暫不關閉）
+
+1. **端到端全鏈驗證**（目前 `NOT_VERIFIED-live`）：payment → settlement → partial refund → payout confirm，含重送與 fault injection。冷啟動環境無安全的測試訂單，且出款仍 HOLD，故未執行。
+2. **Fresh independent review**：issue Verification 明列需獨立審查（安全／帳務不變量／migration 可回滾／測試不可只驗 source string）。**驗收報告由實作者撰寫，不能取代獨立審查。**
+
+完成上述兩項後才可：
+
+3. **解除出款 HOLD**：設 `PAYOUT_CONFIRM_ENABLED=true`。在此之前未設定即為擋下狀態，無需額外操作。
+4. **#1647 項目一、三**：依 `docs/operations/issue1777-historical-data-proposal.md` 重新 preview → 逐項取得 owner 授權 → 執行 → 留證。
 
 ## 絕不重做（Do-NOT-redo）
 
