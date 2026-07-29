@@ -1,7 +1,7 @@
 # issue1777 — [Payments][P0] 修正結算／部分退款／出款非原子鏈，避免漏帳、重扣與錯誤撥款
 
-> 最後更新：2026-07-29 15:00 Asia/Taipei｜負責 session：claude-fable-5／2026-07-29
-> 本輪範圍：查核 → 計劃 → Phase 1–4 全部實作完成（owner 於對話中依序指示「開始執行程式碼修改」「進入 Phase 2，完成所有 phase 再開 PR」）。**production 寫入仍未授權**：未套用 migration、未執行任何 DML。
+> 最後更新：2026-07-29 21:50 Asia/Taipei｜負責 session：claude-fable-5／2026-07-29
+> 本輪範圍：查核 → 計劃 → Phase 1–4 實作 → 三支 migration 已套用 production 並驗證（owner 依序授權「開始執行程式碼修改」「進入 Phase 2，完成所有 phase 再開 PR」「SQL-OVERRIDE 授權」）。**DML 仍未授權**：未執行任何資料寫入、未動真實出款/退款。
 
 ## 目標
 
@@ -257,13 +257,59 @@
 
 **全套 `npm test`：4798/4802 pass、3 skipped。**
 
-### 唯一剩餘紅燈（預期且正確，不得修飾）
+### 曾經的唯一紅燈（已於 2026-07-29 21:43 套用 migration 後消除）
 
-`issue #1293 — migration ledger gate` **HOLD**。這是 fail-safe 設計正確運作：本分支新增的兩支 migration 尚未套用至 production，ledger 因此無 `verified` record。依 `docs/operations/migration-apply-ledger-sop.md`，該 record 必須在 owner 授權套用**並實際驗證**後才能補上；`pending` 狀態同樣會 HOLD。**不得為了讓 gate 轉綠而謊報 verified。**
+`issue #1293 — migration ledger gate` 一度 HOLD，這是 fail-safe 設計正確運作：migration 尚未套用時 ledger 無 `verified` record。**當時刻意不謊報 verified**；待 owner 授權套用並實際驗證後才補 record，gate 隨即轉綠。詳見下方「Migration 套用紀錄」。
+
+## Migration 套用紀錄（2026-07-29 21:43 Asia/Taipei，owner 於對話中授權「SQL-OVERRIDE 授權」）
+
+依 `docs/operations/migration-apply-ledger-sop.md` 四步驟執行。專案 `pyoderxmpeyqjwkeliiu`（tour platform）。
+
+### 套用前唯讀檢查
+
+三支目標函式皆不存在；`payout_items_order_kind_unique` 為全表唯一索引；CHECK 僅允許 `settlement`／`reversal`；`refund_event_id` 欄位不存在——與 migration 假設完全吻合。
+
+### 套用與驗證
+
+| migration | 結果 | 驗證 |
+|---|---|---|
+| `20260729160000`（Phase 2） | success | `pg_proc` 實查兩支函式存在且 `proconfig=search_path=pg_catalog,public,pg_temp`；`fn_confirm_payout_atomic` 對不存在 payout 回 **P0002**；`fn_record_settlement_atomic('[]')` 回 0 且無寫入 |
+| `20260729170000`（Phase 3） | success | `refund_event_id` 欄位存在；CHECK 已含三種 kind；`payout_items_order_kind_unique` 帶 `WHERE settlement_kind IN ('settlement','reversal')`；`payout_items_refund_event_unique` 帶 `WHERE refund_event_id IS NOT NULL`；空冪等鍵回 **22023** |
+| `20260729180000`（hotfix） | success | `routine_privileges` 實查三支函式 grantee 僅剩 `service_role`／`postgres` |
+
+### ⚠️ 套用後發現並修復的 P0 安全缺口
+
+套用 Phase 2／3 後實查發現：**三支財務函式對 `anon` 與 `authenticated` 皆持有 EXECUTE**。
+
+- **成因**：Supabase 在 public schema 對 FUNCTIONS 有 default privileges，而兩支 migration 只寫了 `REVOKE ALL … FROM PUBLIC`。PUBLIC 是偽角色，撤不掉已明確授予具名角色的權限。
+- **風險**：未登入者可直接呼叫 `fn_confirm_payout_atomic` 把 payout 標為 paid 並扣減導遊餘額，或以 `fn_apply_refund_adjustment_atomic` 竄改 ledger。
+- **修復**：新增 `20260729180000` hotfix，三支函式 `REVOKE ALL FROM anon, authenticated, public` 並重新授權 `service_role`；另以 `ALTER DEFAULT PRIVILEGES` 撤銷兩角色對 FUNCTIONS 的預設 EXECUTE，避免下一支金流函式重蹈覆轍（既有 #1678 hardening 只涵蓋 TABLES）。
+- **測試盲點**：原契約測試只斷言「沒有明確 `GRANT` 給 anon」，因此**測試全綠而 production 不安全**。已改鎖正面條件——每支財務函式都必須被明確 `REVOKE FROM anon/authenticated`。**「沒有寫 GRANT」不等於「沒有權限」。**
+
+### 資料影響（鐵律 2 回報義務）
+
+**三支 migration 均未異動任何資料列。** 套用後實查：
+
+| 項目 | 值 |
+|---|---|
+| `payout_items` 總列數 | 10（與 #1637 稽核 2026-07-06 快照一致） |
+| `payout_items`：`refund_adjustment` 分錄 | 0 |
+| `payout_items`：`refund_event_id` 非空 | 0 |
+| `guide_balances` | 1 位導遊，合計 NT$21,814（快照一致） |
+| `payouts` pending／paid／cancelled | 1 / 0 / 0（快照一致） |
+| 本次相關 `audit_logs` | 0 |
+
+### Ledger（SOP 步驟 4）
+
+已補三筆 `verified` record。gate 由 HOLD 轉綠：**migration 檔 131：verified 14、baseline 117、missing 0、unverified 0**。
+
+### 套用後全套測試
+
+`npm test`：**4809/4812 pass、0 fail、3 skipped**（原本唯一的 ledger gate 紅燈已消除）。
 
 ## 下一步
 
-1. **開 PR 並盯 CI**（CI 會因上述 ledger gate 亮 HOLD，屬預期；PR 說明已標示）。
+1. **盯 CI 並 merge PR #1778**（ledger 已補，CI 應全綠）。
 2. **套用 migration**（需 owner `SQL-OVERRIDE` 授權）：
    - 先套 `20260729160000`，再套 `20260729170000`
    - 套用後補 ledger record → 開 PR → CI 轉綠
