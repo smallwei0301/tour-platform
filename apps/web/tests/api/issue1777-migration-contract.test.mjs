@@ -25,6 +25,8 @@ const ISSUE_1777_MIGRATIONS = [
   '20260729160000_issue1777_atomic_settlement_and_payout_confirm',
   '20260729170000_issue1777_refund_adjustment_ledger',
   '20260729180000_issue1777_revoke_atomic_fns_from_anon',
+  // 獨立審查後的修復：ON CONFLICT predicate（P0）＋ default privileges FOR ROLE
+  '20260729190000_issue1777_post_review_fixes',
 ];
 
 /** 本 issue 建立的財務函式——權限收斂必須涵蓋每一支。 */
@@ -38,9 +40,18 @@ function readMigration(base) {
   return readFileSync(join(MIGRATIONS_DIR, `${base}.sql`), 'utf8');
 }
 
-/** 去掉 SQL 註解，避免解釋性文字讓斷言假綠。 */
+/**
+ * 去掉 SQL 註解，避免解釋性文字讓斷言假綠。
+ *
+ * originally 只剝行首 `--`（`/^\s*--.*$/gm`），因此 `SELECT 1; -- REVOKE ALL …`
+ * 這種**行中**註解仍會被斷言匹配到——守門是壞的（獨立審查 2026-07-29 實測）。
+ * 現改剝任意位置的 `--` 到行尾。
+ *
+ * 已知限制：不解析字串字面值，故 `'a--b'` 內的 `--` 也會被剝掉。本檔的斷言
+ * 都不依賴字串內容，這個取捨可接受；若日後需要精確處理，得改用真正的 SQL 詞法切分。
+ */
 function sqlCode(src) {
-  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*--.*$/gm, '');
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/--.*$/gm, '');
 }
 
 describe('#1777 — migration 檔案結構', () => {
@@ -175,12 +186,59 @@ describe('#1777 Phase 2 — 原子函式的安全屬性', () => {
   });
 
   it('ledger 冪等：只有真正插入新分錄才動餘額', () => {
-    assert.match(code, /ON\s+CONFLICT\s*\(\s*order_id\s*,\s*settlement_kind\s*\)\s*DO\s+NOTHING/i);
+    assert.match(code, /ON\s+CONFLICT\s*\(\s*order_id\s*,\s*settlement_kind\s*\)/i);
     assert.match(code, /RETURNING\s+id\s+INTO/i, '必須以 RETURNING 判定是否真的新增，否則重跑會重複累加');
   });
 
   it('confirm 對已付款的 payout 冪等回應而非重複扣款', () => {
     assert.match(code, /already_paid/i, '重送必須回報 already_paid');
+  });
+});
+
+// ── P0 迴歸：ON CONFLICT 必須能推論到部分唯一索引 ─────────────────────────────
+//
+// 2026-07-29 獨立審查發現（production 已 live）：Phase 3 把
+// payout_items_order_kind_unique 改成帶 WHERE 的部分索引後，Phase 2 的
+//     ON CONFLICT (order_id, settlement_kind) DO NOTHING
+// 就再也推論不到該索引，Postgres 直接 42P10——settlement sweep 會整批失敗。
+// production EXPLAIN 實測確認：不帶 predicate → 42P10；帶 predicate →
+// 「Conflict Arbiter Indexes: payout_items_order_kind_unique」。
+//
+// 更糟的是原本的契約測試斷言了 `… DO NOTHING` 這個**壞形式**，等於把 bug 鎖住。
+// 這裡改鎖真正的不變量：只要 payout_items 的唯一索引是部分索引，所有針對它的
+// ON CONFLICT 就必須帶上一致的 predicate。
+
+describe('#1777 P0 迴歸 — ON CONFLICT 必須與部分索引的 predicate 一致', () => {
+  const allCode = ISSUE_1777_MIGRATIONS.map((base) => sqlCode(readMigration(base))).join('\n');
+
+  it('payout_items_order_kind_unique 確實是部分索引', () => {
+    assert.match(
+      allCode,
+      /CREATE\s+UNIQUE\s+INDEX[^;]*payout_items_order_kind_unique[\s\S]*?WHERE\s+settlement_kind\s+IN\s*\(\s*'settlement'\s*,\s*'reversal'\s*\)/i,
+      '這是本測試的前提；若索引改回全表唯一，本檔的 predicate 要求也要一併改',
+    );
+  });
+
+  it('最終生效的 fn_record_settlement_atomic 定義帶 predicate', () => {
+    // migration 只增不改，舊檔裡不帶 predicate 的版本會永遠留著——所以不能掃
+    // 全部檔案，要看「最後一支重新定義該函式的 migration」，那才是 DB 上生效的版本。
+    const defining = ISSUE_1777_MIGRATIONS
+      .filter((base) => /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+public\.fn_record_settlement_atomic/i
+        .test(sqlCode(readMigration(base))))
+      .sort();
+
+    assert.ok(defining.length > 0, '應有 migration 定義 fn_record_settlement_atomic');
+
+    const latest = defining[defining.length - 1];
+    const code = sqlCode(readMigration(latest));
+    const match = code.match(/ON\s+CONFLICT\s*\(\s*order_id\s*,\s*settlement_kind\s*\)([\s\S]{0,120})/i);
+
+    assert.ok(match, `${latest} 應有 ON CONFLICT (order_id, settlement_kind)`);
+    assert.match(
+      match[1],
+      /^\s*WHERE\s+settlement_kind\s+IN\s*\(/i,
+      `${latest} 的 ON CONFLICT 未帶 predicate——推論不到部分索引，會 42P10 讓 sweep 整批失敗`,
+    );
   });
 });
 
