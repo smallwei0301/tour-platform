@@ -18,7 +18,7 @@
 - [x] AC1 issue #1777 所列四個未完成缺口，逐一以現碼證據（檔案:行號）確認成立或推翻
 - [x] AC2 產出分期修改計劃，對齊 owner 已拍板的決策 A～D
 - [x] AC3 明確標示 production 授權邊界（本輪與後續皆未取得 production 寫入授權）
-- [ ] AC4 worklog commit／push 至指定分支，並同步進度錨點留言至 issue #1777
+- [x] AC4 worklog commit／push 至指定分支，並同步進度錨點留言至 issue #1777
 
 ---
 
@@ -157,6 +157,7 @@
 - 2026-07-29 完成四缺口現碼查核（基準 commit `0e8c7823881e71570cac46955f4145696ae15656`），四項全部屬實，證據見上表；另補兩項同源觀察（`getUnsettledOrdersDb` PostgREST 子查詢寫法、`recordRefundReversalDb` 仍在 `db.mjs`）。
 - 2026-07-29 產出四階段修改計劃，對齊 owner 決策 A～D。
 - 本輪**未修改任何程式碼、未執行任何 production 查詢或 DML、未跑測試**（無程式碼異動，故無 run-checks 證據需求）。
+- 2026-07-29 worklog commit `acb6f9e` push 至 `claude/1777-check-modify-plan-ylztm1`；進度錨點留言同步至 issue：<https://github.com/smallwei0301/tour-platform/issues/1777#issuecomment-5114307673>（鐵律 7 雙寫完成）。未開 PR。
 
 ## 下一步
 
