@@ -24,7 +24,22 @@ function isMissingFunctionError(error) {
   if (error.code === PGRST_FN_NOT_FOUND) return true;
   const message = String(error.message ?? '');
   return /could not find the function|does not exist/i.test(message)
-    && /fn_record_settlement_atomic|fn_confirm_payout_atomic/i.test(message);
+    && /fn_record_settlement_atomic|fn_confirm_payout_atomic|fn_apply_refund_adjustment_atomic/i.test(message);
+}
+
+/**
+ * 退款事件的確定性冪等鍵。
+ *
+ * 用「訂單 + 本次退款後的累積退款總額」而非隨機 id：同一次退款重送會得到相同
+ * 的鍵（因此不重複記帳），而第二次部分退款因累積額不同而得到新鍵（因此各自
+ * 留下一筆差額分錄）。這正是 #1777 要的冪等語意，且不需要外部事件 id。
+ *
+ * @param {string} orderId
+ * @param {number} cumulativeRefundTwd 本次退款完成後的累積退款總額
+ * @returns {string}
+ */
+export function buildRefundEventId(orderId, cumulativeRefundTwd) {
+  return `${orderId}:cum:${Number(cumulativeRefundTwd) || 0}`;
 }
 
 function toError(error, fallbackMessage) {
@@ -127,5 +142,47 @@ export async function confirmPayoutAtomicDb(supabase, payoutId, confirmedBy = 'a
     before_balance: Number(row.before_balance ?? 0),
     after_balance: Number(row.after_balance ?? 0),
     already_paid: row.already_paid === true,
+  };
+}
+
+/**
+ * 把訂單的 ledger 淨額調整到「未退款有效金額 × 導遊分潤率」，只追加本次差額。
+ *
+ * 決策 B（owner 2026-07-29）：`max(0, 總額 − 累積退款) × active rate`；
+ * 每次退款只記差額，不重複全額紅沖。
+ *
+ * 冪等：以 refundEventId 為鍵，同一退款事件重送回 `applied: false`。
+ * 尚未結算的訂單（無任何 ledger 分錄）不介入——結算前的退款由 sweep 的
+ * effective-gmv 直接處理，避免對從未入帳的訂單記出負餘額。
+ *
+ * @param {any} supabase service-role Supabase client
+ * @param {{orderId: string, refundEventId: string, actor?: string}} input
+ * @returns {Promise<{order_id: string, guide_id: string|null, target_net_twd: number,
+ *   previous_net_twd: number, delta_twd: number, applied: boolean,
+ *   carry_forward_twd: number, balance_after: number}>}
+ */
+export async function applyRefundAdjustmentAtomicDb(supabase, { orderId, refundEventId, actor = 'refund-execute' } = {}) {
+  if (!orderId) throw new Error('orderId is required');
+  if (!refundEventId) throw new Error('refundEventId is required');
+
+  const { data, error } = await supabase.rpc('fn_apply_refund_adjustment_atomic', {
+    p_order_id: orderId,
+    p_refund_event_id: refundEventId,
+    p_actor: actor,
+  });
+
+  if (error) throw toError(error, 'refund adjustment rpc failed');
+
+  const row = firstRow(data);
+  if (!row) throw new Error('fn_apply_refund_adjustment_atomic returned no row');
+
+  return {
+    ...row,
+    target_net_twd: Number(row.target_net_twd ?? 0),
+    previous_net_twd: Number(row.previous_net_twd ?? 0),
+    delta_twd: Number(row.delta_twd ?? 0),
+    carry_forward_twd: Number(row.carry_forward_twd ?? 0),
+    balance_after: Number(row.balance_after ?? 0),
+    applied: row.applied === true,
   };
 }
