@@ -354,7 +354,7 @@ test('baseline workdir binds materializer capture, rewrites full config after ve
 test('real default database workdir adapter consumes the trusted post-cutoff manifest and materializes Task14', async () => {
   const root = await mkdtemp(join(tmpdir(), 'midao-default-materializer-'));
   const lockDir = join(root, 'lock');
-  const migrationName = '20260723004000_midao_request_read_projection.sql';
+  const migrationName = '20260723011000_midao_atomic_booking_decision_command.sql';
   let capability;
   await mkdir(lockDir, { mode: 0o700 });
   try {
@@ -1154,7 +1154,7 @@ test('signal received during cleanup completes stop but runner rejects', async (
   assert.deepEqual(calls, ['stop']);
 });
 
-test('custom lifecycle contract accepts only exact Task9 marker and six original migration filenames', async () => {
+test('custom lifecycle contract accepts only exact Task9 marker and nine post-cutoff migration filenames', async () => {
   const expectedWorkdir = `/tmp/lock/${projectId}`;
   const migrationNames = [
     '00000000000001_baseline_v1.sql',
@@ -1164,6 +1164,9 @@ test('custom lifecycle contract accepts only exact Task9 marker and six original
     '20260723002500_midao_audit_events.sql',
     '20260723003000_midao_atomic_backend_mode_switch.sql',
     '20260723003500_midao_service_role_acl_hardening.sql',
+    '20260723004000_midao_request_read_projection.sql',
+    '20260723010000_midao_atomic_booking_approval.sql',
+    '20260723011000_midao_atomic_booking_decision_command.sql',
   ];
   const stderr = `${[
     `Using workdir ${expectedWorkdir}`,
