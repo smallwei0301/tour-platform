@@ -1,0 +1,192 @@
+# #1777 Phase 4 — #1647 歷史資料處理 proposal
+
+> 建立：2026-07-29 Asia/Taipei｜狀態：**待 owner 授權，尚未執行任何 production 寫入**
+> 對應 issue：#1777（機制修復）／#1647（歷史資料追蹤）
+
+## 這份文件是什麼
+
+#1777 Phase 2／3 讓**新的**結算、退款、出款寫入不可能再產生「只寫一半」或「金額算錯」。但既有的歷史偏離不會自己消失。這份文件提供三項歷史資料的處理方案、影響範圍取得方式、DML proposal 與 rollback／compensation path，供 owner 逐項授權。
+
+**本文件不是執行紀錄。** 截至建立時間，未對 production 執行任何 DML、未套用任何 migration、未 confirm／cancel 任何真實出款。
+
+## 執行前必做：重新取得 preview
+
+issue #1647 記錄的數字（14 筆卡單、未實收 NT$6,120、過期 pending payout NT$7,168）來自 **2026-07-06 快照**（`docs/operations/qa-reports/payment-payout-chain-audit-20260706.md` §3）。**不得以舊快照執行 DML**——期間可能已有新的付款、退款或人工調整。
+
+重新取得的方式（唯讀，不需 SQL-OVERRIDE）：
+
+```bash
+SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… \
+  node scripts/admin/issue1777-reconciliation-preview.mjs --out /tmp/issue1777-preview.json
+```
+
+輸出為 privacy-safe JSON（識別碼遮罩、只含金額與計數）。該腳本在程式碼層面沒有任何寫入呼叫，並有測試鎖住（`issue1777-reconciliation.test.mjs` 的「對帳路徑必須是唯讀」）。
+
+## 前置條件
+
+三項處理都應在**機制修復上線之後**才執行，否則修完的資料會再次被舊路徑弄髒：
+
+1. migration `20260729160000`（原子 settlement／payout confirm）已套用並記入 ledger
+2. migration `20260729170000`（退款差額 adjustment）已套用並記入 ledger
+3. 對應的應用程式碼已 merge 且部署（部署順序見下方警告）
+4. 重新 preview 的結果已交 owner 確認
+
+> ⚠️ **部署順序硬規則**：settlement sweep 由 GitHub Actions cron 每日 02:00 UTC 自動執行。migration 必須**先**套用，才能部署改呼叫 RPC 的應用程式碼；順序顛倒會讓隔日排程整批失敗（呼叫端刻意 fail-closed，不會退回非原子路徑）。
+
+---
+
+## 項目一：卡在 `paid` 且從未結算的訂單
+
+### 現況
+
+訂單狀態停在 `paid`、無任何 `payout_items` 分錄。成因是 #1637 P0-1：callback 後沒有自動 `paid→confirmed` 路徑，而 auto-complete sweep 與掃碼核銷都只認 `confirmed`。該根因已由 #1637／PR #1644 修復（callback 依 booking_type 自動 confirm），因此**這批是修復前的存量**，不會再新增。
+
+### 判斷準則
+
+preview 的 `historical.stuckPaidOrders` 會分出：
+
+- `collectedCount`：`paid_at` 非空＝provider 確實已收款 → **候選**
+- `notCollectedCount`：`paid_at` 為空＝從未實收 → **不處理**，維持原狀
+- `paymentStatusMismatchCount`：`paid_at` 有值但 `payment_status='pending'`＝欄位不同步，需個別檢視
+
+### Proposal
+
+只推進「provider 已收款 ＋ 行程資料完整 ＋ 狀態轉移合法」者。**不建議無條件全改**。
+
+```sql
+-- 逐筆執行，一次一張訂單；:order_id 由 preview 的候選清單提供
+-- 前置檢查（必須為 1 列且 paid_at 非空）
+SELECT id, status, paid_at, payment_status, total_twd
+  FROM orders WHERE id = :order_id;
+
+-- 推進狀態（僅限已收款且行程已結束者）
+UPDATE orders
+   SET status = 'confirmed', updated_at = now()
+ WHERE id = :order_id
+   AND status = 'paid'
+   AND paid_at IS NOT NULL;
+```
+
+推進為 `confirmed` 後，既有的 auto-complete sweep 會在行程結束後自動帶到 `completed`，再由 settlement sweep 依正常資格結算——**不需要手動插入 ledger 分錄**。這是刻意的：讓存量資料走與新資料完全相同的路徑，避免另一套手工帳。
+
+### Rollback / compensation
+
+```sql
+-- 尚未被 auto-complete 帶走時可直接還原
+UPDATE orders SET status = 'paid', updated_at = now()
+ WHERE id = :order_id AND status = 'confirmed';
+```
+
+若已被結算：不可直接改回，須改走 #1777 Phase 3 的退款 adjustment 或人工沖銷分錄，並留會計理由。**因此建議逐筆小批執行、每批之間確認 sweep 結果**。
+
+---
+
+## 項目二：已進導遊餘額但平台從未實收的金額
+
+### 現況
+
+`guide_balances.balance_twd` 中含有沒有 ledger 分錄支撐的金額（#1637 P1-4：某筆 `paid_at IS NULL` 的訂單在 `paid_at` 閘門補上前被結算入帳）。preview 的 `historical.uncollectedInBalance` 以「餘額 − ledger 期望值 > 0」計算，逐導遊列出多出來的金額。
+
+### Proposal
+
+分兩種情形，取決於這筆錢**是否已實際付給導遊**（查 `payouts` 中該導遊的 `paid` 紀錄與轉帳憑證）：
+
+**情形 A — 尚未付出去：直接沖銷**
+
+```sql
+-- 前置：確認差額與 preview 一致
+SELECT guide_id, balance_twd FROM guide_balances WHERE guide_id = :guide_id;
+
+BEGIN;
+UPDATE guide_balances
+   SET balance_twd = balance_twd - :surplus_twd,
+       updated_at = now()
+ WHERE guide_id = :guide_id
+   AND balance_twd >= :surplus_twd;   -- 防呆：不足額則 0 rows，不得扣成負數
+
+INSERT INTO audit_logs (actor, action, metadata)
+VALUES ('issue1777-historical-fix', 'guide_balance_uncollected_writeoff',
+  jsonb_build_object('guide_id', :guide_id, 'surplus_twd', :surplus_twd,
+                     'reason', 'balance had no ledger backing; platform never collected'));
+COMMIT;
+```
+
+**情形 B — 已實際付出：不沖銷餘額，改列 carry-forward 回收**
+
+沖銷會讓帳面看似平衡，實際上錢已經出去了。改以稽核紀錄留下應回收金額，於下期出款時扣抵：
+
+```sql
+INSERT INTO audit_logs (actor, action, metadata)
+VALUES ('issue1777-historical-fix', 'payout_carry_forward_created',
+  jsonb_build_object('guide_id', :guide_id, 'carry_forward_twd', :surplus_twd,
+                     'reason', 'uncollected amount already paid out; recover from future payouts'));
+```
+
+（此 action 名稱與 Phase 3 的 `fn_apply_refund_adjustment_atomic` 一致，方便統一查詢待回收項。）
+
+### Rollback / compensation
+
+情形 A 可還原：`UPDATE guide_balances SET balance_twd = balance_twd + :surplus_twd WHERE guide_id = :guide_id;`
+情形 B 只寫稽核列，無需回滾；如需撤銷，另插一筆註記列，**不要刪除既有稽核紀錄**。
+
+---
+
+## 項目三：過期／與餘額不符的 pending 出款單
+
+### 現況
+
+`payouts` 中的 `pending` 列，金額是建立當下的餘額快照。餘額後續變動（結算、退款紅沖）不會回頭改這個快照，而 `payouts_pending_unique` 的部分唯一索引又使 generate 永遠 skip，因此舊快照會一直卡著（#1637 P1-5）。preview 的 `historical.stalePendingPayouts` 會標出 `exceedsBalance` 與 `ageDays`。
+
+### Proposal
+
+**不可直接 confirm 舊快照。** 順序是：對帳 → cancel → 依最新餘額重產。
+
+```sql
+-- 1) 確認該導遊的對帳已無 mismatch（preview 的 reconciliation.guides 對應列 needsAttention=false）
+
+-- 2) cancel 舊快照。cancel 不動餘額，只釋放 pending 唯一鍵
+BEGIN;
+UPDATE payouts
+   SET state = 'cancelled'
+ WHERE id = :payout_id AND state = 'pending';
+
+INSERT INTO audit_logs (actor, action, metadata)
+VALUES ('issue1777-historical-fix', 'payout_cancelled',
+  jsonb_build_object('payout_id', :payout_id, 'guide_id', :guide_id,
+                     'total_twd', :stale_total_twd,
+                     'reason', 'stale balance snapshot superseded by reconciled balance'));
+COMMIT;
+
+-- 3) 依最新正確餘額重產（走既有 admin API，不手寫 INSERT）
+--    POST /api/v2/admin/payouts/generate
+```
+
+重產走既有 API 而非手寫 INSERT，可沿用 `createPayoutDb` 的 pending 唯一性防呆與稽核。
+
+### Rollback / compensation
+
+```sql
+-- 誤 cancel 時可還原（前提：期間沒有重產出新的 pending，否則會撞唯一索引）
+UPDATE payouts SET state = 'pending' WHERE id = :payout_id AND state = 'cancelled';
+```
+
+若已重產新的 pending，**不要**把舊列改回 pending（會違反唯一索引）；改為維持 cancelled 並在稽核紀錄說明。
+
+---
+
+## 執行紀律
+
+1. **逐項、逐筆、小批**：每項獨立取得 owner 授權；每批執行後重跑 preview 確認差異如預期收斂。
+2. **每次寫入前後都留證**：執行前的 SELECT 結果、執行的 SQL、影響列數、執行後的 SELECT 結果，一併記入 `docs/operations/worklogs/issue1777.md` 與 issue 留言。
+3. **鐵律 2**：agent 執行任何寫入後必須立刻回報實際影響（動到哪張表、幾筆、結果）。
+4. **不得為了讓數字好看而動 ledger**：`payout_items` 是 append-only 帳本，任何調整都應該是新增分錄，而非修改或刪除既有列。
+5. **出款 HOLD**：Phase 2 驗收前 `PAYOUT_CONFIRM_ENABLED` 維持未設定（fail-closed）。歷史資料處理過程中若需要重產出款單，只做到 pending 為止，不 confirm。
+
+## 待 owner 決定的事項
+
+| 項目 | 需要的決定 |
+|---|---|
+| 一 | 候選清單確認後，是否逐筆推進 `paid→confirmed`；批次大小 |
+| 二 | 逐導遊確認屬情形 A（沖銷）或情形 B（carry-forward 回收） |
+| 三 | 確認 cancel 舊 pending 出款單並重產的時點 |
+| 全部 | production DML 的執行時窗與授權方式（鐵律 2 的 `SQL-OVERRIDE` 僅涵蓋 schema 變更；DML 依 #1777 留言需另行明確授權） |
