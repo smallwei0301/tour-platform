@@ -159,10 +159,47 @@
 - 本輪**未修改任何程式碼、未執行任何 production 查詢或 DML、未跑測試**（無程式碼異動，故無 run-checks 證據需求）。
 - 2026-07-29 worklog commit `acb6f9e` push 至 `claude/1777-check-modify-plan-ylztm1`；進度錨點留言同步至 issue：<https://github.com/smallwei0301/tour-platform/issues/1777#issuecomment-5114307673>（鐵律 7 雙寫完成）。未開 PR。
 
+## Phase 1 執行紀錄（2026-07-29，owner 於對話中指示「開始執行程式碼修改」）
+
+### 異動清單
+
+| 檔案 | 變更 |
+|---|---|
+| `apps/web/app/api/internal/settlement/sweep/route.ts` | select 補 `is_disputed, is_safety_case`；抽出 `OpsTrackingRow` 型別並註明四旗標須與導遊端一致 |
+| `apps/web/src/lib/payout-confirm-guard.mjs`（新增） | fail-closed 出款開關；預設擋，僅 `PAYOUT_CONFIRM_ENABLED` 精確為 `"true"` 放行 |
+| `apps/web/app/api/v2/admin/payouts/[payoutId]/confirm/route.ts` | HOLD gate 置於 route 最前，早於 Supabase client 建立與 `confirmPayoutDb`；HOLD 回 503＋`PAYOUT_CONFIRM_ON_HOLD` |
+| `apps/web/tests/api/issue1777-dispute-safety-hold-projection.test.mjs`（新增） | 12 條：投影→資料形狀→結算行為的因果鏈＋7 情境跨介面對齊契約 |
+| `apps/web/tests/api/issue1777-payout-confirm-fail-closed.test.mjs`（新增） | 9 條：guard 行為 6 條＋route 順序契約 3 條 |
+| `apps/web/tests/api/issue1106-settlement-sweep-hold-projection.test.mjs` | 反轉過期反向斷言（原「不得 select 兩欄」→「必須 select」），並更新 scope note |
+
+### RED → GREEN 證據
+
+- **RED**：`issue1777-dispute-safety-hold-projection` 12 tests／**4 fail**（`is_disputed`、`is_safety_case` 兩條＋對應的跨介面對齊兩條）；`issue1777-payout-confirm-fail-closed` 7 tests／**7 fail**（guard 模組不存在）。
+- **GREEN**：`.claude/hooks/run-checks.sh --typecheck`（10 檔）→ **180/180 pass、0 fail、0 skip**，`tsc --noEmit` 通過。
+- 擴大迴歸（含 `issue1365-*`）**273/273 綠**。
+- commit `464483d`，已推送。
+
+### 計劃執行中的一項修正
+
+計劃原寫「建議沿用既有 `cron-job-controls.mjs` kill-switch 模式」，實作時發現**不可行**：`isCronJobEnabled`（`cron-job-controls.mjs:127-130`）是**刻意 fail-open**（「排程連續性優先於後台可用性」），語意與金流出款所需的 fail-closed 完全相反；且 payout confirm 是 admin 手動 API 而非排程 job，登記進 `CRON_JOBS` registry 會讓後台排程清單出現不存在的工作。故改為獨立的 `payout-confirm-guard.mjs`，env-based、無 migration、預設擋下。
+
+### 測試誠實度說明
+
+- hold 投影測試**刻意不做 source-string 斷言**：從 sweep route 解析實際投影欄位清單 → 據此裁切出 PostgREST 真實回傳形狀（未投影欄位即 `undefined`）→ 斷言最終結算行為。投影漏欄會讓行為斷言自然轉紅。
+- confirm route **無法在 `node --test` 內實際執行**（route.ts 使用 extensionless TS import，Node ESM 解析不了，需 Next bundler——這也是 repo 內既有 route 契約測試一律走原始碼分析的原因）。標 `NOT_AUTOMATABLE-env`，改鎖「guard 早於 `createClient` 與 `confirmPayoutDb`」的順序契約；核心判定邏輯已由 6 條行為測試覆蓋。
+
+### Phase 1 對應的 AC 進度
+
+- [x] settlement sweep 的 dispute／safety hold 與 guide dashboard／JSON／CSV 完全一致（7 情境對齊契約鎖住）
+- [x] completed＋paid_at＋T+7 但任一 hold=true 的訂單，不得建立 settlement 或增加 balance
+- [x] payout confirm fail-closed guard（production 維持 HOLD）
+- 其餘 AC 屬 Phase 2–4 範圍，未動。
+
 ## 下一步
 
-- 等 owner 將 issue #1777 由 `agent:backlog` 提升至 `agent:now`／`agent:next`／`agent:queued`，並指定執行 agent（建議角色：payment/settlement backend + database transaction specialist，搭配獨立 finance-integrity review）。
-- 開工後從 Phase 1 起（純程式碼、無 migration、風險最低、可獨立出 PR）。
+- **開 PR 並盯 CI**（Phase 1 為純程式碼、無 migration，可獨立 merge）。
+- Phase 2 起需 migration，套用前必須取得 `SQL-OVERRIDE` 授權；且因 sweep 由 GitHub Actions cron 每日 02:00 UTC 自動執行，**migration 必須先套用才能 merge 呼叫端切換**。
+- production payout confirm 在 Phase 2 驗收前維持 HOLD（未設 `PAYOUT_CONFIRM_ENABLED` 即為擋下狀態，無需額外操作）。
 
 ## 絕不重做（Do-NOT-redo）
 
@@ -171,6 +208,9 @@
 - **`is_disputed`／`is_safety_case` 欄位不需新建**（`20260618_operations_tracking_dispute_safety_flags.sql` 已存在）；`issue1106-*.test.mjs` 中「這兩欄不是 schema 欄位」的註解是過期資訊，勿再據以推論。
 - **`getUnsettledOrdersDb` 已確認為死碼**（無生產 caller），不需再花時間追它的呼叫鏈；只需在 Phase 2 決定刪除或標記。
 - **不必重跑金流鏈路稽核**：`docs/operations/qa-reports/payment-payout-chain-audit-20260706.md` 已含程式碼逐行＋生產唯讀查證，缺口 3／4 在該報告已獨立記錄（P2／P1-5）。需要生產數字時重新 preview，但鏈路結構結論可直接引用。
+- **Phase 1 已完成，不要重做**（commit `464483d`）：sweep 兩欄投影、`payout-confirm-guard.mjs`、issue1106 斷言反轉、issue1777 兩個測試檔。
+- **不要把 payout confirm guard 改接 `cron-job-controls`**：該模組是刻意 fail-open，用在出款上語意相反；已評估並排除。
+- **不要嘗試在 `node --test` 內直接載入 v2 route.ts**：extensionless TS import 使 Node ESM 解析失敗，需 Next bundler；已驗證，改用順序契約。
 - 已完成不重做的舊 issue（issue #1777 內文列舉）：#1637／PR #1644、#1365、#847、#1221、#1284、#449、#1474。
 
 ## P0-OVERRIDE 使用紀錄
