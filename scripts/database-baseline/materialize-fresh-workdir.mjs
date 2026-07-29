@@ -24,7 +24,7 @@ export const POST_CUTOFF_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: '20260723003500_midao_service_role_acl_hardening.sql', sha256: 'f16fd369b9ce0b405c38ec2df5a46676cc84ba2de087b3b010cc00e4415353e5' }),
   Object.freeze({ filename: '20260723004000_midao_request_read_projection.sql', sha256: '639f430e666666c2ee9418f8dd2240d0d2c1b1038345378bee11436fc99aeabb' }),
   Object.freeze({ filename: '20260723010000_midao_atomic_booking_approval.sql', sha256: 'a97d57a82bf2e70425325498b0ca96bdf64c1c3322cf81288135a71abaebc968' }),
-  Object.freeze({ filename: '20260723011000_midao_atomic_booking_decision_command.sql', sha256: 'e620e61d4adb965caf2945bc5f3856cdce389e8805849865bd41b9c05310e133' }),
+  Object.freeze({ filename: '20260723011000_midao_atomic_booking_decision_command.sql', sha256: 'c3abc1a6cc5984bcc5239c9728ebd8d46020c43fa577382f87d2775cfb5fdf8a' }),
 ]);
 
 export const CONFIG_SHA256 = '5289984d402959cd0d4596b056df9a3d27590b3abefa4d7551151ad54ae084ee';

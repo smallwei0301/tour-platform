@@ -329,9 +329,9 @@ BEGIN
 END;
 $midao$;
 
-REVOKE ALL ON FUNCTION public.midao_decide_booking_request(uuid, text, text, text, text, text, text, text)
+REVOKE ALL ON FUNCTION public.midao_decide_booking_request(uuid, text, text, uuid, text, text, text, text)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.midao_decide_booking_request(uuid, text, text, text, text, text, text, text)
+GRANT EXECUTE ON FUNCTION public.midao_decide_booking_request(uuid, text, text, uuid, text, text, text, text)
   TO service_role;
 REVOKE EXECUTE ON FUNCTION public.midao_decide_booking_request(uuid, text, text)
   FROM service_role;

@@ -6,7 +6,7 @@ const databaseUrl = process.env.SUPABASE_DB_URL;
 const apiUrl = process.env.SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const anonKey = process.env.SUPABASE_ANON_KEY;
-const decisionSignature = 'public.midao_decide_booking_request(uuid,text,text,text,text,text,text,text)';
+const decisionSignature = 'public.midao_decide_booking_request(uuid,text,text,uuid,text,text,text,text)';
 const oldDecisionSignature = 'public.midao_decide_booking_request(uuid,text,text)';
 
 assert.ok(databaseUrl, 'decision PostgREST integration runner must provide SUPABASE_DB_URL');
@@ -64,7 +64,7 @@ test('runtime catalog materializes the exact 8-arg decision RPC and canonical se
   assert.equal(catalog.rowCount, 1);
   assert.deepEqual(catalog.rows[0], {
     signature: decisionSignature,
-    identity_arguments: 'uuid, text, text, text, text, text, text, text',
+    identity_arguments: 'uuid, text, text, uuid, text, text, text, text',
     result: 'jsonb',
     prosecdef: true,
     proconfig: ['search_path=pg_catalog'],
