@@ -33,8 +33,8 @@ test('guide login redirect sanitizer blocks path-normalization escapes and keeps
   )(URL);
 
   assert.equal(sanitizeGuideNext('/guide/orders?tab=today'), '/guide/orders?tab=today');
-  assert.equal(sanitizeGuideNext('/guide/../admin'), '/guide/dashboard');
-  assert.equal(sanitizeGuideNext('/guide/%2e%2e/admin'), '/guide/dashboard');
-  assert.equal(sanitizeGuideNext('//evil.example/path'), '/guide/dashboard');
-  assert.equal(sanitizeGuideNext('https://evil.example/guide/dashboard'), '/guide/dashboard');
+  assert.equal(sanitizeGuideNext('/guide/../admin'), '/midao2');
+  assert.equal(sanitizeGuideNext('/guide/%2e%2e/admin'), '/midao2');
+  assert.equal(sanitizeGuideNext('//evil.example/path'), '/midao2');
+  assert.equal(sanitizeGuideNext('https://evil.example/guide/dashboard'), '/midao2');
 });
