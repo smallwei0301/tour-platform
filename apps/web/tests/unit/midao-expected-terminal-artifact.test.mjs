@@ -129,7 +129,7 @@ test('unfinished journals and metadata mismatch reject before either transaction
       baselineDir: fixtureBaseline, ledgerPath: hostileLedgerPath, captureLedgerPath,
       journalPath: path.join(fixture, 'absent.journal'),
       onPayloadOpen: () => { expectedReads += 1; },
-    }), /manifest|metadata|transaction/iu);
+    }), /manifest|metadata|transaction|exact history/iu);
     assert.equal(expectedReads, 0);
   } finally { await rm(parent, { recursive: true, force: true }); }
 });
