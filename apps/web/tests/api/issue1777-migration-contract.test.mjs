@@ -24,6 +24,14 @@ const MIGRATIONS_DIR = join(__dirname, '../../../../supabase/migrations');
 const ISSUE_1777_MIGRATIONS = [
   '20260729160000_issue1777_atomic_settlement_and_payout_confirm',
   '20260729170000_issue1777_refund_adjustment_ledger',
+  '20260729180000_issue1777_revoke_atomic_fns_from_anon',
+];
+
+/** 本 issue 建立的財務函式——權限收斂必須涵蓋每一支。 */
+const FINANCIAL_FUNCTIONS = [
+  'fn_record_settlement_atomic',
+  'fn_confirm_payout_atomic',
+  'fn_apply_refund_adjustment_atomic',
 ];
 
 function readMigration(base) {
@@ -61,6 +69,62 @@ describe('#1777 — migration 檔案結構', () => {
     }
     // #449 建立的複合唯一索引是 Phase 3 的前提，必須仍在
     assert.ok(files.has('20260513_issue449_payout_items_reversal.sql'), '既有 #449 migration 不得被移除');
+  });
+});
+
+// ── 權限收斂：跨 migration 的整體屬性 ─────────────────────────────────────────
+//
+// 教訓（2026-07-29 套用後實查）：Phase 2／3 只寫了 `REVOKE ALL … FROM PUBLIC`，
+// 但 Supabase 在 public schema 對 anon／authenticated 有 FUNCTIONS 的 default
+// privileges，新建函式仍自動取得 EXECUTE——REVOKE FROM PUBLIC 撤不掉具名角色的
+// 權限。原本的斷言只檢查「沒有明確 GRANT 給 anon」，因此測試全綠而 production
+// 上未登入者可直接呼叫 fn_confirm_payout_atomic 扣餘額。
+//
+// 所以這裡改鎖**正面條件**：每支財務函式都必須被明確 REVOKE FROM anon／
+// authenticated。「沒有寫 GRANT」不等於「沒有權限」。
+
+describe('#1777 — 財務函式的 EXECUTE 權限必須自 anon／authenticated 收回', () => {
+  const allCode = ISSUE_1777_MIGRATIONS.map((base) => sqlCode(readMigration(base))).join('\n');
+
+  for (const fn of FINANCIAL_FUNCTIONS) {
+    it(`${fn} 被明確 REVOKE FROM anon／authenticated`, () => {
+      const revokePattern = new RegExp(
+        `REVOKE\\s+ALL\\s+ON\\s+FUNCTION\\s+public\\.${fn}\\s*\\([^)]*\\)\\s*FROM\\s+[^;]*anon[^;]*authenticated`,
+        'i',
+      );
+      assert.match(
+        allCode,
+        revokePattern,
+        `${fn} 必須被明確自 anon／authenticated 撤銷 EXECUTE；`
+          + '只寫 REVOKE … FROM PUBLIC 擋不住 Supabase 的 default privileges',
+      );
+    });
+
+    it(`${fn} 明確授權給 service_role`, () => {
+      assert.match(
+        allCode,
+        new RegExp(`GRANT\\s+EXECUTE\\s+ON\\s+FUNCTION\\s+public\\.${fn}\\s*\\([^)]*\\)\\s*TO\\s+service_role`, 'i'),
+        `${fn} 必須授權給 service_role（撤銷後若沒補授權，正常路徑會壞）`,
+      );
+    });
+  }
+
+  it('沒有任何財務函式被授權給 anon／authenticated', () => {
+    assert.doesNotMatch(
+      allCode,
+      /GRANT\s+EXECUTE\s+ON\s+FUNCTION[^;]*TO\s+[^;]*\b(anon|authenticated)\b/i,
+      '財務函式不得授權給未登入或一般登入角色',
+    );
+  });
+
+  it('對 FUNCTIONS 的 default privileges 已收斂，日後新函式不再自動放行', () => {
+    for (const role of ['anon', 'authenticated']) {
+      assert.match(
+        allCode,
+        new RegExp(`ALTER\\s+DEFAULT\\s+PRIVILEGES[\\s\\S]*?REVOKE\\s+EXECUTE\\s+ON\\s+FUNCTIONS\\s+FROM\\s+${role}`, 'i'),
+        `必須撤銷 ${role} 對 FUNCTIONS 的 default privileges，否則下一支金流函式會重蹈覆轍`,
+      );
+    }
   });
 });
 
