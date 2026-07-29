@@ -102,15 +102,6 @@ test('unfinished journals and metadata mismatch reject before either transaction
     }
 
     const manifest = JSON.parse(await readFile(path.join(baselineDir, 'manifest.json'), 'utf8'));
-    manifest.historyVersions = [
-      ...manifest.historyVersions,
-      '20260723010000',
-      '20260723011000',
-    ];
-    manifest.postCutoffMigrations.push(
-      { filename: '20260723010000_midao_atomic_booking_approval.sql', sha256: 'a97d57a82bf2e70425325498b0ca96bdf64c1c3322cf81288135a71abaebc968' },
-      { filename: '20260723011000_midao_atomic_booking_decision_command.sql', sha256: 'c3abc1a6cc5984bcc5239c9728ebd8d46020c43fa577382f87d2775cfb5fdf8a' },
-    );
     const core = structuredClone(manifest); delete core.transactionId;
     manifest.transactionId = sha256(canonical(core));
 
@@ -129,7 +120,7 @@ test('unfinished journals and metadata mismatch reject before either transaction
       baselineDir: fixtureBaseline, ledgerPath: hostileLedgerPath, captureLedgerPath,
       journalPath: path.join(fixture, 'absent.journal'),
       onPayloadOpen: () => { expectedReads += 1; },
-    }), /manifest|metadata|transaction|exact history/iu);
+    }), /expected-terminal transaction metadata contract mismatch/iu);
     assert.equal(expectedReads, 0);
   } finally { await rm(parent, { recursive: true, force: true }); }
 });
