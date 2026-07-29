@@ -133,7 +133,7 @@ if (isMain) {
   const lines = [];
 
   lines.push(`<!-- query_timestamp: ${timestamp} -->`);
-  lines.push(`<!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run \`npm run readiness:snapshot\` to refresh -->`);
+  lines.push(`<!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run \`npm run readiness:snapshot\` to refresh -->`);
   lines.push('');
   lines.push(`# Readiness Live-State Snapshot`);
   lines.push('');
