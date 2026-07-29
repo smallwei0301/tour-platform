@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-07-28T05:57:15.836Z -->
+<!-- query_timestamp: 2026-07-29T05:59:52.340Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-28T05:57:15.836Z  
-**Commit SHA:** `1b0246e0771035cd70fb007f5e54cf75633c8523`
+**Query timestamp:** 2026-07-29T05:59:52.340Z  
+**Commit SHA:** `0e8c7823881e71570cac46955f4145696ae15656`
 
 ---
 
@@ -14,7 +14,7 @@
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1772 | [docs: 建立 README 文件架構索引與任務路由](https://github.com/smallwei0301/tour-platform/pull/1772) | `docs/issue-1771-readme-index` |
+| #1776 | [feat(shop): 完成導遊商店匯款 beta 文案與 SOP（#1607）](https://github.com/smallwei0301/tour-platform/pull/1776) _(draft)_ | `fix/issue-1607-guide-shop-beta` |
 | #1769 | [feat: Midao Requests projections and atomic decisions](https://github.com/smallwei0301/tour-platform/pull/1769) _(draft)_ | `feat/midao-requests-1757` |
 | #1766 | [feat: 建立 Midao foundation 與 baseline-backed E2E](https://github.com/smallwei0301/tour-platform/pull/1766) | `feat/midao-foundation-1756` |
 | #1763 | [feat: midao2 導遊接案後台（接案 CRM）＋公開接案頁 /g/[slug]](https://github.com/smallwei0301/tour-platform/pull/1763) | `claude/superpowers-midao-backend-x90czx` |
@@ -28,16 +28,19 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (58 total)
+## Open Issues (56 total)
 
-### P0 (0)
+### P0 (1)
 
-_none_
+| # | Title | Labels |
+|---|-------|--------|
+| #1777 | [[Payments][P0] 修正結算／部分退款／出款非原子鏈，避免漏帳、重扣與錯誤撥款](https://github.com/smallwei0301/tour-platform/issues/1777) | triaged, type:bug, priority:P0, agent:backlog, owner:ai-agent, status:ready, payments, orders, database |
 
 ### P1 (34)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1773 | [[QA] Daily test checklist for recent merged PRs 2026-07-29](https://github.com/smallwei0301/tour-platform/issues/1773) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, docs, post-merge |
 | #1770 | [[QA] Daily test checklist for recent merged PRs 2026-07-28](https://github.com/smallwei0301/tour-platform/issues/1770) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, admin, post-merge |
 | #1762 | [[QA] Daily test checklist for recent merged PRs 2026-07-23](https://github.com/smallwei0301/tour-platform/issues/1762) | priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, auth, admin, post-merge |
 | #1761 | [[Midao Backend] Unify public guide page, cut over safely, and verify](https://github.com/smallwei0301/tour-platform/issues/1761) | triaged, type:feature, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:blocked, traveler-booking, notifications, infra |
@@ -58,7 +61,6 @@ _none_
 | #1682 | [[QA] Verify post-#1676/#1677/#1679 admin trend and RLS preflight evidence](https://github.com/smallwei0301/tour-platform/issues/1682) | triaged, priority:P1, cron-followup, qa, security, agent:queued, owner:ai-agent, status:ready, type:qa, database, rls, infra, admin |
 | #1673 | [[QA] Daily test checklist for recent merged PRs 2026-07-09](https://github.com/smallwei0301/tour-platform/issues/1673) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, auth |
 | #1661 | [[QA] Daily test checklist for recent merged PRs 2026-07-08](https://github.com/smallwei0301/tour-platform/issues/1661) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, auth, rls, infra, post-merge |
-| #1659 | [[Security][RLS] Revoke post-#1646 anon write grants and default privileges drift](https://github.com/smallwei0301/tour-platform/issues/1659) | triaged, type:bug, priority:P1, security, owner:mixed, status:needs-decision, database, rls |
 | #1657 | [[QA] Verify post-#1656 v2 order/refund/payment full-wiring regression](https://github.com/smallwei0301/tour-platform/issues/1657) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, booking-v2, refund |
 | #1653 | [[QA] Verify post-#1650 v2 Admin POS auth/CSRF contract before further UI接線](https://github.com/smallwei0301/tour-platform/issues/1653) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, payments, orders, auth, booking-v2 |
 | #1652 | [[Booking V2][Phase 1/6] 訂單讀取面 v2 接線 — 詳情頁接既有 v2 route、新增 v2 訂單列表、POS UI 接線、死碼清理（#1649）](https://github.com/smallwei0301/tour-platform/issues/1652) | priority:P1, owner:ai-agent, status:in-progress, traveler-booking, booking-v2 |
@@ -73,18 +75,16 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (15)
+### P2 (13)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1771 | [[Docs] 建立 README 文件架構索引與 agent 任務路由](https://github.com/smallwei0301/tour-platform/issues/1771) | triaged, priority:P2, agent:next, owner:ai-agent, status:ready, type:docs, docs |
 | #1765 | [[QA] Daily test checklist for recent merged PRs 2026-07-27 (no recent merged PRs)](https://github.com/smallwei0301/tour-platform/issues/1765) | triaged, priority:P2, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, auth, infra, admin |
 | #1764 | [[QA] Daily test checklist for recent merged PRs 2026-07-26 (no recent merged PRs)](https://github.com/smallwei0301/tour-platform/issues/1764) | triaged, priority:P2, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, auth, infra, admin |
 | #1706 | [[QA] Daily test checklist for recent merged PRs 2026-07-13 (no recent merged PRs)](https://github.com/smallwei0301/tour-platform/issues/1706) | triaged, priority:P2, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, auth, infra, admin |
 | #1670 | [[Frontend Daily Check] 2026-07-09 health check failures](https://github.com/smallwei0301/tour-platform/issues/1670) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:ready, traveler-booking |
 | #1660 | [[Ops] Reconcile stale open PR queue after #1656/#1646 main drift](https://github.com/smallwei0301/tour-platform/issues/1660) | triaged, type:investigation, priority:P2, qa, agent:backlog, owner:mixed, status:needs-decision |
 | #1658 | [[Ops] Refresh current issue priority routing after #1656/#1654 drift and #1121 label change](https://github.com/smallwei0301/tour-platform/issues/1658) | triaged, priority:P2, cron-followup, agent:backlog, owner:ai-agent, status:ready, type:docs, infra, docs |
-| #1654 | [[Ops] Fix recurring readiness live-state snapshot stale at 2026-06-09](https://github.com/smallwei0301/tour-platform/issues/1654) | triaged, type:optimization, priority:P2, cron-followup, qa, agent:backlog, owner:ai-agent, status:ready, infra, docs |
 | #1388 | [[Growth][P2] 成長基礎 backlog 總綱 — i18n 英文版、站內訊息、會員回購（Phase 12 對齊）](https://github.com/smallwei0301/tour-platform/issues/1388) | type:optimization, priority:P2, agent:backlog, owner:mixed, traveler-booking |
 | #1344 | [[Perf][P2] Mobile LCP regression on /activities — 10–12s vs 2s desktop](https://github.com/smallwei0301/tour-platform/issues/1344) | type:bug, priority:P2, owner:ai-agent, traveler-booking, performance |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
@@ -99,7 +99,7 @@ _none_
 |---|-------|--------|
 | #1647 | [[Payments] Decide and verify post-#1637 historical paid-order / payout reconciliation](https://github.com/smallwei0301/tour-platform/issues/1647) | triaged, priority:P1, owner:human-decision, status:needs-decision, type:decision, payments, orders |
 
-### Other (8)
+### Other (7)
 
 | # | Title | Labels |
 |---|-------|--------|
@@ -108,7 +108,6 @@ _none_
 | #1608 | [導遊開店第 2–3 週：導遊後台「開店進度」新頁＋「本月商店表現」](https://github.com/smallwei0301/tour-platform/issues/1608) | — |
 | #1607 | [導遊開店第 2–3 週：商店 FAQ／政策區塊擴充＋匯款付款 beta（文案＋SOP＋flag）](https://github.com/smallwei0301/tour-platform/issues/1607) | — |
 | #1604 | [[SEO] 不存在的頁面回 HTTP 200 而非 404（not-found 狀態碼）— #1585 調查附帶發現](https://github.com/smallwei0301/tour-platform/issues/1604) | type:investigation, agent:backlog, seo |
-| #1603 | [[SEO] server-rendered `<html lang>` 隨 locale 正確輸出（多 root layout 結構）— #1585 follow-up](https://github.com/smallwei0301/tour-platform/issues/1603) | type:investigation, agent:backlog, seo |
 | #1474 | [QA：PR #1473 部分退款功能 — Staging 實測（ECPay 測試卡）](https://github.com/smallwei0301/tour-platform/issues/1474) | qa, refund |
 | #1121 | [[Security] Rotate all credentials exposed in git history (service_role JWT × 7, sbp_ PAT × 5, admin token × 10, anon JWT × 4) — 正式上線前執行](https://github.com/smallwei0301/tour-platform/issues/1121) | type:bug, security, owner:mixed, status:needs-decision, launch:post-first-payment |
 
@@ -118,6 +117,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1775 | [fix(ops): 對齊 readiness snapshot 刷新節奏與 freshness guard（#1654）](https://github.com/smallwei0301/tour-platform/pull/1775) | 2026-07-29 |
+| #1772 | [docs: 建立 README 文件架構索引與任務路由](https://github.com/smallwei0301/tour-platform/pull/1772) | 2026-07-28 |
 | #1768 | [fix: 方案啟用不再洗掉方案詳情＋小野教練文案潤飾/啟用 worklog](https://github.com/smallwei0301/tour-platform/pull/1768) | 2026-07-27 |
 | #1754 | [docs: 小野教練 41 行程 Unsplash 圖片與方案詳情補齊 worklog](https://github.com/smallwei0301/tour-platform/pull/1754) | 2026-07-22 |
 | #1753 | [docs(worklog): admin-csrf-impersonate-403 補記 PR #1752 CI 綠燈證據與 merge SHA](https://github.com/smallwei0301/tour-platform/pull/1753) | 2026-07-22 |
@@ -126,8 +127,6 @@ _none_
 | #1744 | [fix: footer 手機版排版錯亂——#1739 拆分誤夾帶的全域響應式規則搬回 globals](https://github.com/smallwei0301/tour-platform/pull/1744) | 2026-07-17 |
 | #1743 | [docs: §9e 字重裁減驗收——@font-face CSS -43%、下載持平；建議關閉 #1735](https://github.com/smallwei0301/tour-platform/pull/1743) | 2026-07-17 |
 | #1742 | [perf: CJK 字重 7→4（Sans 400/700、Serif 700/900）——#1735 二階段字型瘦身](https://github.com/smallwei0301/tour-platform/pull/1742) | 2026-07-17 |
-| #1741 | [docs(harness+worklog): 更正「hooks 未武裝」誤判＋lessons 追加安全探針法](https://github.com/smallwei0301/tour-platform/pull/1741) | 2026-07-17 |
-| #1740 | [docs: §9d #1735 CSS 拆分 PSI 驗收——頁面 CSS 出清、真兇確診為 CJK 字型檔](https://github.com/smallwei0301/tour-platform/pull/1740) | 2026-07-17 |
 
 ---
 
