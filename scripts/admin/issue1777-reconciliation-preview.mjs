@@ -23,6 +23,7 @@ import { getReconciliationDataDb } from '../../apps/web/src/lib/accounting/db-re
 import {
   buildGuideReconciliation,
   buildOrderReconciliation,
+  buildEligibilityAudit,
   buildReconciliationReport,
   maskId,
 } from '../../apps/web/src/lib/accounting/reconciliation.mjs';
@@ -77,22 +78,37 @@ async function previewStuckPaidOrders() {
   };
 }
 
-/** #1647 項目二：已進導遊餘額但平台從未實收的金額。 */
-async function previewUncollectedInBalance(reconciliation) {
-  // 餘額高於 ledger 期望值的部分，即「沒有分錄支撐的餘額」
+/**
+ * #1647 項目二：未實收卻入帳的金額。
+ *
+ * 兩條互補的偵測路徑——2026-07-29 的生產實測顯示，只看金額會漏掉這一類：
+ *   (a) 餘額高於 ledger 期望值 → 有餘額但無分錄支撐
+ *   (b) 資格稽核 → 有分錄且金額算得對，但訂單當初根本不該被結算
+ * 生產上那筆 NT$6,120 屬於 (b)，且淨額已被 reversal 沖銷為 0。
+ */
+async function previewUncollectedInBalance(reconciliation, eligibility) {
   const surplus = reconciliation.guides.filter((g) => g.diffTwd > 0);
   return {
-    description: '導遊餘額高於 ledger 期望值的部分（無分錄支撐＝可能未實收卻入帳）',
-    guideCount: surplus.length,
-    totalTwd: surplus.reduce((s, g) => s + g.diffTwd, 0),
-    guides: surplus.map((g) => ({
-      guideIdMasked: g.guideIdMasked,
-      surplusTwd: g.diffTwd,
-      actualBalanceTwd: g.actualBalanceTwd,
-      expectedBalanceTwd: g.expectedBalanceTwd,
-    })),
-    proposal: '原則沖銷；若款項已實際付給導遊，改列下期 carry-forward 回收並留會計理由。'
-      + '兩種處理都需 owner 個別授權。',
+    description: '未實收卻入帳的金額（餘額無分錄支撐 ＋ 分錄不符資格兩路偵測）',
+    balanceSurplus: {
+      guideCount: surplus.length,
+      totalTwd: surplus.reduce((s, g) => s + g.diffTwd, 0),
+      guides: surplus.map((g) => ({
+        guideIdMasked: g.guideIdMasked,
+        surplusTwd: g.diffTwd,
+        actualBalanceTwd: g.actualBalanceTwd,
+        expectedBalanceTwd: g.expectedBalanceTwd,
+      })),
+    },
+    ineligibleSettlements: {
+      needsAttentionCount: eligibility.totals.needsAttentionCount,
+      outstandingTwd: eligibility.totals.outstandingTwd,
+      alreadyReversedCount: eligibility.totals.alreadyReversedCount,
+      orders: eligibility.orders,
+    },
+    proposal: '仍有淨額者：原則沖銷；若款項已實際付給導遊，改列下期 carry-forward 回收並留'
+      + '會計理由。淨額已被 reversal 沖銷為 0 者（alreadyReversed）帳已平，無需處理。'
+      + '任何寫入都需 owner 個別授權。',
   };
 }
 
@@ -144,7 +160,15 @@ async function main() {
     ledgerRows: data.ledgerRows,
     commissionRate: data.commissionRate,
   });
-  const reconciliation = buildReconciliationReport({ guideReconciliation, orderReconciliation });
+  const eligibilityAudit = buildEligibilityAudit({
+    orders: data.orders,
+    ledgerRows: data.ledgerRows,
+  });
+  const reconciliation = buildReconciliationReport({
+    guideReconciliation,
+    orderReconciliation,
+    eligibilityAudit,
+  });
 
   const report = {
     issue: 1777,
@@ -155,7 +179,7 @@ async function main() {
     reconciliation,
     historical: {
       stuckPaidOrders: await previewStuckPaidOrders(),
-      uncollectedInBalance: await previewUncollectedInBalance(guideReconciliation),
+      uncollectedInBalance: await previewUncollectedInBalance(guideReconciliation, eligibilityAudit),
       stalePendingPayouts: await previewStalePendingPayouts(guideReconciliation),
     },
   };

@@ -10,6 +10,7 @@ import { getReconciliationDataDb } from './db-reconciliation.mjs';
 import {
   buildGuideReconciliation,
   buildOrderReconciliation,
+  buildEligibilityAudit,
   buildReconciliationReport,
 } from './reconciliation.mjs';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../config/supabase-service-env.mjs';
@@ -51,6 +52,10 @@ export async function getMonthlyAccountingReport(month) {
         orders: reconciliationData.orders,
         ledgerRows: reconciliationData.ledgerRows,
         commissionRate: reconciliationData.commissionRate,
+      }),
+      eligibilityAudit: buildEligibilityAudit({
+        orders: reconciliationData.orders,
+        ledgerRows: reconciliationData.ledgerRows,
       }),
     });
   } catch (err) {

@@ -9,9 +9,31 @@
 
 **本文件不是執行紀錄。** 截至建立時間，未對 production 執行任何 DML、未套用任何 migration、未 confirm／cancel 任何真實出款。
 
+## 2026-07-29 read-only preview 實測結果
+
+已對 production 執行唯讀查核（純 SELECT，無任何寫入）。**與 2026-07-06 舊快照有一項重大差異**：
+
+| 項目 | 2026-07-06 舊快照 | **2026-07-29 實況** | 結論 |
+|---|---|---|---|
+| 一：`paid` 卡單 | 14 筆 NT$23,838 | 14 筆 NT$23,838，**全部 `paid_at` 非空（已收款）** | 仍待處理，全數符合候選條件 |
+| 二：未實收卻入帳 | NT$6,120 待沖銷 | **ledger 淨額 0——已被 reversal 沖銷** | ✅ **已完成，無待處理** |
+| 三：過期 pending 出款 | NT$7,168 | 1 筆 NT$7,168（2026-06-11），當前餘額 NT$21,814 | 仍待處理，但餘額足夠、confirm 不會被擋 |
+
+三方對帳同時確認：**唯一一位導遊的 ledger 淨額 = 餘額 = NT$21,814，差異 0**。
+
+### 項目二為何已完成
+
+訂單 `1158aa21…`（NT$7,200、`paid_at IS NULL`）同時存在 `settlement +6120` 與 `reversal −6120` 兩筆分錄，淨額為 0——`20260622120000_reverse_unpaid_completed_settlements.sql` 已處理過。舊快照描述的「未實收 NT$6,120 已進餘額」在當時屬實，但**該筆已沖銷**，不需再執行任何 DML。
+
+### 這次 preview 暴露的對帳盲點（已修）
+
+那筆錯誤分錄的**金額完全正確**（`floor(7200 × 0.85) = 6120`），ledger 與餘額也一致，因此逐導遊與逐訂單的金額對帳全部判定「正常」。**錯的不是金額，是資格**（訂單從未實收）。
+
+已新增 `buildEligibilityAudit`：回頭掃既有分錄，比對的正是 `fn_record_settlement_atomic` 在交易內重驗的那組條件（`completed`／已實收／四個 hold 旗標）。淨額已被沖銷為 0 者標為 `alreadyReversed` 但不列入待處理——帳已平，列出來只是雜訊。
+
 ## 執行前必做：重新取得 preview
 
-issue #1647 記錄的數字（14 筆卡單、未實收 NT$6,120、過期 pending payout NT$7,168）來自 **2026-07-06 快照**（`docs/operations/qa-reports/payment-payout-chain-audit-20260706.md` §3）。**不得以舊快照執行 DML**——期間可能已有新的付款、退款或人工調整。
+上表為 **2026-07-29 快照**。實際執行 DML 前仍須重跑一次——期間可能有新的付款、退款或人工調整。
 
 重新取得的方式（唯讀，不需 SQL-OVERRIDE）：
 
@@ -81,11 +103,13 @@ UPDATE orders SET status = 'paid', updated_at = now()
 
 ---
 
-## 項目二：已進導遊餘額但平台從未實收的金額
+## 項目二：已進導遊餘額但平台從未實收的金額 ✅ 已完成
 
-### 現況
+### 現況（2026-07-29 實測）
 
-`guide_balances.balance_twd` 中含有沒有 ledger 分錄支撐的金額（#1637 P1-4：某筆 `paid_at IS NULL` 的訂單在 `paid_at` 閘門補上前被結算入帳）。preview 的 `historical.uncollectedInBalance` 以「餘額 − ledger 期望值 > 0」計算，逐導遊列出多出來的金額。
+**無待處理項。** #1637 P1-4 記錄的那筆（訂單 `1158aa21…`，`paid_at IS NULL` 卻被結算 net 6120）已同時存在 `settlement +6120` 與 `reversal −6120`，**ledger 淨額為 0**——`20260622120000_reverse_unpaid_completed_settlements.sql` 已處理過。三方對帳亦顯示餘額與 ledger 差異為 0。
+
+以下 DML proposal **暫不需要執行**，保留作為日後若再出現同類情形的處理範本。preview 的 `historical.uncollectedInBalance` 現以兩條路徑偵測：餘額無分錄支撐（`balanceSurplus`）＋分錄不符資格（`ineligibleSettlements`）。
 
 ### Proposal
 
@@ -186,7 +210,7 @@ UPDATE payouts SET state = 'pending' WHERE id = :payout_id AND state = 'cancelle
 
 | 項目 | 需要的決定 |
 |---|---|
-| 一 | 候選清單確認後，是否逐筆推進 `paid→confirmed`；批次大小 |
-| 二 | 逐導遊確認屬情形 A（沖銷）或情形 B（carry-forward 回收） |
-| 三 | 確認 cancel 舊 pending 出款單並重產的時點 |
-| 全部 | production DML 的執行時窗與授權方式（鐵律 2 的 `SQL-OVERRIDE` 僅涵蓋 schema 變更；DML 依 #1777 留言需另行明確授權） |
+| 一 | 14 筆全數已收款、符合候選條件——是否逐筆推進 `paid→confirmed`；批次大小 |
+| 二 | ✅ 無需決定（已由 `20260622120000` 沖銷完畢，淨額 0） |
+| 三 | 確認 cancel 舊 pending 出款單（NT$7,168）並重產的時點 |
+| 全部 | production DML 的執行時窗與授權方式（`SQL-OVERRIDE` 僅涵蓋 schema 變更；DML 依 #1777 留言需另行明確授權） |
