@@ -400,7 +400,7 @@ test.describe('Midao requests list', () => {
     await page.goto(`/midao/requests/${firstRequestRef}`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: '核准需求' }).click();
     await page.getByRole('button', { name: '確認核准' }).click();
-    const recovery = page.getByRole('alert');
+    const recovery = page.getByRole('alert').filter({ hasText: '需求狀態可能已變更' });
     await expect(recovery).toContainText('需求狀態可能已變更');
     await expect(page.getByText('private server detail')).toHaveCount(0);
     expect(decideCalls).toBe(1);
