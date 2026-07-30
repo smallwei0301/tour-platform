@@ -12,6 +12,8 @@ import { compressImage } from '../../../../src/lib/client-image-compress';
 import { CATEGORY_OPTIONS } from '../../../../src/lib/category-tags.mjs';
 // 補充說明留空時的佔位文案與後台／通知信同源（勿在此硬編字面值）。
 import { BIO_UNFILLED_PLACEHOLDER } from '../../../../src/lib/guide-application/summary';
+// JSON-LD 需要絕對網址；走 SITE_URL 才會跟著自訂網域走（勿硬編網域）。
+import { SITE_URL } from '../../../../src/lib/seo/site-metadata';
 
 /* ── 海報四大優點的圖示（inline SVG，線條風，顏色由 CSS 的 stroke 決定）──
    共用 viewBox 32×32；fill/stroke 一律交給 .lp-apply-perk-icon svg 統一設定，
@@ -213,8 +215,8 @@ export default function GuideApplyPage() {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://tour-platform-nine.vercel.app' },
-      { '@type': 'ListItem', position: 2, name: '成為嚮導', item: 'https://tour-platform-nine.vercel.app/guide/apply' },
+      { '@type': 'ListItem', position: 1, name: '首頁', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: '成為嚮導', item: `${SITE_URL}/guide/apply` },
     ],
   };
 
