@@ -6,8 +6,8 @@ const databaseUrl = process.env.SUPABASE_DB_URL;
 const apiUrl = process.env.SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const anonKey = process.env.SUPABASE_ANON_KEY;
-const decisionSignature = 'public.midao_decide_booking_request(uuid,text,text,uuid,text,text,text,text)';
-const oldDecisionSignature = 'public.midao_decide_booking_request(uuid,text,text)';
+const decisionSignature = 'midao_decide_booking_request(uuid,text,text,uuid,text,text,text,text)';
+const oldDecisionSignature = 'midao_decide_booking_request(uuid,text,text)';
 
 assert.ok(databaseUrl, 'decision PostgREST integration runner must provide SUPABASE_DB_URL');
 assert.ok(apiUrl && serviceRoleKey && anonKey, 'decision PostgREST integration runner must provide local API credentials');
@@ -53,16 +53,20 @@ async function callDecision(key) {
 
 test('runtime catalog materializes the exact 8-arg decision RPC and canonical security posture', async () => {
   const catalog = await client.query(`
-    SELECT p.oid::regprocedure::text AS signature,
+    SELECT n.nspname AS namespace,
+           p.oid::regprocedure::text AS signature,
            pg_catalog.pg_get_function_identity_arguments(p.oid) AS identity_arguments,
            pg_catalog.pg_get_function_result(p.oid) AS result,
            p.prosecdef,
            p.proconfig
       FROM pg_catalog.pg_proc AS p
+      JOIN pg_catalog.pg_namespace AS n
+        ON n.oid = p.pronamespace
      WHERE p.oid = $1::regprocedure
   `, [decisionSignature]);
   assert.equal(catalog.rowCount, 1);
   assert.deepEqual(catalog.rows[0], {
+    namespace: 'public',
     signature: decisionSignature,
     identity_arguments: 'uuid, text, text, uuid, text, text, text, text',
     result: 'jsonb',
