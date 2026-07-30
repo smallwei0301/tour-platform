@@ -15,8 +15,13 @@
 | 3 | 第一頁文案與欄位重編、符合海報 | ✅ PASS | 標頭「在地嚮導招募中！」、海報引言、圓章金句「你的在地故事，就是旅人的祕境指南。」、「請填寫以下資訊」、「加入祕島，你可以」四格、揪團尾句全部上架；欄位比照海報（姓名／聯絡方式／居住縣市／熟悉地區／推薦祕境／帶團經驗／旅程類型／方便聯絡時間／其他想分享） |
 | 6 | 「其他想分享的內容」改選填（追加需求） | ✅ PASS | 標示「（選填）」、移除 `required`；必填縮為姓名／電話／Email／居住縣市四欄。全空時 `bio` 走佔位文案避開後端非空檢查。e2e「只填必填四欄即可送出」PASS |
 | 7 | 四大優點改用 SVG 圖示（追加需求） | ✅ PASS | 新增 4 個 inline SVG（個人頁卡片／山景定位／三人群像／$ 循環箭頭），比照海報 pictogram；`aria-hidden` 隱藏於輔助技術，顏色統一由 CSS `stroke` 控制。真實瀏覽器截圖確認四格 2×2 排版與圖示可辨識 |
+| 8 | 移除 hero 分潤三格文案（追加需求） | ✅ PASS | 嚮導實拿 85%／平台抽成 15%／金流手續費由平台吸收／後台一站式 全部移除，`payoutFacts` 資料結構刪除；hero 收在金句「你的在地故事，就是旅人的祕境指南。」（截圖確認版面完整）。`settlement-rules-alignment` 該案例改只鎖 dashboard；另加反向守門防止文案被誤加回招募頁 |
 | 4 | 全面改用「嚮導」，含 footer 標題 | ✅ PASS | 45 個使用者可見檔案＋`messages/zh-Hant.json` 完成改名；footer 顯示「認識嚮導／成為嚮導／嚮導開店／嚮導後台」（截圖可見）。`導遊證`（官方證照名）刻意保留 |
 | 5 | 管理者後台仍能取得申請資訊、流程不變 | ✅ PASS | admin 頁／admin API／`db-guide-applications.mjs`／通知信 **零 diff**；e2e `admin-guide-application-detail.spec.ts` 3 項全 PASS；e2e round-trip 驗證海報新欄位隨 `bio` 落地可讀回 |
+
+| 9 | 管理者 email 得知所有填寫內容（追加需求） | ✅ PASS | 寄給 `ADMIN_EMAIL_ALLOWLIST` 全員，表格列出全部 13 欄（未填標「未填寫」）＋未填欄位數摘要。單元測試驗收件人、主旨、全欄位、HTML escape、無 allowlist 時不寄信 |
+| 10 | Telegram 收到有人填寫通知（追加需求） | ✅ PASS | 走既有 `pushTelegramToAdmin`（`TELEGRAM_ORDER_CHAT_ID`），同一份欄位清單純文字版＋未填摘要＋申請編號短碼。單元測試覆蓋 |
+| 11 | 後台點名字看到所有填寫與未填寫（追加需求） | ✅ PASS | 詳情頁改用共用欄位清單，**舊行為「空的就不顯示」已修正**；未填顯示灰體斜體「未填寫／未上傳」，並加「未填寫 N 項」徽章。e2e `admin-guide-application-detail` 3 項 PASS ＋ 真實瀏覽器截圖確認 |
 
 ## 測試證據
 

@@ -10,6 +10,8 @@ import { compressImage } from '../../../../src/lib/client-image-compress';
 // 主題篩選、活動編輯下拉同源（category-tags.mjs），避免各處標籤漂移。
 // 海報上的美食／攝影／親子／在地生活由「其他想帶的旅程類型」自由填寫欄承接。
 import { CATEGORY_OPTIONS } from '../../../../src/lib/category-tags.mjs';
+// 補充說明留空時的佔位文案與後台／通知信同源（勿在此硬編字面值）。
+import { BIO_UNFILLED_PLACEHOLDER } from '../../../../src/lib/guide-application/summary';
 
 /* ── 海報四大優點的圖示（inline SVG，線條風，顏色由 CSS 的 stroke 決定）──
    共用 viewBox 32×32；fill/stroke 一律交給 .lp-apply-perk-icon svg 統一設定，
@@ -155,13 +157,6 @@ export default function GuideApplyPage() {
     { strong: '用自己的專長創造收入', label: '熱愛的事，變成收入來源', icon: <PerkIconIncome /> },
   ];
 
-  // 分潤條件（與 settlement 規則同源文案，供申請者決策前先看清）。
-  const payoutFacts = [
-    { strong: '嚮導實拿 85%', label: '平台抽成 15%' },
-    { strong: '金流手續費', label: '由平台吸收' },
-    { strong: '後台一站式', label: '行程與訂單管理' },
-  ];
-
   // 必填只留聯絡得上人所需的四欄；補充說明與照片一律選填。
   const requiredMissing = !fullName.trim() || !phone.trim() || !email.trim() || !city.trim();
 
@@ -182,7 +177,7 @@ export default function GuideApplyPage() {
         contactTime.trim() && `方便聯絡時間：${contactTime.trim()}`,
       ]
         .filter(Boolean)
-        .join('\n') || '（申請者未填寫補充說明，請於聯繫時確認）';
+        .join('\n') || BIO_UNFILLED_PLACEHOLDER;
 
       const res = await fetch('/api/guide-applications', {
         method: 'POST',
@@ -242,14 +237,6 @@ export default function GuideApplyPage() {
           我們正在尋找熱愛分享在地生活的人，一起帶更多旅客認識真正的台灣。
         </p>
         <p className="lp-apply-quote">你的在地故事，就是旅人的祕境指南。</p>
-        <div className="lp-apply-perks">
-          {payoutFacts.map((fact) => (
-            <div key={fact.strong} className="lp-apply-perk">
-              <strong>{fact.strong}</strong>
-              <span>{fact.label}</span>
-            </div>
-          ))}
-        </div>
       </header>
 
       <div className="lp-apply-body">
