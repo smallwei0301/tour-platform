@@ -1,26 +1,26 @@
 import { test, expect, setGuideSession } from './helpers';
 
 /**
- * 導遊申請熟悉區域擴充（全台 18 區，含嘉義／屏東）＋ 收款方式可複選；
- * 導遊後台「服務地區→熟悉區域」、新增專業證照／收款方式且可自行修改。
+ * 嚮導申請熟悉區域擴充（全台 18 區，含嘉義／屏東）＋ 收款方式可複選；
+ * 嚮導後台「服務地區→熟悉區域」、新增專業證照／收款方式且可自行修改。
  *
  * 申請表單純前端（送出才打 API），故無須 mock 後端即可驗 chips／checkbox。
- * 導遊後台 profile 需 guide session + 攔截 GET/PATCH /api/guide/profile。
+ * 嚮導後台 profile 需 guide session + 攔截 GET/PATCH /api/guide/profile。
  */
 
-test.describe('導遊申請表單：熟悉區域與收款方式', () => {
+test.describe('嚮導申請表單：熟悉區域與收款方式', () => {
   test('熟悉區域涵蓋全台（含嘉義、屏東），收款方式可複選', async ({ page }) => {
     await page.goto('/guide/apply');
 
-    // 熟悉區域：嘉義、屏東等地區皆可選。
+    // 熟悉區域：嘉義、屏東等地區皆可選（單頁流程改版後為選填）。
     const regionGroup = page.locator('.lp-apply-chips').filter({ hasText: '嘉義' }).first();
-    await expect(page.getByText('熟悉區域*')).toBeVisible();
+    await expect(page.getByText('熟悉的地區／區域（選填，可複選）')).toBeVisible();
     for (const region of ['嘉義', '屏東', '基隆', '宜蘭', '澎湖']) {
       await expect(regionGroup.getByText(region, { exact: true })).toBeVisible();
     }
 
     // 收款方式：checkbox（可複選），預設「銀行轉帳」勾選，可再加 LINE Pay。
-    await expect(page.getByText('收款方式*（可複選）')).toBeVisible();
+    await expect(page.getByText('希望的收款方式（選填，可複選）')).toBeVisible();
     const bank = page.getByRole('checkbox', { name: '銀行轉帳' });
     const linepay = page.getByRole('checkbox', { name: 'LINE Pay' });
     await expect(bank).toBeChecked();
@@ -30,7 +30,7 @@ test.describe('導遊申請表單：熟悉區域與收款方式', () => {
   });
 });
 
-test.describe('導遊後台：熟悉區域／專業證照／收款方式可自行修改', () => {
+test.describe('嚮導後台：熟悉區域／專業證照／收款方式可自行修改', () => {
   const GUIDE_ID = 'guide-e2e-regions';
 
   test.beforeEach(async ({ page }) => {
@@ -93,6 +93,9 @@ test.describe('導遊後台：熟悉區域／專業證照／收款方式可自�
     await payGroup.getByRole('button', { name: 'LINE Pay' }).click();
 
     // 新增一個熟悉區域（台南），送出 PATCH 應帶 regions/certifications/payment_methods。
+    // 注意 mock 的 GET 回舊資料短名（['高雄','屏東']）—— 頁面載入時會以
+    // normalizeRegionToDbValue 正規化成全名，故 PATCH 一律送全名（高雄市／屏東縣／
+    // 台南市）。這正是「熟悉區域統一存全名」的契約，順帶驗證舊短名資料會被升級。
     await regionGroup.getByRole('button', { name: '台南', exact: true }).click();
 
     const patchPromise = page.waitForRequest((req) =>
@@ -100,7 +103,10 @@ test.describe('導遊後台：熟悉區域／專業證照／收款方式可自�
     await page.getByRole('button', { name: /儲存/ }).first().click();
     const patch = await patchPromise;
     const body = JSON.parse(patch.postData() || '{}');
-    expect(body.regions).toEqual(expect.arrayContaining(['高雄', '屏東', '台南']));
+    expect(body.regions).toEqual(expect.arrayContaining(['高雄市', '屏東縣', '台南市']));
+    expect(body.regions, '不得殘留未正規化的短名').not.toEqual(
+      expect.arrayContaining(['高雄', '屏東', '台南']),
+    );
     expect(body.certifications).toEqual(expect.arrayContaining(['導遊證', '急救證照']));
     expect(body.payment_methods).toEqual(expect.arrayContaining(['bank', 'linepay']));
   });

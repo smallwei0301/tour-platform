@@ -490,6 +490,37 @@ export async function POST(
             message: 'refund executed but operations_tracking.refund_amount_twd write failed (payout may not reflect refund)',
             metadata: { orderId, refundAmountTwd: opsRefundTwd, error: result.error },
           });
+        } else {
+          // #1777 Phase 3（決策 B）：把該訂單的 ledger 淨額調整到
+          // `max(0, 總額 − 累積退款) × 分潤率`，只追加本次差額。
+          //
+          // 必須排在 refund_amount_twd 寫入**之後**——RPC 讀的是累積退款額，
+          // 早一步呼叫會用到舊值。上游的 recordRefundReversalDb 仍可能已整筆
+          // 紅沖（與 order 狀態機、修復路徑深度耦合，本 phase 不拆）；本 RPC 以
+          // 「目標 − ledger 現值」計算差額，因此不論前置狀態如何都會收斂到正確
+          // 的最終淨應付，並自動補回被紅沖過頭的部分。
+          try {
+            const { applyRefundAdjustmentAtomicDb, buildRefundEventId } =
+              await import('../../../../../../../src/lib/settlement/db-settlement-atomic.mjs');
+            await applyRefundAdjustmentAtomicDb(supabase, {
+              orderId,
+              refundEventId: buildRefundEventId(orderId, opsRefundTwd),
+              actor: 'refund-execute',
+            });
+          } catch (adjustErr) {
+            // 退款本身已成功，不因帳務調整失敗而回滾；改記 incident 供人工補正。
+            void recordIncident({
+              source: 'admin_refund_execute',
+              severity: 'error',
+              category: 'payment',
+              message: 'refund executed but payout ledger adjustment failed (guide net payable may be stale)',
+              metadata: {
+                orderId,
+                refundAmountTwd: opsRefundTwd,
+                error: adjustErr instanceof Error ? adjustErr.message : String(adjustErr),
+              },
+            });
+          }
         }
       }
     }

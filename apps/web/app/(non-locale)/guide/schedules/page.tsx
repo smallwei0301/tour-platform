@@ -160,7 +160,7 @@ export default function GuideSchedulesPage() {
           Legacy 固定場次管理（activity_schedules）
         </p>
         <p style={{ margin: '0 0 6px', fontSize: 12, color: '#78350f' }}>
-          狀態說明：開放 / 額滿 / 已關閉（open/full/cancelled）。這個頁面只會調整既有固定場次的開關與容量，屬於舊制快照/備援流程，不會建立 V2 導遊可售時段規則。
+          狀態說明：開放 / 額滿 / 已關閉（open/full/cancelled）。這個頁面只會調整既有固定場次的開關與容量，屬於舊制快照/備援流程，不會建立 V2 嚮導可售時段規則。
         </p>
         <p style={{ margin: 0, fontSize: 12, color: '#78350f' }}>
           若你目前使用 V2 模式，請到

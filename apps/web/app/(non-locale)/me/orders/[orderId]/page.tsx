@@ -52,7 +52,7 @@ export default function OrderDetailPage() {
   const orderId = typeof params.orderId === 'string' ? params.orderId : '';
 
   const [order, setOrder] = useState<OrderDetail | null>(null);
-  // #1596 行前導遊聯絡：僅出發前 24h＋導遊同意時，API 才回非 null。
+  // #1596 行前嚮導聯絡：僅出發前 24h＋嚮導同意時，API 才回非 null。
   const [guideContact, setGuideContact] = useState<{ name: string; phone: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [authChecking, setAuthChecking] = useState(true);
@@ -124,7 +124,7 @@ export default function OrderDetailPage() {
     if (sp.get('review') === '1') setShowReviewForm(true);
   }, [order]);
 
-  // #1596：confirmed 訂單才嘗試取行前聯絡；資格外或導遊未同意時 API 回 null，不顯示卡片。
+  // #1596：confirmed 訂單才嘗試取行前聯絡；資格外或嚮導未同意時 API 回 null，不顯示卡片。
   useEffect(() => {
     if (!order || order.status !== 'confirmed' || !orderId) { setGuideContact(null); return; }
     let cancelled = false;
@@ -423,7 +423,7 @@ export default function OrderDetailPage() {
         <p style={{ fontSize: 13, color: 'var(--tp-text)', margin: 0 }}>{statusDesc}</p>
       </div>
 
-      {/* #1565 電子憑證：confirmed 訂單顯示 QR＋短碼供出發當日出示/導遊核銷 */}
+      {/* #1565 電子憑證：confirmed 訂單顯示 QR＋短碼供出發當日出示/嚮導核銷 */}
       {status === 'confirmed' && order.voucherToken && (
         <div data-testid="voucher-card" style={{ ...cardStyle, textAlign: 'center' }}>
           <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--tp-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>電子憑證</h2>
@@ -436,17 +436,17 @@ export default function OrderDetailPage() {
             </p>
           )}
           <p style={{ fontSize: 12, color: 'var(--tp-muted)', margin: '6px 0 0' }}>
-            出發當日向導遊出示此 QR 或短碼；無法掃描時，導遊可用短碼＋姓名於名冊核對。
+            出發當日向嚮導出示此 QR 或短碼；無法掃描時，嚮導可用短碼＋姓名於名冊核對。
           </p>
         </div>
       )}
 
-      {/* #1596 行前聯絡：僅出發前 24h＋導遊同意揭露時顯示（API 資格外回 null） */}
+      {/* #1596 行前聯絡：僅出發前 24h＋嚮導同意揭露時顯示（API 資格外回 null） */}
       {guideContact && (
         <div data-testid="pre-tour-contact-card" style={cardStyle}>
           <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--tp-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>行前聯絡</h2>
           <div style={rowStyle}>
-            <span style={labelStyle}>導遊</span>
+            <span style={labelStyle}>嚮導</span>
             <span style={valueStyle}>{guideContact.name}</span>
           </div>
           <div style={rowStyle}>
@@ -456,7 +456,7 @@ export default function OrderDetailPage() {
             </a>
           </div>
           <p style={{ fontSize: 12, color: 'var(--tp-muted)', margin: '6px 0 0' }}>
-            此聯絡方式僅在出發前 24 小時內顯示，供臨時狀況（如集合點確認）聯繫導遊。
+            此聯絡方式僅在出發前 24 小時內顯示，供臨時狀況（如集合點確認）聯繫嚮導。
           </p>
         </div>
       )}

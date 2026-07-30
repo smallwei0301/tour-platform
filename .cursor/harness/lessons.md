@@ -97,3 +97,20 @@
 - 另外兩個 bash-guard 邊角：(1) commit 證據 gate 檢查的是「hook 執行當下」的 staged 區——add 與 commit 併在同一條指令會因 staged 為空而讓純文件豁免失效，**add 與 commit 要分兩條指令**；(2) heredoc/字串內容若含「git …commit」字樣也會被 commit gate 的 regex 命中——往 lessons.md 等檔案追加含 git 指令的文字時改用 Edit 工具，別用 shell heredoc
 - 適用範圍：所有 session 開機煙霧測試；純文件 commit 流程
 - **[2026-07-17 更新] 雲端 remote session 全程重演本假陰性**：agent 照 00_INDEX 步驟 0 的 Edit 探針判定「hooks 未武裝」、以人工遵守替代跑了整個 session（4 個 PR），收尾調查時用「Write 寫回一字不差的 CLAUDE.md」重測 → `⛔ HARNESS BLOCK [file-guard]`——**hooks 其實從頭到尾武裝**。兩個新事實：(1) **Write-identical-content 是安全的武裝探針**（有攔＝武裝；沒攔＝寫入相同內容零損害，且立刻知道真裸奔）；(2) Bash 工具裡 `printenv CLAUDE_PROJECT_DIR` 為空**不代表** hook 環境沒有——該變數只注入 hook 執行 context，別拿 Bash env 當證據。根因是開機時未先 grep 本檔就照 00_INDEX 步驟 0 行動；步驟 0 的探針方法待 owner 依 05_maintenance 提案流程修訂（本檔無權改 0*.md）。
+- **[2026-07-30 再次重演]** 又一個 session 照步驟 0 判「未武裝」。本次改用兩個真陽性探針確認武裝：(1) Bash 跑 `echo "probe: git push --force"`（字串含 force-push 樣式會被 bash-guard 攔，但真執行也只是印字，零風險）；(2) Write 一個**不存在的新檔**到 `.claude/hooks/`（無覆蓋風險，會被 file-guard 攔）。兩者都比 Write-identical-content 更不需要事前讀檔。
+
+## [2026-07-30] nextjs-hydration-wipes-first-e2e-fill
+- Context：嚮導申請頁改單頁流程後，新寫的 e2e 一直卡在「送出鈕永遠 disabled」；後面欄位值都在，只有第一個 `#apply-fullname` 莫名是空字串
+- Error：Next dev 下 client component 的 SSR HTML 先到、React 才 hydrate。`page.goto()` 後立刻 `fill()` 會落在 hydration 之前，React 掛載時用初始 state（空字串）重繪，**把剛打進去的值直接抹掉**；因為只抹到最前面一兩欄，症狀看起來像「表單驗證邏輯壞了」而不是 timing。單獨回讀該欄的值也可能通過（抹除發生在稍後），所以「填完立刻 assert 一欄」不是可靠對策
+- Solution：`e2e/helpers.ts` 的 `fillFormHydrated(page, entries)`——**全部填完再全部回讀**，任一欄被抹掉就整組重填（`expect(...).toPass()`）。新寫涉及表單輸入的 spec 一律用它，不要自己 `locator.fill()` 起頭
+- 同類徵兆：`getByRole(...).click()` 在 goto 後立刻執行也會被吃掉（受控 checkbox 勾了又被重設）；`guide-profile-contact-qa.spec.ts` 的 CTA 點擊偶發 flaky 就是這個家族（既有問題，非本輪造成）
+- 另一個踩點：`getByRole('radio', { name: '有' })` 會同時命中「有」與「沒有，但有興趣」→ strict mode violation，選項互為子字串時要加 `exact: true`
+- **點擊版對策**：`clickUntilExpanded(locator)`（同檔）用 React 控制的 `aria-expanded` 當成功信號重試點擊。**只適用「只開不 toggle」的按鈕**（如 `setOpen(true)`）；toggle 型按鈕重試會關回去，需改用別的信號
+- 適用範圍：所有 Playwright spec 的第一個輸入／點擊互動；Next dev/preview 環境尤其明顯
+
+## [2026-07-30] ci-e2e-smoke-lane-hides-long-red-specs
+- Context：修申請頁時順手跑了幾支相關 e2e，發現兩支**長期紅燈**（`guide-familiar-regions-payments`、`i18n-footer-guides`）與一支 flaky，且都不是本輪造成（用 `git stash` 在乾淨工作樹覆核過）
+- Error：CI 的 `e2e-smoke.yml` 只跑 `test:e2e:smoke` 指定的 **4 支** spec，其餘 e2e **完全不在任何 CI lane**。所以 spec 斷言寫錯／過期可以紅很久沒人知道，`ci.yml` 也一路綠燈
+- 兩支的根因都是**測試本身寫錯，不是產品 bug**：(1) regions 斷言期望短名，但「熟悉區域存全名」是既有契約；(2) 斷言把 `guides.resultCount` 的文案套到 h1（h1 其實是 `pageTitle`）。修的是斷言，產品碼沒動
+- Solution／習慣：(a) 改到某個區域時，順手跑該區域**全部**相關 e2e，不要只信 CI 綠燈；(b) 判斷紅燈歸屬一律先 `git stash push --include-untracked` 在乾淨樹重跑 —— 別預設「跑紅的就是我弄壞的」，也別預設「本來就紅所以不用管」；(c) 斷言文案前先確認該字串屬於哪個 i18n key、渲染在哪個元素，別靠印象
+- 適用範圍：任何 e2e 紅燈的歸屬判斷；評估「CI 綠燈」的實際覆蓋範圍時

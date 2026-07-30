@@ -39,14 +39,14 @@ test('blog 列表：chrome 與文章標題／摘要實際 zh↔en 切換', async
   await setLocaleCookie(page, 'zh-Hant');
   await page.goto('/blog');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('旅遊指南');
-  await expect(page.getByText('為什麼在台灣旅行要找私人導遊')).toBeVisible();
+  await expect(page.getByText('為什麼在台灣旅行要找私人嚮導')).toBeVisible();
 
   await setLocaleCookie(page, 'en');
   await page.goto('/en/blog');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Travel Guide');
   // 文章標題／摘要實際英文，舊中文標題消失
   await expect(page.getByText('Why hire a private guide in Taiwan')).toBeVisible();
-  await expect(page.getByText('為什麼在台灣旅行要找私人導遊')).toHaveCount(0);
+  await expect(page.getByText('為什麼在台灣旅行要找私人嚮導')).toHaveCount(0);
 });
 
 test('blog 文章頁 chrome＋本文皆英文化（/en）', async ({ page }) => {
@@ -67,5 +67,5 @@ test('blog 文章頁 預設中文本文維持中文', async ({ page }) => {
   await setLocaleCookie(page, 'zh-Hant');
   const resp = await page.goto('/blog/why-private-guide');
   expect(resp?.status()).toBeLessThan(400);
-  await expect(page.getByRole('heading', { name: '私人導遊帶來的改變' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '私人嚮導帶來的改變' })).toBeVisible();
 });

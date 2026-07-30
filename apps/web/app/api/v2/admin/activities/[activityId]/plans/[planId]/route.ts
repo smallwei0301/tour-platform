@@ -9,7 +9,7 @@ import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../../src/lib/api';
 import { handleRouteError } from '../../../../../../../../src/lib/route-error';
 import { getSupabase } from '../../../../../../../../src/lib/db.mjs';
-import { normalizeRichPlanPayload } from '../../../../../../../../src/lib/activity-plans-rich-mapper.mjs';
+import { normalizeRichPlanPatch } from '../../../../../../../../src/lib/activity-plans-rich-mapper.mjs';
 import { applyWithMissingColumnFallback } from '../../../../../../../../src/lib/activity-plans-insert-fallback.mjs';
 import { revalidateActivityById } from '../../../../../../../../src/lib/revalidate-activity-by-id.mjs';
 
@@ -176,7 +176,9 @@ export async function PUT(
     if (body.status !== undefined) updateData.status = body.status;
     if (body.is_year_round !== undefined) updateData.is_year_round = body.is_year_round;
 
-    Object.assign(updateData, normalizeRichPlanPayload(body));
+    // 部分更新語意：只覆蓋 body 有提供的 rich 欄位。改用全量版 normalizeRichPlanPayload
+    // 會讓「啟用／停用」這種 status-only PUT 把 plan_itinerary 等既有內容洗成 null。
+    Object.assign(updateData, normalizeRichPlanPatch(body));
 
     const { data, error, droppedColumns } = await applyWithMissingColumnFallback(
       (payload: Record<string, unknown>) =>

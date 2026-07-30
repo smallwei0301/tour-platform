@@ -2,13 +2,13 @@
 /**
  * check-snapshot-freshness.mjs
  *
- * Checks whether the readiness live-state snapshot is fresh (< 12h old).
+ * Checks whether the readiness live-state snapshot is fresh (< 26h old).
  * Optionally checks drift between snapshot header counts and live GitHub data
  * when GH_TOKEN is available.
  *
  * Exit codes:
- *   0 — snapshot is within the freshness threshold (< 12h)
- *   1 — snapshot is stale (>= 12h old) or unreadable
+ *   0 — snapshot is within the freshness threshold (< 26h)
+ *   1 — snapshot is stale (>= 26h old) or unreadable
  *
  * Usage: node scripts/readiness/check-snapshot-freshness.mjs
  * npm:   npm run readiness:check
@@ -29,8 +29,9 @@ const SNAPSHOT_PATH = process.env.READINESS_SNAPSHOT_PATH
   ? resolve(process.env.READINESS_SNAPSHOT_PATH)
   : resolve(REPO_ROOT, 'docs', 'operations', 'reports', 'readiness-live-state-latest.md');
 
-// stale threshold: 12h — snapshot older than this triggers exit code 1
-const FRESHNESS_THRESHOLD_HOURS = 12;
+// stale threshold: 26h（每日 05:00 UTC 刷新一次 + 2h 緩衝；#1654 由 12h 對齊每日節奏）
+// — snapshot older than this triggers exit code 1
+const FRESHNESS_THRESHOLD_HOURS = 26;
 
 // ── Read snapshot ─────────────────────────────────────────────────────────────
 

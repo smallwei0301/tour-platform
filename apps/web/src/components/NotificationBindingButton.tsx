@@ -20,12 +20,12 @@ interface Props {
   description?: string;
   accent?: string;
   /**
-   * 卡片配色基調：'light'（預設，給白底的導遊後台）／'dark'（給深綠的旅客會員中心）。
+   * 卡片配色基調：'light'（預設，給白底的嚮導後台）／'dark'（給深綠的旅客會員中心）。
    * dark 套用主題 token，標題與說明文字才不會在深底上糊掉。
    */
   tone?: 'light' | 'dark';
   /**
-   * UI 文案語言（#multilingual）。預設 'zh-Hant' — 導遊後台不傳即維持繁中（零變動）；
+   * UI 文案語言（#multilingual）。預設 'zh-Hant' — 嚮導後台不傳即維持繁中（零變動）；
    * 旅客 /me/profile 傳入 useClientLocale() 後內部狀態／按鈕文字跟著切英文。
    */
   locale?: AppLocale;

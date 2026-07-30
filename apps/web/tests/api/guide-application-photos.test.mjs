@@ -100,10 +100,21 @@ test('上傳 API：存在且限制 kind / 型別 / 大小，路徑鎖 applicatio
   assert.match(src, /5 \* 1024 \* 1024/, '需有檔案大小上限');
 });
 
-test('申請 API：個人照片為必填（profilePhotoUrl 缺漏要 400）', () => {
+test('申請 API：照片全部選填（缺 profilePhotoUrl 不得 400）', async () => {
+  // 單頁流程改版：照片不再 gating，申請者可先送出、通過後於嚮導後台補照片。
   const src = readFileSync(APPLICATIONS_ROUTE, 'utf8');
-  assert.match(src, /profilePhotoUrl/, 'POST 需驗證 profilePhotoUrl');
-  assert.match(src, /required/, '缺漏需走 required → 400 路徑');
+  assert.doesNotMatch(src, /profilePhotoUrl is required/, '不得再把個人照片當必填擋下');
+
+  // 行為面（in-memory fallback）：完全不帶照片也要能建立申請。
+  const created = await createGuideApplicationDb({
+    fullName: '無照片測試嚮導',
+    phone: '0912-000-333',
+    email: `apply-no-photo-${Date.now()}@example.com`,
+    city: '花蓮縣',
+    bio: '熟悉太魯閣周邊的野溪與部落故事。',
+  });
+  assert.ok(created.id, '無照片仍應建立成功');
+  assert.equal(created.profilePhotoUrl ?? null, null);
 });
 
 // ---------- admin 詳情 ----------
@@ -137,18 +148,19 @@ test('promote：建檔自動帶 profile_photo_url / hero_image_url / gallery_url
 
 // ---------- 申請表單 ----------
 
-test('申請表單：真上傳（file input 有 accept 且打上傳 API），個人照片必填 gating', () => {
+test('申請表單：真上傳（file input 有 accept 且打上傳 API），照片全部選填', () => {
   const src = readFileSync(APPLY_PAGE, 'utf8');
   const fileInputs = src.match(/type="file"/g) || [];
-  assert.ok(fileInputs.length >= 3, '需有個人照片/封面/活動照片三個上傳欄位');
+  assert.ok(fileInputs.length >= 3, '需有個人照/封面/活動照三個上傳欄位');
   // accept 以 PHOTO_ACCEPT 常數綁定（GH-1093 契約回歸）
   assert.match(src, /PHOTO_ACCEPT\s*=\s*'image\/jpeg,image\/png,image\/webp'/, '需定義 image MIME accept 常數');
   const acceptBound = (src.match(/accept=\{PHOTO_ACCEPT\}/g) || []).length;
   assert.ok(acceptBound >= 3, '三個 file input 都需綁 accept');
   assert.match(src, /\/api\/guide-applications\/upload/, '必須真的打上傳 API（不得再有假欄位）');
-  assert.match(src, /disabled=\{[^}]*!profilePhotoUrl/, '個人照片未上傳前不得進入下一步');
+  // 單頁流程：送出鈕不得再被照片 gating（只看必填文字欄位與上傳中狀態）。
+  assert.doesNotMatch(src, /disabled=\{[^}]*!profilePhotoUrl/, '照片不得再 gating 送出');
   for (const field of ['profilePhotoUrl', 'heroImageUrl', 'galleryUrls']) {
     assert.match(src, new RegExp(`${field}[,:]`), `submit payload 需含 ${field}`);
   }
-  assert.match(src, /請勿在表單中提供證件影本/, '證件核驗誠實說明不得移除');
+  assert.match(src, /請勿在表單中提供證件影本/, '不收證件影本的誠實說明不得移除');
 });

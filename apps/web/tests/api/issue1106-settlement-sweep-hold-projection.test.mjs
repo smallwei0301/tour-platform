@@ -15,12 +15,13 @@
  *   refund/complaint/safety/payment dispute；不得因 order completed 就自動
  *   payable." The helper enforced it; the route starved it of data.
  *
- * Scope note — only has_complaint / has_oversell_issue (and refund_amount_twd)
- * are persisted columns on operations_tracking (migrations 001/002). is_disputed
- * / is_safety_case are NOT schema columns; isPayoutOnHold defaults them to false
- * and the canonical post-trip-summary route also projects only these three
- * columns, so we deliberately match that projection rather than SELECTing
- * non-existent columns (which would 500 the sweep).
+ * Scope note（2026-07-29 更新，#1777 缺口 1）——本檔原本斷言 sweep「不得」
+ * select is_disputed / is_safety_case，理由是那兩欄不是 schema 欄位。**該假設
+ * 已過期**：migration 20260618_operations_tracking_dispute_safety_flags.sql 已
+ * 把兩欄建為實體欄位，導遊端 computeGuidePayoutEstimate 也早已讀取它們。過期
+ * 的反向斷言使「dispute／safety 訂單被錯誤結算」這個錯誤行為得以測試全綠。
+ * 現已反轉為「必須投影四個 hold 旗標」，行為層契約見
+ * tests/api/issue1777-dispute-safety-hold-projection.test.mjs。
  */
 import { readFileSync } from 'node:fs';
 import { strict as assert } from 'node:assert';
@@ -67,12 +68,21 @@ describe('GH-1106 — settlement sweep projects the operations_tracking hold fla
     );
   });
 
-  it('sweep route does NOT select non-existent columns is_disputed / is_safety_case', () => {
+  it('sweep route selects is_disputed so the payment_dispute hold can fire (#1777)', () => {
     const projection = sweepOpsTrackingProjection();
-    assert.doesNotMatch(
+    assert.match(
       projection,
-      /is_disputed|is_safety_case/,
-      'those are not operations_tracking columns; selecting them would error the sweep query'
+      /is_disputed/,
+      'is_disputed 自 migration 20260618 起是實體欄位；未投影會讓付款爭議訂單被錯誤結算'
+    );
+  });
+
+  it('sweep route selects is_safety_case so the safety_review hold can fire (#1777)', () => {
+    const projection = sweepOpsTrackingProjection();
+    assert.match(
+      projection,
+      /is_safety_case/,
+      'is_safety_case 自 migration 20260618 起是實體欄位；未投影會讓安全案件訂單被錯誤結算'
     );
   });
 

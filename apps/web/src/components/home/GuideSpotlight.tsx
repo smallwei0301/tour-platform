@@ -12,7 +12,7 @@ export function GuideSpotlight() {
     <section className="tp-section" style={{ background: 'var(--tp-bg-soft)' }}>
       <div className="tp-container">
         <div className="tp-section-head">
-          <h2>🔦 焦點導遊</h2>
+          <h2>🔦 焦點嚮導</h2>
         </div>
         <div className="tp-guide-spotlight-layout" style={{ display: 'grid', gap: 24, alignItems: 'start' }}>
           <div style={{ textAlign: 'center' }}>
