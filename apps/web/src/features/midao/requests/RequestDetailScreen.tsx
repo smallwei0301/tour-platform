@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { InlineError } from '../ui/InlineError';
 import { LoadingSkeleton } from '../ui/LoadingSkeleton';
+import { RequestProgressActions } from './RequestProgressActions';
 import { RequestSummaryCard } from './RequestSummaryCard';
 
 export interface RequestDetail {
@@ -188,12 +189,12 @@ export function RequestDetailScreen({ requestRef }: { requestRef: string }) {
       {state.kind === 'error' ? (
         <InlineError message="目前無法載入需求詳情" onRetry={() => void load()} />
       ) : null}
-      {state.kind === 'ready' ? <DetailContent detail={state.data} /> : null}
+      {state.kind === 'ready' ? <DetailContent detail={state.data} onReload={load} /> : null}
     </section>
   );
 }
 
-function DetailContent({ detail }: { detail: RequestDetail }) {
+function DetailContent({ detail, onReload }: { detail: RequestDetail; onReload: () => Promise<void> }) {
   const isPendingDecision = detail.allowedActions.approve || detail.allowedActions.reject;
   return (
     <div className="midao-request-detail-content">
@@ -203,9 +204,7 @@ function DetailContent({ detail }: { detail: RequestDetail }) {
           <p className="midao-home-eyebrow">處理狀態</p>
           <h3 id="midao-request-status-title" className="midao-heading">{statusLabel(detail)}</h3>
         </div>
-        {isPendingDecision ? (
-          <p className="midao-request-detail-status__note">目前僅顯示待確認狀態</p>
-        ) : null}
+        {isPendingDecision ? <RequestProgressActions bookingId={detail.bookingId} allowedActions={detail.allowedActions} onReload={onReload} /> : null}
       </section>
     </div>
   );

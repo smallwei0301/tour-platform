@@ -301,8 +301,9 @@ test.describe('Midao requests list', () => {
     await expect(page.getByText('traveler-detail@example.invalid')).toBeVisible();
     await expect(page.getByText('+886 900 000 000')).toBeVisible();
     await expect(page.getByText('希望安排適合初次健行的路線')).toBeVisible();
-    await expect(page.getByText('目前僅顯示待確認狀態')).toBeVisible();
-    await expect(page.getByRole('button', { name: /核准|婉拒|批准|拒絕/u })).toHaveCount(0);
+    await expect(page.getByText('目前僅顯示待確認狀態')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '核准需求' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '婉拒需求' })).toBeVisible();
     await expect(page.getByRole('link', { name: '返回需求列表' })).toHaveAttribute('href', '/midao/requests');
     expect(await page.locator('body').innerText()).not.toContain('orderId');
     expect(calls).toEqual([`/api/v2/guide/requests/${firstRequestRef}`]);
@@ -310,5 +311,103 @@ test.describe('Midao requests list', () => {
     const screenshotPath = testInfo.outputPath('requests-detail.png');
     await page.screenshot({ path: screenshotPath, fullPage: true });
     await testInfo.attach('requests-detail', { path: screenshotPath, contentType: 'image/png' });
+  });
+
+  test('delayed approve sends one command and only reloads the latest detail after strict success', async ({ page }) => {
+    test.setTimeout(180_000);
+    let detailCalls = 0;
+    let decideCalls = 0;
+    await page.route('**/api/v2/guide/requests/*', async (route) => {
+      detailCalls += 1;
+      const latest = structuredClone(detailData);
+      if (detailCalls > 1) {
+        latest.allowedActions = { approve: false, reject: false, markReplied: false, convertInquiry: false };
+        latest.guideApprovalStatus = 'approved';
+        latest.status.guideApprovalStatus = 'approved';
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: latest }) });
+    });
+    await page.route('**/api/v2/guide/bookings/*/commands/decide', async (route) => {
+      decideCalls += 1;
+      expect(route.request().method()).toBe('POST');
+      expect(await route.request().postDataJSON()).toEqual({ action: 'approve' });
+      expect(route.request().headers()['idempotency-key']).toBeTruthy();
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: {} }) });
+    });
+
+    await loginMidaoGuideViaApi(page, guide);
+    await page.goto(`/midao/requests/${firstRequestRef}`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('button', { name: '核准需求' }).click();
+    await expect(page.getByRole('dialog', { name: '確認核准需求' })).toBeVisible();
+    await page.getByRole('button', { name: '確認核准' }).click();
+    await expect(page.getByRole('button', { name: '核准需求' })).toBeDisabled();
+    await expect.poll(() => decideCalls).toBe(1);
+    await expect.poll(() => detailCalls).toBe(2);
+    expect(decideCalls).toBe(1);
+  });
+
+  test('reject requires a checked confirmation and trimmed note, then double-click still sends one command', async ({ page }) => {
+    test.setTimeout(180_000);
+    let detailCalls = 0;
+    let decideCalls = 0;
+    await page.route('**/api/v2/guide/requests/*', async (route) => {
+      detailCalls += 1;
+      const latest = structuredClone(detailData);
+      if (detailCalls > 1) latest.allowedActions = { approve: false, reject: false, markReplied: false, convertInquiry: false };
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: latest }) });
+    });
+    await page.route('**/api/v2/guide/bookings/*/commands/decide', async (route) => {
+      decideCalls += 1;
+      expect(await route.request().postDataJSON()).toEqual({ action: 'reject', note: '行程已滿' });
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: {} }) });
+    });
+
+    await loginMidaoGuideViaApi(page, guide);
+    await page.goto(`/midao/requests/${firstRequestRef}`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('button', { name: '婉拒需求' }).click();
+    const dialog = page.getByRole('dialog', { name: '確認婉拒需求' });
+    const submit = dialog.getByRole('button', { name: '確認婉拒' });
+    await expect(submit).toBeDisabled();
+    await dialog.getByLabel('婉拒原因').fill('  行程已滿  ');
+    await dialog.getByLabel('我確認要婉拒此需求').check();
+    await expect(submit).toBeEnabled();
+    await submit.dblclick();
+    await expect.poll(() => decideCalls).toBe(1);
+    await expect.poll(() => detailCalls).toBe(2);
+    expect(decideCalls).toBe(1);
+  });
+
+  test('a 409 decision shows recovery and its reload button issues only a latest-detail GET', async ({ page }) => {
+    test.setTimeout(180_000);
+    let detailCalls = 0;
+    let decideCalls = 0;
+    await page.route('**/api/v2/guide/requests/*', async (route) => {
+      detailCalls += 1;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: detailData }) });
+    });
+    await page.route('**/api/v2/guide/bookings/*/commands/decide', async (route) => {
+      decideCalls += 1;
+      await route.fulfill({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: false, error: { code: 'NOT_PENDING_APPROVAL', message: 'private server detail' } }),
+      });
+    });
+
+    await loginMidaoGuideViaApi(page, guide);
+    await page.goto(`/midao/requests/${firstRequestRef}`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('button', { name: '核准需求' }).click();
+    await page.getByRole('button', { name: '確認核准' }).click();
+    const recovery = page.getByRole('alert');
+    await expect(recovery).toContainText('需求狀態可能已變更');
+    await expect(page.getByText('private server detail')).toHaveCount(0);
+    expect(decideCalls).toBe(1);
+    expect(detailCalls).toBe(1);
+    await page.getByRole('button', { name: '重新載入需求' }).click();
+    await expect.poll(() => detailCalls).toBe(2);
+    expect(decideCalls).toBe(1);
+    await expect(page.getByText('操作成功')).toHaveCount(0);
   });
 });
