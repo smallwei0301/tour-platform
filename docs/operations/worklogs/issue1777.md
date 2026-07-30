@@ -364,3 +364,110 @@
 ## P0-OVERRIDE 使用紀錄
 
 - 無。本輪未觸碰凍結區，未使用任何 override。
+
+---
+
+## 退款鏈修復（2026-07-30，接續獨立審查）
+
+獨立審查的三個 fresh-context reviewer 抓出 ON CONFLICT P0 之後，我把**呼叫端**再走一遍。
+Phase 3 的 RPC 本身是對的，錯在 `refund-execute/route.ts` 餵給它的值——這一段原本
+沒有任何測試覆蓋（route 是 `.ts`、測試是 `.mjs` 無 TS loader，只能寫 source-string
+測試；而字串全都在，傳的值錯）。
+
+### F1（P0）累積退款額被覆寫而非累加
+
+```
+route.ts:71  .update({ refund_amount_twd: refundAmountTwd, updated_at: now })
+```
+
+`refundAmountTwd` 是**本次**金額。NT$2,000 訂單先退 500 再退 500 → 欄位停在 500
+（實際已退 1,000）→ sweep 的 effective GMV 多算 500 → 導遊多領 `floor(500 × 0.85) = 425`。
+且該寫入是應用層 read-modify-write，兩筆併發退款會 lost update——正是 #1777 要消滅的模式。
+
+### F2（P0）冪等鍵以「本次金額」組成
+
+```
+route.ts:507  refundEventId: buildRefundEventId(orderId, opsRefundTwd)
+```
+
+`buildRefundEventId` 的 docstring 寫「累積退款總額」，但 route 傳的是本次金額。
+兩次等額部分退款（500、500）算出同一把鍵 → 第二筆差額分錄被
+`ON CONFLICT DO NOTHING` 吃掉 → ledger 只調整一次。
+
+**為什麼測試沒抓到**：`issue1777-refund-adjustment.test.mjs` 只驗 helper 在「餵累積額」
+時的語意（`buildRefundEventId('o-1', 3000) ≠ ('o-1', 5000)`），從未斷言呼叫端傳了什麼。
+這是本輪最該記住的一條：**契約測試若不覆蓋呼叫端傳值，等於沒測**。
+
+### F5（P1）`delta=0` 早退跳過 carry-forward 稽核
+
+舊版在 `v_delta = 0` 時直接 `RETURN`，早於「餘額轉負 → 記 carry-forward」的檢查。
+若上游 `recordRefundReversalDb` 已整筆紅沖（ledger 淨額已為 0、餘額已被扣成負數），
+本函式算出 target=0／previous=0／delta=0 → 早退 → **完全沒有 `payout_carry_forward_created`**。
+已經付出去的錢沒有可追蹤的回收紀錄。
+
+### 順帶修掉的一個潛在解析風險
+
+舊版 `RETURNS TABLE (order_id uuid, …, refund_event_id text)` 讓 plpgsql 變數與資料表
+欄位同名，而 `ON CONFLICT (order_id, refund_event_id)` 的 inference specification 是以
+**運算式**解析的——同名變數會被代換成參數 placeholder。該路徑要「已結算訂單 + 差額≠0」
+才會走到，production 至今 `refund_adjustment` 為 0 筆，因此從未觸發。新版改
+`RETURNS jsonb`，函式體內不再有與欄位同名的變數，整類問題消失。
+
+### 修法
+
+責任搬進 DB 交易內，呼叫端只說「本次退了多少」：
+
+| 檔案 | 變更 |
+|---|---|
+| `supabase/migrations/20260730093000_issue1777_refund_delta_accumulation.sql`（＋rollback） | 簽章 `(uuid, text, text)` → `(uuid, integer, text)`；舊簽章 `DROP`（避免 PostgREST 多載歧義 PGRST203）；`operations_tracking.refund_amount_twd += delta` 移入同一把 `orders FOR UPDATE`；冪等鍵改由交易內累積額推導（`'cum:' || 累積額`）；負 delta `RAISE`；carry-forward／超額稽核改為全路徑檢查並以 `refund_event_id` 去重；`RETURNS jsonb` |
+| `apps/web/src/lib/settlement/refund-payout-sync.mjs`（新） | `readCumulativeRefundTwd`、`checkRefundWithinRemaining`（純函式）、`syncRefundToPayoutLedger` |
+| `apps/web/src/lib/settlement/db-settlement-atomic.mjs` | 移除 `buildRefundEventId`；`applyRefundAdjustmentAtomicDb` 改收 `refundDeltaTwd`，拒絕負數／非整數 |
+| `apps/web/app/api/v2/admin/orders/[orderId]/refund-execute/route.ts` | 刪 `recordOperationsRefundAmount`；改呼叫 `syncRefundToPayoutLedger`；**新增呼叫 provider 前的「剩餘可退」把關**；incident 訊息改為誠實說明「累積額與 ledger 同交易、失敗代表兩者皆未寫入」 |
+
+### 順帶關掉的一個新缺口（F9）
+
+`resolveRefundAmount`（`refund-execute.ts`）只驗 `refundAmount ≤ total`，沒扣掉已退部分。
+NT$1,000 訂單連退兩次 800 都會通過驗證，累積 1,600 > 總額——而錢已經從 provider 出去了。
+新增的把關擋在**呼叫 provider 之前**，且只在「已有累積退款」時介入（純加法變更，首次退款
+的錯誤碼與行為不變）；累積額讀取失敗時放行並記 incident——擋掉所有退款的代價高於這個
+競態風險，且 RPC 端仍會對超額累積留下 `refund_exceeds_order_total` 稽核作為後手。
+
+### 為什麼要新開一支 `.mjs`
+
+route 是 `.ts`，本 repo 沒有 TS test loader，因此 route 只能寫 source-string 測試——
+而 F1／F2 正是 source-string 測試看不見的那一類。把決策邏輯搬到可 `import` 的模組後，
+才能用**行為測試**斷言「實際傳給 RPC 的參數」（`assert.deepEqual(args, {...})`＋
+「不得出現 `p_refund_event_id`」）。
+
+### 測試
+
+新增 `apps/web/tests/api/issue1777-refund-chain-accumulation.test.mjs`（20 個 case），
+含一組並列 oracle：`makeBrokenAppWorld`（修復前）vs `makeFixedRpcWorld`（修復後），
+以數字證明「兩次 500 → 導遊多領 425」與修復後收斂到 850。
+
+改動既有測試（機制變了、不變量沒變，均在檔內註明原因）：
+- `issue1777-refund-adjustment.test.mjs`：移除 `buildRefundEventId` 那組（helper 已刪），
+  wrapper 契約改為 `p_refund_delta_twd`
+- `issue1474-refund-payout-wiring.test.mjs`：#1474 的不變量（金額必須落到出帳讀的欄位）
+  不變，守門改鎖「route 委派到唯一 writer」＋「route 不得自行 update 該欄位」
+- `issue1777-migration-contract.test.mjs`：新增 migration 入列；新增「最終生效版本」
+  describe（migration 只增不改，掃全部檔案會被舊的壞版本假綠——與 ON CONFLICT 那次同一教訓）
+
+**實跑證據**（`.claude/hooks/run-checks.sh --typecheck …`，2026-07-30 20:38 CST）：
+**230 pass / 0 fail / 0 skipped**，`tsc --noEmit` 綠燈，`npm run lint` 0 errors。
+
+### 一個自己踩到的坑（記給下一輪）
+
+route 的說明註解裡引用了錯誤寫法當反例（`.update({ refund_amount_twd: … })`），
+結果我自己的守門斷言咬到自己的註解 → **假紅**。修法：字串守門一律先剝註解
+（`tsCode()`）。這與 2026-07-29 那次「斷言咬到 migration 註解 → 假綠」是同一個坑的兩面。
+
+### 狀態
+
+- ⏳ **migration 尚未套用 production**：需新的 `SQL-OVERRIDE` 授權（前一次已過期清除）。
+  在套用前，`applyRefundAdjustmentAtomicDb` 傳 `p_refund_delta_twd` 會打不到舊簽章
+  → wrapper fail-closed 拋 `SETTLEMENT_RPC_NOT_DEPLOYED` → 退款仍成功、帳務同步中止並記
+  incident。**因此部署順序必須是 migration 先、程式碼後**（與 Phase 2 同一條規則）。
+- ⚠️ **AC 6／AC 7 的 PASS 判定要撤回**：驗收報告與 issue 留言當時判 PASS，但 F1／F2 讓
+  「多次部分退款的最終淨應付正確」與「退款重送冪等」實際上不成立。修復套用並驗證後才能重判。
+- 緩解因素：production `refund_adjustment` 目前 0 筆，payout confirm 仍 HOLD。

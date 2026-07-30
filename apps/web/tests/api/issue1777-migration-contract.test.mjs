@@ -27,6 +27,9 @@ const ISSUE_1777_MIGRATIONS = [
   '20260729180000_issue1777_revoke_atomic_fns_from_anon',
   // 獨立審查後的修復：ON CONFLICT predicate（P0）＋ default privileges FOR ROLE
   '20260729190000_issue1777_post_review_fixes',
+  // 收尾稽核後的修復：累積退款額原子累加（F1）＋冪等鍵改由 DB 端推導（F2）＋
+  // carry-forward 不再被 delta=0 早退跳過（F5）
+  '20260730093000_issue1777_refund_delta_accumulation',
 ];
 
 /** 本 issue 建立的財務函式——權限收斂必須涵蓋每一支。 */
@@ -242,6 +245,10 @@ describe('#1777 P0 迴歸 — ON CONFLICT 必須與部分索引的 predicate 一
   });
 });
 
+// ⚠️ 以下鎖的是 20260729170000 這支 migration 建立的**schema**（分錄型別、
+// refund_event_id、部分索引）與當時的函式定義。函式本體已由
+// 20260730093000 取代（累積額改在交易內累加、冪等鍵改由 DB 端推導）——DB 上
+// 生效的版本請看下一個 describe。
 describe('#1777 Phase 3 — 退款 adjustment ledger 的安全屬性', () => {
   const src = readMigration(ISSUE_1777_MIGRATIONS[1]);
   const code = sqlCode(src);
@@ -281,5 +288,128 @@ describe('#1777 Phase 3 — 退款 adjustment ledger 的安全屬性', () => {
 
   it('已出款的訂單全額退款時建立 carry-forward，不靜默歸零', () => {
     assert.match(code, /carry_forward/i, '已出款者必須留下可追蹤的 carry-forward，而非把差額吞掉');
+  });
+});
+
+// ── 退款鏈修復（F1／F2／F5）──────────────────────────────────────────────────
+//
+// 收尾稽核（2026-07-30）在呼叫端抓到的兩個 P0：累積退款額被覆寫（F1）、冪等鍵
+// 以本次金額組成（F2）。兩者的修法都是「把責任搬進 RPC 交易內」，因此這裡鎖的
+// 是**最後一支重新定義該函式的 migration**（migration 只增不改，舊檔的壞版本會
+// 永遠留在目錄裡，掃全部檔案會假綠——與 ON CONFLICT 那次同一個教訓）。
+
+describe('#1777 退款鏈 — 最終生效的 fn_apply_refund_adjustment_atomic', () => {
+  const defining = ISSUE_1777_MIGRATIONS
+    .filter((base) => /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+public\.fn_apply_refund_adjustment_atomic/i
+      .test(sqlCode(readMigration(base))))
+    .sort();
+
+  it('有 migration 定義該函式', () => {
+    assert.ok(defining.length > 0);
+  });
+
+  const latest = defining[defining.length - 1];
+  const code = sqlCode(readMigration(latest));
+
+  it(`${latest} 以 delta 為參數，不再由呼叫端提供冪等鍵（F2）`, () => {
+    assert.match(code, /p_refund_delta_twd\s+integer/i, '參數必須是「本次退款額」');
+    assert.doesNotMatch(
+      code,
+      /p_refund_event_id/i,
+      '冪等鍵不得再由呼叫端傳入——那正是 F2 的成因',
+    );
+    assert.match(
+      code,
+      /'cum:'\s*\|\|/i,
+      '冪等鍵必須在函式內以累積額推導',
+    );
+  });
+
+  it(`${latest} 舊簽章已 DROP（避免 PostgREST 多載歧義 PGRST203）`, () => {
+    assert.match(
+      code,
+      /DROP\s+FUNCTION\s+IF\s+EXISTS\s+public\.fn_apply_refund_adjustment_atomic\s*\(\s*uuid\s*,\s*text\s*,\s*text\s*\)/i,
+      '第二參數型別改變會產生多載；舊簽章必須移除',
+    );
+  });
+
+  it(`${latest} 在交易內累加 refund_amount_twd，且不是整值覆寫（F1）`, () => {
+    assert.match(
+      code,
+      /ON\s+CONFLICT\s*\(\s*order_id\s*\)\s*DO\s+UPDATE[\s\S]{0,200}refund_amount_twd\s*=\s*coalesce\s*\(\s*ot\.refund_amount_twd\s*,\s*0\s*\)\s*\+/i,
+      'refund_amount_twd 必須以 `既有值 + delta` 累加；覆寫會讓多次部分退款漏計',
+    );
+    // 累加必須在同一把 orders 鎖之內，否則兩筆併發退款仍會 lost update。
+    const lockAt = code.search(/FROM\s+orders\s+o[\s\S]{0,80}FOR\s+UPDATE/i);
+    const accumulateAt = code.search(/INSERT\s+INTO\s+operations_tracking/i);
+    assert.ok(lockAt >= 0 && accumulateAt >= 0, '應同時有 orders FOR UPDATE 與 ops 累加');
+    assert.ok(lockAt < accumulateAt, '累加必須發生在 orders FOR UPDATE 之後');
+  });
+
+  it(`${latest} 負 delta 直接 RAISE（累積額必須單調遞增，否則鍵會重複）`, () => {
+    assert.match(code, /v_delta_in\s*<\s*0[\s\S]{0,160}RAISE\s+EXCEPTION/i);
+  });
+
+  it(`${latest} carry-forward 不再被 delta=0 早退跳過（F5）`, () => {
+    // 舊版在 v_delta = 0 時直接 RETURN，早於餘額轉負的稽核；若上游已整筆紅沖，
+    // 已付出去的錢就完全沒有可追蹤的回收紀錄。
+    const carryAt = code.search(/IF\s+v_balance\s*<\s*0\s+THEN/i);
+    const deltaBranchAt = code.search(/IF\s+v_delta\s*<>\s*0\s+THEN/i);
+    assert.ok(carryAt >= 0, '必須有餘額轉負的 carry-forward 檢查');
+    assert.ok(deltaBranchAt >= 0, '差額分錄應在 v_delta <> 0 的分支內');
+    assert.ok(
+      carryAt > deltaBranchAt,
+      'carry-forward 檢查必須在差額分支之後、且不在其內——delta=0 也要檢查',
+    );
+    assert.doesNotMatch(
+      code,
+      /IF\s+v_delta\s*=\s*0\s+THEN[\s\S]{0,400}RETURN\s*;/i,
+      '不得有 delta=0 的早退路徑（那會跳過 carry-forward 稽核）',
+    );
+  });
+
+  it(`${latest} carry-forward 與超額稽核以 refund_event_id 去重（重跑不刷重複列）`, () => {
+    const dedupes = code.match(/NOT\s+EXISTS\s*\([\s\S]{0,300}?metadata\s*->>\s*'refund_event_id'\s*=\s*v_event_id/gi) ?? [];
+    assert.ok(dedupes.length >= 2, `carry-forward 與超額退款稽核都要去重，目前 ${dedupes.length} 處`);
+  });
+
+  it(`${latest} 累積額超過訂單總額時留稽核，不靜默通過`, () => {
+    assert.match(code, /refund_exceeds_order_total/i, '超額退款必須留下可查的稽核 action');
+  });
+
+  it(`${latest} 未結算訂單不動 ledger，但累積額仍已記錄`, () => {
+    // 累加必須排在「無 ledger 分錄就早退」之前，否則結算前的退款不會反映到
+    // sweep 的 effective GMV（#1474 的不變量）。
+    const accumulateAt = code.search(/INSERT\s+INTO\s+operations_tracking/i);
+    const notSettledAt = code.search(/IF\s+v_guide_id\s+IS\s+NULL\s+THEN/i);
+    assert.ok(accumulateAt >= 0 && notSettledAt >= 0);
+    assert.ok(accumulateAt < notSettledAt, '未結算的早退路徑必須在累積額寫入之後');
+    assert.match(code, /'settled'\s*,\s*false/i, '未結算應以 settled:false 回報');
+  });
+
+  it(`${latest} 仍 pin search_path 且權限收斂到 service_role`, () => {
+    assert.match(code, /SET\s+search_path\s*=\s*pg_catalog\s*,\s*public\s*,\s*pg_temp/i);
+    assert.match(
+      code,
+      /GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+public\.fn_apply_refund_adjustment_atomic\s*\(\s*uuid\s*,\s*integer\s*,\s*text\s*\)\s*TO\s+service_role/i,
+      '新簽章必須重新授權給 service_role（舊簽章的 GRANT 隨 DROP 一併消失）',
+    );
+    assert.match(
+      code,
+      /REVOKE\s+ALL\s+ON\s+FUNCTION\s+public\.fn_apply_refund_adjustment_atomic\s*\(\s*uuid\s*,\s*integer\s*,\s*text\s*\)\s*FROM\s+[^;]*anon[^;]*authenticated/i,
+      '新簽章必須重新自 anon／authenticated 收回（DROP 後 default privileges 會再放行一次）',
+    );
+  });
+
+  it(`${latest} 回傳 jsonb，函式體內沒有與資料表欄位同名的變數`, () => {
+    // 舊版 `RETURNS TABLE (order_id …, refund_event_id …)` 讓 plpgsql 變數與欄位
+    // 同名，而 ON CONFLICT 的 inference specification 是以運算式解析的——同名
+    // 變數會被代換成參數 placeholder。改回傳 jsonb 後整類問題消失。
+    assert.match(code, /RETURNS\s+jsonb/i);
+    assert.doesNotMatch(
+      code,
+      /RETURNS\s+TABLE\s*\([\s\S]{0,400}?\brefund_event_id\b/i,
+      'OUT 參數不得與 ON CONFLICT 用到的欄位同名',
+    );
   });
 });

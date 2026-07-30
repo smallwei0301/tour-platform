@@ -48,29 +48,37 @@ test('helper：executeRefund/executeEcpayReversal 不再寫入幽靈 orders 欄�
   assert.ok(!/ecpay_refund_trade_no:\s/.test(helperSrc), 'refund-execute.ts 不應有 `ecpay_refund_trade_no:` 寫入');
 });
 
-test('route：退款成功時寫入 operations_tracking.refund_amount_twd（出帳真正讀的欄位）', () => {
+// #1474 的不變量是「退款金額必須落到出帳真正讀的欄位
+// operations_tracking.refund_amount_twd」。**機制**已於 #1777（2026-07-30）改變：
+// 原本由 route 的 recordOperationsRefundAmount 直接 update，但那是**覆寫**而非
+// 累加，兩次部分退款只留最後一次的金額（導遊被多撥）。現改由
+// fn_apply_refund_adjustment_atomic 在交易內 `+= delta`，route 只傳本次金額。
+//
+// 因此這裡改鎖「route 委派到唯一 writer」，而累加語意與呼叫端傳值由
+// tests/api/issue1777-refund-chain-accumulation.test.mjs 以行為測試守門。
+test('route：退款成功時把本次金額交給唯一 writer（落到 refund_amount_twd）', () => {
   assert.match(
     routeSrc,
-    /recordOperationsRefundAmount/,
-    'route.ts 應呼叫 recordOperationsRefundAmount 同步出帳退款金額',
+    /syncRefundToPayoutLedger/,
+    'route.ts 應委派 syncRefundToPayoutLedger 同步出帳退款金額',
   );
   assert.match(
     routeSrc,
-    /from\(['"]operations_tracking['"]\)/,
-    'route.ts 應更新 operations_tracking 表',
-  );
-  assert.match(
-    routeSrc,
-    /refund_amount_twd/,
-    'route.ts operations_tracking 寫入應包含 refund_amount_twd',
+    /refundDeltaTwd/,
+    'route.ts 應傳入本次退款額（delta），由 RPC 交易內累加',
   );
 });
 
-test('route：operations_tracking 採針對性 upsert，不覆寫 ops 既有欄位', () => {
-  // 只更新 refund_amount_twd + updated_at；不得呼叫會全欄覆寫的 updateOperationsTrackingDb。
+test('route：不得自行讀寫 refund_amount_twd（覆寫是 #1777 F1 的成因）', () => {
+  // 剝註解：route 的說明註解引用了錯誤寫法當反例，不剝會咬到自己的說明文字。
+  const routeCode = routeSrc.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
   assert.ok(
-    !/updateOperationsTrackingDb/.test(routeSrc),
+    !/updateOperationsTrackingDb/.test(routeCode),
     '不應用全欄覆寫的 updateOperationsTrackingDb（會清空 manual_minutes/holds 等人工欄位）',
+  );
+  assert.ok(
+    !/\.update\(\s*\{[^}]*refund_amount_twd/.test(routeCode),
+    'route 不得以 update 覆寫 refund_amount_twd——累加必須在 RPC 交易內完成',
   );
 });
 
