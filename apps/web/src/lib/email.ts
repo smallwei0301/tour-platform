@@ -215,7 +215,7 @@ export async function sendOrderConfirmation(data: OrderEmailData): Promise<Email
       您的行程預訂已成功建立！請在付款期限內完成付款以確保席位。
     </p>
     ${orderInfoBlock(data)}
-    <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform.vercel.app'}/me/orders"
+    <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform-nine.vercel.app'}/me/orders"
        style="display:inline-block;background:#ec4899;color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:700;font-size:14px;margin-top:8px;">
       查看我的訂單
     </a>
@@ -495,7 +495,7 @@ export async function sendOrderCancellation(data: OrderEmailData): Promise<Email
       您的訂單已成功取消。如果您希望重新預訂，歡迎再次造訪我們的平台。
     </p>
     ${orderInfoBlock(data)}
-    <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform.vercel.app'}/activities"
+    <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform-nine.vercel.app'}/activities"
        style="display:inline-block;background:#6b7280;color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:700;font-size:14px;margin-top:8px;">
       探索更多行程
     </a>
@@ -692,7 +692,7 @@ export interface BookingApprovalNoticeData {
 /** 導遊審核通過 → 通知旅客前往付款。 */
 export async function sendBookingApprovalApproved(data: BookingApprovalNoticeData): Promise<EmailDeliveryResult> {
   const subject = `預約已通過審核，請完成付款 — ${data.activityTitle}`;
-  const payUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform.vercel.app'}/me/orders`;
+  const payUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform-nine.vercel.app'}/me/orders`;
   const html = wrapEmail(subject, `
     <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">導遊已確認你的預約 ✅</h1>
     <p style="font-size:14px;color:#374151;margin:0 0 12px;">
@@ -736,7 +736,7 @@ export interface PaymentDeadlineNoticeData {
 /** 建立訂單／開放付款時：通知旅客付款連結與截止時間。 */
 export async function sendPaymentDeadlineNotice(data: PaymentDeadlineNoticeData): Promise<EmailDeliveryResult> {
   const subject = `請於期限內完成付款 — ${data.activityTitle}`;
-  const payUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform.vercel.app'}/me/orders`;
+  const payUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform-nine.vercel.app'}/me/orders`;
   const html = wrapEmail(subject, `
     <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">預約已建立，請完成付款 🕐</h1>
     <p style="font-size:14px;color:#374151;margin:0 0 12px;">
@@ -762,7 +762,7 @@ export interface UnpaidOrderCancelledData {
 /** 逾時自動取消後：通知旅客訂單已取消、名額已釋出。 */
 export async function sendUnpaidOrderCancelledNotice(data: UnpaidOrderCancelledData): Promise<EmailDeliveryResult> {
   const subject = `訂單已逾時自動取消 — ${data.activityTitle}`;
-  const browseUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform.vercel.app'}/activities`;
+  const browseUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform-nine.vercel.app'}/activities`;
   const html = wrapEmail(subject, `
     <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">訂單已逾時自動取消</h1>
     <p style="font-size:14px;color:#374151;margin:0 0 12px;">
@@ -807,7 +807,7 @@ function escapeHtmlText(text: string): string {
 export async function sendOrderMessageNotice(data: OrderMessageNoticeData): Promise<EmailDeliveryResult> {
   const subject = `新訊息 — ${data.activityTitle}`;
   const preview = escapeHtmlText(String(data.preview || '').slice(0, 120));
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform-nine.vercel.app';
   const html = wrapEmail(subject, `
     <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">您有一則新訊息 💬</h1>
     <p style="font-size:14px;color:#374151;margin:0 0 12px;">
@@ -843,7 +843,7 @@ export interface GuideQuestionNoticeData {
 export async function sendGuideQuestionNotice(data: GuideQuestionNoticeData): Promise<EmailDeliveryResult> {
   const subject = `有旅客向您提問 — ${data.sourceLabel}`;
   const preview = escapeHtmlText(String(data.question || '').slice(0, 200));
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform-nine.vercel.app';
   const html = wrapEmail(subject, `
     <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">您有一則新提問 💬</h1>
     <p style="font-size:14px;color:#6b7280;margin:0 0 4px;">嗨 ${escapeHtmlText(data.guideName || '導遊')}，</p>
