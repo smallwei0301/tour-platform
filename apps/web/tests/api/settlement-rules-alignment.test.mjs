@@ -29,14 +29,14 @@ describe('settlement rules alignment', () => {
   });
 
   it('guide-facing copy states the full payout policy', () => {
-    const applyPage = src('app/(non-locale)/guide/apply/page.tsx');
+    // 分潤條件的權威呈現處＝嚮導後台（登入後看得到明細與門檻）。
+    // 公開招募頁 /guide/apply 於 2026-07-30 依 owner 指示移除分潤三格文案，
+    // 故不再納入本斷言；改由下一個 case 鎖「不得偷偷長回來」。
     const dashboard = src('app/(non-locale)/guide/dashboard/page.tsx');
-    for (const text of [applyPage, dashboard]) {
-      assert.match(text, /平台抽成\s*15%/);
-      // 用語統一（招募改版）：使用者可見文案一律「嚮導」；admin 後台仍為「導遊」。
-      assert.match(text, /嚮導實拿\s*85%/);
-      assert.match(text, /金流手續費[^。]*平台吸收|平台吸收[^。]*金流手續費/);
-    }
+    assert.match(dashboard, /平台抽成\s*15%/);
+    // 用語統一（招募改版）：使用者可見文案一律「嚮導」；admin 後台仍為「導遊」。
+    assert.match(dashboard, /嚮導實拿\s*85%/);
+    assert.match(dashboard, /金流手續費[^。]*平台吸收|平台吸收[^。]*金流手續費/);
     assert.match(dashboard, /旅客實付金額扣除已退款部分後/);
     assert.match(dashboard, /活動完成後第\s*7\s*天|T\+7/);
     assert.match(dashboard, /最低出款門檻：?NT\$5,000|最低出款門檻：?NT\$\{data\.minWithdrawalTwd\.toLocaleString\(\)\}/);

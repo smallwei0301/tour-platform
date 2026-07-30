@@ -103,6 +103,13 @@ describe('guide/apply 單頁流程', () => {
     }
   });
 
+  test('招募頁不放分潤數字（owner 2026-07-30 指示移除，勿長回來）', () => {
+    for (const copy of ['實拿 85%', '抽成 15%', '平台吸收', '後台一站式']) {
+      assert.ok(!page.includes(copy), `招募頁不應出現分潤文案「${copy}」`);
+    }
+    assert.doesNotMatch(page, /payoutFacts/, '分潤三格資料結構應已移除');
+  });
+
   test('用語：頁面與 metadata 一律「嚮導」', () => {
     for (const [name, src] of [['page', page], ['layout', layout]]) {
       assert.doesNotMatch(src, /導遊/, `${name} 不得殘留「導遊」字眼`);

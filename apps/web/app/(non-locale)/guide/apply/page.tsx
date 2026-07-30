@@ -155,13 +155,6 @@ export default function GuideApplyPage() {
     { strong: '用自己的專長創造收入', label: '熱愛的事，變成收入來源', icon: <PerkIconIncome /> },
   ];
 
-  // 分潤條件（與 settlement 規則同源文案，供申請者決策前先看清）。
-  const payoutFacts = [
-    { strong: '嚮導實拿 85%', label: '平台抽成 15%' },
-    { strong: '金流手續費', label: '由平台吸收' },
-    { strong: '後台一站式', label: '行程與訂單管理' },
-  ];
-
   // 必填只留聯絡得上人所需的四欄；補充說明與照片一律選填。
   const requiredMissing = !fullName.trim() || !phone.trim() || !email.trim() || !city.trim();
 
@@ -242,14 +235,6 @@ export default function GuideApplyPage() {
           我們正在尋找熱愛分享在地生活的人，一起帶更多旅客認識真正的台灣。
         </p>
         <p className="lp-apply-quote">你的在地故事，就是旅人的祕境指南。</p>
-        <div className="lp-apply-perks">
-          {payoutFacts.map((fact) => (
-            <div key={fact.strong} className="lp-apply-perk">
-              <strong>{fact.strong}</strong>
-              <span>{fact.label}</span>
-            </div>
-          ))}
-        </div>
       </header>
 
       <div className="lp-apply-body">

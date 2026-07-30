@@ -117,6 +117,20 @@ e2e `guide-apply-pipeline.spec.ts`「只填必填四欄即可送出」鎖住此�
 驗證：三支 spec 9 項全 PASS；contact-qa 以 `--repeat-each=4` 跑 12 次全 PASS；
 連同申請流程與改名波及共 25 項 e2e 全 PASS。
 
+## 追加變更（owner 指示）
+
+1. **補充說明改選填**（見上方「表單必填最小化」）。
+2. **四大優點改 inline SVG 圖示**：個人頁卡片／山景定位／三人群像／$ 循環箭頭，
+   `aria-hidden` 隱藏於輔助技術，顏色由 `.lp-apply-perk-icon svg` 的 `stroke` 統一控制。
+3. **移除 hero 分潤三格**（嚮導實拿 85%／平台抽成 15%／金流手續費由平台吸收／後台一站式）。
+   - 連帶調整 `tests/api/settlement-rules-alignment.test.mjs`：該案例原本同時鎖
+     apply page 與 dashboard 兩個 surface，現只鎖 dashboard（分潤條件的權威呈現處）。
+   - `tests/ui/guide-apply-single-step.test.mjs` 加一條反向守門，防止這段文案日後
+     被誤加回招募頁。
+   - **提醒 owner**：申請者在送出前不會再看到分潤比例，要等通過審核、登入嚮導後台
+     才看得到。若日後希望招募階段先講清楚條件，可改放在 `/for-guides`（該頁已有
+     Beta 定價 NT$0＋15% 區塊），不必動招募頁版面。
+
 ## CI 對照（本輪確認）
 
 `ci.yml` 跑 lint → typecheck → `npm test` → `build` → ISR smoke → preflight；
