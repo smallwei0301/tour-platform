@@ -241,22 +241,15 @@ it('verified gate rejects fake ledger identity and fabricated verified or baseli
   }
 });
 
-describe('issue #1293 — repo現況verified release gate誠實HOLD', () => {
-  it('九支Midao post-cutoff未套production，因此verified mode exact列為missing', () => {
+describe('issue #1756 — repo現況verified release gate可稽核通過', () => {
+  it('九支Midao migration 已有 verified ledger record，因此verified mode通過', () => {
     const cli = runCli({ migrationsDir: path.join(REPO_ROOT, 'supabase', 'migrations'), ledgerPath: LEDGER_PATH });
-    assert.equal(cli.status, 1, `repo verified gate應HOLD\n${cli.stdout}\n${cli.stderr}`);
+    assert.equal(cli.status, 0, `repo verified gate應通過\n${cli.stdout}\n${cli.stderr}`);
     const result = JSON.parse(cli.stdout);
-    assert.deepEqual(result.missing, [
-      '20260723000000_midao_backend_mode.sql',
-      '20260723001000_midao_notification_outbox.sql',
-      '20260723002000_midao_idempotency_records.sql',
-      '20260723002500_midao_audit_events.sql',
-      '20260723003000_midao_atomic_backend_mode_switch.sql',
-      '20260723003500_midao_service_role_acl_hardening.sql',
-      '20260723004000_midao_request_read_projection.sql',
-      '20260723010000_midao_atomic_booking_approval.sql',
-      '20260723011000_midao_atomic_booking_decision_command.sql',
-    ]);
+    assert.equal(result.status, 'verified');
+    assert.deepEqual(result.missing, []);
+    assert.deepEqual(result.unverified, []);
+    assert.equal(result.verifiedCount >= 9, true);
   });
 });
 

@@ -1,0 +1,13 @@
+-- OPERATOR-ONLY ROLLBACK COMPANION for 20260723002500_midao_audit_events.sql
+-- NEVER auto-run. A separate owner authorization and a new, reviewed recovery
+-- migration are required. Audit records must not be silently destroyed; this
+-- file deliberately blocks and invents no historical rollback action.
+
+DO $rollback$
+BEGIN
+  RAISE EXCEPTION USING
+    ERRCODE = 'P0001',
+    MESSAGE = 'MIDAO_HISTORICAL_ROLLBACK_BLOCKED',
+    DETAIL = 'Data-bearing historical audit-table rollback is intentionally not defined; obtain separate owner authorization and prepare a reviewed recovery migration.';
+END
+$rollback$;
