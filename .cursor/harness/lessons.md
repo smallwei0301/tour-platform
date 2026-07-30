@@ -105,4 +105,12 @@
 - Solution：`e2e/helpers.ts` 的 `fillFormHydrated(page, entries)`——**全部填完再全部回讀**，任一欄被抹掉就整組重填（`expect(...).toPass()`）。新寫涉及表單輸入的 spec 一律用它，不要自己 `locator.fill()` 起頭
 - 同類徵兆：`getByRole(...).click()` 在 goto 後立刻執行也會被吃掉（受控 checkbox 勾了又被重設）；`guide-profile-contact-qa.spec.ts` 的 CTA 點擊偶發 flaky 就是這個家族（既有問題，非本輪造成）
 - 另一個踩點：`getByRole('radio', { name: '有' })` 會同時命中「有」與「沒有，但有興趣」→ strict mode violation，選項互為子字串時要加 `exact: true`
-- 適用範圍：所有 Playwright spec 的第一個輸入互動；Next dev/preview 環境尤其明顯
+- **點擊版對策**：`clickUntilExpanded(locator)`（同檔）用 React 控制的 `aria-expanded` 當成功信號重試點擊。**只適用「只開不 toggle」的按鈕**（如 `setOpen(true)`）；toggle 型按鈕重試會關回去，需改用別的信號
+- 適用範圍：所有 Playwright spec 的第一個輸入／點擊互動；Next dev/preview 環境尤其明顯
+
+## [2026-07-30] ci-e2e-smoke-lane-hides-long-red-specs
+- Context：修申請頁時順手跑了幾支相關 e2e，發現兩支**長期紅燈**（`guide-familiar-regions-payments`、`i18n-footer-guides`）與一支 flaky，且都不是本輪造成（用 `git stash` 在乾淨工作樹覆核過）
+- Error：CI 的 `e2e-smoke.yml` 只跑 `test:e2e:smoke` 指定的 **4 支** spec，其餘 e2e **完全不在任何 CI lane**。所以 spec 斷言寫錯／過期可以紅很久沒人知道，`ci.yml` 也一路綠燈
+- 兩支的根因都是**測試本身寫錯，不是產品 bug**：(1) regions 斷言期望短名，但「熟悉區域存全名」是既有契約；(2) 斷言把 `guides.resultCount` 的文案套到 h1（h1 其實是 `pageTitle`）。修的是斷言，產品碼沒動
+- Solution／習慣：(a) 改到某個區域時，順手跑該區域**全部**相關 e2e，不要只信 CI 綠燈；(b) 判斷紅燈歸屬一律先 `git stash push --include-untracked` 在乾淨樹重跑 —— 別預設「跑紅的就是我弄壞的」，也別預設「本來就紅所以不用管」；(c) 斷言文案前先確認該字串屬於哪個 i18n key、渲染在哪個元素，別靠印象
+- 適用範圍：任何 e2e 紅燈的歸屬判斷；評估「CI 綠燈」的實際覆蓋範圍時

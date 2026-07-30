@@ -93,6 +93,9 @@ test.describe('嚮導後台：熟悉區域／專業證照／收款方式可自�
     await payGroup.getByRole('button', { name: 'LINE Pay' }).click();
 
     // 新增一個熟悉區域（台南），送出 PATCH 應帶 regions/certifications/payment_methods。
+    // 注意 mock 的 GET 回舊資料短名（['高雄','屏東']）—— 頁面載入時會以
+    // normalizeRegionToDbValue 正規化成全名，故 PATCH 一律送全名（高雄市／屏東縣／
+    // 台南市）。這正是「熟悉區域統一存全名」的契約，順帶驗證舊短名資料會被升級。
     await regionGroup.getByRole('button', { name: '台南', exact: true }).click();
 
     const patchPromise = page.waitForRequest((req) =>
@@ -100,7 +103,10 @@ test.describe('嚮導後台：熟悉區域／專業證照／收款方式可自�
     await page.getByRole('button', { name: /儲存/ }).first().click();
     const patch = await patchPromise;
     const body = JSON.parse(patch.postData() || '{}');
-    expect(body.regions).toEqual(expect.arrayContaining(['高雄', '屏東', '台南']));
+    expect(body.regions).toEqual(expect.arrayContaining(['高雄市', '屏東縣', '台南市']));
+    expect(body.regions, '不得殘留未正規化的短名').not.toEqual(
+      expect.arrayContaining(['高雄', '屏東', '台南']),
+    );
     expect(body.certifications).toEqual(expect.arrayContaining(['導遊證', '急救證照']));
     expect(body.payment_methods).toEqual(expect.arrayContaining(['bank', 'linepay']));
   });

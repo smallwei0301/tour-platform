@@ -101,13 +101,27 @@ e2e `guide-apply-pipeline.spec.ts`「只填必填四欄即可送出」鎖住此�
 `e2e/helpers.ts` 新增 `fillFormHydrated()`：Next dev 下 hydration 前的 `fill()` 會被 React
 初始 state 抹掉（詳見 `lessons.md` 2026-07-30 條）。新寫表單 spec 一律用它起頭。
 
-## 既有債（clean tree 覆核確認非本輪造成）
+## 既有債（clean tree 覆核確認非本輪造成 → 使用者指示一併修掉）
 
-1. `e2e/guide-familiar-regions-payments.spec.ts:103` regions 期望短名、實際存全名（spec 期望過期）。
-2. `e2e/i18n-footer-guides.spec.ts:35` 英文 h1 期望值與 `messages/en.json` 不符。
-3. `e2e/guide-profile-contact-qa.spec.ts` CTA 點擊偶發 hydration flaky。
+1. `e2e/guide-familiar-regions-payments.spec.ts:103` — 斷言過期（regions 契約是存全名）。
+   改期望全名＋加反向斷言鎖「舊短名資料會被正規化升級」。
+2. `e2e/i18n-footer-guides.spec.ts:35` — 斷言抓錯元素（`local guides across Taiwan`
+   是 `guides.resultCount` 而非 h1 的 `pageTitle`）。h1 改驗 `Meet the Guides`，
+   另加 `.tp-result-title` 斷言，兩個文案都真的驗到。
+3. `e2e/guide-profile-contact-qa.spec.ts` — hydration flaky。新增 `clickUntilExpanded()`
+   helper（以 React 控制的 `aria-expanded` 當信號重試點擊；安全前提＝按鈕只開不 toggle）。
 
-三項皆在乾淨工作樹重現，本輪未處理（超出需求範圍），已記入 QA 報告。
+**#1／#2 都是測試本身寫錯，產品程式碼未動。** 長期沒被發現的原因：CI e2e smoke lane
+只跑 4 支指定 spec（`issue1294`／`issue1269`／`issue1360`／`issue1365`），這三支都不在其中。
+
+驗證：三支 spec 9 項全 PASS；contact-qa 以 `--repeat-each=4` 跑 12 次全 PASS；
+連同申請流程與改名波及共 25 項 e2e 全 PASS。
+
+## CI 對照（本輪確認）
+
+`ci.yml` 跑 lint → typecheck → `npm test` → `build` → ISR smoke → preflight；
+e2e 另在 `e2e-smoke.yml` 只跑 4 支 spec。本機已驗前四項全綠（`build` 需補
+`GUIDE_SESSION_SECRET`／`ADMIN_ACCESS_TOKEN` 才過 startup-env 守衛，CI 由 secrets 提供）。
 
 ## 環境備註（不進 repo）
 

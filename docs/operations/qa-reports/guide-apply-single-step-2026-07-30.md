@@ -40,18 +40,22 @@
 - **改名範圍**＝旅客與嚮導可見面向＋footer（使用者拍板）。`admin/**` 頁面、交易通知信、
   `db.mjs` 等內部訊息維持「導遊」；官方證照名「導遊證」不改。
 
-## 既有問題（非本輪造成，已用 clean tree 覆核）
+## 既有債（先以 clean tree 確認非本輪造成，後續一併修掉）
 
-以下兩項在**未套用本輪變更**的乾淨工作樹上同樣失敗，屬既有債，本輪未處理：
+三項都是既有紅燈／flaky（在未套用本輪變更的乾淨工作樹上同樣重現），使用者指示一併處理：
 
-1. `e2e/guide-familiar-regions-payments.spec.ts:103` — 期望 `['高雄','屏東','台南']`，
-   實際 PATCH 送出全名 `['高雄市','屏東縣','台南市']`。頁面載入時以
-   `normalizeRegionToDbValue` 正規化為全名是既有設計，spec 期望值過期。
-2. `e2e/i18n-footer-guides.spec.ts:35` — 期望英文 h1 含 `local guides across Taiwan`，
-   實際為 `Meet the Guides`（`messages/en.json` 未在本輪改名範圍內）。
+| # | 問題 | 根因 | 修法 |
+|---|---|---|---|
+| 1 | `guide-familiar-regions-payments.spec.ts:103` 期望 `['高雄','屏東','台南']`，實際 PATCH 送全名 | **斷言過期**，非產品 bug。熟悉區域統一存全名是既有契約（`normalizeRegionToDbValue`），mock 的 GET 回舊短名資料，頁面載入時正規化成全名 | 改期望全名，並加一條「不得殘留未正規化短名」的反向斷言 —— 順帶把「舊短名資料會被升級」這個原本沒測到的契約鎖住 |
+| 2 | `i18n-footer-guides.spec.ts:35` 期望英文 h1 含 `local guides across Taiwan`，實際 `Meet the Guides` | **斷言抓錯元素**。該字串是 `guides.resultCount`（`{n} local guides across Taiwan`），渲染在 `.tp-result-title`；h1 是 `guides.pageTitle` | h1 改斷言 `Meet the Guides`，另加一條對 `.tp-result-title` 的斷言 —— 兩個文案都真的驗到，比原本只驗一個更嚴 |
+| 3 | `guide-profile-contact-qa.spec.ts` CTA 點擊偶發 flaky | `goto()` 後立刻 `click()` 落在 hydration 前，onClick 未掛上 → 點了等於沒點（與 `fillFormHydrated` 同源問題） | 新增 `clickUntilExpanded()` helper：用 React 控制的 `aria-expanded` 當成功信號並重試點擊。安全前提＝該按鈕 `setOpen(true)` 只開不 toggle（已確認） |
 
-另：`e2e/guide-profile-contact-qa.spec.ts` 的 CTA 點擊偶發 flaky（goto 後立即 click 撞
-hydration，見 `lessons.md` 2026-07-30 條）——clean tree 亦可重現，本輪未改該 spec 邏輯。
+**驗證**：三支 spec 9 項全 PASS；`guide-profile-contact-qa` 另以 `--repeat-each=4`
+跑 12 次全 PASS 確認 flaky 已消除；連同申請流程與改名波及共 25 項 e2e 全 PASS。
+
+> 註：#1 與 #2 都是**測試本身寫錯**而非產品行為錯誤 —— 修的是斷言，產品程式碼未動。
+> 這兩條長期紅燈之所以沒被發現，是因為 CI 的 e2e smoke lane 只跑 4 支指定 spec，
+> 這三支都不在其中。
 
 ## 未於本輪驗證
 

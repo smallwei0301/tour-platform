@@ -32,7 +32,10 @@ test('英文 /en/guides 列表 UI 英文化', async ({ page }) => {
   expect(resp?.status()).toBeLessThan(400);
   expect(page.url()).toContain('/en/guides');
   await expect(page.getByRole('heading', { name: 'Filter guides' })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('local guides across Taiwan');
+  // h1＝guides.pageTitle（'Meet the Guides'）；'{n} local guides across Taiwan'
+  // 是 guides.resultCount，渲染在結果數標題而非 h1 —— 原斷言抓錯元素故長期紅燈。
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Meet the Guides');
+  await expect(page.locator('.tp-result-title')).toContainText('local guides across Taiwan');
   await expect(page.getByRole('option', { name: 'Recommended' })).toBeAttached();
   await expect(page.getByText('嚮導篩選')).toHaveCount(0);
 });

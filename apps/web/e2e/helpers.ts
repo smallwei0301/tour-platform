@@ -1,4 +1,4 @@
-import { test as base, expect, Page, APIRequestContext } from '@playwright/test';
+import { test as base, expect, Page, Locator, APIRequestContext } from '@playwright/test';
 
 const ADMIN_TOKEN = process.env.ADMIN_ACCESS_TOKEN || 'test-token-123';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@tour-platform.com';
@@ -177,6 +177,23 @@ async function fillFormHydrated(page: Page, entries: [selector: string, value: s
   }).toPass({ timeout: 20_000 });
 }
 
+/**
+ * Helper: 點一個「展開型」按鈕，直到它真的展開為止。
+ *
+ * 與 fillFormHydrated 同源問題（見 lessons.md 2026-07-30）：`goto()` 後立刻
+ * `click()` 可能落在 hydration 之前，onClick 還沒掛上 → 點了等於沒點，接著
+ * 等展開內容就 timeout。
+ *
+ * 這裡用 React 控制的 `aria-expanded` 當成功信號並重試點擊。**前提是該按鈕
+ * 只會開、不會 toggle**（例如 `setOpen(true)`），否則重試會把它關回去。
+ */
+async function clickUntilExpanded(locator: Locator) {
+  await expect(async () => {
+    await locator.click();
+    await expect(locator).toHaveAttribute('aria-expanded', 'true', { timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
+}
+
 /** Fixture: authenticated page + isMobile flag */
 const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   authedPage: async ({ page }, use) => {
@@ -189,4 +206,13 @@ const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   },
 });
 
-export { test, expect, adminLogin, ensureLoggedIn, setGuideSession, setTravelerSession, fillFormHydrated };
+export {
+  test,
+  expect,
+  adminLogin,
+  ensureLoggedIn,
+  setGuideSession,
+  setTravelerSession,
+  fillFormHydrated,
+  clickUntilExpanded,
+};

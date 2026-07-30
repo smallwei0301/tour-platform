@@ -1,4 +1,4 @@
-import { test, expect, setTravelerSession } from './helpers';
+import { test, expect, setTravelerSession, clickUntilExpanded } from './helpers';
 import type { Route } from '@playwright/test';
 
 /**
@@ -17,7 +17,8 @@ test.describe('嚮導頁「詢問嚮導」inline 訊息', () => {
 
     const cta = page.getByRole('button', { name: /詢問嚮導/ });
     await expect(cta).toBeVisible();
-    await cta.click();
+    // hydration 前的點擊會被吃掉（onClick 還沒掛上）→ 點到真的展開為止。
+    await clickUntilExpanded(cta);
 
     await expect(page.getByTestId('guide-qa-login-prompt')).toBeVisible();
     await expect(page.locator('#guide-qa-question-input')).toHaveCount(0);
@@ -47,7 +48,7 @@ test.describe('嚮導頁「詢問嚮導」inline 訊息', () => {
     await page.goto('/guides/andy-lee');
 
     const cta = page.getByRole('button', { name: /詢問嚮導/ });
-    await cta.click();
+    await clickUntilExpanded(cta);
 
     const textarea = page.locator('#guide-qa-question-input');
     await expect(textarea).toBeVisible();
