@@ -2,20 +2,20 @@ import { test, expect, setTravelerSession } from './helpers';
 import type { Route } from '@playwright/test';
 
 /**
- * 認識導遊頁（/guides/[slug]）的「詢問導遊」inline 訊息（真實 browser smoke）。
+ * 認識嚮導頁（/guides/[slug]）的「詢問嚮導」inline 訊息（真實 browser smoke）。
  *
- * 需求：按下 sidebar「詢問導遊」先判斷旅客是否登入。
+ * 需求：按下 sidebar「詢問嚮導」先判斷旅客是否登入。
  *  - 已登入 → 就地展開和行程 QA 一樣的輸入框，送出後顯示等候回覆。
  *  - 未登入 → 展開登入提示。
  *
  * 訊息走既有 /api/qa（activity_id 帶 sentinel guide:<guideId>）；本測試以
  * page.route mock /api/qa，不依賴 Supabase。andy-lee 由 fixtures fallback 渲染。
  */
-test.describe('導遊頁「詢問導遊」inline 訊息', () => {
+test.describe('嚮導頁「詢問嚮導」inline 訊息', () => {
   test('未登入：點擊展開登入提示（不顯示輸入框）', async ({ page }) => {
     await page.goto('/guides/andy-lee');
 
-    const cta = page.getByRole('button', { name: /詢問導遊/ });
+    const cta = page.getByRole('button', { name: /詢問嚮導/ });
     await expect(cta).toBeVisible();
     await cta.click();
 
@@ -46,7 +46,7 @@ test.describe('導遊頁「詢問導遊」inline 訊息', () => {
 
     await page.goto('/guides/andy-lee');
 
-    const cta = page.getByRole('button', { name: /詢問導遊/ });
+    const cta = page.getByRole('button', { name: /詢問嚮導/ });
     await cta.click();
 
     const textarea = page.locator('#guide-qa-question-input');
@@ -62,13 +62,13 @@ test.describe('導遊頁「詢問導遊」inline 訊息', () => {
 });
 
 /**
- * 行程詳情頁的「詢問導遊」錨點仍滾動到旅客問答區塊（既有機制不退化）。
+ * 行程詳情頁的「詢問嚮導」錨點仍滾動到旅客問答區塊（既有機制不退化）。
  */
-test.describe('行程詳情頁「詢問導遊」錨點', () => {
+test.describe('行程詳情頁「詢問嚮導」錨點', () => {
   test('錨定 #section-qa 並顯示旅客問答', async ({ page }) => {
     await page.goto('/activities/kaohsiung/kaohsiung-chaishan-cave-experience');
 
-    const askCta = page.getByRole('link', { name: /詢問導遊/ });
+    const askCta = page.getByRole('link', { name: /詢問嚮導/ });
     await expect(askCta).toBeVisible();
     await expect(askCta).toHaveAttribute('href', '#section-qa');
 

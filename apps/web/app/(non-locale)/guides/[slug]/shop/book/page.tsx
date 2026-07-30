@@ -197,7 +197,7 @@ export default function GuideShopBookingPage() {
       .then((j) => {
         if (!mounted) return;
         if (j?.ok && j.data) setShop(j.data as ShopData);
-        else setLoadError(j?.error?.message || '找不到此導遊商店');
+        else setLoadError(j?.error?.message || '找不到此嚮導商店');
       })
       .catch(() => mounted && setLoadError('載入失敗，請稍後再試'));
     return () => { mounted = false; };
@@ -516,7 +516,7 @@ export default function GuideShopBookingPage() {
           <h1 className="sib-book-h1">選一條想走的徑</h1>
           {stepIndicator}
           {shop.activitiesByRegion.length === 0 && (
-            <p style={{ color: 'var(--sib-muted)', marginTop: 16 }}>此導遊目前沒有可預約的行程。</p>
+            <p style={{ color: 'var(--sib-muted)', marginTop: 16 }}>此嚮導目前沒有可預約的行程。</p>
           )}
           {shop.activitiesByRegion.map((group) => (
             <section key={group.region}>
@@ -707,7 +707,7 @@ export default function GuideShopBookingPage() {
             <div data-testid="shop-transfer-info" style={{ marginTop: 12, padding: 16, borderRadius: 14, background: 'var(--sib-card)', border: '1px solid var(--sib-gold-line)' }}>
               {transferInfo == null && <p style={{ color: 'var(--sib-muted)', margin: 0 }}>載入匯款資訊中…</p>}
               {transferInfo && !transferInfo.configured && (
-                <p style={{ color: '#a3401f', margin: 0 }}>此導遊尚未提供匯款資訊，請改用信用卡付款。</p>
+                <p style={{ color: '#a3401f', margin: 0 }}>此嚮導尚未提供匯款資訊，請改用信用卡付款。</p>
               )}
               {transferInfo?.configured && (
                 <div style={{ fontSize: 14, lineHeight: 1.9, color: 'var(--sib-ink-soft)' }}>

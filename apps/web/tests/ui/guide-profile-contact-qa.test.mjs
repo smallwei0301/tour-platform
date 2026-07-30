@@ -88,9 +88,10 @@ test('/api/guide/qa/[id] 以 sentinel 內嵌 guideId 判定擁有權', () => {
   );
 });
 
-test('導遊後台對 sentinel 顯示「導遊頁面」而非行程 ID', () => {
+test('嚮導後台對 sentinel 顯示「嚮導頁面」而非行程 ID', () => {
   assert.match(dashboardSrc, /isGuideContactActivityId/, '應用 helper 辨識 sentinel');
-  assert.match(dashboardSrc, /導遊頁面/, 'sentinel 應顯示「導遊頁面」');
+  // 用語統一：使用者可見文案一律「嚮導」（招募改版全站對齊，識別碼不動）。
+  assert.match(dashboardSrc, /嚮導頁面/, 'sentinel 應顯示「嚮導頁面」');
 });
 
 test('行程詳情頁「詢問導遊」仍是錨定 #section-qa 的連結（不退化）', () => {

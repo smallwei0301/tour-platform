@@ -38,7 +38,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
     setIsImpersonating(hasImpersonationCookie());
   }, []);
 
-  // 結束「管理員代入」：清掉導遊 session 與代入標記，回到後台導遊管理。
+  // 結束「管理員代入」：清掉嚮導 session 與代入標記，回到後台嚮導管理。
   async function handleEndImpersonation() {
     try {
       await fetch('/api/guide/auth/session', {
@@ -59,8 +59,8 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
     setMenuOpen(false);
   }, [pathname]);
 
-  // 公開頁面（登入、成為導遊申請）不套用導遊後台外框（top nav / bottom tabbar）。
-  // 「成為導遊」是對外招募頁，應沿用站台首頁風格，而非後台導覽。
+  // 公開頁面（登入、成為嚮導申請）不套用嚮導後台外框（top nav / bottom tabbar）。
+  // 「成為嚮導」是對外招募頁，應沿用站台首頁風格，而非後台導覽。
   if (
     pathname === '/guide/login' ||
     pathname === '/guide/apply' ||
@@ -111,7 +111,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
             textAlign: 'center',
           }}
         >
-          <span>🛡️ 管理員代入模式：您正以此導遊身分操作導遊後台</span>
+          <span>🛡️ 管理員代入模式：您正以此嚮導身分操作嚮導後台</span>
           <button
             onClick={handleEndImpersonation}
             style={{
@@ -132,7 +132,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
       )}
 
       {/* ── Desktop Top Navbar ── */}
-      <nav aria-label="導遊後台主要導覽" style={{
+      <nav aria-label="嚮導後台主要導覽" style={{
         background: '#fff',
         borderBottom: '1px solid #e5e7eb',
         padding: '0 24px',
@@ -151,7 +151,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
           style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginRight: 16, flexShrink: 0 }}
         >
           <span style={{ fontSize: 22 }}>🧭</span>
-          <span style={{ fontWeight: 800, fontSize: 16, color: '#1f2937', whiteSpace: 'nowrap' }}>導遊後台</span>
+          <span style={{ fontWeight: 800, fontSize: 16, color: '#1f2937', whiteSpace: 'nowrap' }}>嚮導後台</span>
         </div>
 
         {/* Desktop Nav Links (hidden on mobile) */}

@@ -1,7 +1,7 @@
 import React from 'react';
 
 /**
- * 三種方案預約方式（booking_type）的說明內容,管理者與導遊後台共用。
+ * 三種方案預約方式（booking_type）的說明內容,管理者與嚮導後台共用。
  * 由方案編輯表單「預約方式」旁的說明連結進入
  * （/admin/help/booking-types 與 /guide/help/booking-types）。
  * 純展示元件,無 admin/guide 專屬相依,兩個 realm 都可掛載。
@@ -49,16 +49,16 @@ export function BookingTypesGuide() {
             <tbody>
               <tr>
                 <td style={thtd}><Tag color="#166534" bg="#dcfce7">即時預約</Tag></td>
-                <td style={thtd}>導遊可預約時段規則(動態產生)</td>
+                <td style={thtd}>嚮導可預約時段規則(動態產生)</td>
                 <td style={thtd}>無</td>
                 <td style={thtd}>付款成功 → 自動確認</td>
                 <td style={thtd}>希望旅客在你開放的時間內自由挑時段、立即成交</td>
               </tr>
               <tr style={{ background: '#fcfcfd' }}>
                 <td style={thtd}><Tag color="#92400e" bg="#fef3c7">申請預約</Tag></td>
-                <td style={thtd}>導遊可預約時段規則(動態產生)</td>
-                <td style={thtd}><strong>導遊審核</strong></td>
-                <td style={thtd}>送出申請 → 導遊通過 → 旅客付款 → 確認</td>
+                <td style={thtd}>嚮導可預約時段規則(動態產生)</td>
+                <td style={thtd}><strong>嚮導審核</strong></td>
+                <td style={thtd}>送出申請 → 嚮導通過 → 旅客付款 → 確認</td>
                 <td style={thtd}>需要先確認能不能接、再讓旅客付款</td>
               </tr>
               <tr>
@@ -91,11 +91,11 @@ export function BookingTypesGuide() {
       <div style={cardStyle}>
         <h2 style={h2Style}>② 申請預約(request)</h2>
         <p style={pStyle}>
-          時段來源與即時預約相同(動態規則),但<strong>多了一道導遊審核關卡,而且是「先審核後付款」</strong>:
+          時段來源與即時預約相同(動態規則),但<strong>多了一道嚮導審核關卡,而且是「先審核後付款」</strong>:
         </p>
         <ol style={{ margin: 0, paddingLeft: 20 }}>
           <li style={liStyle}>旅客送出預約申請(此時<strong>不收費</strong>)。</li>
-          <li style={liStyle}>導遊在後台審核 → 通過或婉拒。</li>
+          <li style={liStyle}>嚮導在後台審核 → 通過或婉拒。</li>
           <li style={liStyle}>通過 → 系統通知旅客前往付款 → 付款成功後確認。</li>
           <li style={liStyle}>婉拒 → 申請取消,旅客不需付款。</li>
         </ol>
@@ -139,7 +139,7 @@ export function BookingTypesGuide() {
         <h2 style={h2Style}>共同注意事項</h2>
         <ul style={{ margin: 0, paddingLeft: 20 }}>
           <li style={liStyle}>
-            <strong>同一位導遊、時間重疊只能接一團。</strong>不論哪種方式,某時段被預約後(即使只是尚未付款的草稿),
+            <strong>同一位嚮導、時間重疊只能接一團。</strong>不論哪種方式,某時段被預約後(即使只是尚未付款的草稿),
             重疊時段就會被擋下,跨方案、跨活動都一樣。
           </li>
           <li style={liStyle}>

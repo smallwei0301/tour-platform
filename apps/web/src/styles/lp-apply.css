@@ -82,49 +82,6 @@
 /* ── 主體容器 ── */
 .lp-apply-body { max-width: 720px; margin: 0 auto; padding: 28px 16px 0; }
 
-/* ── 步驟指示 ── */
-.lp-apply-steps {
-  list-style: none;
-  display: flex;
-  gap: 8px;
-  padding: 0;
-  margin: 0 0 22px;
-}
-.lp-apply-steps li {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(190, 178, 137, 0.25);
-  background: rgba(255, 255, 255, 0.02);
-  font-size: 13px;
-  color: rgba(244, 236, 216, 0.55);
-}
-.lp-apply-step-num {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1px solid rgba(190, 178, 137, 0.4);
-  font-size: 12px;
-}
-.lp-apply-steps li.active {
-  border-color: rgba(176, 141, 62, 0.6);
-  background: rgba(176, 141, 62, 0.12);
-  color: #ded7ab;
-}
-.lp-apply-steps li.active .lp-apply-step-num {
-  background: #b08d3e;
-  border-color: #b08d3e;
-  color: #18211a;
-  font-weight: 700;
-}
-
 /* ── 卡片 ── */
 .lp-apply-card {
   background: linear-gradient(180deg, #1f2a1f 0%, #18221a 100%);
@@ -270,20 +227,53 @@
 }
 .lp-apply-btn-ghost:hover { border-color: rgba(176, 141, 62, 0.6); color: #f4ecd8; }
 
-/* ── 摘要列 ── */
-.lp-apply-summary { display: grid; gap: 8px; }
-.lp-apply-summary p { margin: 0; font-size: 14px; color: var(--tp-cream); }
-.lp-apply-summary-photo { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--tp-cream); }
-
 /* ── 送出成功 ── */
 .lp-apply-success { text-align: center; }
 .lp-apply-success h2 { text-align: center; }
 .lp-apply-success .lp-apply-hint { text-align: center; }
 .lp-apply-check { font-size: 44px; line-height: 1; }
 
+/* ── 招募海報元素（單頁流程改版）── */
+/* 海報右上圓章「你的在地故事，就是旅人的祕境指南。」的行內版本 */
+.lp-apply-quote {
+  max-width: 600px;
+  margin: 0 auto 22px;
+  padding: 12px 18px;
+  border-top: 1px solid rgba(190, 178, 137, 0.3);
+  border-bottom: 1px solid rgba(190, 178, 137, 0.3);
+  font-family: var(--tp-serif);
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  color: #ded7ab;
+}
+.lp-apply-section-title {
+  font-family: var(--tp-serif);
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  color: #f0ecdc;
+  margin: 0;
+}
+.lp-apply-perks-block { margin: 28px 0 0; padding-bottom: 8px; }
+.lp-apply-perks-block .lp-apply-section-title { text-align: center; margin-bottom: 16px; }
+/* 海報四格：用 grid 排 2×2（flex 的 min-width 會擠成 3+1，尾格孤零零一列） */
+.lp-apply-perks-block .lp-apply-perks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 640px;
+}
+.lp-apply-outro {
+  max-width: 600px;
+  margin: 18px auto 0;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.85;
+  color: rgba(244, 236, 216, 0.7);
+}
+
 @media (max-width: 640px) {
   .lp-apply-title { font-size: 26px; }
-  .lp-apply-steps { flex-direction: column; }
+  .lp-apply-quote { font-size: 15px; }
+  .lp-apply-perks-block .lp-apply-perks { grid-template-columns: minmax(0, 1fr); }
   .lp-apply-actions { flex-direction: column-reverse; }
   .lp-apply-actions .lp-apply-btn { width: 100%; }
 }

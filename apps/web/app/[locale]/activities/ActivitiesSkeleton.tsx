@@ -23,7 +23,7 @@ export default function ActivitiesSkeleton() {
           <div className="tp-result-head">
             {/* skeleton 佔位標題不得用 h1：與 FirstPaint/Content 的真 H1 同時出現在
                 SSR HTML 會變成雙 H1（issue1711 S3）。tp-result-title 樣式與 h1 對齊。 */}
-            <p className="tp-result-title" aria-hidden="true">全台灣私人導遊行程</p>
+            <p className="tp-result-title" aria-hidden="true">全台灣私人嚮導行程</p>
           </div>
           <div className="tp-card-grid tp-card-grid-activities">
             {Array.from({ length: 6 }).map((_, i) => (

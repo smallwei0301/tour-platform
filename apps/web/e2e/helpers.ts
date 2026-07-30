@@ -157,6 +157,26 @@ async function setGuideSession(page: Page, guideId: string): Promise<void> {
   ]);
 }
 
+/**
+ * Helper: 填一組受控欄位，並確保值撐過 hydration。
+ *
+ * Next dev 下 client component 的 SSR HTML 先到、React 才接上事件。若 `fill()`
+ * 落在 hydration 之前，React 掛載後會用初始 state（空字串）重繪，把剛打進去的
+ * 值直接抹掉 —— 症狀是後面欄位都正常、只有最前面一兩個莫名是空的，表單於是
+ * 永遠停在「必填未完成」、送出鈕不會 enable。
+ *
+ * 單獨回讀某一欄不夠：那一刻值可能還在，hydration 稍後才抹掉。所以這裡「全部
+ * 填完再全部回讀」，只要有任一欄被抹掉就整組重填，直到全部穩定。
+ */
+async function fillFormHydrated(page: Page, entries: [selector: string, value: string][]) {
+  await expect(async () => {
+    for (const [selector, value] of entries) await page.locator(selector).fill(value);
+    for (const [selector, value] of entries) {
+      expect(await page.locator(selector).inputValue()).toBe(value);
+    }
+  }).toPass({ timeout: 20_000 });
+}
+
 /** Fixture: authenticated page + isMobile flag */
 const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   authedPage: async ({ page }, use) => {
@@ -169,4 +189,4 @@ const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   },
 });
 
-export { test, expect, adminLogin, ensureLoggedIn, setGuideSession, setTravelerSession };
+export { test, expect, adminLogin, ensureLoggedIn, setGuideSession, setTravelerSession, fillFormHydrated };

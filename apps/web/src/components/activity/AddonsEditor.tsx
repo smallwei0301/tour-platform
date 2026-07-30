@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * 加購項目編輯器（導遊後台＋管理者後台共用）。
+ * 加購項目編輯器（嚮導後台＋管理者後台共用）。
  * 讀 GET {endpointBase} 取全部加購項（含停用）；新增 POST、更新 PATCH、刪除 DELETE。
  * endpointBase 由呼叫端給（guide：/api/v2/guide/activities/[id]/addons；admin：/api/v2/admin/...）。
  * 未設定任何加購項時，結帳頁的加購選購器本來就不顯示（預設隱藏）。

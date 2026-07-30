@@ -150,9 +150,9 @@ export default function GuideProfileEditPage() {
         setMessage({
           kind: 'ok',
           text: nextPublished
-            ? '已儲存並公開！旅客重新整理「認識導遊」即可看到你的最新資訊。'
+            ? '已儲存並公開！旅客重新整理「認識嚮導」即可看到你的最新資訊。'
             : profile.is_published
-              ? '已儲存並取消公開，你的頁面暫時不會出現在認識導遊。'
+              ? '已儲存並取消公開，你的頁面暫時不會出現在認識嚮導。'
               : '已儲存（尚未公開）。',
         });
         if (isNew) {
@@ -197,8 +197,8 @@ export default function GuideProfileEditPage() {
         >
           <p style={{ margin: 0, fontWeight: 700 }}>👋 歡迎加入！先完善你的公開頁吧</p>
           <p style={{ margin: '4px 0 0' }}>
-            你的導遊頁目前<strong>尚未公開</strong>。調整下方的照片與介紹後，按「儲存並公開」，
-            旅客就能在「認識導遊」看到你。隨時可以再回來修改或取消公開。
+            你的嚮導頁目前<strong>尚未公開</strong>。調整下方的照片與介紹後，按「儲存並公開」，
+            旅客就能在「認識嚮導」看到你。隨時可以再回來修改或取消公開。
           </p>
         </div>
       )}
@@ -206,7 +206,7 @@ export default function GuideProfileEditPage() {
       {/* Top bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>編輯公開導遊頁面</h1>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>編輯公開嚮導頁面</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>設定旅客在你的公開頁上會看到的內容</p>
         </div>
         {profile.slug && (
@@ -471,7 +471,7 @@ export default function GuideProfileEditPage() {
               }}
             >
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: profile.is_published ? '#16a34a' : '#f59e0b' }} />
-              {profile.is_published ? '公開中（認識導遊頁可見）' : '尚未公開（旅客看不到）'}
+              {profile.is_published ? '公開中（認識嚮導頁可見）' : '尚未公開（旅客看不到）'}
             </span>
             {message && (
               <p style={{ margin: 0, fontSize: 13, color: message.kind === 'ok' ? '#16a34a' : '#dc2626' }}>{message.text}</p>
@@ -988,4 +988,4 @@ function GalleryEditor({ urls, onChange }: { urls: string[]; onChange: (next: st
 }
 
 // client-side center-crop + WebP compress 已抽到 src/lib/client-image-compress.ts
-// （申請表單與導遊後台共用，避免重複實作）。
+// （申請表單與嚮導後台共用，避免重複實作）。

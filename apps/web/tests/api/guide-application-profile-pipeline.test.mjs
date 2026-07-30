@@ -199,6 +199,6 @@ test('申請表單：照片為真上傳（打 upload API），證件仍人工核
   // 照片串接改版：file input 恢復且必須真的上傳（詳細契約見
   // guide-application-photos.test.mjs 與 issue1093 測試）。
   assert.match(src, /\/api\/guide-applications\/upload/, '照片必須經 upload API 真上傳');
-  assert.match(src, /審核|核驗/, '需說明證件核驗流程');
-  assert.match(src, /導遊後台/, '需說明上線後可於導遊後台管理照片');
+  assert.match(src, /送出後我們會以 Email 或電話與你聯繫[\s\S]{0,80}完成審核/, '需說明送出後的審核聯繫流程');
+  assert.match(src, /嚮導後台/, '需說明上線後可於嚮導後台管理照片');
 });

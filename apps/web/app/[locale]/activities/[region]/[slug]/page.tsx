@@ -439,7 +439,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                 <span className="kkd-reviews-total">{t('reviewsTotal', { count: reviewStats.count })}</span>
               </div>
 
-              {/* #1592 真實旅客評論（已核准）＋評分分佈長條＋星等/有照片篩選＋導遊回覆；
+              {/* #1592 真實旅客評論（已核准）＋評分分佈長條＋星等/有照片篩選＋嚮導回覆；
                   社群口碑語錄（暖場，管理者後台設定）併入分佈/篩選、真實在前暖場在後。
                   互動需 client → 抽出面板元件。rating_avg/review_count/JSON-LD 仍僅採真實評論。 */}
               <ActivityReviewsPanel
@@ -528,7 +528,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               )}
             </section>
 
-            {/* 導遊介紹 */}
+            {/* 嚮導介紹 */}
             {guide && (
               <section className="kkd-scroll-section">
                 <h2 className="kkd-section-title"><span style={{ color: 'var(--tp-brass)', display: 'inline-flex' }}><PublicIcon name="badgeCheck" size={18} /></span> {t('sectionGuide')}</h2>

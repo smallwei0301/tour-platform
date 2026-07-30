@@ -36,7 +36,7 @@ const THEMES = [
   },
   {
     label: '🍜 美食導覽',
-    desc: '跟著懂吃的導遊，找到真正的在地味道',
+    desc: '跟著懂吃的嚮導，找到真正的在地味道',
     href: '/activities?category=food',
     image:
       'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=800&q=80',

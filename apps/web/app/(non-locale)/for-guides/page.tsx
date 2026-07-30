@@ -1,14 +1,14 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 
-// Midao for Guides — 導遊開店 landing（非 localized root 路徑，靜態可快取）。
-// 對導遊的第一階段主張：一條連結＝個人預約頁＋線上收款＋訂單管理。
+// Midao for Guides — 嚮導開店 landing（非 localized root 路徑，靜態可快取）。
+// 對嚮導的第一階段主張：一條連結＝個人預約頁＋線上收款＋訂單管理。
 // 申請入口沿用既有 /guide/apply 表單頁，本頁只負責說清楚「你會得到什麼」。
 
 export const metadata: Metadata = {
-  title: '導遊開店 — 你的線上預約頁',
+  title: '嚮導開店 — 你的線上預約頁',
   description:
-    '把你熟的路，變成你的預約頁。祕島替導遊處理預約、收款、訂單管理——一條連結，放進 IG bio、LINE 群組、名片。Beta 期間月費 NT$0，成交才收 15% 服務費。',
+    '把你熟的路，變成你的預約頁。祕島替嚮導處理預約、收款、訂單管理——一條連結，放進 IG bio、LINE 群組、名片。Beta 期間月費 NT$0，成交才收 15% 服務費。',
 };
 
 const BENEFITS = [
@@ -27,7 +27,7 @@ const BENEFITS = [
 ];
 
 const STEPS = [
-  { num: '01', title: '送出導遊申請', desc: '填一次基本資料與專長，審核通過就能開店。' },
+  { num: '01', title: '送出嚮導申請', desc: '填一次基本資料與專長，審核通過就能開店。' },
   { num: '02', title: '上架行程與方案', desc: '定價、時長、人數上限自己定；設定可預約時段，不用再來回問空檔。' },
   { num: '03', title: '分享你的預約頁', desc: '複製連結或 QR code，放進 IG bio、LINE 群組、名片，開始收單。' },
 ];
@@ -35,7 +35,7 @@ const STEPS = [
 const FAQS = [
   {
     q: '需要什麼資格才能開店？',
-    a: '通過祕島的導遊審核即可。送出申請時附上你的專長、熟悉區域與相關證照（如急救、領隊導遊證），審核通過後就能上架行程。',
+    a: '通過祕島的嚮導審核即可。送出申請時附上你的專長、熟悉區域與相關證照（如急救、領隊導遊證），審核通過後就能上架行程。',
   },
   {
     q: '錢什麼時候入帳？',
@@ -56,7 +56,7 @@ export default function ForGuidesPage() {
     <main className="lp-apply">
       {/* Hero */}
       <header className="lp-apply-hero">
-        <p className="lp-apply-eyebrow">MIDAO FOR GUIDES · 導遊開店</p>
+        <p className="lp-apply-eyebrow">MIDAO FOR GUIDES · 嚮導開店</p>
         <h1 className="lp-apply-title">把你熟的路，變成你的預約頁</h1>
         <p className="lp-apply-lead">
           你帶路，祕島替你處理預約、收款、訂單。
@@ -64,7 +64,7 @@ export default function ForGuidesPage() {
         </p>
         <div className="lp-fg-hero-cta">
           <Link href="/guide/apply" className="lp-fg-btn-primary">免費開通我的預約頁</Link>
-          <Link href="/guide/login" className="lp-fg-btn-ghost">登入導遊後台</Link>
+          <Link href="/guide/login" className="lp-fg-btn-ghost">登入嚮導後台</Link>
         </div>
       </header>
 
@@ -115,7 +115,7 @@ export default function ForGuidesPage() {
               <span className="lp-fg-preview-avatar">嚮</span>
               <div>
                 <p className="lp-fg-preview-name">阿明 的祕島預約頁</p>
-                <p className="lp-fg-preview-sub">✓ 祕島審核導遊 · ★ 4.9（87 則評論）</p>
+                <p className="lp-fg-preview-sub">✓ 祕島審核嚮導 · ★ 4.9（87 則評論）</p>
               </div>
             </div>
             <div className="lp-fg-preview-card">
