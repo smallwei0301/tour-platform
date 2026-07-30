@@ -219,21 +219,16 @@ export default function AdminGuideDetailPage() {
                     </span>
                   </div>
                   <div style={{ background: '#f9fafb', borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-                    {fields.map((field, i) => (
-                      <div
-                        key={field.label}
-                        style={{
-                          display: 'flex', gap: 12, padding: '10px 16px',
-                          borderTop: i === 0 ? 'none' : '1px solid #e5e7eb',
-                          alignItems: 'flex-start',
-                        }}
-                      >
-                        <div style={{ fontSize: 12, color: '#6b7280', flex: '0 0 190px', lineHeight: 1.6 }}>
+                    {/* 版面走 admin-console.css 的 .admin-field-* — 手機上會改成
+                        上下堆疊並允許長字串斷行，避免固定寬標籤欄把值擠出畫面。 */}
+                    {fields.map((field) => (
+                      <div key={field.label} className="admin-field-row">
+                        <div className="admin-field-label">
                           {field.label}{field.required ? ' *' : ''}
                         </div>
                         <div
+                          className="admin-field-value"
                           style={{
-                            fontSize: 14, lineHeight: 1.7, flex: 1,
                             whiteSpace: field.multiline ? 'pre-wrap' : 'normal',
                             color: field.filled ? '#111827' : '#9ca3af',
                             fontStyle: field.filled ? 'normal' : 'italic',

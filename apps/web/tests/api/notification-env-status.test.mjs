@@ -29,6 +29,8 @@ test('全空 env → 所有葉值為 false（且皆為布林）', () => {
 test('設值 → 對應布林為 true；序列化結果不含任何 env 值（防洩漏）', () => {
   const env = {
     RESEND_API_KEY: 're_sekret_abc',
+    EMAIL_FROM: 'Midao 祕島 <noreply@midao.example>',
+    ADMIN_EMAIL_ALLOWLIST: 'ops@example.com',
     LINE_MESSAGING_ENABLED: '1',
     LINE_CHANNEL_ACCESS_TOKEN: 'line-token-xyz',
     TELEGRAM_NOTIFY_ENABLED: 'true',
@@ -43,6 +45,10 @@ test('設值 → 對應布林為 true；序列化結果不含任何 env 值（�
   ];
   const s = getNotificationEnvStatus(env);
   assert.equal(s.email.secrets.RESEND_API_KEY, true);
+  // EMAIL_FROM／ADMIN_EMAIL_ALLOWLIST：缺任一項都會造成「日誌寄出成功但收不到信」，
+  // 是最常見的誤判來源，故納入診斷（同樣只回布林、不回值）。
+  assert.equal(s.email.secrets.EMAIL_FROM, true);
+  assert.equal(s.email.secrets.ADMIN_EMAIL_ALLOWLIST, true);
   assert.equal(s.line.flags.LINE_MESSAGING_ENABLED, true);
   assert.equal(s.line.flags.LINE_GUIDE_PUSH_ENABLED, false);
   assert.equal(s.line.secrets.LINE_CHANNEL_ACCESS_TOKEN, true);

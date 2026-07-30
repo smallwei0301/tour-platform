@@ -27,6 +27,12 @@ export function getNotificationEnvStatus(env = process.env) {
     email: {
       secrets: {
         RESEND_API_KEY: hasValue(env, 'RESEND_API_KEY'),
+        // EMAIL_FROM 未設時 email.ts 會 fallback 到共用測試網域
+        // （noreply@resend.dev），Resend 對未驗證寄件網域不會實際投遞 ——
+        // API 仍回 messageId，所以「日誌顯示寄出成功但收不到信」多半是這一項沒設。
+        EMAIL_FROM: hasValue(env, 'EMAIL_FROM'),
+        // 沒設就沒有收件人，通知信會靜默 self-skip（回空陣列、不留 log）。
+        ADMIN_EMAIL_ALLOWLIST: hasValue(env, 'ADMIN_EMAIL_ALLOWLIST'),
       },
     },
     line: {

@@ -140,6 +140,23 @@ test('admin 詳情頁：渲染申請表完整欄位（含未填），欄位清�
   assert.match(src, /application-unfilled-count/, '需顯示未填欄位數');
   assert.match(src, /field\.filled/, '需依 filled 區分已填／未填樣式');
 
+  // 手機版遮擋回歸（owner 2026-07-30 回報）：固定寬標籤欄會把值擠出畫面、
+  // 長 email／+886 電話被右側裁掉。版面必須走 admin-field-* class（含 RWD 斷點），
+  // 不得回到 inline 的固定寬 flex。
+  assert.match(src, /className="admin-field-row"/, '欄位列需用 admin-field-row');
+  assert.match(src, /className="admin-field-label"/, '標籤需用 admin-field-label');
+  assert.match(src, /className="admin-field-value"/, '值需用 admin-field-value');
+  assert.doesNotMatch(src, /flex: '0 0 190px'/, '不得再用 inline 固定寬標籤欄');
+
+  const adminCss = readFileSync(join(APP_ROOT, 'src/styles/admin-console.css'), 'utf8');
+  assert.match(adminCss, /\.admin-field-row\s*\{/, 'admin-console.css 需定義欄位列版面');
+  assert.match(adminCss, /overflow-wrap:\s*anywhere/, '長字串需可斷行，否則右側被裁切');
+  assert.match(
+    adminCss,
+    /@media \(max-width: 640px\)[\s\S]{0,200}\.admin-field-row \{ flex-direction: column/,
+    '手機需改上下堆疊',
+  );
+
   const summary = readFileSync(SUMMARY_MODULE, 'utf8');
   for (const label of ['專長', '語言', '熟悉的地區／區域', '證照', '收款方式', '補充說明']) {
     assert.ok(summary.includes(label), `共用欄位清單需含 ${label}`);
