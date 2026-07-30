@@ -11,6 +11,63 @@ import { compressImage } from '../../../../src/lib/client-image-compress';
 // 海報上的美食／攝影／親子／在地生活由「其他想帶的旅程類型」自由填寫欄承接。
 import { CATEGORY_OPTIONS } from '../../../../src/lib/category-tags.mjs';
 
+/* ── 海報四大優點的圖示（inline SVG，線條風，顏色由 CSS 的 stroke 決定）──
+   共用 viewBox 32×32；fill/stroke 一律交給 .lp-apply-perk-icon svg 統一設定，
+   避免各圖示各自硬編顏色而在深淺背景下失控。 */
+function PerkIconProfile() {
+  // 個人頁：視窗卡片 + 人像 + 右側資料列
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <rect x="3" y="6" width="26" height="20" rx="3" />
+      <path d="M3 11.5h26" />
+      <circle cx="11.5" cy="17" r="2.8" />
+      <path d="M7 23.5c0-2.3 2-3.8 4.5-3.8s4.5 1.5 4.5 3.8" />
+      <path d="M20 16.5h5.5M20 20.5h5.5" />
+    </svg>
+  );
+}
+
+function PerkIconRoute() {
+  // 在地特色行程：山稜線 + 定位標記
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <path d="M2.5 27h27" />
+      <path d="M5 27l6-8.5 4.2 5.8" />
+      <path d="M13 27l6.2-8.2L25.5 27" />
+      <path d="M22 4c2.2 0 4 1.8 4 4 0 2.9-4 7.2-4 7.2S18 10.9 18 8c0-2.2 1.8-4 4-4z" />
+      <circle cx="22" cy="8" r="1.4" />
+    </svg>
+  );
+}
+
+function PerkIconPeople() {
+  // 更多旅客：三人群像
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <circle cx="16" cy="10.5" r="4" />
+      <path d="M9 25.5c0-3.9 3.1-7 7-7s7 3.1 7 7" />
+      <circle cx="6" cy="13.5" r="2.8" />
+      <path d="M1.5 24.5c0-2.6 2-4.7 4.5-4.7" />
+      <circle cx="26" cy="13.5" r="2.8" />
+      <path d="M30.5 24.5c0-2.6-2-4.7-4.5-4.7" />
+    </svg>
+  );
+}
+
+function PerkIconIncome() {
+  // 創造收入：$ + 循環箭頭
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <path d="M27 13.5A11.5 11.5 0 0 0 8.8 7.6" />
+      <path d="M8.4 3.2v4.6h4.6" />
+      <path d="M5 18.5A11.5 11.5 0 0 0 23.2 24.4" />
+      <path d="M23.6 28.8v-4.6H19" />
+      <path d="M16 9.8v12.4" />
+      <path d="M19.3 13.4c0-1.7-1.5-2.7-3.3-2.7s-3.3 1-3.3 2.7c0 3.5 6.6 1.8 6.6 5.3 0 1.7-1.5 2.7-3.3 2.7s-3.3-1-3.3-2.7" />
+    </svg>
+  );
+}
+
 export default function GuideApplyPage() {
   // 單頁流程（招募海報改版）：原三步驟（基本資料／證件與照片／審核送出）合併為一頁，
   // 送出後切到 done 畫面。證件核驗不在公開表單處理，改為審核人員後續聯繫。
@@ -90,12 +147,12 @@ export default function GuideApplyPage() {
   const paymentOptions = GUIDE_PAYMENT_OPTIONS;
   const experienceOptions = ['有', '沒有，但有興趣'];
 
-  // 海報「加入祕島，你可以」四格。
+  // 海報「加入祕島，你可以」四格（圖示比照海報：個人頁卡片／山景定位／人群／收入循環）。
   const perks = [
-    { strong: '建立自己的嚮導個人頁', label: '專屬頁面，展現你的特色' },
-    { strong: '分享自己的在地特色行程', label: '設計行程，自由接案' },
-    { strong: '接觸更多喜歡深度旅行的旅客', label: '讓更多人看見你的價值' },
-    { strong: '用自己的專長創造收入', label: '熱愛的事，變成收入來源' },
+    { strong: '建立自己的嚮導個人頁', label: '專屬頁面，展現你的特色', icon: <PerkIconProfile /> },
+    { strong: '分享自己的在地特色行程', label: '設計行程，自由接案', icon: <PerkIconRoute /> },
+    { strong: '接觸更多喜歡深度旅行的旅客', label: '讓更多人看見你的價值', icon: <PerkIconPeople /> },
+    { strong: '用自己的專長創造收入', label: '熱愛的事，變成收入來源', icon: <PerkIconIncome /> },
   ];
 
   // 分潤條件（與 settlement 規則同源文案，供申請者決策前先看清）。
@@ -105,7 +162,8 @@ export default function GuideApplyPage() {
     { strong: '後台一站式', label: '行程與訂單管理' },
   ];
 
-  const requiredMissing = !fullName.trim() || !phone.trim() || !email.trim() || !city.trim() || !intro.trim();
+  // 必填只留聯絡得上人所需的四欄；補充說明與照片一律選填。
+  const requiredMissing = !fullName.trim() || !phone.trim() || !email.trim() || !city.trim();
 
   async function submitApplication() {
     try {
@@ -113,6 +171,8 @@ export default function GuideApplyPage() {
       setError('');
       // 海報新增欄位（推薦祕境／帶團經驗／其他旅程類型／LINE ID／方便聯絡時間）
       // 不另開 DB 欄位，統一組進既有 bio，管理者後台讀 bio 即可看到全部補充資訊。
+      // 補充說明改選填後，全部留空時 bio 會是空字串，而 createGuideApplicationDb
+      // 硬要求 bio 非空 —— 補一句佔位文案，避免「什麼都沒填」被後端當成錯誤擋掉。
       const bio = [
         intro.trim(),
         recommendedSpot.trim() && `推薦祕境／特色體驗：${recommendedSpot.trim()}`,
@@ -122,7 +182,7 @@ export default function GuideApplyPage() {
         contactTime.trim() && `方便聯絡時間：${contactTime.trim()}`,
       ]
         .filter(Boolean)
-        .join('\n');
+        .join('\n') || '（申請者未填寫補充說明，請於聯繫時確認）';
 
       const res = await fetch('/api/guide-applications', {
         method: 'POST',
@@ -305,8 +365,8 @@ export default function GuideApplyPage() {
             </label>
 
             <label className="lp-apply-field" htmlFor="apply-bio">
-              <span>其他想分享的內容*</span>
-              <textarea id="apply-bio" rows={4} value={intro} onChange={(e) => setIntro(e.target.value)} required aria-required="true" placeholder="自我介紹／特長／想帶旅客體驗的亮點…" />
+              <span>其他想分享的內容（選填）</span>
+              <textarea id="apply-bio" rows={4} value={intro} onChange={(e) => setIntro(e.target.value)} placeholder="自我介紹／特長／想帶旅客體驗的亮點…" />
             </label>
 
             {/* ── 照片：全部選填（個人照／封面／活動照） ── */}
@@ -407,7 +467,7 @@ export default function GuideApplyPage() {
 
             {error && <p style={{ color: '#f0a3a3', margin: 0 }}>⚠️ {error}</p>}
             {requiredMissing && (
-              <p className="lp-apply-hint" style={{ margin: 0 }}>請先填寫姓名、聯絡電話、電子信箱、居住縣市與想分享的內容。</p>
+              <p className="lp-apply-hint" style={{ margin: 0 }}>請先填寫姓名、聯絡電話、電子信箱與居住縣市。</p>
             )}
 
             <div className="lp-apply-actions">
@@ -439,7 +499,8 @@ export default function GuideApplyPage() {
           <h2 id="apply-perks-title" className="lp-apply-section-title">加入祕島，你可以</h2>
           <div className="lp-apply-perks">
             {perks.map((perk) => (
-              <div key={perk.strong} className="lp-apply-perk">
+              <div key={perk.strong} className="lp-apply-perk lp-apply-perk-iconed">
+                <span className="lp-apply-perk-icon">{perk.icon}</span>
                 <strong>{perk.strong}</strong>
                 <span>{perk.label}</span>
               </div>

@@ -13,6 +13,8 @@
 | 1 | 簡化成單一流程，移除證件驗證 | ✅ PASS | 三步驟 state machine 移除（無 `setStep`／步驟指示列／上一步下一步）；「身分證件核驗」區塊移除。守門測試 `tests/ui/guide-apply-single-step.test.mjs`；真實瀏覽器截圖為單頁表單 |
 | 2 | 照片可自由選填（個人照／活動照） | ✅ PASS | 表單三個上傳欄位全標「（選填）」；送出鈕不再被 `!profilePhotoUrl` gating；API 端移除 `profilePhotoUrl is required`。e2e `guide-apply-pipeline.spec.ts:107`「照片完全不上傳也能送出申請」PASS |
 | 3 | 第一頁文案與欄位重編、符合海報 | ✅ PASS | 標頭「在地嚮導招募中！」、海報引言、圓章金句「你的在地故事，就是旅人的祕境指南。」、「請填寫以下資訊」、「加入祕島，你可以」四格、揪團尾句全部上架；欄位比照海報（姓名／聯絡方式／居住縣市／熟悉地區／推薦祕境／帶團經驗／旅程類型／方便聯絡時間／其他想分享） |
+| 6 | 「其他想分享的內容」改選填（追加需求） | ✅ PASS | 標示「（選填）」、移除 `required`；必填縮為姓名／電話／Email／居住縣市四欄。全空時 `bio` 走佔位文案避開後端非空檢查。e2e「只填必填四欄即可送出」PASS |
+| 7 | 四大優點改用 SVG 圖示（追加需求） | ✅ PASS | 新增 4 個 inline SVG（個人頁卡片／山景定位／三人群像／$ 循環箭頭），比照海報 pictogram；`aria-hidden` 隱藏於輔助技術，顏色統一由 CSS `stroke` 控制。真實瀏覽器截圖確認四格 2×2 排版與圖示可辨識 |
 | 4 | 全面改用「嚮導」，含 footer 標題 | ✅ PASS | 45 個使用者可見檔案＋`messages/zh-Hant.json` 完成改名；footer 顯示「認識嚮導／成為嚮導／嚮導開店／嚮導後台」（截圖可見）。`導遊證`（官方證照名）刻意保留 |
 | 5 | 管理者後台仍能取得申請資訊、流程不變 | ✅ PASS | admin 頁／admin API／`db-guide-applications.mjs`／通知信 **零 diff**；e2e `admin-guide-application-detail.spec.ts` 3 項全 PASS；e2e round-trip 驗證海報新欄位隨 `bio` 落地可讀回 |
 

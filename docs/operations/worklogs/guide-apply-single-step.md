@@ -36,8 +36,14 @@
 
 ### 表單必填最小化
 
-DB 層 `createGuideApplicationDb` 硬要求 `fullName` / `phone` / `email` / `city` / `bio`，
-故這五項維持必填；其餘（含照片）全部選填。
+必填只留「聯絡得上人」所需的四欄：`fullName` / `phone` / `email` / `city`。
+其餘（含全部照片與補充說明）皆選填。
+
+**注意**：DB 層 `createGuideApplicationDb` 額外硬要求 `bio` 非空。補充說明改選填後，
+若使用者全部留空，組出來的 `bio` 會是空字串而被後端 400 擋掉；故 bio 組裝加上
+fallback 佔位文案「（申請者未填寫補充說明，請於聯繫時確認）」。這樣既不動 DB 契約，
+管理者後台也看得出來這筆是「沒填補充說明」而不是資料掉了。
+e2e `guide-apply-pipeline.spec.ts`「只填必填四欄即可送出」鎖住此行為。
 
 ## 變更清單
 

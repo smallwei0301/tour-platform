@@ -104,16 +104,16 @@ test('單頁填寫申請（含照片上傳／專長／語言／區域）→ 送�
   expect(row.bio).toContain('方便聯絡時間：平日晚上 7 點後');
 });
 
-test('照片完全不上傳也能送出申請（照片全選填）', async ({ page, request }) => {
+test('只填必填四欄即可送出（照片與補充說明全選填）', async ({ page, request }) => {
   const email = `e2e-apply-nophoto-${Date.now()}@example.com`;
   await page.goto('/guide/apply');
 
+  // 只填姓名／電話／Email／居住縣市 —— 補充說明與照片都不填。
   await fillFormHydrated(page, [
     ['#apply-fullname', '無照片測試嚮導'],
     ['#apply-phone', '0933-444-555'],
     ['#apply-email', email],
     ['#apply-city', '花蓮縣'],
-    ['#apply-bio', '熟悉太魯閣周邊的野溪與部落故事。'],
   ]);
 
   const submitBtn = page.getByRole('button', { name: /送出申請/ });
@@ -127,4 +127,6 @@ test('照片完全不上傳也能送出申請（照片全選填）', async ({ pa
   expect(row, '無照片申請也必須查得回來').toBeTruthy();
   expect(row.profilePhotoUrl ?? null).toBeNull();
   expect(row.galleryUrls).toEqual([]);
+  // 補充說明留空 → bio 走佔位文案（後端硬要求 bio 非空，不得讓申請卡在 400）。
+  expect(row.bio).toBe('（申請者未填寫補充說明，請於聯繫時確認）');
 });

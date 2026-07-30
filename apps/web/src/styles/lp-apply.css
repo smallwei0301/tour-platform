@@ -261,6 +261,34 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   max-width: 640px;
 }
+/* 帶圖示的優點卡：圖示置頂居中，文字跟著居中（比照海報四欄排版） */
+.lp-apply-perk-iconed {
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 18px 14px;
+}
+.lp-apply-perk-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: rgba(176, 141, 62, 0.14);
+  border: 1px solid rgba(190, 178, 137, 0.3);
+}
+.lp-apply-perk-icon svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: #ded7ab;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lp-apply-perk-iconed strong { font-size: 16px; line-height: 1.45; }
 .lp-apply-outro {
   max-width: 600px;
   margin: 18px auto 0;
