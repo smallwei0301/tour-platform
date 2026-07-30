@@ -48,6 +48,15 @@ test('版面（對齊 Midao mockup 圖3）：hero＋引路人卡＋預約三步�
   assert.match(pageSource, /替我留一個位置/, 'CTA 文案對齊 mockup');
 });
 
+test('FAQ：商店政策區塊提供預約、付款、退款與聯絡導遊四個可展開項目', () => {
+  assert.match(pageSource, /data-testid="shop-policy"/, '商店頁應有政策 FAQ 區塊');
+  for (const copy of ['如何預約', '付款方式', '取消與退款', '如何聯絡導遊']) {
+    assert.match(pageSource, new RegExp(copy), `FAQ 應包含「${copy}」`);
+  }
+  assert.match(pageSource, /href="\/legal\/refund"/, '退款 FAQ 應連到退款政策');
+  assert.match(pageSource, /<details>/, 'FAQ 應使用可互動的 details 元素');
+});
+
 test('三步驟圖示使用附件真實資產（step-trip/date/contact）', () => {
   const iconsSource = readFileSync(path.join(shopDir, 'sib-icons.tsx'), 'utf8');
   assert.match(iconsSource, /step-trip\.png/);

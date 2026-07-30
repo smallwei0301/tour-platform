@@ -75,3 +75,13 @@ test('guide/profile 路由：EDITABLE_FIELDS 含匯款欄位且接受字串/null
   }
   assert.match(src, /must be a string or null/);
 });
+
+test('manual-payment：匯款核帳更新既有 transfer payment，且後台資料走 service-role client', () => {
+  const src = read('app/api/v2/admin/pos/bookings/[bookingId]/manual-payment/route.ts');
+  assert.match(src, /createServiceClient\(\s*getSupabaseUrl\(\)!?\s*,\s*getSupabaseServiceRoleKey\(\)!?/, '管理核帳讀寫應使用 service-role client');
+  assert.match(src, /provider\s*===\s*'transfer'/, '應先找出原本的 transfer payment');
+  assert.match(src, /transferPayments\.length\s*>\s*1/, '多筆匯款 payment 應 fail-closed');
+  assert.match(src, /transferPayment\.amount_twd/, '匯款核帳應驗證既有 payment 金額');
+  assert.match(src, /from\('payments'\)[\s\S]*?\.update\(/, '匯款核帳應更新既有 payment');
+  assert.match(src, /providerReconciled|provider_reconciled_paid/, '應留下匯款核帳事件');
+});

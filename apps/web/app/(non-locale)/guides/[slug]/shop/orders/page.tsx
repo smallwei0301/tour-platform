@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useMeResource } from '../../../../../../src/lib/use-me-resource';
 import { useTablistKeyboard } from '../../../../../../src/lib/use-tablist-keyboard';
@@ -44,8 +44,14 @@ export default function GuideShopOrdersPage() {
   const router = useRouter();
   const slug = params.slug as string;
   const [tab, setTab] = useState<Tab>('all');
+  const [transferSubmitted, setTransferSubmitted] = useState(false);
   const TABS: Tab[] = ['all', 'pending', 'history'];
   const { onKeyDown, registerTab } = useTablistKeyboard<Tab>(TABS, tab, setTab);
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    setTransferSubmitted(queryParams.get('paid') === 'transfer');
+  }, []);
 
   const { data, loading } = useMeResource<Order[]>('/api/v2/orders', {
     onUnauthorized: () => router.replace(`/login?next=${encodeURIComponent(`/guides/${slug}/shop/orders`)}`),
@@ -64,6 +70,16 @@ export default function GuideShopOrdersPage() {
         <Link href={`/guides/${slug}/shop`} className="tp-btn tp-btn-ghost" style={{ fontSize: 14, padding: '6px 12px' }}>←</Link>
         <h1 style={{ margin: 0, fontSize: 20 }}>預約管理</h1>
       </div>
+
+      {transferSubmitted && (
+        <div data-testid="shop-transfer-pending" role="status"
+          style={{ marginTop: 16, padding: 16, borderRadius: 14, background: 'var(--tp-card-bg, #fff)', border: '1px solid var(--sib-gold-line, #dfc99b)' }}>
+          <strong style={{ display: 'block', color: 'var(--tp-text)' }}>等待對帳確認</strong>
+          <p style={{ margin: '6px 0 0', color: 'var(--tp-muted)', fontSize: 14, lineHeight: 1.7 }}>
+            我們會在 1–2 個工作天內完成人工對帳並通知你。
+          </p>
+        </div>
+      )}
 
       {/* 分頁 */}
       <div role="tablist" style={{ display: 'flex', gap: 8, marginTop: 16, background: 'var(--tp-bg-soft, #f3f4f6)', borderRadius: 12, padding: 4 }}>

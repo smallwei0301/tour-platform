@@ -6,6 +6,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '../../../../../../src/lib/supabase/client';
 import { track } from '../../../../../../src/lib/track';
+import { isTransferPaymentEnabledClient } from '../../../../../../src/config/feature-flags.mjs';
 import {
   ArrowRight, MountainCircleLogo, PersonIcon,
   ClockIcon, TagIcon, RadioIcon, PinIcon, CalPrev, CalNext, PhoneIcon, MailIcon, BackIcon,
@@ -696,14 +697,16 @@ export default function GuideShopBookingPage() {
               <input type="radio" name="pay" checked={payMethod === 'ecpay'} onChange={() => setPayMethod('ecpay')} />
               💳 信用卡（ECPay 安全付款）
             </label>
-            <label data-testid="shop-pay-transfer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 14, cursor: 'pointer', borderRadius: 14,
-              background: 'var(--sib-card)', border: payMethod === 'transfer' ? '1.5px solid var(--sib-green)' : '1px solid var(--sib-gold-line)' }}>
-              <input type="radio" name="pay" checked={payMethod === 'transfer'} onChange={() => setPayMethod('transfer')} />
-              🏦 自行匯款（人工核帳）
-            </label>
+            {isTransferPaymentEnabledClient && (
+              <label data-testid="shop-pay-transfer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 14, cursor: 'pointer', borderRadius: 14,
+                background: 'var(--sib-card)', border: payMethod === 'transfer' ? '1.5px solid var(--sib-green)' : '1px solid var(--sib-gold-line)' }}>
+                <input type="radio" name="pay" checked={payMethod === 'transfer'} onChange={() => setPayMethod('transfer')} />
+                🏦 自行匯款（人工核帳）
+              </label>
+            )}
           </div>
 
-          {payMethod === 'transfer' && (
+          {isTransferPaymentEnabledClient && payMethod === 'transfer' && (
             <div data-testid="shop-transfer-info" style={{ marginTop: 12, padding: 16, borderRadius: 14, background: 'var(--sib-card)', border: '1px solid var(--sib-gold-line)' }}>
               {transferInfo == null && <p style={{ color: 'var(--sib-muted)', margin: 0 }}>載入匯款資訊中…</p>}
               {transferInfo && !transferInfo.configured && (
@@ -715,8 +718,8 @@ export default function GuideShopBookingPage() {
                   <p style={{ margin: 0 }}>戶名：{transferInfo.accountName}</p>
                   <p style={{ margin: 0 }}>帳號：{transferInfo.accountNumber}</p>
                   {transferInfo.transferNote && <p style={{ margin: '6px 0 0', color: 'var(--sib-muted)' }}>{transferInfo.transferNote}</p>}
-                  <p style={{ margin: '8px 0 0', color: 'var(--sib-muted)', fontSize: 13 }}>
-                    請完成匯款後按下方按鈕送出，我們將人工核對入帳後為您確認預約。
+                  <p data-testid="shop-transfer-reconciliation-copy" style={{ margin: '8px 0 0', color: 'var(--sib-muted)', fontSize: 13 }}>
+                    匯款後由祕島人工對帳，1–2 個工作天內確認並通知你。
                   </p>
                 </div>
               )}

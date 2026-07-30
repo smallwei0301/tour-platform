@@ -24,6 +24,14 @@ test('商店首頁（Midao mockup 圖3）：hero＋引路人卡＋預約三步�
   await expect(page.locator('.sib-step')).toHaveCount(3);
   await expect(page.locator('.sib-step-ico img').first()).toBeVisible();
 
+  const policy = page.getByTestId('shop-policy');
+  await expect(policy).toBeVisible();
+  await expect(policy.locator('details')).toHaveCount(4);
+  await expect(policy).toContainText('如何預約');
+  await expect(policy).toContainText('付款方式');
+  await expect(policy).toContainText('取消與退款');
+  await expect(policy).toContainText('如何聯絡導遊');
+
   // CTA「替我留一個位置」→ /shop/book
   const cta = page.getByRole('link', { name: /替我留一個位置/ });
   await expect(cta).toBeVisible();
