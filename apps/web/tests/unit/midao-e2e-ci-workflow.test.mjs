@@ -14,7 +14,7 @@ test('Midao baseline E2E workflow is PR-triggered, bounded, and uses Node 22', (
   const source = workflowSource();
   assert.match(source, /pull_request:/u);
   assert.match(source, /timeout-minutes:\s*60/u);
-  assert.match(source, /node-version:\s*'22'/u);
+  assert.match(source, /node-version:\s*'22\.23\.1'/u);
   assert.match(source, /concurrency:/u);
   assert.match(source, /cancel-in-progress:\s*true/u);
 });
@@ -45,4 +45,18 @@ test('CI runs real Midao and legacy browser gates with independent hard timeouts
   assert.match(source, /timeout --signal=TERM --kill-after=30s 1200s bash scripts\/testing\/run-midao-legacy-e2e-compat\.sh/u);
   assert.match(source, /apps\/web\/e2e\/t1-login\.spec\.ts/u);
   assert.match(source, /playwright install --with-deps chromium/u);
+});
+
+test('CI runs the decision RPC runtime lane serially with redacted artifact metadata', () => {
+  const source = workflowSource();
+  assert.match(source, /supabase\/migrations\/20260723010000_midao_atomic_booking_approval\.sql/u);
+  assert.match(source, /supabase\/migrations\/20260723011000_midao_atomic_booking_decision_command\.sql/u);
+  assert.match(
+    source,
+    /timeout --signal=TERM --kill-after=30s 1200s\s+node scripts\/testing\/with-midao-local-supabase\.mjs --postgrest\s+apps\/web\/tests\/integration\/midao-booking-decision-postgrest\.test\.mjs/u,
+  );
+  assert.match(source, /Run Task20B booking decision PostgreSQL and PostgREST runtime contracts/u);
+  assert.match(source, /if:\s+failure\(\)/u);
+  assert.match(source, /midao-baseline-e2e-/u);
+  assert.doesNotMatch(source, /DATABASE_URL\s*[:=]|SUPABASE_SERVICE_ROLE_KEY\s*[:=]/u);
 });

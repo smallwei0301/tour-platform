@@ -640,7 +640,8 @@ apps/web/src/lib/midao/
 
 apps/web/src/lib/
   db-midao-inquiries.mjs
-  db-midao-requests.mjs
+  midao/
+    db-requests.mjs
   db-midao-calendar.mjs
   db-midao-service-drafts.mjs
   db-midao-service-publication.mjs

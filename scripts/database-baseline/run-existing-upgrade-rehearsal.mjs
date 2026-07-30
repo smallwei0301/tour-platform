@@ -112,8 +112,8 @@ async function extractExistingTerminal(databaseUrl, {
       const { rows } = await client.query('SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version');
       return rows;
     });
-    if (history.length !== 134 || history.some(({ version }) => version === '00000000000001')
-      || JSON.stringify(history.slice(-6).map(({ version }) => version)) !== JSON.stringify(POST_VERSIONS)) {
+    if (history.length !== 128 + POST_VERSIONS.length || history.some(({ version }) => version === '00000000000001')
+      || JSON.stringify(history.slice(-POST_VERSIONS.length).map(({ version }) => version)) !== JSON.stringify(POST_VERSIONS)) {
       throw new Error('existing rehearsal exact history invalid');
     }
     return { terminalBytes, history };
@@ -145,7 +145,11 @@ async function buildCutoffFixtureActual({ canonicalRoot, projectId, capture, exp
   try {
     await mkdirFn(runParent, { mode: 0o700 }); parentCreated = true;
     parentIdentity = await lstatFn(runParent);
-    materialized = await materialize({ outputParent: runParent, projectId });
+    materialized = await materialize({
+      outputParent: runParent,
+      projectId,
+      postCutoffManifest: expected.manifest,
+    });
     if (materialized?.transactionId !== capture.transactionId) throw new Error('existing materializer capture transaction binding mismatch');
   } catch (primary) {
     const cleanup = [];

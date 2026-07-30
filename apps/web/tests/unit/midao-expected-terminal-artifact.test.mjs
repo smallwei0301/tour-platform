@@ -20,15 +20,7 @@ const captureLedgerPath = path.join(root, 'docs/operations/baseline-ledger.json'
 const expectedLedgerPath = path.join(root, 'docs/operations/expected-terminal-ledger.json');
 const captureJournalPath = resolveRepositoryPublicationPaths().journalPath;
 const expectedJournalPath = resolveExpectedTerminalPublicationPaths().journalPath;
-const expectedHistory = [
-  '00000000000001',
-  '20260723000000',
-  '20260723001000',
-  '20260723002000',
-  '20260723002500',
-  '20260723003000',
-  '20260723003500',
-];
+const { historyVersions: expectedHistory } = JSON.parse(await readFile(path.join(baselineDir, 'manifest.json'), 'utf8'));
 
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable);
@@ -100,13 +92,35 @@ test('unfinished journals and metadata mismatch reject before either transaction
     assert.equal(expectedReads, 0);
     await rm(hostileExpectedJournal);
 
-    const ledger = JSON.parse(await readFile(expectedLedgerPath, 'utf8'));
-    ledger.transactionId = 'f'.repeat(64);
-    await writeFile(hostileLedgerPath, `${JSON.stringify(ledger)}\n`, { mode: 0o600, flag: 'wx' });
+    const fixture = path.join(parent, 'hostile-ledger-baseline');
+    const fixtureBaseline = path.join(fixture, 'baseline');
+    await mkdir(fixtureBaseline, { recursive: true, mode: 0o700 });
+
+    const expectedPayloads = ['catalog.expected-terminal.normalized.json', 'catalog-expected-terminal.sha256'];
+    for (const payload of expectedPayloads) {
+      await copyFile(path.join(baselineDir, payload), path.join(fixtureBaseline, payload));
+    }
+
+    const manifest = JSON.parse(await readFile(path.join(baselineDir, 'manifest.json'), 'utf8'));
+    const core = structuredClone(manifest); delete core.transactionId;
+    manifest.transactionId = sha256(canonical(core));
+
+    const manifestBytes = canonical(manifest);
+    await writeFile(path.join(fixtureBaseline, 'manifest.json'), manifestBytes, { mode: 0o600 });
+
+    const hostileLedger = JSON.parse(await readFile(expectedLedgerPath, 'utf8'));
+    hostileLedger.transactionId = manifest.transactionId;
+    hostileLedger.manifestSha256 = sha256(manifestBytes);
+
+    await writeFile(path.join(fixture, 'expected-terminal-ledger.json'), canonical(hostileLedger), { mode: 0o600, flag: 'wx' });
+
+    hostileLedger.transactionId = 'f'.repeat(64);
+    await writeFile(hostileLedgerPath, canonical(hostileLedger), { mode: 0o600, flag: 'wx' });
     await assert.rejects(verifyExpectedTerminalTransaction({
-      baselineDir, ledgerPath: hostileLedgerPath, captureLedgerPath,
-      journalPath: hostileExpectedJournal, onPayloadOpen: () => { expectedReads += 1; },
-    }), /manifest|metadata|transaction/iu);
+      baselineDir: fixtureBaseline, ledgerPath: hostileLedgerPath, captureLedgerPath,
+      journalPath: path.join(fixture, 'absent.journal'),
+      onPayloadOpen: () => { expectedReads += 1; },
+    }), /expected-terminal transaction metadata contract mismatch/iu);
     assert.equal(expectedReads, 0);
   } finally { await rm(parent, { recursive: true, force: true }); }
 });

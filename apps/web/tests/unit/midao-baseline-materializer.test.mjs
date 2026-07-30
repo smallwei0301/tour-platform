@@ -24,6 +24,9 @@ const exactPostCutoff = [
   ['20260723002500_midao_audit_events.sql', '62fa29d6d4d8fe119867ef05e69eba465f52b5cfa2ca96bddd83e93da9b9bcca'],
   ['20260723003000_midao_atomic_backend_mode_switch.sql', 'c59afc5ee72da4d76ae77fb984db4b34d8f160198544ba233d0fb9f2190c90e5'],
   ['20260723003500_midao_service_role_acl_hardening.sql', 'f16fd369b9ce0b405c38ec2df5a46676cc84ba2de087b3b010cc00e4415353e5'],
+  ['20260723004000_midao_request_read_projection.sql', '639f430e666666c2ee9418f8dd2240d0d2c1b1038345378bee11436fc99aeabb'],
+  ['20260723010000_midao_atomic_booking_approval.sql', 'a97d57a82bf2e70425325498b0ca96bdf64c1c3322cf81288135a71abaebc968'],
+  ['20260723011000_midao_atomic_booking_decision_command.sql', 'c3abc1a6cc5984bcc5239c9728ebd8d46020c43fa577382f87d2775cfb5fdf8a'],
 ];
 
 async function subject() {
@@ -123,7 +126,7 @@ test('materializer exposes identity-bound bootstrap staging and restores exact m
   }
 });
 
-test('materializer verifies capture transaction then emits one marker, six migrations and separate seed', async () => {
+test('materializer verifies capture transaction then emits one marker, exact migrations and separate seed', async () => {
   const api = await subject();
   const parent = await mkdtemp(path.join(os.tmpdir(), 'midao-materializer-green-'));
   let sourceOpens = 0;
@@ -137,7 +140,7 @@ test('materializer verifies capture transaction then emits one marker, six migra
     assert.deepEqual(result.history, [api.SYNTHETIC_BASELINE_FILENAME, ...exactPostCutoff.map(([name]) => name)]);
     assert.deepEqual(result.historyVersions, ['00000000000001', ...exactPostCutoff.map(([name]) => name.slice(0, 14))]);
     assert.equal(result.transactionId, JSON.parse(await readFile(path.join(baselineDir, 'capture-manifest.json'), 'utf8')).transactionId);
-    assert.equal(sourceOpens, exactPostCutoff.length + 2, 'six migrations plus config and seed only after verifier');
+    assert.equal(sourceOpens, exactPostCutoff.length + 2, 'exact migrations plus config and seed only after verifier');
 
     const marker = await readFile(path.join(result.migrationsDir, api.SYNTHETIC_BASELINE_FILENAME));
     const baseline = await readFile(path.join(baselineDir, 'baseline.sql'));
@@ -215,9 +218,12 @@ test('public materializer binds journal lookup to its repository when invoked fr
   }
 });
 
-test('selection is exact, future-manifest fail-closed and rejects rollback, symlink and hardlink sources', async () => {
+test('selection is exact, published manifest is trusted, and rollback/symlink/hardlink sources fail closed', async () => {
   const api = await subject();
   const parent = await mkdtemp(path.join(os.tmpdir(), 'midao-materializer-select-'));
+  for (const hostile of [null, [], 42]) {
+    await assert.rejects(api.materializeFreshWorkdir(hostile), /public options contain forbidden path override/u);
+  }
   const source = path.join(parent, 'migrations');
   await mkdir(source, { mode: 0o700 });
   try {
@@ -233,9 +239,21 @@ test('selection is exact, future-manifest fail-closed and rejects rollback, syml
     );
     for (const item of selected) item.bytes.fill(0);
 
+    const publishedManifest = JSON.parse(await readFile(path.join(baselineDir, 'manifest.json'), 'utf8'));
+    assert.deepEqual(
+      publishedManifest.postCutoffMigrations.map(({ filename, sha256 }) => [filename, sha256]),
+      exactPostCutoff,
+    );
+    const manifested = await api.materializeFreshWorkdir({
+      outputParent: parent,
+      postCutoffManifest: publishedManifest,
+      projectId: 'midao-manifest-run',
+    });
+    assert.deepEqual(manifested.history, [api.SYNTHETIC_BASELINE_FILENAME, ...exactPostCutoff.map(([name]) => name)]);
+    await manifested.cleanup();
     await assert.rejects(
       api.materializeFreshWorkdir({ outputParent: parent, postCutoffManifest: { entries: [] } }),
-      /FUTURE_MANIFEST_NOT_AVAILABLE/iu,
+      /expected terminal|manifest/iu,
     );
     const sourceAlias = path.join(parent, 'migrations-alias');
     await symlink(source, sourceAlias);

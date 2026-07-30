@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 
 const wrapperModule = await import('../../src/lib/midao/with-guide-route.ts');
 const idempotencyModule = await import('../../src/lib/midao/idempotency.ts');
@@ -7,6 +8,8 @@ const errorModule = await import('../../src/lib/midao/route-errors.ts');
 const { withMidaoGuideQuery, withMidaoGuideCommand } = wrapperModule;
 const { parseIdempotencyKey, hashIdempotentRequest } = idempotencyModule;
 const { MidaoRouteError } = errorModule;
+const wrapperSource = readFileSync(new URL('../../src/lib/midao/with-guide-route.ts', import.meta.url), 'utf8');
+const routeErrorsSource = readFileSync(new URL('../../src/lib/midao/route-errors.ts', import.meta.url), 'utf8');
 
 const canonical = {
   guideId: 'guide-1',
@@ -28,6 +31,88 @@ function request(method = 'GET', body, headers = {}) {
 async function responseJson(response) {
   return { status: response.status, body: await response.json() };
 }
+
+function getFunctionBody(source, functionName) {
+  const signature = `export async function ${functionName}`;
+  const start = source.indexOf(signature);
+  assert.notEqual(start, -1);
+
+  let parenDepth = 0;
+  let sawParen = false;
+  let closeParen = -1;
+
+  for (let index = start; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === '(') {
+      sawParen = true;
+      parenDepth += 1;
+    } else if (!sawParen) {
+      continue;
+    } else if (char === ')') {
+      parenDepth -= 1;
+      if (parenDepth === 0) {
+        closeParen = index;
+        break;
+      }
+    }
+  }
+
+  assert.notEqual(closeParen, -1);
+  const braceStart = source.indexOf('{', closeParen);
+  assert.notEqual(braceStart, -1);
+
+  let depth = 1;
+  for (let index = braceStart + 1; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === '{') depth += 1;
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(braceStart + 1, index);
+      }
+    }
+  }
+  throw new Error(`Failed to parse function body for ${functionName}`);
+}
+
+function assertDefaultRouteErrorChain() {
+  assert.match(routeErrorsSource, /reportUnexpected = reportRouteError/u);
+  assert.match(routeErrorsSource, /await reportUnexpected\(error, \{\s*route\s*\}\);/u);
+}
+
+function wrapperContractPattern() {
+  return /catch \(error\)\s*\{[\s\S]*?return handleMidaoRouteError\(error,\s*\{[\s\S]*?route:\s*options\.route,\s*\n[\s\S]*?reportUnexpected:\s*options\.reportUnexpected,\s*\n[\s\S]*?\}\);/u;
+}
+
+test('query wrapper error path requires its own catch→handleMidaoRouteError contract', () => {
+  const queryBody = getFunctionBody(wrapperSource, 'withMidaoGuideQuery');
+  assert.match(queryBody, wrapperContractPattern());
+  assertDefaultRouteErrorChain();
+});
+
+test('removing query chain triggers only query assertion failure, while command path still passes', () => {
+  const queryBody = getFunctionBody(wrapperSource, 'withMidaoGuideQuery');
+  const commandBody = getFunctionBody(wrapperSource, 'withMidaoGuideCommand');
+  const queryBodyWithoutCatch = queryBody.replace(wrapperContractPattern(), '/*query-chain-removed*/');
+
+  assert.throws(() => assert.match(queryBodyWithoutCatch, wrapperContractPattern()));
+  assert.match(commandBody, wrapperContractPattern());
+});
+
+test('command wrapper error path requires its own catch→handleMidaoRouteError contract', () => {
+  const commandBody = getFunctionBody(wrapperSource, 'withMidaoGuideCommand');
+  assert.match(commandBody, wrapperContractPattern());
+  assertDefaultRouteErrorChain();
+});
+
+test('removing command chain triggers only command assertion failure, while query path still passes', () => {
+  const queryBody = getFunctionBody(wrapperSource, 'withMidaoGuideQuery');
+  const commandBody = getFunctionBody(wrapperSource, 'withMidaoGuideCommand');
+  const commandBodyWithoutCatch = commandBody.replace(wrapperContractPattern(), '/*command-chain-removed*/');
+
+  assert.throws(() => assert.match(commandBodyWithoutCatch, wrapperContractPattern()));
+  assert.match(queryBody, wrapperContractPattern());
+});
 
 test('query runs canonical guard before handler and emits only V2 success envelope', async () => {
   const order = [];

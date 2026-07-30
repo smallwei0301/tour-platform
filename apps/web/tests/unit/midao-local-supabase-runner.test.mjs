@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { link, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { createServer as createHttpServer } from 'node:http';
 import { createServer, connect } from 'node:net';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 const runner = await import('../../../../scripts/testing/with-midao-local-supabase.mjs');
 const {
@@ -19,6 +21,7 @@ const {
   confirmProjectContainers,
   assertOwnershipUnchanged,
   redactSupabaseOutput,
+  formatMidaoRunnerFailure,
   buildSupabaseCliInvocation,
   acquireKernelRunnerLock,
   releaseKernelRunnerLock,
@@ -34,10 +37,12 @@ const {
   buildMidaoE2ELocalConfig,
   prepareDatabaseOnlyWorkdir,
   prepareBaselineWorkdirWithAdapters,
+  parseMidaoRunnerInvocation,
   runWithLocalSupabase,
 } = runner;
 
 const projectId = 'midao-backend-design';
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const missingLine = `failed to inspect container health: Error response from daemon: No such container: supabase_db_${projectId}`;
 const helpLine = 'Try rerunning the command with --debug to troubleshoot the error.';
 
@@ -50,6 +55,33 @@ test('package-lock pin and canonical repo basename are exact and fail closed', (
   ]) assert.throws(() => parseSupabasePin(invalid));
   assert.equal(canonicalProjectId('/tmp/midao-backend-design'), projectId);
   for (const path of ['/tmp/Bad Project', '/tmp/project.name', '/']) assert.throws(() => canonicalProjectId(path));
+});
+
+test('runner invocation reserves an exact Node integration lane for the pinned PostgREST runtime', () => {
+  const integration = 'apps/web/tests/integration/midao-requests-postgrest.test.mjs';
+  const decisionIntegration = 'apps/web/tests/integration/midao-booking-decision-postgrest.test.mjs';
+  assert.deepEqual(parseMidaoRunnerInvocation(['--postgrest', integration]), {
+    mode: 'postgrest',
+    childArgs: [integration],
+  });
+  assert.deepEqual(parseMidaoRunnerInvocation(['--postgrest', decisionIntegration]), {
+    mode: 'postgrest',
+    childArgs: [decisionIntegration],
+  });
+  assert.deepEqual(parseMidaoRunnerInvocation(['--playwright', 'apps/web/e2e/midao-navigation.spec.ts']), {
+    mode: 'playwright',
+    childArgs: ['apps/web/e2e/midao-navigation.spec.ts'],
+  });
+  assert.deepEqual(parseMidaoRunnerInvocation([integration]), {
+    mode: 'postgres',
+    childArgs: [integration],
+  });
+  for (const hostile of [
+    ['--postgrest'],
+    ['--postgrest', 'apps/web/e2e/midao-navigation.spec.ts'],
+    ['--postgrest', '../escape.test.mjs'],
+    ['--unknown', integration],
+  ]) assert.throws(() => parseMidaoRunnerInvocation(hostile), /ARGS_INVALID/u);
 });
 
 test('status classifier accepts only pinned exact two-line CRLF-aware missing fixture', () => {
@@ -216,7 +248,7 @@ test('browser lifecycle separates direct PostgREST probes from Supabase client c
   assert.match(source, /startSupabaseRestCompatProxy\(\{ listenPort: 0, targetUrl: directApiUrl \}\)/u);
   assert.match(source, /createLocalSupabaseApiCredentials\(apiCompatProxy\.url\)/u);
   assert.equal((source.match(/apiUrl: directApiUrl,/gu) || []).length, 2);
-  assert.match(source, /if \(apiCompatProxy\) \{ try \{ await apiCompatProxy\.close\(\);/u);
+  assert.match(source, /if \(apiCompatProxy\) \{\s*try \{ await apiCompatProxy\.close\(\); \}\s*catch \(error\) \{ cleanupErrors\.push\(new Error\('API_COMPAT_PROXY_CLOSE_FAILED'/u);
 });
 
 test('baseline workdir verifies both transactions before materializer or full-service config consumers', async () => {
@@ -274,16 +306,28 @@ test('baseline workdir binds materializer capture, rewrites full config after ve
     manifest: { captureTransactionId: capture.transactionId, captureManifestSha256: capture.ledger.captureManifestSha256 },
     dispose() { calls.push('expected-dispose'); },
   };
+  const migrationHistory = [
+    '00000000000001_baseline_v1.sql',
+    '20260723000000_midao_backend_mode.sql',
+    '20260723001000_midao_notification_outbox.sql',
+    '20260723002000_midao_idempotency_records.sql',
+    '20260723002500_midao_audit_events.sql',
+    '20260723003000_midao_atomic_backend_mode_switch.sql',
+    '20260723003500_midao_service_role_acl_hardening.sql',
+    '20260723004000_midao_request_read_projection.sql',
+  ];
+  expected.manifest.historyVersions = migrationHistory.map((name) => name.slice(0, 14));
   try {
     const capability = await prepareBaselineWorkdirWithAdapters({
       repoRoot, lockDir, fullServices: true,
       verifyCapture: async () => { calls.push('capture'); return capture; },
       verifyExpected: async () => { calls.push('expected'); return expected; },
-      materialize: async ({ outputParent, projectId: id }) => {
+      materialize: async ({ outputParent, projectId: id, postCutoffManifest }) => {
+        assert.strictEqual(postCutoffManifest, expected.manifest);
         calls.push('materialize'); const workdir = join(outputParent, id); await mkdir(join(workdir, 'supabase'), { recursive: true });
         return {
           workdir, transactionId: capture.transactionId, captureManifestSha256: capture.ledger.captureManifestSha256,
-          history: ['00000000000001_baseline_v1.sql'], seedPath: join(workdir, 'supabase/seed.sql'),
+          history: migrationHistory, seedPath: join(workdir, 'supabase/seed.sql'),
           async stageCliReplay() {}, async cleanupCliMetadata() {},
           async cleanup() { calls.push('materialized-cleanup'); await rm(workdir, { recursive: true }); },
         };
@@ -297,10 +341,7 @@ test('baseline workdir binds materializer capture, rewrites full config after ve
     assert.equal(capability.captureTransactionId, capture.transactionId);
     assert.equal(capability.expectedTransactionId, expected.transactionId);
     assert.equal(configBytes.every((byte) => byte === 0), true);
-    assert.deepEqual(capability.migrationNames, ['00000000000001_baseline_v1.sql',
-      '20260723000000_midao_backend_mode.sql', '20260723001000_midao_notification_outbox.sql',
-      '20260723002000_midao_idempotency_records.sql', '20260723002500_midao_audit_events.sql',
-      '20260723003000_midao_atomic_backend_mode_switch.sql', '20260723003500_midao_service_role_acl_hardening.sql']);
+    assert.deepEqual(capability.migrationNames, migrationHistory);
     await capability.cleanup();
     await assert.rejects(readFile(join(lockDir, 'db-only-workdir')), /ENOENT/u);
     assert.deepEqual(calls, [
@@ -308,6 +349,30 @@ test('baseline workdir binds materializer capture, rewrites full config after ve
       'config-read', 'config-write', 'materialized-cleanup',
     ]);
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('real default database workdir adapter consumes the trusted post-cutoff manifest and materializes Task14', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'midao-default-materializer-'));
+  const lockDir = join(root, 'lock');
+  const migrationName = '20260723011000_midao_atomic_booking_decision_command.sql';
+  let capability;
+  await mkdir(lockDir, { mode: 0o700 });
+  try {
+    capability = await prepareDatabaseOnlyWorkdir({ repoRoot, lockDir });
+    assert.equal(capability.migrationNames.at(-1), migrationName);
+    assert.equal(capability.migrationNames.filter((name) => name === migrationName).length, 1);
+    const [source, materialized] = await Promise.all([
+      readFile(join(repoRoot, 'supabase/migrations', migrationName)),
+      readFile(join(capability.workdir, 'supabase/migrations', migrationName)),
+    ]);
+    assert.equal(
+      createHash('sha256').update(materialized).digest('hex'),
+      createHash('sha256').update(source).digest('hex'),
+    );
+  } finally {
+    await capability?.cleanup();
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test('same-process secure FD lock rejects contention and unsafe filesystem identities', async () => {
@@ -731,6 +796,27 @@ test('redaction removes explicit and structured local credentials from all outpu
   assert.match(redacted, /\[REDACTED\]/u);
 });
 
+test('runner failure formatter expands nested safe codes while suppressing arbitrary secret-bearing messages', () => {
+  const failure = new AggregateError([
+    new AggregateError([
+      new Error('OWNED_VOLUME_CLEANUP_FAILED'),
+      new Error('postgresql://postgres:db-secret@127.0.0.1:54322/postgres'),
+    ], 'owned Supabase asset cleanup failed'),
+    new Error('DATABASE_WORKDIR_CLEANUP_FAILED'),
+    new Error('SUPABASE_SERVICE_START_FAILED: service-secret postgresql://postgres:db-secret@127.0.0.1:54322/postgres'),
+    new Error('service-secret'),
+    new Error('SERVICESECRET'),
+  ], 'Midao baseline runner and cleanup failed');
+  const formatted = formatMidaoRunnerFailure(failure, ['db-secret', 'service-secret']);
+  assert.match(formatted, /Midao baseline runner and cleanup failed/u);
+  assert.match(formatted, /owned Supabase asset cleanup failed/u);
+  assert.match(formatted, /OWNED_VOLUME_CLEANUP_FAILED/u);
+  assert.match(formatted, /DATABASE_WORKDIR_CLEANUP_FAILED/u);
+  assert.match(formatted, /SUPABASE_SERVICE_START_FAILED/u);
+  assert.match(formatted, /\[REDACTED_ERROR\]/u);
+  assert.doesNotMatch(formatted, /db-secret|service-secret|SERVICESECRET|postgresql:\/\//u);
+});
+
 test('abort terminates the complete spawned CLI process group without orphan descendants', async () => {
   const controller = new AbortController();
   const pending = runCommand('sh', ['-c', 'sleep 30 & child=$!; printf "%s\\n" "$child"; wait'], { signal: controller.signal });
@@ -1068,7 +1154,7 @@ test('signal received during cleanup completes stop but runner rejects', async (
   assert.deepEqual(calls, ['stop']);
 });
 
-test('custom lifecycle contract accepts only exact Task9 marker and six original migration filenames', async () => {
+test('custom lifecycle contract accepts only exact Task9 marker and nine post-cutoff migration filenames', async () => {
   const expectedWorkdir = `/tmp/lock/${projectId}`;
   const migrationNames = [
     '00000000000001_baseline_v1.sql',
@@ -1078,6 +1164,9 @@ test('custom lifecycle contract accepts only exact Task9 marker and six original
     '20260723002500_midao_audit_events.sql',
     '20260723003000_midao_atomic_backend_mode_switch.sql',
     '20260723003500_midao_service_role_acl_hardening.sql',
+    '20260723004000_midao_request_read_projection.sql',
+    '20260723010000_midao_atomic_booking_approval.sql',
+    '20260723011000_midao_atomic_booking_decision_command.sql',
   ];
   const stderr = `${[
     `Using workdir ${expectedWorkdir}`,

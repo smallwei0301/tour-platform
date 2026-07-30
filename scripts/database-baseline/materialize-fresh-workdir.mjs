@@ -7,7 +7,7 @@ import {
 } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { verifyCaptureTransaction } from './verify-manifest.mjs';
+import { validateExpectedTerminalManifest, verifyCaptureTransaction } from './verify-manifest.mjs';
 import { resolveRepositoryPublicationPaths } from './publish-baseline.mjs';
 
 export const SYNTHETIC_BASELINE_FILENAME = '00000000000001_baseline_v1.sql';
@@ -22,6 +22,9 @@ export const POST_CUTOFF_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: '20260723002500_midao_audit_events.sql', sha256: '62fa29d6d4d8fe119867ef05e69eba465f52b5cfa2ca96bddd83e93da9b9bcca' }),
   Object.freeze({ filename: '20260723003000_midao_atomic_backend_mode_switch.sql', sha256: 'c59afc5ee72da4d76ae77fb984db4b34d8f160198544ba233d0fb9f2190c90e5' }),
   Object.freeze({ filename: '20260723003500_midao_service_role_acl_hardening.sql', sha256: 'f16fd369b9ce0b405c38ec2df5a46676cc84ba2de087b3b010cc00e4415353e5' }),
+  Object.freeze({ filename: '20260723004000_midao_request_read_projection.sql', sha256: '639f430e666666c2ee9418f8dd2240d0d2c1b1038345378bee11436fc99aeabb' }),
+  Object.freeze({ filename: '20260723010000_midao_atomic_booking_approval.sql', sha256: 'a97d57a82bf2e70425325498b0ca96bdf64c1c3322cf81288135a71abaebc968' }),
+  Object.freeze({ filename: '20260723011000_midao_atomic_booking_decision_command.sql', sha256: 'c3abc1a6cc5984bcc5239c9728ebd8d46020c43fa577382f87d2775cfb5fdf8a' }),
 ]);
 
 export const CONFIG_SHA256 = '5289984d402959cd0d4596b056df9a3d27590b3abefa4d7551151ad54ae084ee';
@@ -439,12 +442,21 @@ async function materializeWithPaths(options = {}) {
 }
 
 export async function materializeFreshWorkdir(options = {}) {
+  if (!options || typeof options !== 'object' || Array.isArray(options)) {
+    throw new Error('materializer public options contain forbidden path override');
+  }
   const keys = Object.keys(options).sort();
   if (keys.some((key) => !['outputParent', 'postCutoffManifest', 'projectId'].includes(key))) {
     throw new Error('materializer public options contain forbidden path override');
   }
+  let entries = POST_CUTOFF_MIGRATIONS;
   if (Object.hasOwn(options, 'postCutoffManifest')) {
-    throw new Error('FUTURE_MANIFEST_NOT_AVAILABLE: expected-terminal manifest transaction is not published');
+    let manifest;
+    try { manifest = structuredClone(options.postCutoffManifest); } catch {
+      throw new Error('expected-terminal manifest is not cloneable');
+    }
+    validateExpectedTerminalManifest(manifest);
+    entries = Object.freeze(manifest.postCutoffMigrations.map((entry) => Object.freeze({ ...entry })));
   }
   const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
   return materializeWithPaths({
@@ -452,6 +464,7 @@ export async function materializeFreshWorkdir(options = {}) {
     outputParent: options.outputParent,
     projectId: options.projectId,
     journalPath: resolveJournalForRepository(repoRoot),
+    entries,
   });
 }
 

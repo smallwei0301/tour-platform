@@ -5,14 +5,18 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, writeFile, unlink } from 'node:fs/promises';
+import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import ts from 'typescript';
 
+const WEB_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+
 async function importRateLimitModule() {
-  const sourcePath = path.resolve('src/lib/rate-limit.ts');
-  const compiledPath = path.resolve('src/lib/.tmp-rate-limit-issue1411.test.mjs');
+  const sourcePath = path.join(WEB_ROOT, 'src/lib/rate-limit.ts');
+  const scratchDir = await mkdtemp(path.join(tmpdir(), 'tour-platform-rate-limit-'));
+  const compiledPath = path.join(scratchDir, 'rate-limit.test.mjs');
 
   const source = await readFile(sourcePath, 'utf8');
   const compiled = ts.transpileModule(source, {
@@ -23,12 +27,13 @@ async function importRateLimitModule() {
     fileName: sourcePath,
   }).outputText;
 
+  await copyFile(path.join(WEB_ROOT, 'src/lib/trusted-ip.mjs'), path.join(scratchDir, 'trusted-ip.mjs'));
   await writeFile(compiledPath, compiled, 'utf8');
 
   try {
     return await import(`${pathToFileURL(compiledPath).href}?t=${Date.now()}`);
   } finally {
-    await unlink(compiledPath).catch(() => {});
+    await rm(scratchDir, { recursive: true, force: true });
   }
 }
 

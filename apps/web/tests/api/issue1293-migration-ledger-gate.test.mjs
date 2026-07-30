@@ -242,7 +242,7 @@ it('verified gate rejects fake ledger identity and fabricated verified or baseli
 });
 
 describe('issue #1293 — repo現況verified release gate誠實HOLD', () => {
-  it('六支Midao post-cutoff未套production，因此verified mode exact列為missing', () => {
+  it('九支Midao post-cutoff未套production，因此verified mode exact列為missing', () => {
     const cli = runCli({ migrationsDir: path.join(REPO_ROOT, 'supabase', 'migrations'), ledgerPath: LEDGER_PATH });
     assert.equal(cli.status, 1, `repo verified gate應HOLD\n${cli.stdout}\n${cli.stderr}`);
     const result = JSON.parse(cli.stdout);
@@ -253,6 +253,9 @@ describe('issue #1293 — repo現況verified release gate誠實HOLD', () => {
       '20260723002500_midao_audit_events.sql',
       '20260723003000_midao_atomic_backend_mode_switch.sql',
       '20260723003500_midao_service_role_acl_hardening.sql',
+      '20260723004000_midao_request_read_projection.sql',
+      '20260723010000_midao_atomic_booking_approval.sql',
+      '20260723011000_midao_atomic_booking_decision_command.sql',
     ]);
   });
 });

@@ -79,7 +79,7 @@ live catalog + live migration history
 pinned Supabase platform bootstrap
 → materialize one synthetic baseline_v1 migration
    [baseline.sql bytes + exact boundary + managed-overlays.sql bytes]
-→ six Midao post-cutoff migrations
+→ reviewed Midao post-cutoff manifest（目前7支）
 → later post-cutoff migrations
 → deterministic non-secret seed
 → extract terminal catalog
