@@ -116,6 +116,17 @@ describe('guide/apply 單頁流程', () => {
     assert.doesNotMatch(page, /payoutFacts/, '分潤三格資料結構應已移除');
   });
 
+  test('JSON-LD 絕對網址走 SITE_URL，不得硬編網域（綁自訂網域後才不會指向舊站）', () => {
+    assert.match(
+      page,
+      /import \{ SITE_URL \} from '[^']*seo\/site-metadata'/,
+      '需自 site-metadata 取得站台網址',
+    );
+    assert.match(page, /item: SITE_URL/, 'breadcrumb 首頁需用 SITE_URL');
+    assert.match(page, /`\$\{SITE_URL\}\/guide\/apply`/, 'breadcrumb 本頁需用 SITE_URL');
+    assert.doesNotMatch(page, /https:\/\/tour-platform-nine\.vercel\.app/, '不得硬編網域字面值');
+  });
+
   test('用語：頁面與 metadata 一律「嚮導」', () => {
     for (const [name, src] of [['page', page], ['layout', layout]]) {
       assert.doesNotMatch(src, /導遊/, `${name} 不得殘留「導遊」字眼`);

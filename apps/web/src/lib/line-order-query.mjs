@@ -69,7 +69,10 @@ export function parseOrderQueryIntent(text) {
 
 function baseUrl() {
   const raw = String(process.env.NEXT_PUBLIC_APP_URL || '').trim().replace(/\/+$/, '');
-  return raw || 'https://midao.tw';
+  // fallback 與其餘各頁一致（未設 NEXT_PUBLIC_APP_URL 時的 Vercel 預設網址）。
+  // 原本寫 https://midao.tw —— 該網域平台並未持有（2026-07-30 查證仍可公開註冊），
+  // 一旦被第三方註冊，LINE 查詢訊息就會把旅客導到別人的站，故改回預設網址。
+  return raw || 'https://tour-platform-nine.vercel.app';
 }
 
 function shortId(id) {
