@@ -68,7 +68,7 @@ test('runtime catalog materializes the exact 8-arg decision RPC and canonical se
   assert.deepEqual(catalog.rows[0], {
     namespace: 'public',
     signature: decisionSignature,
-    identity_arguments: 'uuid, text, text, uuid, text, text, text, text',
+    identity_arguments: 'p_guide_id uuid, p_actor_type text, p_actor_id text, p_booking_id uuid, p_action text, p_note text, p_idempotency_key text, p_request_hash text',
     result: 'jsonb',
     prosecdef: true,
     proconfig: ['search_path=pg_catalog'],
