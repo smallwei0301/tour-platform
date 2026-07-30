@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, PageHeader } from '../../../../../src/components/admin/ui';
-import { paymentMethodLabels } from '../../../../../src/lib/guide-payment-options.mjs';
 import { csrfHeaders, ensureCsrfToken } from '../../../../../src/lib/csrf-client';
 import { sanitizeGuideRealmRedirect } from '../../../../../src/lib/midao/login-redirect';
 import {
@@ -11,6 +10,8 @@ import {
   executeAdminBackendModeSwitch,
   normalizeAdminBackendModeReason,
 } from '../../../../../src/lib/midao/admin-backend-mode-switch.mjs';
+// 申請內容的欄位清單與管理者通知信／Telegram 同源，避免三個介面各列一套而漂移。
+import { buildGuideApplicationFields } from '../../../../../src/lib/guide-application/summary';
 
 type GuideApplicationDetail = {
   fullName: string;
@@ -244,33 +245,52 @@ export default function AdminGuideDetailPage() {
                 </div>
               )}
             </div>
-            {/* 申請人自填的專長/語言/熟悉區域/證照/收款方式 — 上線時自動帶入導遊檔案 */}
-            {([
-              { label: '專長', items: guide.application.specialties },
-              { label: '語言', items: guide.application.languages },
-              { label: '熟悉區域', items: guide.application.regions },
-              { label: '證照（自述，僅供審核參考）', items: guide.application.certifications },
-              { label: '收款方式', items: paymentMethodLabels(guide.application.paymentMethods) },
-            ] as Array<{ label: string; items?: string[] }>).map((section) =>
-              section.items && section.items.length > 0 ? (
-                <div key={section.label} style={{ marginTop: 12, background: '#f9fafb', borderRadius: 8, padding: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{section.label}</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {section.items.map((item) => (
-                      <span key={item} style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: '#eef2ff', color: '#3730a3' }}>
-                        {item}
-                      </span>
+            {/* 申請表完整內容 — 一律列出所有欄位，沒填的顯示「未填寫」。
+                招募表單除四項必填外全部選填，審核者需要一眼看出「缺什麼」，
+                所以這裡刻意不做「空的就不顯示」的過濾（那是舊行為，會讓人
+                誤以為申請者沒有那一欄）。欄位清單與通知信／TG 同源。 */}
+            {(() => {
+              const fields = buildGuideApplicationFields(guide.application!);
+              const unfilled = fields.filter((f) => !f.filled);
+              return (
+                <div style={{ marginTop: 16 }} data-testid="application-all-fields">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>申請表內容</div>
+                    <span
+                      data-testid="application-unfilled-count"
+                      style={{
+                        padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                        background: unfilled.length ? '#fffbeb' : '#ecfdf5',
+                        color: unfilled.length ? '#92400e' : '#065f46',
+                      }}
+                    >
+                      {unfilled.length ? `未填寫 ${unfilled.length} 項` : '全部已填寫'}
+                    </span>
+                  </div>
+                  <div style={{ background: '#f9fafb', borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                    {/* 版面走 admin-console.css 的 .admin-field-* — 手機上會改成
+                        上下堆疊並允許長字串斷行，避免固定寬標籤欄把值擠出畫面。 */}
+                    {fields.map((field) => (
+                      <div key={field.label} className="admin-field-row">
+                        <div className="admin-field-label">
+                          {field.label}{field.required ? ' *' : ''}
+                        </div>
+                        <div
+                          className="admin-field-value"
+                          style={{
+                            whiteSpace: field.multiline ? 'pre-wrap' : 'normal',
+                            color: field.filled ? '#111827' : '#9ca3af',
+                            fontStyle: field.filled ? 'normal' : 'italic',
+                          }}
+                        >
+                          {field.value}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
-              ) : null
-            )}
-            {guide.application.bio && (
-              <div style={{ marginTop: 12, background: '#f9fafb', borderRadius: 8, padding: 16 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>個人簡介</div>
-                <p style={{ margin: 0, fontSize: 14, color: '#374151', lineHeight: 1.7 }}>{guide.application.bio}</p>
-              </div>
-            )}
+              );
+            })()}
             {/* 申請者上傳的照片 — 上線時自動帶入導遊檔案 */}
             {guide.application.heroImageUrl && (
               <div style={{ marginTop: 12, background: '#f9fafb', borderRadius: 8, padding: 16 }}>

@@ -123,6 +123,30 @@
       "applied_at": "2026-07-10T12:20:00+08:00",
       "status": "verified",
       "note": "固定 fn_process_payment_callback_atomic(uuid,text,text,jsonb,text,text) 的 search_path=pg_catalog,public,pg_temp，修 advisor WARN function_search_path_mutable（0011）——#1637 重建該金流函式時漏帶、回歸 #1564 的收斂。單行 ALTER FUNCTION、行為不變。apply_migration success；驗證 proconfig=['search_path=pg_catalog, public, pg_temp']、get_advisors(security) 該 WARN 已消除（僅剩 auth_leaked_password_protection＝owner Dashboard 開關）。rollback：同名 .rollback.sql（RESET search_path）。Refs #1564 #1293。"
+    },
+    {
+      "filename": "20260729160000_issue1777_atomic_settlement_and_payout_confirm.sql",
+      "environment": "production",
+      "operator": "Claude Code agent（SQL-OVERRIDE 授權：使用者「SQL-OVERRIDE 授權」）套用＋驗證",
+      "applied_at": "2026-07-29T21:43:00+08:00",
+      "status": "verified",
+      "note": "#1777 Phase 2：建立 fn_record_settlement_atomic(jsonb,timestamptz) 與 fn_confirm_payout_atomic(uuid,text,text)，把結算分錄+導遊餘額、以及扣餘額+pending→paid+audit 各自收斂為單一交易（修缺口 3/4：split-brain 與重複扣款）。純建函式，未改表結構、未寫入任何資料列。apply_migration success。驗證：pg_proc 實查兩支函式存在且 proconfig=search_path=pg_catalog,public,pg_temp；錯誤路徑實測 fn_confirm_payout_atomic 對不存在 payout 回 SQLSTATE P0002；空批次 fn_record_settlement_atomic('[]') 回 0 且無寫入。套用後資料實查未變動（payout_items 10 筆、guide_balances 1 筆合計 21814、payouts 1 pending、0 新 audit）。注意：本檔的 REVOKE 僅涵蓋 PUBLIC，anon/authenticated 仍經 default privileges 取得 EXECUTE，已由 20260729180000 hotfix 收回。backup：Supabase 託管備份/PITR；本 migration 無資料異動，回滾僅需 DROP FUNCTION。rollback：同名 .rollback.sql。Refs #1777 #1293。"
+    },
+    {
+      "filename": "20260729170000_issue1777_refund_adjustment_ledger.sql",
+      "environment": "production",
+      "operator": "Claude Code agent（SQL-OVERRIDE 授權：使用者「SQL-OVERRIDE 授權」）套用＋驗證",
+      "applied_at": "2026-07-29T21:43:00+08:00",
+      "status": "verified",
+      "note": "#1777 Phase 3：payout_items 擴充為 append-only ledger——新增 refund_event_id 欄、settlement_kind 允許值加 refund_adjustment、(order_id,settlement_kind) 唯一鍵縮為部分索引（僅約束 settlement/reversal）、新增部分唯一索引 (order_id,refund_event_id)；並建立 fn_apply_refund_adjustment_atomic(uuid,text,text) 只追加『目標−ledger 現值』差額（決策 B）。apply_migration success。驗證：實查 refund_event_id 欄位存在、CHECK 已含三種 kind、payout_items_order_kind_unique 帶 WHERE settlement_kind IN ('settlement','reversal')、payout_items_refund_event_unique 帶 WHERE refund_event_id IS NOT NULL、函式 proconfig 已 pin search_path；錯誤路徑實測空冪等鍵回 SQLSTATE 22023。套用後資料實查未變動（refund_adjustment 分錄 0 筆、refund_event_id 非空 0 筆、餘額合計 21814 不變）。注意：anon/authenticated 的 EXECUTE 已由 20260729180000 hotfix 收回。backup：Supabase 託管備份/PITR；未異動既有資料列。rollback：同名 .rollback.sql（還原全表唯一鍵前須先確認無 refund_adjustment 分錄殘留，檔內已註明）。Refs #1777 #1293。"
+    },
+    {
+      "filename": "20260729180000_issue1777_revoke_atomic_fns_from_anon.sql",
+      "environment": "production",
+      "operator": "Claude Code agent（SQL-OVERRIDE 授權：使用者「SQL-OVERRIDE 授權」）套用＋驗證",
+      "applied_at": "2026-07-29T21:43:00+08:00",
+      "status": "verified",
+      "note": "#1777 hotfix（P0 安全）：套用 Phase 2/3 後實查發現三支財務函式對 anon 與 authenticated 皆持有 EXECUTE——因 Supabase 在 public schema 對 FUNCTIONS 有 default privileges，而原 migration 只寫 REVOKE ALL … FROM PUBLIC（撤不掉具名角色）。未修正前未登入者可直接呼叫 fn_confirm_payout_atomic 標記出款並扣減導遊餘額。本檔對三支函式 REVOKE ALL FROM anon,authenticated,public 並重新 GRANT EXECUTE TO service_role，另以 ALTER DEFAULT PRIVILEGES 撤銷 anon/authenticated 對 FUNCTIONS 的預設 EXECUTE，避免日後新建金流函式重蹈覆轍（既有 20260709_issue1678 hardening 只涵蓋 TABLES）。apply_migration success。驗證：routine_privileges 實查三支函式的 grantee 僅剩 service_role 與 postgres。無資料異動。rollback：同名 .rollback.sql（只還原 default privileges，刻意不重新授權 anon——回滾不該把漏洞裝回去）。Refs #1777 #1678 #1293。"
     }
   ]
 }

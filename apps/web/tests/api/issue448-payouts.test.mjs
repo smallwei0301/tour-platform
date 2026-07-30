@@ -184,9 +184,12 @@ describe('Issue 448 Payouts — POST confirm route contract', () => {
     assert.ok(hasPromiseParams, 'Must use Promise<{ payoutId }> and await params (Next.js 15)');
   });
 
-  it('calls confirmPayoutDb', () => {
+  it('calls the atomic payout-confirm writer', () => {
     const src = readRoute(ROUTE);
-    assert.match(src, /confirmPayoutDb/, 'Must call confirmPayoutDb');
+    // #1777 Phase 2：confirm 改走 fn_confirm_payout_atomic（扣餘額／pending→paid
+    // ／audit 單一交易）。比對實際呼叫而非單純提及——舊斷言 /confirmPayoutDb/
+    // 會被解釋該遷移的註解匹配到，形成假綠燈。
+    assert.match(src, /await\s+confirmPayoutAtomicDb\(/, 'Must call confirmPayoutAtomicDb');
   });
 
   it('accepts confirmed_by and transfer_ref in request body', () => {

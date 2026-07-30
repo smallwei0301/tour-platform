@@ -38,13 +38,14 @@ function runFreshnessCheck(snapshotFile) {
   });
 }
 
-test('GREEN: a fresh snapshot (<12h) → readiness:check exits 0', () => {
-  const res = runFreshnessCheck(writeSnapshotFixture(4));
+test('GREEN: a fresh snapshot (<26h) → readiness:check exits 0', () => {
+  // 20h：舊 12h 門檻下會誤判 stale（每日刷新節奏必然出現的年齡），新門檻下必須為 fresh（#1654）
+  const res = runFreshnessCheck(writeSnapshotFixture(20));
   assert.equal(res.status, 0, res.stdout + res.stderr);
   assert.match(res.stdout, /\[OK\]/);
 });
 
-test('RED: a stale snapshot (>=12h) → readiness:check exits 1 (fails visible)', () => {
+test('RED: a stale snapshot (>=26h) → readiness:check exits 1 (fails visible)', () => {
   const res = runFreshnessCheck(writeSnapshotFixture(48));
   assert.equal(res.status, 1, res.stdout + res.stderr);
   assert.match(res.stdout + res.stderr, /\[STALE\]/);
@@ -56,9 +57,10 @@ test('source-contract: refresh workflow runs readiness:check WITHOUT swallowing 
   assert.doesNotMatch(wf, /readiness:check\s*\|\|\s*true/, 'must not swallow the staleness signal with `|| true`');
 });
 
-test('source-contract: freshness check enforces a 12h threshold and exits non-zero on stale', () => {
+test('source-contract: freshness check enforces a 26h threshold and exits non-zero on stale', () => {
+  // #1654：workflow 已由每 6h 降頻為每日（05:00 UTC），門檻同步為 26h（每日 + 2h 緩衝）
   const src = readFileSync(CHECK, 'utf8');
-  assert.match(src, /FRESHNESS_THRESHOLD_HOURS\s*=\s*12/);
+  assert.match(src, /FRESHNESS_THRESHOLD_HOURS\s*=\s*26/);
   assert.match(src, /process\.exit\(isFresh \? 0 : 1\)/);
 });
 

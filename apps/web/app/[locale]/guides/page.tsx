@@ -6,10 +6,10 @@ import { listPublishedGuidesDb } from '../../../src/lib/db.mjs';
 import GuidesContent from './GuidesContent';
 import { buildAlternates } from '../../../src/lib/seo-alternates.ts';
 
-// On-demand revalidation（非定時 ISR）：認識導遊列表直接讀 Supabase，
-// 平時維持靜態快取、零背景運算；當導遊在後台「儲存並公開」時，
+// On-demand revalidation（非定時 ISR）：認識嚮導列表直接讀 Supabase，
+// 平時維持靜態快取、零背景運算；當嚮導在後台「儲存並公開」時，
 // /api/guide/profile 會 revalidatePath('/guides') 精準失效，旅客下次
-// 刷新即見最新資料。導遊資料變動不頻繁，這比定時 ISR 更省資源。
+// 刷新即見最新資料。嚮導資料變動不頻繁，這比定時 ISR 更省資源。
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;

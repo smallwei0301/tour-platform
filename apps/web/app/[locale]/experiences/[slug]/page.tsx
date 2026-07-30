@@ -64,7 +64,7 @@ function toExperience(experience: Record<string, unknown>): Experience {
     levelLabel: String(experience.levelLabel ?? '新手友善'),
     highlightBullets: Array.isArray(experience.highlightBullets)
       ? experience.highlightBullets.map(String)
-      : (Array.isArray(experience.highlights) ? experience.highlights.map(String) : ['實名在地導遊', '小團體深度體驗', '透明價格與彈性取消']),
+      : (Array.isArray(experience.highlights) ? experience.highlights.map(String) : ['實名在地嚮導', '小團體深度體驗', '透明價格與彈性取消']),
     description: String(experience.description ?? '跟著懂路的人，走進最有故事的地方。'),
     ratingAvg: typeof experience.ratingAvg === 'number' ? experience.ratingAvg : null,
     ratingCount: typeof experience.ratingCount === 'number' ? experience.ratingCount : 0,

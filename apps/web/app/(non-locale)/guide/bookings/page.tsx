@@ -120,7 +120,7 @@ function ConflictOverrideWarning({ override }: { override: ConflictOverride }) {
         </div>
         {override.guideNote && (
           <div style={{ display: 'flex', gap: 8 }}>
-            <span style={{ color: '#92400e', width: 72, flexShrink: 0 }}>給導遊的備注</span>
+            <span style={{ color: '#92400e', width: 72, flexShrink: 0 }}>給嚮導的備注</span>
             <span style={{ fontWeight: 500 }}>{override.guideNote}</span>
           </div>
         )}

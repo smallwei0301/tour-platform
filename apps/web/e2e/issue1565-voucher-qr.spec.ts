@@ -33,7 +33,7 @@ test.describe('Issue #1565 — 旅客電子憑證 QR', () => {
     await expect(page.getByTestId('voucher-card')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId('voucher-qr')).toBeVisible();
     await expect(page.getByTestId('voucher-shortcode')).toHaveText('MID-7K9Q2X');
-    await expect(page.getByTestId('voucher-card')).toContainText('向導遊出示');
+    await expect(page.getByTestId('voucher-card')).toContainText('向嚮導出示');
   });
 
   test('T1565.2 — 非 confirmed（paid）訂單不顯示憑證', async ({ page }) => {

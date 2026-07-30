@@ -104,9 +104,9 @@ function GuideLoginForm() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{ fontSize: 36, marginBottom: 8 }}>🧭</div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1f2937' }}>導遊後台</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1f2937' }}>嚮導後台</h1>
           <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: 14 }}>
-            {isFirstTime ? '設定你的登入密碼' : '登入你的導遊帳號'}
+            {isFirstTime ? '設定你的登入密碼' : '登入你的嚮導帳號'}
           </p>
         </div>
 

@@ -101,7 +101,7 @@ const ICONS = {
 
 function getIconForHighlight(text: string) {
   if (text.includes('取消')) return ICONS.cancel;
-  if (text.includes('導遊')) return ICONS.guide;
+  if (text.includes('嚮導')) return ICONS.guide;
   if (text.includes('憑證')) return ICONS.ticket;
   if (text.includes('餐')) return ICONS.meal;
   if (text.includes('預訂') || text.includes('日')) return ICONS.clock;

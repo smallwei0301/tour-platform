@@ -81,15 +81,19 @@ test('點申請者名字 → 詳情頁渲染「申請詳情」視圖（不再 40
 
   const card = page.getByTestId('admin-guide-application-detail');
   await expect(card).toBeVisible({ timeout: 20_000 });
-  await expect(card.getByText('林小芳')).toBeVisible();
+  // 姓名在標題與「申請表內容」欄位表各出現一次，故指定 heading 以免 strict violation。
+  await expect(card.getByRole('heading', { name: '林小芳' })).toBeVisible();
   await expect(card.getByText('待審核')).toBeVisible();
   await expect(card.getByText('尚未建立正式導遊檔案')).toBeVisible();
-  await expect(card.getByText('fang@example.com')).toBeVisible();
+  await expect(card.getByText('fang@example.com').first()).toBeVisible();
   // 申請人自填的專長/語言/地區/證照必須呈現給審核者
-  await expect(card.getByText('山林健行')).toBeVisible();
-  await expect(card.getByText('英文')).toBeVisible();
-  await expect(card.getByText('屏東')).toBeVisible();
-  await expect(card.getByText('急救證照')).toBeVisible();
+  const allFields = card.getByTestId('application-all-fields');
+  await expect(allFields.getByText('山林健行')).toBeVisible();
+  await expect(allFields.getByText(/英文/)).toBeVisible();
+  await expect(allFields.getByText(/屏東/)).toBeVisible();
+  await expect(allFields.getByText('急救證照')).toBeVisible();
+  // 未填欄位也必須看得到（owner 需求：要知道申請者「沒填什麼」）
+  await expect(card.getByTestId('application-unfilled-count')).toBeVisible();
   // 申請者上傳的照片必須呈現給審核者
   await expect(card.getByTestId('application-avatar')).toBeVisible();
   await expect(card.getByTestId('application-hero')).toBeVisible();

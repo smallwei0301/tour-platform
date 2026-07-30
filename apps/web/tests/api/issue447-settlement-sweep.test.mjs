@@ -137,21 +137,37 @@ describe('Issue 447 — settlement sweep route structural checks', () => {
     assert.doesNotMatch(src, /tour_date/, 'must NOT use non-existent tour_date column')
   })
 
-  it('sweep route inserts into payout_items with ON CONFLICT DO NOTHING', () => {
+  // #1777 Phase 2 起，ledger 分錄與餘額累加移入單一 DB 交易
+  // （fn_record_settlement_atomic）。原本這裡有兩條契約鎖住「route 自己 upsert
+  // payout_items」與「route fetch+upsert 累加 guide_balances」——後者正是缺口 3
+  // （split-brain／lost update）的成因，已被刻意移除，故契約隨之反轉。
+  //
+  // 註：舊斷言改用寬鬆 regex 比對整個檔案，會被解釋遷移的**註解**匹配到而假綠。
+  // 新契約一律鎖「實際呼叫」形式。
+  it('sweep route delegates the ledger write to the atomic settlement RPC', () => {
     const src = readFileSync(routePath, 'utf8')
-    assert.match(src, /payout_items/, 'must upsert/insert into payout_items')
-    assert.match(src, /onConflict.*order_id/, 'must use onConflict on order_id')
-    // Supabase upsert with ignoreDuplicates=true maps to ON CONFLICT DO NOTHING
-    assert.match(src, /ignoreDuplicates.*true|\.ignore\(\)/, 'must use ignoreDuplicates:true or .ignore() for idempotency')
+    assert.match(src, /await\s+recordSettlementAtomicDb\(/, 'must call recordSettlementAtomicDb')
+    assert.match(
+      src,
+      /import\s*\{[^}]*recordSettlementAtomicDb[^}]*\}\s*from/,
+      'must import the atomic writer from the settlement domain module',
+    )
   })
 
-  it('sweep route accumulates guide_balances via fetch+upsert', () => {
+  it('sweep route no longer performs read-modify-write on guide_balances', () => {
     const src = readFileSync(routePath, 'utf8')
-    assert.match(src, /guide_balances/, 'must upsert guide_balances')
-    assert.match(src, /balance_twd/, 'must include balance_twd in upsert')
-    assert.match(src, /last_settled_at/, 'must include last_settled_at in upsert')
-    // Must fetch existing balance before upserting (accumulate, not replace)
-    assert.match(src, /existing.*balance_twd|balance_twd.*existing/s, 'must fetch existing balance before upserting')
+    // 只看程式碼，不看註解——避免解釋歷史的註解讓過期行為「通過」。
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+    assert.doesNotMatch(
+      code,
+      /from\(\s*['"]guide_balances['"]\s*\)/,
+      'route 不得再直接讀寫 guide_balances：餘額累加必須在 RPC 交易內完成',
+    )
+    assert.doesNotMatch(
+      code,
+      /from\(\s*['"]payout_items['"]\s*\)\s*\.\s*upsert/,
+      'route 不得再直接 upsert payout_items：ledger 寫入必須與餘額同交易',
+    )
   })
 
   it('sweep route delegates payout-item math to computeSweepPayoutItem (#847)', () => {

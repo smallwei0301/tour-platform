@@ -6,6 +6,13 @@
 
 import { buildMonthlyAccountingReport } from './report.mjs';
 import { getMonthlyAccountingReportDataDb } from './db-report.mjs';
+import { getReconciliationDataDb } from './db-reconciliation.mjs';
+import {
+  buildGuideReconciliation,
+  buildOrderReconciliation,
+  buildEligibilityAudit,
+  buildReconciliationReport,
+} from './reconciliation.mjs';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../config/supabase-service-env.mjs';
 
 async function getServiceSupabase() {
@@ -18,7 +25,8 @@ async function getServiceSupabase() {
 
 /**
  * @param {string} month - 'YYYY-MM'（呼叫端先驗格式）
- * @returns {Promise<ReturnType<typeof buildMonthlyAccountingReport>>}
+ * @returns {Promise<ReturnType<typeof buildMonthlyAccountingReport> & { reconciliation?: any }>}
+ *   #1777 Phase 4 起額外附帶 reconciliation 區塊（無 Supabase env 的 fallback 路徑不含）。
  */
 export async function getMonthlyAccountingReport(month) {
   if (!getSupabaseUrl()) {
@@ -26,9 +34,36 @@ export async function getMonthlyAccountingReport(month) {
   }
   const supabase = await getServiceSupabase();
   const data = await getMonthlyAccountingReportDataDb(supabase, month);
-  return buildMonthlyAccountingReport({
+  const report = buildMonthlyAccountingReport({
     month,
     generatedAt: new Date().toISOString(),
     ...data,
   });
+
+  // #1777 Phase 4：附上 ledger／balance／payout 三方對帳結論與待人工處理項。
+  // 對帳是全期不變量檢查（非歸月），因此與月報表資料分開查詢。失敗不影響月報
+  // 主體——報表本身仍要出得來，對帳區塊標記為不可用即可。
+  let reconciliation;
+  try {
+    const reconciliationData = await getReconciliationDataDb(supabase);
+    reconciliation = buildReconciliationReport({
+      guideReconciliation: buildGuideReconciliation(reconciliationData),
+      orderReconciliation: buildOrderReconciliation({
+        orders: reconciliationData.orders,
+        ledgerRows: reconciliationData.ledgerRows,
+        commissionRate: reconciliationData.commissionRate,
+      }),
+      eligibilityAudit: buildEligibilityAudit({
+        orders: reconciliationData.orders,
+        ledgerRows: reconciliationData.ledgerRows,
+      }),
+    });
+  } catch (err) {
+    reconciliation = {
+      available: false,
+      error: err instanceof Error ? err.message : 'reconciliation failed',
+    };
+  }
+
+  return { ...report, reconciliation };
 }

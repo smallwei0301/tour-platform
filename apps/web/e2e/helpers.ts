@@ -1,4 +1,4 @@
-import { test as base, expect, Page, APIRequestContext } from '@playwright/test';
+import { test as base, expect, Page, Locator, APIRequestContext } from '@playwright/test';
 import { createImpersonationActorCookie } from '../src/lib/midao/impersonation-actor';
 
 const ADMIN_TOKEN = process.env.ADMIN_ACCESS_TOKEN || 'test-token-123';
@@ -225,6 +225,43 @@ async function setMidaoImpersonationActorCookie(
   ]);
 }
 
+/**
+ * Helper: 填一組受控欄位，並確保值撐過 hydration。
+ *
+ * Next dev 下 client component 的 SSR HTML 先到、React 才接上事件。若 `fill()`
+ * 落在 hydration 之前，React 掛載後會用初始 state（空字串）重繪，把剛打進去的
+ * 值直接抹掉 —— 症狀是後面欄位都正常、只有最前面一兩個莫名是空的，表單於是
+ * 永遠停在「必填未完成」、送出鈕不會 enable。
+ *
+ * 單獨回讀某一欄不夠：那一刻值可能還在，hydration 稍後才抹掉。所以這裡「全部
+ * 填完再全部回讀」，只要有任一欄被抹掉就整組重填，直到全部穩定。
+ */
+async function fillFormHydrated(page: Page, entries: [selector: string, value: string][]) {
+  await expect(async () => {
+    for (const [selector, value] of entries) await page.locator(selector).fill(value);
+    for (const [selector, value] of entries) {
+      expect(await page.locator(selector).inputValue()).toBe(value);
+    }
+  }).toPass({ timeout: 20_000 });
+}
+
+/**
+ * Helper: 點一個「展開型」按鈕，直到它真的展開為止。
+ *
+ * 與 fillFormHydrated 同源問題（見 lessons.md 2026-07-30）：`goto()` 後立刻
+ * `click()` 可能落在 hydration 之前，onClick 還沒掛上 → 點了等於沒點，接著
+ * 等展開內容就 timeout。
+ *
+ * 這裡用 React 控制的 `aria-expanded` 當成功信號並重試點擊。**前提是該按鈕
+ * 只會開、不會 toggle**（例如 `setOpen(true)`），否則重試會把它關回去。
+ */
+async function clickUntilExpanded(locator: Locator) {
+  await expect(async () => {
+    await locator.click();
+    await expect(locator).toHaveAttribute('aria-expanded', 'true', { timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
+}
+
 /** Fixture: authenticated page + isMobile flag */
 const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   authedPage: async ({ page }, use) => {
@@ -246,4 +283,6 @@ export {
   setTravelerSession,
   loginMidaoGuideViaApi,
   setMidaoImpersonationActorCookie,
+  fillFormHydrated,
+  clickUntilExpanded,
 };

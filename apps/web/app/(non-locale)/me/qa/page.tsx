@@ -69,7 +69,7 @@ export default function MyQaPage() {
     <main className="tp-container" style={pageStyle}>
       <h1 style={titleStyle} data-testid="my-qa-title">問答回覆</h1>
       <p style={{ fontSize: 13, color: 'var(--tp-muted)', margin: '0 0 20px' }}>
-        你向行程或導遊提出的問題與回覆都集中在這裡。
+        你向行程或嚮導提出的問題與回覆都集中在這裡。
       </p>
       <MemberTabs />
 
@@ -116,7 +116,7 @@ export default function MyQaPage() {
                 </div>
               ) : (
                 <p style={{ margin: 0, fontSize: 13, color: 'var(--tp-muted)' }}>
-                  {item.status === 'rejected' ? '此提問未通過審核。' : '導遊尚未回覆，回覆後會顯示在這裡。'}
+                  {item.status === 'rejected' ? '此提問未通過審核。' : '嚮導尚未回覆，回覆後會顯示在這裡。'}
                 </p>
               )}
             </div>

@@ -30,7 +30,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
   const t = useTranslations('guides');
 
   // Derive filter options from actual guide data。地區改用「短名搜尋群組」呈現（與
-  // footer／行程側欄同源 listSearchRegions），只列出實際有導遊的群組；比對時把導遊
+  // footer／行程側欄同源 listSearchRegions），只列出實際有嚮導的群組；比對時把嚮導
   // 存的全名（高雄市）與群組短名（高雄）經 expandRegionToDbValues 展開後對應。
   const { regions, languages, specialties } = useMemo(() => {
     const regionLabelSet = new Set<string>();
@@ -155,7 +155,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
       );
     }
     if (selectedRegions.length > 0) {
-      // 導遊存全名（高雄市）；選取的群組短名（高雄）展開後比對，嘉義/新竹會涵蓋市+縣。
+      // 嚮導存全名（高雄市）；選取的群組短名（高雄）展開後比對，嘉義/新竹會涵蓋市+縣。
       result = result.filter((g) =>
         g.region && selectedRegions.some((sel) => expandRegionToDbValues(sel).includes(normalizeRegionToDbValue(g.region)))
       );

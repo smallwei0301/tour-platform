@@ -97,7 +97,7 @@ function LoginContent() {
             </svg>
           </div>
           <h1 className="login-brand">Midao 祕島</h1>
-          <p className="login-brand-sub">台灣在地導遊平台</p>
+          <p className="login-brand-sub">台灣在地嚮導平台</p>
         </div>
 
         {/* 登入卡片 */}

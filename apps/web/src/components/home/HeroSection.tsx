@@ -32,7 +32,7 @@ export function HeroSection() {
       />
       <div className="tp-container" style={{ position: 'relative', zIndex: 1, textAlign: 'left', alignItems: 'flex-start' }}>
         <p className="tp-kicker" style={{ color: '#E8834D', letterSpacing: 2, fontWeight: 700, marginBottom: 8 }}>
-          台灣在地導遊平台
+          台灣在地嚮導平台
         </p>
         <h1
           style={{
@@ -49,7 +49,7 @@ export function HeroSection() {
           帶你走進台灣最有故事的地方
         </h1>
         <p className="tp-hero-sub" style={{ color: 'rgba(255,255,255,0.9)', maxWidth: 560, lineHeight: 1.72 }}>
-          不跟團、不趕路。預約在地導遊，用你的節奏認識這座島嶼。
+          不跟團、不趕路。預約在地嚮導，用你的節奏認識這座島嶼。
         </p>
 
         <div className="tp-cta-row" style={{ marginTop: 28, alignItems: 'center', gap: 12 }}>
@@ -68,7 +68,7 @@ export function HeroSection() {
               background: 'rgba(255,255,255,0.08)',
             }}
           >
-            再挑適合你的導遊
+            再挑適合你的嚮導
           </Link>
         </div>
       </div>

@@ -2,17 +2,17 @@ import '../../../../src/styles/lp-apply.css'; // #1735 route-scoped（拆自 glo
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: '申請成為導遊',
-  description: '加入 Midao 祕島導遊社群，分享你的在地知識，讓旅客體驗最真實的台灣。提交申請表，我們將在 3–5 個工作天內完成審核。',
+  title: '申請成為嚮導',
+  description: '在地嚮導招募中！加入 Midao 祕島嚮導社群，分享你的在地知識，讓旅客體驗最真實的台灣。一頁填完申請表，我們將在 3–5 個工作天內與你聯繫。',
   openGraph: {
-    title: '申請成為導遊 | Midao 祕島',
-    description: '加入 Midao 祕島，成為認證在地導遊，創造難忘的旅遊體驗。',
-    images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: '成為 Midao 祕島導遊' }],
+    title: '在地嚮導招募中！| Midao 祕島',
+    description: '你熟悉一個地方，知道一般旅客找不到的風景、故事、美食或文化嗎？加入 Midao 祕島，成為在地嚮導。',
+    images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: '成為 Midao 祕島嚮導' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: '申請成為導遊 | Midao 祕島',
-    description: '加入 Midao 祕島，成為認證在地導遊，創造難忘的旅遊體驗。',
+    title: '在地嚮導招募中！| Midao 祕島',
+    description: '你熟悉一個地方，知道一般旅客找不到的風景、故事、美食或文化嗎？加入 Midao 祕島，成為在地嚮導。',
     images: ['/images/og-default.png'],
   },
 };

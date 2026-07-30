@@ -12,7 +12,7 @@ import {
   CtaMountain, ArrowRight, LockIcon,
 } from './sib-icons';
 
-// 與導遊公開頁一致的 on-demand ISR；另加 time-based revalidate 兜底（存檔 revalidatePath 打不到本頁）。
+// 與嚮導公開頁一致的 on-demand ISR；另加 time-based revalidate 兜底（存檔 revalidatePath 打不到本頁）。
 export const fetchCache = 'force-cache';
 export const revalidate = 60;
 export const dynamicParams = true;
