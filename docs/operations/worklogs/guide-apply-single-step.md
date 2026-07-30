@@ -131,6 +131,55 @@ e2e `guide-apply-pipeline.spec.ts`「只填必填四欄即可送出」鎖住此�
      才看得到。若日後希望招募階段先講清楚條件，可改放在 `/for-guides`（該頁已有
      Beta 定價 NT$0＋15% 區塊），不必動招募頁版面。
 
+## 追加需求：管理者通知 ＋ 後台看得到完整填寫內容（owner 反映沒收到信）
+
+### 新增領域模組 `src/lib/guide-application/`
+
+**為什麼開子資料夾**：architecture ratchet 有兩道天花板 ——
+`email.ts` 行數上限 863（原本想把信件內容併進去，一寫就 943 行超標）、
+`src/lib` 頂層檔案數上限 179（新增兩個頂層檔就 181 超標）。
+兩者都指向同一個做法：新領域另開子資料夾。
+
+| 檔案 | 職責 |
+|---|---|
+| `summary.ts` | **欄位清單單一來源**：email／Telegram／後台三個介面共用；一律回傳完整欄位並以 `filled` 標記，不做空值過濾 |
+| `admin-email.ts` | 管理者通知信（借用 `email.ts` 的 `sendEmailWithContract` 與 `wrapEmail`） |
+| `telegram-text.ts` | Telegram 純文字訊息（pure function） |
+| `notify.ts` | fan-out orchestrator（best-effort，永不 throw） |
+
+### 三項需求對應
+
+1. **Email 得知所有填寫內容** → 寄給 `ADMIN_EMAIL_ALLOWLIST` 全員，表格列出**所有欄位**
+   （未填的標「未填寫」並灰體斜體），頂部加未填欄位數摘要。
+2. **Telegram 收到通知** → 走既有 `pushTelegramToAdmin`（`TELEGRAM_ORDER_CHAT_ID`），
+   同一份欄位清單的純文字版。
+3. **後台點名字看到所有填寫與未填寫** → 詳情頁改用 `buildGuideApplicationFields`，
+   **舊行為是「空的就整段不顯示」**（owner 因此看不出申請者缺什麼），現在一律列出，
+   並加「未填寫 N 項」徽章（`data-testid="application-unfilled-count"`）。
+
+### 關鍵設計決策
+
+- **不需要新環境變數**：`ADMIN_EMAIL_ALLOWLIST`／`RESEND_API_KEY`／
+  `TELEGRAM_BOT_TOKEN`／`TELEGRAM_ORDER_CHAT_ID` 都是既有且已在 `.env.example` 列出。
+  兩個管道靠「env 有沒有設」自然 self-skip，沒有額外 feature flag。
+- **通知一律 best-effort**：`Promise.allSettled` ＋ 每腿各自 try/catch。申請者已經填完
+  表單，不能因為通知寄不出去就讓他看到「申請失敗」（申請其實已進 DB）。
+- **在 route 內 `await` 通知**（不 fire-and-forget）：serverless function 在 response
+  送出後可能立刻凍結，不 await 會讓通知有機會送不出去。
+- **不併進通知矩陣**（`notification-settings`）：該矩陣的 `NOTIFY_EVENTS` 明確只涵蓋
+  訂單事件，硬塞會污染 admin 訂單通知 UI 與其斷言。
+- **env 走 `getAdminAuthEnv()`**：ratchet 禁止新增直讀 env 的檔案；該 getter 已存在於
+  凍結檔 `security-env.mjs`，只讀不改。
+- **bio 佔位文案等同未填**：三個介面都把 `BIO_UNFILLED_PLACEHOLDER` 顯示成「未填寫」，
+  不讓審核者誤以為申請者真的寫了東西。
+
+### 順手修掉一個真的 XSS 破口
+
+新寫的 escape 測試抓到：`wrapEmail(title, …)` 會把 title 原樣插進 `<title>`，
+而通知信 subject 含申請人自填姓名（`/guide/apply` 是**公開端點**）→
+`<script>` 會原樣進 email HTML。已在 `admin-email.ts` 對 subject 做 escape。
+（其他既有 email 呼叫端也有同樣模式，但 subject 來源多為內部資料，本輪未擴大處理。）
+
 ## CI 對照（本輪確認）
 
 `ci.yml` 跑 lint → typecheck → `npm test` → `build` → ISR smoke → preflight；

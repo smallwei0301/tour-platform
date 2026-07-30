@@ -71,7 +71,13 @@ describe('guide/apply 單頁流程', () => {
     assert.ok(page.includes('其他想分享的內容（選填）'), '補充說明需標示選填');
     // textarea 不得再帶 required；bio 組裝需有 fallback，否則後端會擋掉「什麼都沒填」。
     assert.doesNotMatch(page, /id="apply-bio"[^>]*required/, 'apply-bio 不得再是必填');
-    assert.match(page, /\|\|\s*'（申請者未填寫補充說明，請於聯繫時確認）'/, 'bio 需有非空 fallback');
+    // fallback 文案取自共用模組（勿在頁面硬編字面值，後台／通知信要同源）。
+    assert.match(page, /\|\|\s*BIO_UNFILLED_PLACEHOLDER/, 'bio 需有非空 fallback');
+    assert.match(
+      page,
+      /import \{ BIO_UNFILLED_PLACEHOLDER \} from '[^']*guide-application\/summary'/,
+      'fallback 文案需自 guide-application/summary 匯入',
+    );
   });
 
   test('四大優點以 inline SVG 圖示呈現（比照海報）', () => {

@@ -10,6 +10,8 @@ import { compressImage } from '../../../../src/lib/client-image-compress';
 // 主題篩選、活動編輯下拉同源（category-tags.mjs），避免各處標籤漂移。
 // 海報上的美食／攝影／親子／在地生活由「其他想帶的旅程類型」自由填寫欄承接。
 import { CATEGORY_OPTIONS } from '../../../../src/lib/category-tags.mjs';
+// 補充說明留空時的佔位文案與後台／通知信同源（勿在此硬編字面值）。
+import { BIO_UNFILLED_PLACEHOLDER } from '../../../../src/lib/guide-application/summary';
 
 /* ── 海報四大優點的圖示（inline SVG，線條風，顏色由 CSS 的 stroke 決定）──
    共用 viewBox 32×32；fill/stroke 一律交給 .lp-apply-perk-icon svg 統一設定，
@@ -175,7 +177,7 @@ export default function GuideApplyPage() {
         contactTime.trim() && `方便聯絡時間：${contactTime.trim()}`,
       ]
         .filter(Boolean)
-        .join('\n') || '（申請者未填寫補充說明，請於聯繫時確認）';
+        .join('\n') || BIO_UNFILLED_PLACEHOLDER;
 
       const res = await fetch('/api/guide-applications', {
         method: 'POST',

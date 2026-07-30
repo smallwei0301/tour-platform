@@ -36,6 +36,7 @@ const PROMOTE_ROUTE = join(APP_ROOT, 'app/api/admin/guides/promote/route.ts');
 const DETAIL_ROUTE = join(APP_ROOT, 'app/api/admin/guides/[guideId]/route.ts');
 const DETAIL_PAGE = join(APP_ROOT, 'app/(non-locale)/admin/guides/[guideId]/page.tsx');
 const APPLY_PAGE = join(APP_ROOT, 'app/(non-locale)/guide/apply/page.tsx');
+const SUMMARY_MODULE = join(APP_ROOT, 'src/lib/guide-application/summary.ts');
 const MIGRATION = join(REPO_ROOT, 'supabase/migrations/20260610_guide_applications_profile_fields.sql');
 
 const SAMPLE = {
@@ -124,12 +125,26 @@ test('admin 詳情 API：application select 含新欄位（含 drift guard）', 
   }
 });
 
-test('admin 詳情頁：渲染專長/語言/熟悉區域/證照/收款方式', () => {
+test('admin 詳情頁：渲染申請表完整欄位（含未填），欄位清單與通知信同源', () => {
   const src = readFileSync(DETAIL_PAGE, 'utf8');
-  for (const label of ['專長', '語言', '熟悉區域', '證照', '收款方式']) {
-    assert.match(src, new RegExp(label), `申請詳情視圖需顯示 ${label}`);
+  // 欄位標籤已抽進 guide-application/summary，由 email／Telegram／後台三處共用；
+  // 詳情頁不再各自列標籤，故改驗「有接上共用清單」＋標籤定義在共用模組。
+  assert.match(
+    src,
+    /import \{ buildGuideApplicationFields \} from '[^']*guide-application\/summary'/,
+    '詳情頁需改用共用欄位清單',
+  );
+  assert.match(src, /buildGuideApplicationFields\(guide\.application!?\)/, '需以申請資料建欄位');
+  // 未填欄位必須看得到（舊行為是空的就整段不顯示，審核者無從得知缺什麼）。
+  assert.match(src, /application-all-fields/, '需有完整欄位區塊');
+  assert.match(src, /application-unfilled-count/, '需顯示未填欄位數');
+  assert.match(src, /field\.filled/, '需依 filled 區分已填／未填樣式');
+
+  const summary = readFileSync(SUMMARY_MODULE, 'utf8');
+  for (const label of ['專長', '語言', '熟悉的地區／區域', '證照', '收款方式', '補充說明']) {
+    assert.ok(summary.includes(label), `共用欄位清單需含 ${label}`);
   }
-  assert.doesNotMatch(src, /服務地區/, '服務地區應已改名為熟悉區域');
+  assert.doesNotMatch(summary, /服務地區/, '服務地區應已改名為熟悉區域');
 });
 
 // ---------- promote 自動建檔 ----------

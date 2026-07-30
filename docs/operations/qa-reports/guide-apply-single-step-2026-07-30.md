@@ -19,6 +19,10 @@
 | 4 | 全面改用「嚮導」，含 footer 標題 | ✅ PASS | 45 個使用者可見檔案＋`messages/zh-Hant.json` 完成改名；footer 顯示「認識嚮導／成為嚮導／嚮導開店／嚮導後台」（截圖可見）。`導遊證`（官方證照名）刻意保留 |
 | 5 | 管理者後台仍能取得申請資訊、流程不變 | ✅ PASS | admin 頁／admin API／`db-guide-applications.mjs`／通知信 **零 diff**；e2e `admin-guide-application-detail.spec.ts` 3 項全 PASS；e2e round-trip 驗證海報新欄位隨 `bio` 落地可讀回 |
 
+| 9 | 管理者 email 得知所有填寫內容（追加需求） | ✅ PASS | 寄給 `ADMIN_EMAIL_ALLOWLIST` 全員，表格列出全部 13 欄（未填標「未填寫」）＋未填欄位數摘要。單元測試驗收件人、主旨、全欄位、HTML escape、無 allowlist 時不寄信 |
+| 10 | Telegram 收到有人填寫通知（追加需求） | ✅ PASS | 走既有 `pushTelegramToAdmin`（`TELEGRAM_ORDER_CHAT_ID`），同一份欄位清單純文字版＋未填摘要＋申請編號短碼。單元測試覆蓋 |
+| 11 | 後台點名字看到所有填寫與未填寫（追加需求） | ✅ PASS | 詳情頁改用共用欄位清單，**舊行為「空的就不顯示」已修正**；未填顯示灰體斜體「未填寫／未上傳」，並加「未填寫 N 項」徽章。e2e `admin-guide-application-detail` 3 項 PASS ＋ 真實瀏覽器截圖確認 |
+
 ## 測試證據
 
 | 項目 | 指令 | 結果 |
