@@ -96,7 +96,9 @@ test('v2 shell keeps exact legacy booking presentation markers while retaining v
     { key: 'cancelPolicyHeading', copy: '取消政策' },
     { key: 'contactNamePlaceholder', copy: '請輸入真實姓名' },
     { key: 'contactPhonePlaceholder', copy: '0912-345-678' },
-    { key: 'noteLabel', copy: '給導遊的備註（選填）' },
+    // 用語統一（招募改版）：旅客可見文案「導遊」→「嚮導」；此處鎖的是 V2 shell 仍
+    // 引用同一個 messages key（呈現一致性契約），文案字面隨品牌用語一起更新。
+    { key: 'noteLabel', copy: '給嚮導的備註（選填）' },
     { key: 'agreeTerms', copy: '服務條款' },
     { key: 'agreeRefund', copy: '退款政策' },
     { key: 'createOrderAndPay', copy: '建立訂單並前往付款' },

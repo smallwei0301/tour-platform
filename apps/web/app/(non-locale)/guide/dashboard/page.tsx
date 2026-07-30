@@ -197,11 +197,11 @@ export default function GuideDashboardPage() {
     void loadQa();
   }, []);
 
-  const [guideName, setGuideName] = useState('導遊');
+  const [guideName, setGuideName] = useState('嚮導');
 
   useEffect(() => {
     const raw = document.cookie.split(';').map(c => c.trim())
-      .find(c => c.startsWith('guide_name='))?.split('=')[1] || '導遊';
+      .find(c => c.startsWith('guide_name='))?.split('=')[1] || '嚮導';
     setGuideName(decodeURIComponent(raw));
   }, []);
 
@@ -215,7 +215,7 @@ export default function GuideDashboardPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <h1 className="sr-only">導遊後台</h1>
+      <h1 className="sr-only">嚮導後台</h1>
       {/* Welcome Banner */}
       {isNew && (
         <div style={{
@@ -232,7 +232,7 @@ export default function GuideDashboardPage() {
               👋 歡迎 {guideName}！
             </div>
             <div style={{ fontSize: 13, color: '#7c3aed', marginTop: 4 }}>
-              這是你的導遊後台。你可以在這裡管理場次和查看訂單。
+              這是你的嚮導後台。你可以在這裡管理場次和查看訂單。
             </div>
           </div>
           <button
@@ -263,7 +263,7 @@ export default function GuideDashboardPage() {
         <RevenueCard
           label="本月預計入帳"
           value={data?.expectedPayoutTwd != null ? `NT$${data.expectedPayoutTwd.toLocaleString()}` : '--'}
-          subtext="點擊查看明細 · 平台抽成 15%，導遊實拿 85%；以旅客實付金額扣除已退款部分後計算；最低出款門檻：NT$5,000；金流手續費平台吸收"
+          subtext="點擊查看明細 · 平台抽成 15%，嚮導實拿 85%；以旅客實付金額扣除已退款部分後計算；最低出款門檻：NT$5,000；金流手續費平台吸收"
           icon="🏦"
           muted={data?.expectedPayoutTwd == null}
           onClick={() => openPayoutDetail(currentMonthStr)}
@@ -489,7 +489,7 @@ export default function GuideDashboardPage() {
                       fontWeight: 600,
                       padding: '2px 8px',
                       borderRadius: 6,
-                    }}>👤 導遊頁面</span>
+                    }}>👤 嚮導頁面</span>
                   ) : (
                     <>行程 ID：<span style={{ fontFamily: 'monospace', fontSize: 12 }}>{q.activity_id}</span></>
                   )}
@@ -605,7 +605,7 @@ export default function GuideDashboardPage() {
                 </tfoot>
               </table>
             </div>
-            <p style={{ fontSize:11, color:'#9ca3af', marginTop:10 }}>平台抽成 15%，導遊實拿 85%；以旅客實付金額扣除已退款部分後計算，金流手續費平台吸收。</p>
+            <p style={{ fontSize:11, color:'#9ca3af', marginTop:10 }}>平台抽成 15%，嚮導實拿 85%；以旅客實付金額扣除已退款部分後計算，金流手續費平台吸收。</p>
           </>
         ) : (
           <p style={{ color:'#6b7280', fontSize:13 }}>本月尚無可計算訂單</p>

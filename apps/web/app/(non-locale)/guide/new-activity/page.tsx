@@ -109,7 +109,7 @@ export default function GuideNewActivityPage() {
     <main className="tp-light-page" style={{ minHeight: '70vh' }}>
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 16px 72px' }}>
         <header style={{ marginBottom: 28 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1, color: '#c2542e', margin: '0 0 8px' }}>MIDAO 祕島｜導遊投稿</p>
+          <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1, color: '#c2542e', margin: '0 0 8px' }}>MIDAO 祕島｜嚮導投稿</p>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1a2e1f', margin: '0 0 12px' }}>投稿一條新行程</h1>
           <p style={{ fontSize: 15, color: '#4a4038', lineHeight: 1.7, margin: 0 }}>
             只要填最少的資訊，剩下的文案（副標、包含項目、注意事項、逐段行程、FAQ…）交給我們用 AI 補完。

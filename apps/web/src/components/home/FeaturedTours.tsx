@@ -85,7 +85,7 @@ export function FeaturedTours() {
 
                 {guide && (
                   <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>
-                    由 {guide.displayName} 帶路 · 導遊評價 {guide.rating.toFixed(1)} ★ / {guide.reviewCount} 則
+                    由 {guide.displayName} 帶路 · 嚮導評價 {guide.rating.toFixed(1)} ★ / {guide.reviewCount} 則
                   </p>
                 )}
 

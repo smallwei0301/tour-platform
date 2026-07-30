@@ -33,7 +33,8 @@ describe('settlement rules alignment', () => {
     const dashboard = src('app/(non-locale)/guide/dashboard/page.tsx');
     for (const text of [applyPage, dashboard]) {
       assert.match(text, /平台抽成\s*15%/);
-      assert.match(text, /導遊實拿\s*85%/);
+      // 用語統一（招募改版）：使用者可見文案一律「嚮導」；admin 後台仍為「導遊」。
+      assert.match(text, /嚮導實拿\s*85%/);
       assert.match(text, /金流手續費[^。]*平台吸收|平台吸收[^。]*金流手續費/);
     }
     assert.match(dashboard, /旅客實付金額扣除已退款部分後/);

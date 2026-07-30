@@ -97,7 +97,7 @@ function GuideLoginForm() {
       const json = await res.json();
 
       if (json?.data?.created) {
-        // 首次（驗證碼）登入：先導向公開頁編輯，引導導遊調整資料並自行
+        // 首次（驗證碼）登入：先導向公開頁編輯，引導嚮導調整資料並自行
         // 發佈（預設未公開）。後續登入照常依 next 參數。
         router.push(isFirstTime ? '/guide/profile' : safeNext);
       } else {
@@ -125,9 +125,9 @@ function GuideLoginForm() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{ fontSize: 36, marginBottom: 8 }}>🧭</div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1f2937' }}>導遊後台</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1f2937' }}>嚮導後台</h1>
           <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: 14 }}>
-            {isFirstTime ? '設定你的登入密碼' : '登入你的導遊帳號'}
+            {isFirstTime ? '設定你的登入密碼' : '登入你的嚮導帳號'}
           </p>
         </div>
 

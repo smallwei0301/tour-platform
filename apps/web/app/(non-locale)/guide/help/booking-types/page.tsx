@@ -1,12 +1,12 @@
 import { BookingTypesGuide } from '../../../../../src/components/help/BookingTypesGuide';
 
 /**
- * 方案預約方式（即時／申請／排程）說明 — 導遊後台。
+ * 方案預約方式（即時／申請／排程）說明 — 嚮導後台。
  * 由方案編輯表單「預約方式」旁的「📖 預約方式說明」連結進入。
  * 內容元件與管理者後台共用：src/components/help/BookingTypesGuide.tsx。
  */
 export const metadata = {
-  title: '預約方式說明 — 導遊',
+  title: '預約方式說明 — 嚮導',
 };
 
 export default function GuideBookingTypesHelpPage() {

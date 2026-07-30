@@ -3,7 +3,7 @@ import Link from 'next/link';
 const trustValuePoints = [
   {
     title: '看清楚再選，不賭人品',
-    body: '導遊資料、評論、專長一眼看清，幾分鐘選對人。',
+    body: '嚮導資料、評論、專長一眼看清，幾分鐘選對人。',
   },
   {
     title: '走進回憶，而不是趕行程',
@@ -11,7 +11,7 @@ const trustValuePoints = [
   },
   {
     title: '有在地人帶路，少花冤枉時間',
-    body: '熟悉地方的導遊，幫你避開陷阱、走穩定路線。',
+    body: '熟悉地方的嚮導，幫你避開陷阱、走穩定路線。',
   },
 ];
 

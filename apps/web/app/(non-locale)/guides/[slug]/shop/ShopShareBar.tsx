@@ -30,7 +30,7 @@ export function ShopShareBar({ slug, displayName }: { slug: string; displayName:
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(fullUrl);
       } else {
-        // 後備：以隱藏 textarea + execCommand 複製（同導遊後台 ShopLinkCard）
+        // 後備：以隱藏 textarea + execCommand 複製（同嚮導後台 ShopLinkCard）
         const ta = document.createElement('textarea');
         ta.value = fullUrl;
         ta.style.position = 'fixed';
