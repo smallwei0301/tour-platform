@@ -146,6 +146,14 @@
       "applied_at": "2026-07-29T21:43:00+08:00",
       "status": "verified",
       "note": "#1777 hotfix（P0 安全）：套用 Phase 2/3 後實查發現三支財務函式對 anon 與 authenticated 皆持有 EXECUTE——因 Supabase 在 public schema 對 FUNCTIONS 有 default privileges，而原 migration 只寫 REVOKE ALL … FROM PUBLIC（撤不掉具名角色）。未修正前未登入者可直接呼叫 fn_confirm_payout_atomic 標記出款並扣減導遊餘額。本檔對三支函式 REVOKE ALL FROM anon,authenticated,public 並重新 GRANT EXECUTE TO service_role，另以 ALTER DEFAULT PRIVILEGES 撤銷 anon/authenticated 對 FUNCTIONS 的預設 EXECUTE，避免日後新建金流函式重蹈覆轍（既有 20260709_issue1678 hardening 只涵蓋 TABLES）。apply_migration success。驗證：routine_privileges 實查三支函式的 grantee 僅剩 service_role 與 postgres。無資料異動。rollback：同名 .rollback.sql（只還原 default privileges，刻意不重新授權 anon——回滾不該把漏洞裝回去）。Refs #1777 #1678 #1293。"
+    },
+    {
+      "filename": "20260729190000_issue1777_post_review_fixes.sql",
+      "environment": "production",
+      "operator": "Claude Code agent（SQL-OVERRIDE 授權：使用者「SQL-OVERRIDE 授權」）套用＋驗證",
+      "applied_at": "2026-07-30T12:49:00+08:00",
+      "status": "verified",
+      "note": "#1777 獨立審查後的 P0 修復：fn_record_settlement_atomic 的 ON CONFLICT 補上與部分索引一致的 predicate。背景——20260729170000 把 payout_items_order_kind_unique 改成 WHERE settlement_kind IN ('settlement','reversal') 的部分索引後，20260729160000 的無-predicate ON CONFLICT 推論不到該索引，production EXPLAIN 實測回 42P10，會使每日 02:00 UTC settlement sweep 整批失敗（fail-closed，不算錯錢但完全不結算）。apply_migration success。驗證：(a) pg_get_functiondef 確認含 predicate；(b) proconfig 仍 pin search_path=pg_catalog,public,pg_temp；(c) proacl 仍為 {postgres,service_role}，anon 未回流；(d) 端到端對一筆已有分錄且符合資格的訂單呼叫 RPC，回 settled_count=0／skipped_existing=1／guides_updated=0，無 42P10，冪等路徑零寫入。資料影響：無——套用後實查 payout_items 10 列、guide_balances 合計 21814、payouts 1 pending/0 paid/0 cancelled、近 2 小時財務 audit_logs 0 筆，全部與套用前一致。註：本檔原含 ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin，經實測 current_user=postgres 非 supabase_admin 成員亦非 superuser → 42501 且因單一交易導致 P0 一併回滾，故經 owner P0-OVERRIDE 授權自檔案移除，改以 scripts/admin/issue1777-function-grants-audit.mjs 的 ACL 稽核作為替代防線（涵蓋更廣：不限建立來源）。backup：Supabase 託管備份/PITR；本 migration 無資料異動。rollback：同名 .rollback.sql（刻意 no-op，單獨回滾 predicate 會重現 42P10）。Refs #1777 #1293。"
     }
   ]
 }

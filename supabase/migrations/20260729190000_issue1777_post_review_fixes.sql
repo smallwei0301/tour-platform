@@ -22,18 +22,31 @@
 -- 本檔只改 fn_record_settlement_atomic 的那一行 ON CONFLICT；其餘邏輯逐字保持
 -- 與 20260729160000 相同。
 --
--- ── P1：ALTER DEFAULT PRIVILEGES 未帶 FOR ROLE，只覆蓋了執行者自己 ──────────
+-- ── P1（無法在此修，已改走稽核防線）：supabase_admin 的 default privileges ──
 --
 -- 20260729180000 寫的是
 --     ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM anon;
--- 未帶 FOR ROLE 時只影響「目前角色（postgres）建立的物件」。production 實查
--- pg_default_acl 顯示 grantor=supabase_admin 的那筆仍是
---     {postgres=X, anon=X, authenticated=X, service_role=X}
--- 因此由 supabase_admin 建立的新函式仍會自動授權給 anon——20260729180000 註解
--- 宣稱的「日後新建函式不再自動放行」只在 postgres 建立時成立。
+-- 未帶 FOR ROLE 時只影響「目前角色建立的物件」。production 實查 pg_default_acl：
+--     grantor=postgres        → {postgres=X, service_role=X}                     ✅
+--     grantor=supabase_admin  → {postgres=X, anon=X, authenticated=X, service_role=X}  ❌
+-- 因此由 supabase_admin 建立的新函式仍會自動授權給 anon。
 --
--- 註：三支既有財務函式的權限本身是乾淨的（proacl 實查僅 postgres／service_role），
--- 本項修的是「日後新函式」的預設，不是既有漏洞。
+-- **為什麼這裡不修**：修它需要 `ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin`，
+-- 而該語句要求執行者是 supabase_admin 本人或其成員。production 實測：
+--     current_user = postgres／is_member_of_supabase_admin = false／is_superuser = false
+--     → ERROR 42501: permission denied to change default privileges
+-- 且因 apply_migration 是單一交易，把它留在檔內會連帶讓上面的 P0 一起回滾。
+--
+-- **替代防線**（比改 default privileges 涵蓋更廣）：
+--   tests/api/issue1777-function-grants-audit.test.mjs 直接稽核 production 上
+--   所有 public.fn_* 的實際 ACL，任何一支對 anon／authenticated 開放即紅燈。
+--   default privileges 只在「建立當下」生效；ACL 稽核則不論函式從哪個角色、
+--   哪個管道（migration／Dashboard／擴充套件）建立都抓得到。
+--
+-- 若仍要收斂 default privileges 本身，須由 owner 在 Supabase Dashboard 以
+-- supabase_admin 連線執行（見 docs/operations/issue1777-historical-data-proposal.md）。
+--
+-- 註：三支既有財務函式的權限本身是乾淨的（proacl 實查僅 postgres／service_role）。
 --
 -- 回滾：同名 .rollback.sql。
 
@@ -171,12 +184,5 @@ $$;
 REVOKE ALL ON FUNCTION public.fn_record_settlement_atomic(jsonb, timestamptz)
   FROM anon, authenticated, public;
 GRANT EXECUTE ON FUNCTION public.fn_record_settlement_atomic(jsonb, timestamptz) TO service_role;
-
--- ── P1 修復：default privileges 補上 FOR ROLE supabase_admin ─────────────────
-
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
-  REVOKE EXECUTE ON FUNCTIONS FROM anon;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
-  REVOKE EXECUTE ON FUNCTIONS FROM authenticated;
 
 COMMIT;
