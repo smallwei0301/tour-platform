@@ -1,0 +1,24 @@
+:root {
+  --midao-color-ink: #1A2E1F;
+  --midao-color-page: #F4ECD8;
+  --midao-color-surface: #EBE1C7;
+  --midao-color-alert: #C2542E;
+  --midao-color-success: #5E7A4F;
+  --midao-color-white: #FFFDF7;
+  --midao-color-muted: #627065;
+  --midao-color-border: color-mix(in srgb, var(--midao-color-ink) 18%, transparent);
+  --midao-font-heading: "Noto Serif TC", "Songti TC", serif;
+  --midao-font-body: "Noto Sans TC", system-ui, sans-serif;
+  --midao-radius-card: 18px;
+  --midao-shadow-card: 0 8px 24px rgb(26 46 31 / 9%);
+  --midao-target-min: 44px;
+  --midao-safe-area-top: env(safe-area-inset-top, 0px);
+  --midao-safe-area-right: env(safe-area-inset-right, 0px);
+  --midao-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --midao-safe-area-left: env(safe-area-inset-left, 0px);
+}
+
+.midao-heading {
+  color: var(--midao-color-ink);
+  font-family: var(--midao-font-heading);
+}

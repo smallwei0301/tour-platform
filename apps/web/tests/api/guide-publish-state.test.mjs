@@ -85,9 +85,10 @@ test('profile 頁：未公開時提示尚未公開（引導導遊發佈）', () 
 
 // ---------- 首次登入導向 ----------
 
-test('login 頁：首次（驗證碼）登入導向 /guide/profile 先調整資料', () => {
+test('login 頁：登入後一律採 API canonical redirect，再套用同 realm safe next', () => {
   const src = readFileSync(LOGIN_PAGE, 'utf8');
-  assert.match(src, /isFirstTime\s*\?\s*['"]\/guide\/profile['"]|['"]\/guide\/profile['"]\s*:\s*safeNext/, '首次登入需導向 /guide/profile');
+  assert.match(src, /resolveGuideLoginRedirect\(json\.data\.redirectTo, requestedNext\)/,
+    '不得以 client-side isFirstTime 覆蓋 API canonical realm redirect');
 });
 
 // ---------- promote 預設不公開 ----------

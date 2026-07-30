@@ -1,4 +1,15 @@
 -- MVP seed data for Andy Lee
+insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data)
+values (
+  '11111111-1111-1111-1111-111111111111',
+  'authenticated',
+  'authenticated',
+  'andy-lee@example.invalid',
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{"full_name":"Andy Lee","role":"guide"}'::jsonb
+)
+on conflict (id) do nothing;
+
 insert into users (id, role)
 values ('11111111-1111-1111-1111-111111111111', 'guide')
 on conflict (id) do nothing;

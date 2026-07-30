@@ -1,4 +1,5 @@
 {
+  "kind": "production-migration-apply-ledger",
   "version": 1,
   "description": "Production migration apply ledger（#1293，owner 拍板選項 B：repo 內 ledger 為 source of truth＋既有 live 探測交叉驗證）。每次 production schema apply 後必須在此補一筆 record（含經 Supabase MCP 套用者）；gate 由 scripts/check-migration-ledger.mjs 靜態比對，缺 verified record 即 HOLD。status: verified（已套用且驗證）/ pending（已套用待驗證）/ baseline（涵蓋檔名排序 <= filename 的全部歷史檔案）。SOP：docs/operations/migration-apply-ledger-sop.md。禁止記錄任何 secret/connection string/token/未遮蔽 PII。",
   "grandfatheredLegacyFiles": [

@@ -19,6 +19,7 @@ const REPO_ROOT = join(__dirname, '..', '..');
 const ROUTE = join(REPO_ROOT, 'app/api/v2/admin/guides/[guideId]/impersonate/route.ts');
 const ADMIN_PAGE = join(REPO_ROOT, 'app/(non-locale)/admin/guides/[guideId]/page.tsx');
 const GUIDE_LAYOUT = join(REPO_ROOT, 'app/(non-locale)/guide/layout.tsx');
+const IMPERSONATION_BANNER = join(REPO_ROOT, 'src/components/midao/ImpersonationBanner.tsx');
 const MIDDLEWARE = join(REPO_ROOT, 'middleware.ts');
 
 // ---------- 代入 route ----------
@@ -46,10 +47,12 @@ test('代入 route：僅允許代入 approved 的正式導遊，否則拒絕', (
   assert.match(src, /GUIDE_NOT_ACTIVE/, '非 approved 需回明確錯誤碼');
 });
 
-test('代入 route：以 createGuideSessionCookies 簽發合法 guide session cookie', () => {
+test('代入 route：以domain-separated impersonation session簽章並與actor共用一小時壽命', () => {
   const src = readFileSync(ROUTE, 'utf8');
-  assert.match(src, /import\s*\{[^}]*createGuideSessionCookies[^}]*\}/, '需重用既有 guide session 簽章工具');
+  assert.match(src, /import\s*\{[^}]*createGuideSessionCookies[^}]*\}/, '需重用既有 guide session簽章工具');
   assert.match(src, /createGuideSessionCookies\(/, '需實際呼叫簽發 cookie');
+  assert.match(src, /sessionKind:\s*['"]admin-impersonation['"]/u, '代入session必須不可移除地綁定purpose');
+  assert.match(src, /maxAgeSeconds:\s*MIDAO_IMPERSONATION_MAX_AGE_SECONDS/u, 'guide session與actor必須同壽命');
   assert.match(src, /set-cookie/, '需回寫 Set-Cookie');
 });
 
@@ -97,11 +100,11 @@ test('admin 詳情頁：提供「進入導遊後台」按鈕，且僅對 approve
   assert.match(src, /kind\s*!==\s*['"]application['"]/, '申請中實體不可代入');
 });
 
-test('admin 詳情頁：以 CSRF header POST 至代入 API 後導向導遊後台', () => {
+test('admin 詳情頁：以 CSRF header POST，並經fail-closed sanitizer使用API canonical redirect', () => {
   const src = readFileSync(ADMIN_PAGE, 'utf8');
   assert.match(src, /\/api\/v2\/admin\/guides\/\$\{guide\.id\}\/impersonate/, '需打代入 API');
   assert.match(src, /csrfHeaders\(\)/, 'v2 admin POST 需手動帶 CSRF header');
-  assert.match(src, /\/guide\/dashboard/, '成功後導向導遊後台');
+  assert.match(src, /sanitizeGuideRealmRedirect\(json\.data\.redirectTo\)/, '成功後需安全使用API canonical redirect');
 });
 
 test('admin 詳情頁：送出代入 POST 前先 ensureCsrfToken 補發 tp_csrf', () => {
@@ -138,11 +141,13 @@ test('admin 詳情頁：以 V2 envelope（json.success）判斷代入結果，�
 
 // ---------- 導遊後台代入橫幅 ----------
 
-test('導遊後台 layout：偵測代入 cookie 顯示橫幅並提供結束代入', () => {
-  const src = readFileSync(GUIDE_LAYOUT, 'utf8');
-  assert.match(src, /guide_impersonation/, '需偵測代入標記 cookie');
-  assert.match(src, /guide-impersonation-banner/, '需顯示代入橫幅');
-  assert.match(src, /handleEndImpersonation/, '需提供結束代入處理');
-  assert.match(src, /\/guide\/auth\/session/, '結束代入需登出導遊 session');
-  assert.match(src, /\/admin\/guides/, '結束後導回管理後台');
+test('導遊後台 layout：使用共用代入橫幅與dedicated結束代入endpoint', () => {
+  const layout = readFileSync(GUIDE_LAYOUT, 'utf8');
+  const banner = readFileSync(IMPERSONATION_BANNER, 'utf8');
+  assert.match(layout, /ImpersonationBanner/, '需掛載共用代入橫幅');
+  assert.match(banner, /method:\s*'GET'/, '需向 dedicated endpoint 驗證代入狀態');
+  assert.doesNotMatch(banner, /document\.cookie/, '不得信任 client-readable marker cookie');
+  assert.match(banner, /guide-impersonation-banner/, '需顯示代入橫幅');
+  assert.match(banner, /\/api\/guide\/impersonation/, '結束代入需使用dedicated lifecycle endpoint');
+  assert.match(banner, /\/admin\/guides/, '成功結束後導回管理後台');
 });

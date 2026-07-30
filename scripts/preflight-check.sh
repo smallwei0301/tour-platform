@@ -24,8 +24,8 @@ check_file "scripts/demo-smoke.sh"
 
 echo
 
-echo "== Migration apply ledger gate (#1293) =="
-node scripts/check-migration-ledger.mjs
+echo "== Migration source gate (local/PR) =="
+node scripts/check-migration-source-gate.mjs --mode source
 
 echo
 

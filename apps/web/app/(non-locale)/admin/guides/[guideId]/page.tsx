@@ -4,6 +4,12 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, PageHeader } from '../../../../../src/components/admin/ui';
 import { csrfHeaders, ensureCsrfToken } from '../../../../../src/lib/csrf-client';
+import { sanitizeGuideRealmRedirect } from '../../../../../src/lib/midao/login-redirect';
+import {
+  canSwitchAdminGuideBackendMode,
+  executeAdminBackendModeSwitch,
+  normalizeAdminBackendModeReason,
+} from '../../../../../src/lib/midao/admin-backend-mode-switch.mjs';
 // 申請內容的欄位清單與管理者通知信／Telegram 同源，避免三個介面各列一套而漂移。
 import { buildGuideApplicationFields } from '../../../../../src/lib/guide-application/summary';
 
@@ -36,6 +42,7 @@ type GuideDetail = {
   display_name: string;
   slug: string;
   verification_status: string;
+  backend_mode?: 'legacy' | 'midao';
   headline?: string | null;
   region?: string | null;
   rating_avg?: number | null;
@@ -64,6 +71,8 @@ export default function AdminGuideDetailPage() {
   const [error, setError] = useState('');
   const [impersonating, setImpersonating] = useState(false);
   const [impersonateError, setImpersonateError] = useState('');
+  const [switchingMode, setSwitchingMode] = useState(false);
+  const [modeSwitchError, setModeSwitchError] = useState('');
 
   useEffect(() => {
     if (!guideId) return;
@@ -106,11 +115,51 @@ export default function AdminGuideDetailPage() {
         setImpersonating(false);
         return;
       }
-      // 取得導遊 session cookie 後導向導遊後台儀表板（整頁導頁確保帶上新 cookie）。
-      window.location.href = '/guide/dashboard';
+      // 取得導遊session cookie後使用API決定的canonical realm；本地sanitizer負責fail closed。
+      window.location.href = sanitizeGuideRealmRedirect(json.data.redirectTo);
     } catch {
       setImpersonateError('進入導遊後台失敗，請稍後再試');
       setImpersonating(false);
+    }
+  }
+
+  async function handleSwitchBackendMode() {
+    if (!guide || !canSwitchAdminGuideBackendMode(guide, switchingMode)) return;
+
+    const targetMode: 'legacy' | 'midao' = guide.backend_mode === 'midao' ? 'legacy' : 'midao';
+    setModeSwitchError('');
+    const reasonInput = window.prompt(
+      targetMode === 'midao' ? '請輸入切換到新後台的原因' : '請輸入切回舊後台的原因'
+    );
+    const normalized = normalizeAdminBackendModeReason(reasonInput);
+    if (!normalized.ok) {
+      if (!normalized.cancelled) setModeSwitchError(normalized.message ?? '切換導遊後台模式失敗');
+      return;
+    }
+
+    setSwitchingMode(true);
+    try {
+      const result = await executeAdminBackendModeSwitch({
+        guideId: guide.id,
+        currentMode: guide.backend_mode ?? 'legacy',
+        reason: normalized.reason,
+      }, {
+        ensureCsrfToken,
+        csrfHeaders,
+        randomUUID: () => crypto.randomUUID(),
+        fetchImpl: fetch,
+      });
+      if (!result.ok) {
+        setModeSwitchError(result.message ?? '切換導遊後台模式失敗');
+        return;
+      }
+      setGuide(current => current
+        ? { ...current, backend_mode: result.backendMode }
+        : current);
+    } catch {
+      setModeSwitchError('切換導遊後台模式失敗，請稍後再試');
+    } finally {
+      setSwitchingMode(false);
     }
   }
 
@@ -377,6 +426,36 @@ export default function AdminGuideDetailPage() {
                   📅 時間管理
                 </a>
                 {canImpersonate && (
+                  <>
+                    <span
+                      data-testid="admin-guide-backend-mode-badge"
+                      aria-live="polite"
+                      style={{
+                        padding: '5px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                        background: guide.backend_mode === 'midao' ? '#ede9fe' : '#f3f4f6',
+                        color: guide.backend_mode === 'midao' ? '#6d28d9' : '#4b5563',
+                      }}
+                    >
+                      後台模式：{guide.backend_mode === 'midao' ? '新後台' : '舊後台'}
+                    </span>
+                    <button
+                      type="button"
+                      data-testid="admin-guide-backend-mode-switch"
+                      onClick={handleSwitchBackendMode}
+                      disabled={switchingMode}
+                      style={{
+                        padding: '9px 16px', borderRadius: 8, border: '1px solid #c2542e',
+                        background: switchingMode ? '#f4ecd8' : '#fff7ed', color: '#9a3412',
+                        fontSize: 13, fontWeight: 600, cursor: switchingMode ? 'wait' : 'pointer',
+                      }}
+                    >
+                      {switchingMode
+                        ? '切換中…'
+                        : guide.backend_mode === 'midao' ? '切回舊後台' : '切換到新後台'}
+                    </button>
+                  </>
+                )}
+                {canImpersonate && (
                   <button
                     type="button"
                     data-testid="admin-enter-guide-backend"
@@ -392,6 +471,11 @@ export default function AdminGuideDetailPage() {
                   </button>
                 )}
               </div>
+              {modeSwitchError && (
+                <div role="alert" style={{ fontSize: 13, color: '#dc2626', marginTop: 2 }}>
+                  {modeSwitchError}
+                </div>
+              )}
               {impersonateError && (
                 <div role="alert" style={{ fontSize: 13, color: '#dc2626', marginTop: 2 }}>
                   {impersonateError}

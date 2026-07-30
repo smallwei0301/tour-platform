@@ -13,6 +13,8 @@ import { getGuideAuthSupabaseClient, type GuideAuthSingleResult } from '../../..
 import { guideLoginLimiter, RateLimiter, createLoginRateLimitResponse } from '../../../../../src/lib/rate-limit';
 import { peekDistributed, recordDistributed } from '../../../../../src/lib/rate-limit-distributed';
 import { getSupabaseUrl } from '../../../../../src/config/supabase-service-env.mjs';
+import { isMidaoE2ELocal } from '../../../../../src/config/feature-flags.mjs';
+import { clearImpersonationActorCookie } from '../../../../../src/lib/midao/impersonation-actor';
 
 // #1599：登入限流跨實例層（記憶體版擋單實例、分散式版 provision 後擋跨實例）。皆 fail-open。
 const LOGIN_RATE_CFG = { maxRequests: 10, windowMs: 60 * 1000 };
@@ -23,6 +25,7 @@ type GuideSessionInviteProfile = {
   invite_token: string | null;
   invite_token_expires_at: string | null;
   guide_session_version: number | null;
+  backend_mode: 'legacy' | 'midao';
 };
 
 type GuideSessionLoginProfile = {
@@ -31,6 +34,7 @@ type GuideSessionLoginProfile = {
   guide_password_hash: string | null;
   guide_session_version: number | null;
   verification_status: string;
+  backend_mode: 'legacy' | 'midao';
 };
 
 type SupabaseSingleResult<T> = GuideAuthSingleResult<T>;
@@ -55,6 +59,31 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms = SUPABASE_QUERY_TIMEO
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+type MidaoE2EGuideAuthFailure = 'LOOKUP_ERROR' | 'LOOKUP_MISS' | 'PASSWORD_MISMATCH';
+
+function reportMidaoE2EGuideAuthFailure(reason: MidaoE2EGuideAuthFailure, error: unknown = null): void {
+  if (!isMidaoE2ELocal()) return;
+  const rawCode = error && typeof error === 'object' && 'code' in error
+    ? String((error as { code?: unknown }).code || '')
+    : '';
+  const code = /^[A-Z0-9_]{1,32}$/u.test(rawCode) ? rawCode : 'UNKNOWN';
+  console.error(`MIDAO_E2E_GUIDE_AUTH=${reason}:${code}`);
+}
+
+function canonicalGuideRedirect(backendMode: 'legacy' | 'midao', isNew: boolean): '/midao' | '/guide/profile' | '/guide/dashboard' {
+  if (backendMode === 'midao') return '/midao';
+  return isNew ? '/guide/profile' : '/guide/dashboard';
+}
+
+function appendClearImpersonationCookies(headers: Headers): void {
+  headers.append('set-cookie', clearImpersonationActorCookie());
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  headers.append(
+    'set-cookie',
+    `guide_impersonation=; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${secure}`,
+  );
 }
 
 /** GET — check current guide session */
@@ -109,12 +138,13 @@ export async function POST(req: Request) {
       const { data: guide, error } = await withTimeout<SupabaseSingleResult<GuideSessionInviteProfile>>(
         supabase
           .from('guide_profiles')
-          .select<GuideSessionInviteProfile>('id, display_name, invite_token, invite_token_expires_at, guide_session_version')
+          .select<GuideSessionInviteProfile>('id, display_name, invite_token, invite_token_expires_at, guide_session_version, backend_mode')
           .eq('invite_token', token)
           .single()
       );
 
       if (error || !guide) {
+        reportMidaoE2EGuideAuthFailure(error ? 'LOOKUP_ERROR' : 'LOOKUP_MISS', error);
         recordGuideLoginFailure();
         return Response.json(fail('INVALID_TOKEN', '邀請碼無效或已使用'), { status: 401 });
       }
@@ -142,8 +172,9 @@ export async function POST(req: Request) {
       const headers = new Headers({ 'content-type': 'application/json' });
       cookies.forEach((c) => headers.append('set-cookie', c));
       headers.append('set-cookie', createCsrfCookie(createCsrfToken()));
+      appendClearImpersonationCookies(headers);
 
-      return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
+      return new Response(JSON.stringify(ok({ created: true, redirectTo: canonicalGuideRedirect(guide.backend_mode, true) })), { status: 200, headers });
     }
 
     // ── Regular password login (email + password) ─────────────────────────────
@@ -152,12 +183,13 @@ export async function POST(req: Request) {
       const { data: guide, error } = await withTimeout<SupabaseSingleResult<GuideSessionLoginProfile>>(
         supabase
           .from('guide_profiles')
-          .select<GuideSessionLoginProfile>('id, display_name, guide_password_hash, guide_session_version, verification_status')
+          .select<GuideSessionLoginProfile>('id, display_name, guide_password_hash, guide_session_version, verification_status, backend_mode')
           .eq('guide_email', loginEmail)
           .single()
       );
 
       if (error || !guide) {
+        reportMidaoE2EGuideAuthFailure(error ? 'LOOKUP_ERROR' : 'LOOKUP_MISS', error);
         recordGuideLoginFailure();
         return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
       }
@@ -167,6 +199,7 @@ export async function POST(req: Request) {
       }
 
       if (!guide.guide_password_hash || !verifyPassword(password, guide.guide_password_hash)) {
+        reportMidaoE2EGuideAuthFailure('PASSWORD_MISMATCH');
         recordGuideLoginFailure();
         return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
       }
@@ -190,8 +223,9 @@ export async function POST(req: Request) {
       const headers = new Headers({ 'content-type': 'application/json' });
       cookies.forEach((c) => headers.append('set-cookie', c));
       headers.append('set-cookie', createCsrfCookie(createCsrfToken()));
+      appendClearImpersonationCookies(headers);
 
-      return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
+      return new Response(JSON.stringify(ok({ created: true, redirectTo: canonicalGuideRedirect(guide.backend_mode, false) })), { status: 200, headers });
     }
 
     // ── Legacy: guideId + password (backward compat) ───────────────────────────
@@ -199,12 +233,13 @@ export async function POST(req: Request) {
       const { data: guide, error } = await withTimeout<SupabaseSingleResult<GuideSessionLoginProfile>>(
         supabase
           .from('guide_profiles')
-          .select<GuideSessionLoginProfile>('id, display_name, guide_password_hash, guide_session_version, verification_status')
+          .select<GuideSessionLoginProfile>('id, display_name, guide_password_hash, guide_session_version, verification_status, backend_mode')
           .eq('id', loginGuideId)
           .single()
       );
 
       if (error || !guide) {
+        reportMidaoE2EGuideAuthFailure(error ? 'LOOKUP_ERROR' : 'LOOKUP_MISS', error);
         recordGuideLoginFailure();
         return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
       }
@@ -214,6 +249,7 @@ export async function POST(req: Request) {
       }
 
       if (!guide.guide_password_hash || !verifyPassword(password, guide.guide_password_hash)) {
+        reportMidaoE2EGuideAuthFailure('PASSWORD_MISMATCH');
         recordGuideLoginFailure();
         return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
       }
@@ -237,8 +273,9 @@ export async function POST(req: Request) {
       const headers = new Headers({ 'content-type': 'application/json' });
       cookies.forEach((c) => headers.append('set-cookie', c));
       headers.append('set-cookie', createCsrfCookie(createCsrfToken()));
+      appendClearImpersonationCookies(headers);
 
-      return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
+      return new Response(JSON.stringify(ok({ created: true, redirectTo: canonicalGuideRedirect(guide.backend_mode, false) })), { status: 200, headers });
     }
 
     return Response.json(fail('BAD_REQUEST', '請提供登入憑證'), { status: 400 });
@@ -260,5 +297,6 @@ export async function DELETE(request: Request) {
   const headers = new Headers({ 'content-type': 'application/json' });
   clearGuideSessionCookies().forEach((c) => headers.append('set-cookie', c));
   headers.append('set-cookie', `${CSRF_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
+  appendClearImpersonationCookies(headers);
   return new Response(JSON.stringify(ok({ deleted: true })), { status: 200, headers });
 }

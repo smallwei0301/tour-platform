@@ -1,4 +1,5 @@
 import { test as base, expect, Page, Locator, APIRequestContext } from '@playwright/test';
+import { createImpersonationActorCookie } from '../src/lib/midao/impersonation-actor';
 
 const ADMIN_TOKEN = process.env.ADMIN_ACCESS_TOKEN || 'test-token-123';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@tour-platform.com';
@@ -157,6 +158,73 @@ async function setGuideSession(page: Page, guideId: string): Promise<void> {
   ]);
 }
 
+interface MidaoGuideLoginInput {
+  guideId: string;
+  email: string;
+  password: string;
+  expectedRedirect: '/midao' | '/guide/dashboard';
+}
+
+interface MidaoImpersonationActorInput {
+  guideId: string;
+  adminEmail: string;
+  issuedAt?: number;
+}
+
+async function loginMidaoGuideViaApi(page: Page, input: MidaoGuideLoginInput): Promise<void> {
+  const csrfRes = await page.request.get('/api/guide/auth/csrf', { failOnStatusCode: false });
+  const csrfBody = await csrfRes.json().catch(() => ({} as Record<string, unknown>));
+  const csrfToken = (csrfBody as { data?: { csrfToken?: string } })?.data?.csrfToken ?? '';
+  if (!csrfRes.ok() || !csrfToken) {
+    throw new Error(`loginMidaoGuideViaApi: csrf failed with status ${csrfRes.status()}`);
+  }
+
+  const sessionRes = await page.request.post('/api/guide/auth/session', {
+    headers: { 'content-type': 'application/json', 'x-csrf-token': csrfToken },
+    data: { email: input.email, password: input.password },
+    failOnStatusCode: false,
+  });
+  const sessionBody = await sessionRes.json().catch(() => ({} as Record<string, unknown>));
+  const sessionData = (sessionBody as { data?: { created?: boolean; redirectTo?: string }; error?: { code?: string } }).data;
+  if (!sessionRes.ok() || sessionData?.created !== true || sessionData.redirectTo !== input.expectedRedirect) {
+    const errorCode = (sessionBody as { error?: { code?: string } }).error?.code ?? 'INVALID_RESPONSE';
+    throw new Error(`loginMidaoGuideViaApi: session failed with status ${sessionRes.status()} code ${errorCode}`);
+  }
+
+  const cookies = await page.context().cookies();
+  const token = cookies.find((cookie) => cookie.name === 'guide_token' && cookie.value);
+  const guideId = cookies.find((cookie) => cookie.name === 'guide_id' && cookie.value === input.guideId);
+  if (!token || !guideId) {
+    throw new Error(`loginMidaoGuideViaApi: canonical guide cookies missing; present=${cookies.map((cookie) => cookie.name).join(',')}`);
+  }
+}
+
+async function setMidaoImpersonationActorCookie(
+  page: Page,
+  input: MidaoImpersonationActorInput,
+): Promise<void> {
+  const actorSetCookie = createImpersonationActorCookie({
+    adminEmail: input.adminEmail,
+    targetGuideId: input.guideId,
+    issuedAt: input.issuedAt,
+  });
+  const actorPair = actorSetCookie.split(';', 1)[0];
+  const separator = actorPair.indexOf('=');
+  if (separator < 1 || !actorPair.slice(separator + 1)) {
+    throw new Error('setMidaoImpersonationActorCookie: signed actor cookie was not created');
+  }
+  await page.context().addCookies([
+    {
+      name: actorPair.slice(0, separator),
+      value: actorPair.slice(separator + 1),
+      url: BASE_URL,
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+    { name: 'guide_impersonation', value: '1', url: BASE_URL, sameSite: 'Lax' },
+  ]);
+}
+
 /**
  * Helper: 填一組受控欄位，並確保值撐過 hydration。
  *
@@ -213,6 +281,8 @@ export {
   ensureLoggedIn,
   setGuideSession,
   setTravelerSession,
+  loginMidaoGuideViaApi,
+  setMidaoImpersonationActorCookie,
   fillFormHydrated,
   clickUntilExpanded,
 };

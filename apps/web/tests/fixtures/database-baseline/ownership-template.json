@@ -1,0 +1,31 @@
+{
+  "templateOnly": true,
+  "ownershipBoundary": {
+    "schemaVersion": 1,
+    "status": "template",
+    "assignments": []
+  },
+  "roleMap": {
+    "schemaVersion": 1,
+    "roles": [
+      { "name": "application-owner", "ownerDomain": "application" },
+      { "name": "application-overlay-owner", "ownerDomain": "application_overlay" },
+      { "name": "platform-owner", "ownerDomain": "platform" },
+      { "name": "extension-owner", "ownerDomain": "extension" },
+      { "name": "excluded-environmental-owner", "ownerDomain": "excluded_environmental" }
+    ]
+  },
+  "exclusions": {
+    "schemaVersion": 1,
+    "entries": []
+  },
+  "platformPrerequisites": {
+    "schemaVersion": 1,
+    "objects": []
+  },
+  "tocOwnershipMap": {
+    "schemaVersion": 1,
+    "expectedTocIds": [],
+    "entries": []
+  }
+}

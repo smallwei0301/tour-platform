@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://midao.local/schemas/role-map.schema.json",
+  "title": "Midao ownership role map",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "roles"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "ownerDomain"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "ownerDomain": { "enum": ["application", "platform", "application_overlay", "extension", "excluded_environmental"] }
+        }
+      }
+    }
+  }
+}
