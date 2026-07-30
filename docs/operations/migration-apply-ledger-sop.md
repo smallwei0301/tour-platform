@@ -59,6 +59,12 @@
 | `status` | `verified`（已套用且驗證）／`pending`（已套用、驗證未完成 — **gate 仍 HOLD**）／`baseline`（僅歷史回填用，之後不再擴大） |
 | `note` | 備份參考、rollback 參考、驗證指令與結果、相關 issue/PR — **全部 redacted** |
 
+### 歷史證據例外（僅限回填）
+
+若既有 production migration 的精確歷史套用時間已無法復原，`applied_at` 可記錄**第一個可稽核、可持久保存的確認時間戳**，而非宣稱它是實際套用時間。該 record 的 `note` 必須明確說明「此為 first durable confirmation timestamp，actual exact historical apply time is unavailable」並列出來源（例如 issue/comment URL）及目前 catalog 驗證方式。
+
+此例外只用於既有歷史回填；**不得用於任何新的 migration**。新 migration 仍必須記錄實際套用完成的精確 ISO 8601 時間、operator、備份與 post-apply 驗證證據。
+
 ## Rollback 時
 
 1. 執行對應 `.rollback.sql`（先備份）。
