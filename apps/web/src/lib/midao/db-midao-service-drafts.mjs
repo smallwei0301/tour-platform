@@ -9,7 +9,14 @@
 //     （避開 architecture-ratchet 的 src/lib 頂層攤平天花板）。
 //   - in-memory store 與 Supabase 走一致行為（parity）；`hasSupabaseEnv()` 決定走哪條。
 //   - 對外「不 throw 預期結果」：成功／409 衝突／問卷驗證失敗都回傳結構化物件，只有非
-//     預期的後端錯誤才 throw。
+//     預期的後端錯誤才 throw。Supabase insert 僅在 unique-violation（23505）時歸類為 409；
+//     其餘錯誤碼（如 42501 權限／RLS、23503 外鍵）一律 throw，與 update／discard 一致。
+//
+// 已知限制（非阻擋，留待 S5 route 層處理）：
+//   - in-memory store 以 activityId 為單鍵，discard 後同鍵會被新草稿覆蓋，與 Supabase 保留
+//     歷史列（多列不同 status）不對等。此差異僅影響 dev/test 路徑，不影響正式 Supabase 行為。
+//   - 無 active 草稿但 expectedRevision >= 1 時目前回 409（draft=null）而非 404；語意上
+//     「草稿不存在」較接近 404，留待 S5 route 層對外映射時區分。
 //
 // 相依：
 //   - S1 schema（guide_service_drafts：revision INTEGER CHECK (revision >= 1)、
@@ -31,6 +38,9 @@ const INVALID_ACTIVITY_ID = 'INVALID_ACTIVITY_ID';
 const INVALID_EXPECTED_REVISION = 'INVALID_EXPECTED_REVISION';
 const INVALID_PATCH = 'INVALID_PATCH';
 const NOT_FOUND = 'NOT_FOUND';
+// PostgreSQL unique_violation：guide_service_drafts 單一 active partial unique index 撞擊時
+// Supabase 回的 error.code。唯一可被視為「版本衝突」的 insert 失敗原因。
+const UNIQUE_VIOLATION = '23505';
 
 const draftStore = new Map();
 let nowProvider = () => new Date().toISOString();
@@ -416,7 +426,14 @@ async function upsertInSupabase(activityId, patch, expected) {
     .select(DRAFT_SELECT)
     .maybeSingle();
   if (error) {
-    // partial unique index 撞擊 → 另一 active 草稿已被搶先建立，回 409。
+    // 只有 unique-violation（partial unique index：單一 active 草稿）才是真正的
+    // 「另一 active 草稿已被搶先建立」→ 回 409 讓呼叫端重讀最新版本。
+    // 其餘後端錯誤（42501 權限／RLS、23503 外鍵…）一律 throw，與同檔 update
+    // (`:400`)／discard (`:442`) 路徑一致，避免把故障偽裝成版本衝突而形成
+    // 無法復原的重試迴圈，並保留 RLS 安全訊號。
+    if (error.code !== UNIQUE_VIOLATION) {
+      throw unexpected('Midao service draft insert failed');
+    }
     return conflictResult(await fetchActiveRow(supabase, activityId));
   }
   const created = mapSupabaseRow(data);

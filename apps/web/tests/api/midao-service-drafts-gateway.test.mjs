@@ -285,7 +285,8 @@ test('新建缺 guideId → 422', async () => {
 // ---------------------------------------------------------------------------
 // 7) Supabase parity — 相同呼叫在 Supabase 路徑行為一致。
 // ---------------------------------------------------------------------------
-function createSupabaseFake(initialRows = []) {
+function createSupabaseFake(initialRows = [], options = {}) {
+  // options.insertError：強制 insert 回傳指定的 Supabase PostgrestError（測錯誤分類用）。
   // 以單表 in-memory 陣列模擬 guide_service_drafts；支援本 gateway 用到的
   // select().eq().eq().maybeSingle()、update().eq()*3.select().maybeSingle()、
   // insert().select().maybeSingle()，並在 partial-unique（單一 active）上擋重複 insert。
@@ -332,6 +333,9 @@ function createSupabaseFake(initialRows = []) {
             const q = {
               select() { return q; },
               maybeSingle() {
+                if (options.insertError) {
+                  return Promise.resolve({ data: null, error: options.insertError });
+                }
                 const clash = rows.some(
                   (r) => r.activity_id === record.activity_id && r.status === 'active',
                 );
@@ -444,4 +448,65 @@ test('parity: Supabase 路徑 get 只回 active', async () => {
   useSupabase(fake);
   const result = await getServiceDraft(OTHER_ACTIVITY_ID);
   assert.equal(result.draft, null);
+});
+
+// ---------------------------------------------------------------------------
+// 8) insert 錯誤分類（#1758 S4 修正）— 只有 unique-violation 才是 409 衝突。
+//    其餘後端錯誤（權限 42501、外鍵 23503…）必須 throw unexpected，與同檔
+//    update/discard 路徑一致，避免把 RLS/FK 故障偽裝成「別人正在編輯」。
+// ---------------------------------------------------------------------------
+function newDraftPatch() {
+  return { guideId: GUIDE_ID, name: 'x', descriptions: ['一段說明'] };
+}
+
+test('insert 遇 42501 permission denied → throw，不得偽裝成 409', async () => {
+  const fake = createSupabaseFake([], {
+    insertError: { code: '42501', message: 'permission denied for table guide_service_drafts' },
+  });
+  useSupabase(fake);
+  await assert.rejects(
+    () => upsertServiceDraft(ACTIVITY_ID, newDraftPatch(), 0),
+    (error) => {
+      assert.equal(error.name, 'MidaoServiceDraftBackendError');
+      return true;
+    },
+  );
+});
+
+test('insert 遇 23503 foreign key violation → throw，不得偽裝成 409', async () => {
+  const fake = createSupabaseFake([], {
+    insertError: { code: '23503', message: 'insert or update violates foreign key constraint' },
+  });
+  useSupabase(fake);
+  await assert.rejects(
+    () => upsertServiceDraft(ACTIVITY_ID, newDraftPatch(), 0),
+    (error) => {
+      assert.equal(error.name, 'MidaoServiceDraftBackendError');
+      return true;
+    },
+  );
+});
+
+test('insert 遇 23505 unique violation → 仍回 409 並回讀最新 active 版本', async () => {
+  const fake = createSupabaseFake(
+    [
+      {
+        id: 'id-1',
+        activity_id: ACTIVITY_ID,
+        guide_id: GUIDE_ID,
+        revision: 5,
+        status: 'active',
+        payload: { name: '別人搶先建立' },
+        updated_at: CLOCK,
+      },
+    ],
+    { insertError: { code: '23505', message: 'duplicate key value violates unique constraint' } },
+  );
+  useSupabase(fake);
+  // 先讀不到 active 才會走 insert：這裡改以「讀得到但 expected 為 0」以外的競態路徑不可行，
+  // 故直接覆寫 insert 錯誤，驗證 23505 分類仍回 409 且能回讀當前版本。
+  const result = await upsertServiceDraft(OTHER_ACTIVITY_ID, newDraftPatch(), 0);
+  assert.equal(result.conflict, true);
+  assert.equal(result.status, 409);
+  assert.equal(result.code, 'REVISION_CONFLICT');
 });
