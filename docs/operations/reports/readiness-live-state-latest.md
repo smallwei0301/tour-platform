@@ -1,22 +1,20 @@
-<!-- query_timestamp: 2026-07-30T05:54:11.303Z -->
+<!-- query_timestamp: 2026-07-31T06:02:05.894Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-30T05:54:11.303Z  
-**Commit SHA:** `70f1da65b185b28bcd4209a86d66fd0c842f0087`
+**Query timestamp:** 2026-07-31T06:02:05.894Z  
+**Commit SHA:** `4099f90824700d23d1a0b5b56023ac7f74050a43`
 
 ---
 
-## Open PRs (13)
+## Open PRs (11)
 
 | # | Title | Branch |
 |---|-------|--------|
 | #1776 | [feat(shop): 完成導遊商店匯款 beta 文案與 SOP（#1607）](https://github.com/smallwei0301/tour-platform/pull/1776) _(draft)_ | `fix/issue-1607-guide-shop-beta` |
-| #1769 | [feat: Midao Requests projections and atomic decisions](https://github.com/smallwei0301/tour-platform/pull/1769) _(draft)_ | `feat/midao-requests-1757` |
-| #1766 | [feat: 建立 Midao foundation 與 baseline-backed E2E](https://github.com/smallwei0301/tour-platform/pull/1766) | `feat/midao-foundation-1756` |
 | #1763 | [feat: midao2 導遊接案後台（接案 CRM）＋公開接案頁 /g/[slug]](https://github.com/smallwei0301/tour-platform/pull/1763) | `claude/superpowers-midao-backend-x90czx` |
 | #1690 | [docs(security): 建立「已接受安全風險」定案清單](https://github.com/smallwei0301/tour-platform/pull/1690) | `claude/code-workflow-architecture-mmm4ba` |
 | #1687 | [修正排程管理的持久稽核機制](https://github.com/smallwei0301/tour-platform/pull/1687) | `kanban/issue-1686-durable-audit` |
@@ -28,7 +26,7 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (56 total)
+## Open Issues (55 total)
 
 ### P0 (1)
 
@@ -36,7 +34,7 @@
 |---|-------|--------|
 | #1777 | [[Payments][P0] 修正結算／部分退款／出款非原子鏈，避免漏帳、重扣與錯誤撥款](https://github.com/smallwei0301/tour-platform/issues/1777) | triaged, type:bug, priority:P0, agent:backlog, owner:ai-agent, status:ready, payments, orders, database |
 
-### P1 (34)
+### P1 (33)
 
 | # | Title | Labels |
 |---|-------|--------|
@@ -47,7 +45,6 @@
 | #1760 | [[Midao Backend] Implement global calendar and effective availability policy](https://github.com/smallwei0301/tour-platform/issues/1760) | triaged, type:feature, priority:P1, guide-dashboard, agent:queued, owner:ai-agent, status:blocked, traveler-booking, database |
 | #1759 | [[Midao Backend] Implement LINE inquiries and traveler booking confirmation](https://github.com/smallwei0301/tour-platform/issues/1759) | triaged, type:feature, priority:P1, agent:queued, owner:ai-agent, status:blocked, traveler-booking, orders, database, rls, notifications |
 | #1758 | [[Midao Backend] Implement service drafts, questionnaires, and direct publishing](https://github.com/smallwei0301/tour-platform/issues/1758) | triaged, type:feature, priority:P1, guide-dashboard, agent:queued, owner:ai-agent, status:blocked, database, rls |
-| #1757 | [[Midao Backend] Implement requests projections and atomic decisions](https://github.com/smallwei0301/tour-platform/issues/1757) | triaged, type:feature, priority:P1, guide-dashboard, agent:queued, owner:ai-agent, status:in-progress, traveler-booking, orders, database |
 | #1756 | [[Midao Backend] Build runtime foundation and responsive shell](https://github.com/smallwei0301/tour-platform/issues/1756) | triaged, type:feature, priority:P1, guide-dashboard, agent:now, owner:ai-agent, status:ready, auth, database |
 | #1755 | [[Midao Backend] Implement approved guide backend redesign](https://github.com/smallwei0301/tour-platform/issues/1755) | triaged, type:feature, priority:P1, guide-dashboard, agent:backlog, owner:ai-agent, status:in-progress |
 | #1749 | [[daily bug scan] tour-platform 2026-07-21](https://github.com/smallwei0301/tour-platform/issues/1749) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
@@ -117,16 +114,16 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1786 | [[Database] 收斂 Midao migration verified ledger 與回滾證據](https://github.com/smallwei0301/tour-platform/pull/1786) | 2026-07-30 |
+| #1785 | [fix(domain): 自訂網域切換前的網址盤點 — BRAND_BOOK 改 midao.com.tw、修死連結 fallback](https://github.com/smallwei0301/tour-platform/pull/1785) | 2026-07-30 |
+| #1784 | [fix(seo): JSON-LD 絕對網址改走 SITE_URL，並修正 LINE 查詢的錯誤網域 fallback](https://github.com/smallwei0301/tour-platform/pull/1784) | 2026-07-30 |
+| #1783 | [fix(admin): 申請詳情欄位表手機版遮擋，並把 EMAIL_FROM 納入通知 env 診斷](https://github.com/smallwei0301/tour-platform/pull/1783) | 2026-07-30 |
+| #1782 | [feat(guide-application): 申請通知管理者（email＋Telegram）、後台顯示完整填寫與未填寫欄位、移除招募頁分潤文案](https://github.com/smallwei0301/tour-platform/pull/1782) | 2026-07-30 |
 | #1781 | [feat(guide-apply): 申請流程單頁化、照片全選填、文案改用招募海報、用語統一「嚮導」](https://github.com/smallwei0301/tour-platform/pull/1781) | 2026-07-30 |
 | #1780 | [docs(worklog): #1777 收尾 — PR merged、AC 11/11 sign-off、剩餘兩項](https://github.com/smallwei0301/tour-platform/pull/1780) | 2026-07-29 |
 | #1779 | [feat(accounting): #1777 收尾 — 對帳補資格稽核維度，#1647 preview 實測](https://github.com/smallwei0301/tour-platform/pull/1779) | 2026-07-29 |
 | #1778 | [fix(payments): #1777 修正結算／部分退款／出款非原子鏈（Phase 1–4）](https://github.com/smallwei0301/tour-platform/pull/1778) | 2026-07-29 |
 | #1775 | [fix(ops): 對齊 readiness snapshot 刷新節奏與 freshness guard（#1654）](https://github.com/smallwei0301/tour-platform/pull/1775) | 2026-07-29 |
-| #1772 | [docs: 建立 README 文件架構索引與任務路由](https://github.com/smallwei0301/tour-platform/pull/1772) | 2026-07-28 |
-| #1768 | [fix: 方案啟用不再洗掉方案詳情＋小野教練文案潤飾/啟用 worklog](https://github.com/smallwei0301/tour-platform/pull/1768) | 2026-07-27 |
-| #1754 | [docs: 小野教練 41 行程 Unsplash 圖片與方案詳情補齊 worklog](https://github.com/smallwei0301/tour-platform/pull/1754) | 2026-07-22 |
-| #1753 | [docs(worklog): admin-csrf-impersonate-403 補記 PR #1752 CI 綠燈證據與 merge SHA](https://github.com/smallwei0301/tour-platform/pull/1753) | 2026-07-22 |
-| #1752 | [fix(admin): 進入導遊後台 403「CSRF token required」——CSRF 附掛補涵蓋 /api/v2/admin 並就地補發過期 cookie](https://github.com/smallwei0301/tour-platform/pull/1752) | 2026-07-22 |
 
 ---
 
