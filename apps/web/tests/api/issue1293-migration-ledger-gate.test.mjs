@@ -241,15 +241,18 @@ it('verified gate rejects fake ledger identity and fabricated verified or baseli
   }
 });
 
-describe('issue #1756 — repo現況verified release gate可稽核通過', () => {
-  it('九支Midao migration 已有 verified ledger record，因此verified mode通過', () => {
+describe('issue #1758 — repo現況verified release gate維持fail-closed', () => {
+  it('三支Midao migration 尚未verified，因此HOLD並精確列入missing', () => {
     const cli = runCli({ migrationsDir: path.join(REPO_ROOT, 'supabase', 'migrations'), ledgerPath: LEDGER_PATH });
-    assert.equal(cli.status, 0, `repo verified gate應通過\n${cli.stdout}\n${cli.stderr}`);
+    assert.equal(cli.status, 1, `repo verified gate應維持HOLD\n${cli.stdout}\n${cli.stderr}`);
     const result = JSON.parse(cli.stdout);
-    assert.equal(result.status, 'verified');
-    assert.deepEqual(result.missing, []);
+    assert.equal(result.status, 'hold');
+    assert.deepEqual(result.missing, [
+      '20260723020000_midao_service_drafts_and_questions.sql',
+      '20260723021000_midao_service_publication_versions.sql',
+      '20260723022000_midao_atomic_service_publication.sql',
+    ]);
     assert.deepEqual(result.unverified, []);
-    assert.equal(result.verifiedCount >= 9, true);
   });
 });
 
