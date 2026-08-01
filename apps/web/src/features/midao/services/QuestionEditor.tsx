@@ -1,5 +1,5 @@
 import styles from './services.module.css';
-import type { ServiceDraftQuestion, ServiceDraftPayload, QuestionType } from './service-types';
+import type { ServiceDraftQuestion, QuestionType } from './service-types';
 
 interface QuestionEditorProps {
   question: ServiceDraftQuestion;
