@@ -18,7 +18,7 @@ import {
   MidaoRuntimeAccessError,
 } from '../../../../../src/lib/midao/canonical-guide-session.ts';
 import { getServiceDraft, upsertServiceDraft } from '../../../../../src/lib/midao/db-midao-service-drafts.mjs';
-import { jsonOk, jsonError } from '../../../../../src/lib/api-response.ts';
+import { jsonOk, jsonError, jsonErrorWithExtras } from '../../../../../src/lib/api-response.ts';
 import { reportRouteError } from '../../../../../src/lib/route-error.ts';
 
 const ROUTE = 'v2/guide/service-drafts';
@@ -73,24 +73,24 @@ function gatewayResponse(result: {
     });
   }
   if (result.conflict) {
-    return Response.json(
+    return jsonErrorWithExtras(
+      'REVISION_CONFLICT',
+      '草稿已被更新，請重新讀取最新版本',
+      409,
       {
-        success: false,
-        error: { code: 'REVISION_CONFLICT', message: '草稿已被更新，請重新讀取最新版本' },
         currentRevision: result.currentRevision ?? null,
         draft: result.draft ?? null,
       },
-      { status: 409 },
     );
   }
   if (result.code === 'INVALID_QUESTIONNAIRE') {
-    return Response.json(
+    return jsonErrorWithExtras(
+      'INVALID_QUESTIONNAIRE',
+      '問卷題目驗證失敗',
+      422,
       {
-        success: false,
-        error: { code: 'INVALID_QUESTIONNAIRE', message: '問卷題目驗證失敗' },
         errors: result.validation?.errors ?? [],
       },
-      { status: 422 },
     );
   }
   if (result.code === 'NOT_FOUND') {

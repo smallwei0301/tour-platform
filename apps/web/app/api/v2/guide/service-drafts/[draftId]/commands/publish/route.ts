@@ -28,7 +28,7 @@ import {
   MidaoRuntimeAccessError,
 } from '../../../../../../../../src/lib/midao/canonical-guide-session.ts';
 import { publishServiceDraft } from '../../../../../../../../src/lib/midao/db-midao-service-publication.mjs';
-import { jsonOk, jsonError } from '../../../../../../../../src/lib/api-response.ts';
+import { jsonOk, jsonError, jsonErrorWithExtras } from '../../../../../../../../src/lib/api-response.ts';
 import { reportRouteError } from '../../../../../../../../src/lib/route-error.ts';
 
 const ROUTE = 'v2/guide/service-drafts/[draftId]/commands/publish';
@@ -85,26 +85,26 @@ function gatewayResponse(result: {
     });
   }
   if (result.code === 'REVISION_CONFLICT') {
-    return Response.json(
+    return jsonErrorWithExtras(
+      'REVISION_CONFLICT',
+      '草稿已被更新，請重新讀取最新版本',
+      409,
       {
-        success: false,
-        error: { code: 'REVISION_CONFLICT', message: '草稿已被更新，請重新讀取最新版本' },
         currentRevision: result.currentRevision ?? null,
       },
-      { status: 409 },
     );
   }
   if (result.code === 'SLUG_COLLISION') {
     return jsonError('SLUG_COLLISION', '方案代碼（slug）重複，請調整後再發布', 409);
   }
   if (result.code === 'VALIDATION_FAILED') {
-    return Response.json(
+    return jsonErrorWithExtras(
+      'VALIDATION_FAILED',
+      '草稿尚未符合發布條件',
+      422,
       {
-        success: false,
-        error: { code: 'VALIDATION_FAILED', message: '草稿尚未符合發布條件' },
         errors: result.errors ?? [],
       },
-      { status: 422 },
     );
   }
   if (

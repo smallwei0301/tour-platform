@@ -22,7 +22,7 @@ import {
   MidaoRuntimeAccessError,
 } from '../../../../../../src/lib/midao/canonical-guide-session.ts';
 import { discardServiceDraft } from '../../../../../../src/lib/midao/db-midao-service-drafts.mjs';
-import { jsonOk, jsonError } from '../../../../../../src/lib/api-response.ts';
+import { jsonOk, jsonError, jsonErrorWithExtras } from '../../../../../../src/lib/api-response.ts';
 import { reportRouteError } from '../../../../../../src/lib/route-error.ts';
 
 const ROUTE = 'v2/guide/service-drafts/[draftId]';
@@ -61,14 +61,14 @@ function gatewayResponse(result: {
 }): Response {
   if (result.ok) return jsonOk({ draft: result.draft ?? null });
   if (result.conflict) {
-    return Response.json(
+    return jsonErrorWithExtras(
+      'REVISION_CONFLICT',
+      '草稿已被更新，請重新讀取最新版本',
+      409,
       {
-        success: false,
-        error: { code: 'REVISION_CONFLICT', message: '草稿已被更新，請重新讀取最新版本' },
         currentRevision: result.currentRevision ?? null,
         draft: result.draft ?? null,
       },
-      { status: 409 },
     );
   }
   if (result.code === 'NOT_FOUND') return jsonError('NOT_FOUND', 'Resource not found', 404);
