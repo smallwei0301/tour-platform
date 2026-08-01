@@ -25,12 +25,11 @@ test('server layout calls the page-session boundary exactly once and composes th
   assert.doesNotMatch(layout, /getSupabase|guide_profiles/u);
 });
 
-test('five route skeletons stay presentation-only and use the canonical labels', () => {
+test('four route skeletons stay presentation-only and use the canonical labels', () => {
   const routes = new Map([
     ['page.tsx', '首頁'],
     ['requests/page.tsx', '需求'],
     ['calendar/page.tsx', '行事曆'],
-    ['services/page.tsx', '服務'],
     ['me/page.tsx', '我的頁面'],
   ]);
   for (const [path, label] of routes) {
@@ -38,6 +37,16 @@ test('five route skeletons stay presentation-only and use the canonical labels',
     assert.ok(source.includes(label), `${path} missing ${label}`);
     assert.doesNotMatch(source, /supabase|getGuideRuntimeAccessDb|fetch\(/iu);
   }
+});
+
+test('services route stays a thin composition boundary for ServiceListScreen', () => {
+  const source = read('services/page.tsx');
+  assert.match(
+    source,
+    /import \{ ServiceListScreen \} from '\.\.\/\.\.\/\.\.\/\.\.\/src\/features\/midao\/services\/ServiceListScreen';/u,
+  );
+  assert.match(source, /return <ServiceListScreen \/>;/u);
+  assert.doesNotMatch(source, /supabase|getGuideRuntimeAccessDb|fetch\(/iu);
 });
 
 test('loading, error and not-found routes use the basic states', () => {
