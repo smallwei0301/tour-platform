@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { setGuideSession } from './helpers';
+import { loginMidaoGuideViaApi } from './helpers';
 
 const guide = {
   guideId: '99999999-9999-4999-8999-999999999999',
@@ -80,7 +80,7 @@ async function installWizardRoutes(page: Page, options: { conflict?: boolean } =
 }
 
 async function login(page: Page) {
-  await setGuideSession(page, guide.guideId);
+  await loginMidaoGuideViaApi(page, guide);
 }
 
 test.describe('Midao services wizard', () => {
