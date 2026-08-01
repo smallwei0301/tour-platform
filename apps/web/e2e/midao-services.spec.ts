@@ -162,7 +162,7 @@ test('Midao services list renders status, price range, empty state and paginatio
       }),
     });
   });
-  await loginMidaoGuideViaApi(page, guide);
+  await login(page);
   await page.goto('/midao/services', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { name: '我的服務' })).toBeVisible();
