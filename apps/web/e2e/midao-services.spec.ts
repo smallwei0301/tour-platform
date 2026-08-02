@@ -107,8 +107,11 @@ test.describe('Midao services wizard', () => {
     await expect(page.getByRole('button', { name: '發布服務' })).toBeEnabled();
 
     await page.getByRole('button', { name: '發布服務' }).click();
-    await expect(page.getByRole('status')).toContainText('已發布');
-    await expect(page.getByRole('link', { name: /查看公開頁面/u })).toHaveAttribute('href', 'https://midao.com.tw/activities/11111111-1111-4111-8111-111111111111');
+    const publishedStatus = page.getByRole('status').filter({
+      has: page.getByRole('link', { name: '查看公開頁面 →', exact: true }),
+    });
+    await expect(publishedStatus).toContainText('已發布');
+    await expect(publishedStatus.getByRole('link', { name: '查看公開頁面 →', exact: true })).toHaveAttribute('href', 'https://midao.com.tw/activities/11111111-1111-4111-8111-111111111111');
 
     const screenshotPath = testInfo.outputPath('midao-services-published.png');
     await page.screenshot({ path: screenshotPath, fullPage: true });
@@ -137,11 +140,14 @@ test.describe('Midao services wizard', () => {
     await page.goto('/midao/services/new', { waitUntil: 'domcontentloaded' });
 
     await page.getByLabel('服務名稱').fill('我正在編輯的內容');
-    await expect(page.getByRole('alert')).toContainText('其他分頁更新了這份草稿');
+    const conflictAlert = page.getByRole('alert').filter({
+      has: page.getByRole('button', { name: '載入最新版本', exact: true }),
+    });
+    await expect(conflictAlert).toContainText('其他分頁更新了這份草稿');
     await expect(page.getByLabel('服務名稱')).toHaveValue('我正在編輯的內容');
-    await expect(page.getByRole('button', { name: '載入最新版本' })).toBeVisible();
+    await expect(conflictAlert.getByRole('button', { name: '載入最新版本', exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: '載入最新版本' }).click();
+    await conflictAlert.getByRole('button', { name: '載入最新版本', exact: true }).click();
     await expect(page.getByLabel('服務名稱')).toHaveValue('其他分頁的新內容');
   });
 });
@@ -166,13 +172,15 @@ test('Midao services list renders status, price range, empty state and paginatio
   await page.goto('/midao/services', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { name: '我的服務' })).toBeVisible();
-  await expect(page.getByText('山徑晨光')).toBeVisible();
-  await expect(page.getByText('草稿')).toBeVisible();
-  await expect(page.getByText('有未發布變更')).toBeVisible();
-  await expect(page.getByText('NT$ 1,200 – 2,400')).toBeVisible();
+  const morningServiceCard = page.getByRole('link', { name: '編輯服務：山徑晨光', exact: true });
+  await expect(morningServiceCard.getByRole('heading', { name: '山徑晨光', exact: true })).toBeVisible();
+  await expect(morningServiceCard.getByText('草稿', { exact: true })).toBeVisible();
+  await expect(morningServiceCard.getByText('有未發布變更', { exact: true })).toBeVisible();
+  await expect(morningServiceCard.getByText('NT$ 1,200 – 2,400', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '下一頁' }).click();
-  await expect(page.getByText('溪谷觀察')).toBeVisible();
-  await expect(page.getByText('已發布')).toBeVisible();
+  const valleyServiceCard = page.getByRole('link', { name: '編輯服務：溪谷觀察', exact: true });
+  await expect(valleyServiceCard.getByRole('heading', { name: '溪谷觀察', exact: true })).toBeVisible();
+  await expect(valleyServiceCard.getByText('已發布', { exact: true })).toBeVisible();
 
   const screenshotPath = testInfo.outputPath('midao-services-list.png');
   await page.screenshot({ path: screenshotPath, fullPage: true });
