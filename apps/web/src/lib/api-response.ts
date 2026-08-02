@@ -26,3 +26,23 @@ export function jsonError(
 ): Response {
   return Response.json(errorV2(code, message), { ...init, status });
 }
+
+/**
+ * 業務錯誤回應（帶額外頂層欄位）：
+ *   { success: false, error: { code, message }, ...extras } + HTTP status
+ *
+ * 與 jsonError 完全相同的 envelope，只是允許在頂層 error 之後附加 route 契約所需的
+ * 額外欄位（例如樂觀鎖衝突的 currentRevision/draft、驗證失敗的 errors[]）——不發明
+ * 新形狀。extras 的鍵順序即為輸出順序（接在 error 之後），與既有手刻 body 逐欄位一致。
+ *
+ * 向下相容：純新增 named export，既有 jsonOk/jsonError 呼叫端與 signature 完全不受影響。
+ */
+export function jsonErrorWithExtras(
+  code: string,
+  message: string,
+  status: number,
+  extras: Record<string, unknown>,
+  init?: ResponseInit
+): Response {
+  return Response.json({ ...errorV2(code, message), ...extras }, { ...init, status });
+}
