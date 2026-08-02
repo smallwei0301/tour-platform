@@ -251,6 +251,7 @@ describe('issue #1758 — repo現況verified release gate維持fail-closed', () 
       '20260723020000_midao_service_drafts_and_questions.sql',
       '20260723021000_midao_service_publication_versions.sql',
       '20260723022000_midao_atomic_service_publication.sql',
+      '20260723023000_midao_atomic_publication_restore.sql',
     ]);
     assert.deepEqual(result.unverified, []);
   });
