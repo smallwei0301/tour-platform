@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-08-01T05:59:52.808Z -->
+<!-- query_timestamp: 2026-08-02T06:00:17.724Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-01T05:59:52.808Z  
-**Commit SHA:** `ba1066d57fea1f7a81bf0a21dd743c53f1776c2d`
+**Query timestamp:** 2026-08-02T06:00:17.724Z  
+**Commit SHA:** `f51365d0966098a175933221343e92bd566d0182`
 
 ---
 
@@ -26,7 +26,7 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (54 total)
+## Open Issues (53 total)
 
 ### P0 (1)
 
@@ -34,7 +34,7 @@
 |---|-------|--------|
 | #1777 | [[Payments][P0] 修正結算／部分退款／出款非原子鏈，避免漏帳、重扣與錯誤撥款](https://github.com/smallwei0301/tour-platform/issues/1777) | triaged, type:bug, priority:P0, agent:backlog, owner:ai-agent, status:ready, payments, orders, database |
 
-### P1 (32)
+### P1 (31)
 
 | # | Title | Labels |
 |---|-------|--------|
@@ -44,7 +44,6 @@
 | #1761 | [[Midao Backend] Unify public guide page, cut over safely, and verify](https://github.com/smallwei0301/tour-platform/issues/1761) | triaged, type:feature, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:blocked, traveler-booking, notifications, infra |
 | #1760 | [[Midao Backend] Implement global calendar and effective availability policy](https://github.com/smallwei0301/tour-platform/issues/1760) | triaged, type:feature, priority:P1, guide-dashboard, agent:queued, owner:ai-agent, status:blocked, traveler-booking, database |
 | #1759 | [[Midao Backend] Implement LINE inquiries and traveler booking confirmation](https://github.com/smallwei0301/tour-platform/issues/1759) | triaged, type:feature, priority:P1, agent:queued, owner:ai-agent, status:blocked, traveler-booking, orders, database, rls, notifications |
-| #1758 | [[Midao Backend] Implement service drafts, questionnaires, and direct publishing](https://github.com/smallwei0301/tour-platform/issues/1758) | triaged, type:feature, priority:P1, guide-dashboard, agent:queued, owner:ai-agent, status:blocked, database, rls |
 | #1755 | [[Midao Backend] Implement approved guide backend redesign](https://github.com/smallwei0301/tour-platform/issues/1755) | triaged, type:feature, priority:P1, guide-dashboard, agent:backlog, owner:ai-agent, status:in-progress |
 | #1749 | [[daily bug scan] tour-platform 2026-07-21](https://github.com/smallwei0301/tour-platform/issues/1749) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
 | #1745 | [[QA] Daily test checklist for recent merged PRs 2026-07-18](https://github.com/smallwei0301/tour-platform/issues/1745) | priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, auth, notifications, admin, post-merge |
@@ -113,6 +112,7 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1787 | [【#1758】Midao 服務草稿、發布與 wizard（S1–S9）](https://github.com/smallwei0301/tour-platform/pull/1787) | 2026-08-02 |
 | #1786 | [[Database] 收斂 Midao migration verified ledger 與回滾證據](https://github.com/smallwei0301/tour-platform/pull/1786) | 2026-07-30 |
 | #1785 | [fix(domain): 自訂網域切換前的網址盤點 — BRAND_BOOK 改 midao.com.tw、修死連結 fallback](https://github.com/smallwei0301/tour-platform/pull/1785) | 2026-07-30 |
 | #1784 | [fix(seo): JSON-LD 絕對網址改走 SITE_URL，並修正 LINE 查詢的錯誤網域 fallback](https://github.com/smallwei0301/tour-platform/pull/1784) | 2026-07-30 |
@@ -122,7 +122,6 @@
 | #1780 | [docs(worklog): #1777 收尾 — PR merged、AC 11/11 sign-off、剩餘兩項](https://github.com/smallwei0301/tour-platform/pull/1780) | 2026-07-29 |
 | #1779 | [feat(accounting): #1777 收尾 — 對帳補資格稽核維度，#1647 preview 實測](https://github.com/smallwei0301/tour-platform/pull/1779) | 2026-07-29 |
 | #1778 | [fix(payments): #1777 修正結算／部分退款／出款非原子鏈（Phase 1–4）](https://github.com/smallwei0301/tour-platform/pull/1778) | 2026-07-29 |
-| #1775 | [fix(ops): 對齊 readiness snapshot 刷新節奏與 freshness guard（#1654）](https://github.com/smallwei0301/tour-platform/pull/1775) | 2026-07-29 |
 
 ---
 
