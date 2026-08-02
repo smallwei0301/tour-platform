@@ -1,11 +1,12 @@
 import type { NextRequest } from 'next/server';
+import { getAdminAuthEnv } from '../../../../../../../src/config/security-env.mjs';
 import { isAdminAuthorized, pickAdminCredentials } from '../../../../../../../src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from '../../../../../../../src/lib/admin-session.mjs';
-import { jsonError, jsonOk } from '../../../../../../../src/lib/api-response.ts';
 import {
   listServicePublicationVersions,
   MidaoPublicationRecoveryError,
-} from '../../../../../../../src/lib/db-midao-publication-recovery.mjs';
+} from '../../../../../../../src/lib/admin/midao-publication-recovery.mjs';
+import { jsonError, jsonOk } from '../../../../../../../src/lib/api-response.ts';
 import { reportRouteError } from '../../../../../../../src/lib/route-error.ts';
 
 const ROUTE = 'v2/admin/activities/[activityId]/publication-versions';
@@ -14,12 +15,13 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 function checkAdminAuth(request: Pick<NextRequest, 'headers'>): { ok: boolean; reason?: string } {
   const { token, email, expiresAt, sessionVersion, requireSession } = pickAdminCredentials(request);
   const security = getAdminSecurityState();
+  const { adminAccessToken, adminEmailAllowlist } = getAdminAuthEnv();
   return isAdminAuthorized({
     token,
     email,
     expiresAt,
-    requiredToken: getRequiredAdminToken(process.env.ADMIN_ACCESS_TOKEN),
-    allowlistRaw: process.env.ADMIN_EMAIL_ALLOWLIST,
+    requiredToken: getRequiredAdminToken(adminAccessToken),
+    allowlistRaw: adminEmailAllowlist,
     expectedSessionVersion: security.sessionVersion,
     sessionVersion: Number(sessionVersion || 0),
     requireSession,

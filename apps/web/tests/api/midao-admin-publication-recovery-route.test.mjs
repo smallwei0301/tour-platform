@@ -19,7 +19,7 @@ const RESTORE_ROUTE_PATH = path.resolve(
   ROOT,
   'app/api/v2/admin/activities/[activityId]/commands/restore-publication/route.ts',
 );
-const GATEWAY_PATH = path.resolve(ROOT, 'src/lib/db-midao-publication-recovery.mjs');
+const GATEWAY_PATH = path.resolve(ROOT, 'src/lib/admin/midao-publication-recovery.mjs');
 const SUPABASE_ENV_PATH = path.resolve(ROOT, 'src/lib/supabase-env.mjs');
 
 async function importFresh(file) {
@@ -112,6 +112,19 @@ async function withAdminEnv(fn) {
   }
 }
 
+async function withoutAdminEnv(fn) {
+  const previousToken = process.env.ADMIN_ACCESS_TOKEN;
+  const previousAllowlist = process.env.ADMIN_EMAIL_ALLOWLIST;
+  delete process.env.ADMIN_ACCESS_TOKEN;
+  delete process.env.ADMIN_EMAIL_ALLOWLIST;
+  try {
+    return await fn();
+  } finally {
+    if (previousToken !== undefined) process.env.ADMIN_ACCESS_TOKEN = previousToken;
+    if (previousAllowlist !== undefined) process.env.ADMIN_EMAIL_ALLOWLIST = previousAllowlist;
+  }
+}
+
 async function withSupabase(mock, fn) {
   const supabaseEnv = await import(pathToFileURL(SUPABASE_ENV_PATH).href);
   supabaseEnv.__setSupabaseClientForTest(mock);
@@ -172,6 +185,8 @@ test('source contract uses canonical admin guard/v2 helpers and only the approve
     assert.match(source, /isAdminAuthorized/);
     assert.match(source, /getAdminSecurityState/);
     assert.match(source, /getRequiredAdminToken/);
+    assert.match(source, /getAdminAuthEnv/);
+    assert.doesNotMatch(source, /process\.env/);
     assert.match(source, /jsonOk/);
     assert.match(source, /jsonError/);
   }
@@ -182,6 +197,26 @@ test('source contract uses canonical admin guard/v2 helpers and only the approve
   assert.doesNotMatch(gatewaySource, /\.(?:insert|upsert|delete)\(/);
   assert.doesNotMatch(gatewaySource, /\.from\([^)]*\)[\s\S]{0,200}\.update\(/);
 });
+
+test('GET and POST remain fail-closed when canonical admin env is missing', async () => withoutAdminEnv(async () => {
+  const mock = createSupabaseMock({ rpcData: RESTORED_PAYLOAD });
+  await withSupabase(mock, async () => {
+    const listRoute = await importFresh(LIST_ROUTE_PATH);
+    const restoreRoute = await importFresh(RESTORE_ROUTE_PATH);
+    const listResponse = await listRoute.GET(listRequest(), routeContext());
+    const restoreResponse = await restoreRoute.POST(
+      restoreRequest({ sourceVersion: 2 }),
+      routeContext(),
+    );
+
+    assert.equal(listResponse.status, 401);
+    assert.equal((await listResponse.json()).error.code, 'UNAUTHORIZED');
+    assert.equal(restoreResponse.status, 401);
+    assert.equal((await restoreResponse.json()).error.code, 'UNAUTHORIZED');
+    assert.deepEqual(mock.state.fromCalls, []);
+    assert.deepEqual(mock.state.rpcCalls, []);
+  });
+}));
 
 test('GET denies unauthenticated access before any DB call', async () => withAdminEnv(async () => {
   const mock = createSupabaseMock();

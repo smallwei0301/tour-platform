@@ -1,12 +1,13 @@
 import type { NextRequest } from 'next/server';
+import { getAdminAuthEnv } from '../../../../../../../../src/config/security-env.mjs';
 import { isAdminAuthorized, pickAdminCredentials } from '../../../../../../../../src/lib/admin-auth.mjs';
-import { getAdminSecurityState, getRequiredAdminToken } from '../../../../../../../../src/lib/admin-session.mjs';
-import { jsonError, jsonOk } from '../../../../../../../../src/lib/api-response.ts';
-import { validateCsrf } from '../../../../../../../../src/lib/csrf.mjs';
 import {
   restoreServicePublication,
   MidaoPublicationRecoveryError,
-} from '../../../../../../../../src/lib/db-midao-publication-recovery.mjs';
+} from '../../../../../../../../src/lib/admin/midao-publication-recovery.mjs';
+import { getAdminSecurityState, getRequiredAdminToken } from '../../../../../../../../src/lib/admin-session.mjs';
+import { jsonError, jsonOk } from '../../../../../../../../src/lib/api-response.ts';
+import { validateCsrf } from '../../../../../../../../src/lib/csrf.mjs';
 import {
   hashIdempotentRequest,
   parseIdempotencyKey,
@@ -24,12 +25,13 @@ type RestorePublicationBody = {
 function authorizeAdmin(request: Pick<NextRequest, 'headers'>) {
   const credentials = pickAdminCredentials(request);
   const security = getAdminSecurityState();
+  const { adminAccessToken, adminEmailAllowlist } = getAdminAuthEnv();
   const auth = isAdminAuthorized({
     token: credentials.token,
     email: credentials.email,
     expiresAt: credentials.expiresAt,
-    requiredToken: getRequiredAdminToken(process.env.ADMIN_ACCESS_TOKEN),
-    allowlistRaw: process.env.ADMIN_EMAIL_ALLOWLIST,
+    requiredToken: getRequiredAdminToken(adminAccessToken),
+    allowlistRaw: adminEmailAllowlist,
     expectedSessionVersion: security.sessionVersion,
     sessionVersion: Number(credentials.sessionVersion || 0),
     requireSession: credentials.requireSession,

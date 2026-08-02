@@ -2,7 +2,7 @@
 // This module is the only layer allowed to use the service-role Supabase client.
 // Restore delegates every mutation to the approved atomic RPC; it never writes tables directly.
 
-import { getSupabase } from './supabase-env.mjs';
+import { getSupabase } from '../supabase-env.mjs';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const IDEMPOTENCY_KEY_PATTERN = /^[ -~]+$/u;
