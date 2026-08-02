@@ -242,18 +242,26 @@ it('verified gate rejects fake ledger identity and fabricated verified or baseli
 });
 
 describe('issue #1758 — repo現況verified release gate維持fail-closed', () => {
-  it('三支Midao migration 尚未verified，因此HOLD並精確列入missing', () => {
+  it('四支Midao migration 已逐筆verified，因此gate通過且ledger records精確綁定', () => {
     const cli = runCli({ migrationsDir: path.join(REPO_ROOT, 'supabase', 'migrations'), ledgerPath: LEDGER_PATH });
-    assert.equal(cli.status, 1, `repo verified gate應維持HOLD\n${cli.stdout}\n${cli.stderr}`);
+    assert.equal(cli.status, 0, `repo verified gate應通過\n${cli.stdout}\n${cli.stderr}`);
     const result = JSON.parse(cli.stdout);
-    assert.equal(result.status, 'hold');
-    assert.deepEqual(result.missing, [
+    assert.equal(result.status, 'verified');
+    assert.deepEqual(result.missing, []);
+    assert.deepEqual(result.unverified, []);
+
+    const expectedFilenames = [
       '20260723020000_midao_service_drafts_and_questions.sql',
       '20260723021000_midao_service_publication_versions.sql',
       '20260723022000_midao_atomic_service_publication.sql',
       '20260723023000_midao_atomic_publication_restore.sql',
-    ]);
-    assert.deepEqual(result.unverified, []);
+    ];
+    const ledger = JSON.parse(fs.readFileSync(LEDGER_PATH, 'utf8'));
+    const issue1758Records = ledger.records.filter((record) => expectedFilenames.includes(record.filename));
+    assert.deepEqual(
+      issue1758Records.map(({ filename, environment, status }) => ({ filename, environment, status })),
+      expectedFilenames.map((filename) => ({ filename, environment: 'production', status: 'verified' }))
+    );
   });
 });
 
