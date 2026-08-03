@@ -471,3 +471,50 @@ route 的說明註解裡引用了錯誤寫法當反例（`.update({ refund_amoun
 - ⚠️ **AC 6／AC 7 的 PASS 判定要撤回**：驗收報告與 issue 留言當時判 PASS，但 F1／F2 讓
   「多次部分退款的最終淨應付正確」與「退款重送冪等」實際上不成立。修復套用並驗證後才能重判。
 - 緩解因素：production `refund_adjustment` 目前 0 筆，payout confirm 仍 HOLD。
+
+### Migration 套用與驗證（2026-08-03 13:03 Asia/Taipei）
+
+`20260730093000` 已套用 production（`SQL-OVERRIDE`：使用者「SQL-OVERRIDE，繼續完成」）。
+
+**結構驗證**：`pg_proc` 實查僅存 `fn_apply_refund_adjustment_atomic(uuid,integer,text)` 一個簽章
+（舊 `(uuid,text,text)` 已消失，無多載歧義）、`returns=jsonb`、`prosecdef=false`、
+`proconfig` 仍 pin `search_path=pg_catalog, public, pg_temp`、`proacl={postgres,service_role}`
+——**DROP + CREATE 後 anon 沒有回流**（Supabase 的 default privileges 會在新建函式時再放行一次，
+本 migration 的顯式 `REVOKE` 擋住了）。
+
+**端到端功能驗證（零寫入）**：在結尾 `RAISE EXCEPTION` 的 `DO` block 內執行，讓整個交易中止，
+以拋出的例外訊息當證據。對已結算訂單 `466e6b29`（total 6000／ledger_net 5100）連續呼叫：
+
+| 呼叫 | `refund_event_id` | `cumulative_refund_twd` | `target_net_twd` | `delta_twd` | `applied` |
+|---|---|---|---|---|---|
+| delta=1000 | `cum:1000` | 1000 | 4250 | −850 | true |
+| delta=1000 | **`cum:2000`** | **2000** | 3400 | −850 | true |
+| delta=0 | `cum:2000` | 2000 | 3400 | 0 | **false** |
+
+交易內實查 `operations_tracking.refund_amount_twd = 2000`、`adjustment_rows = 2`。
+
+**兩次等額退款得到兩把不同的鍵，且累積額正確相加** —— F1／F2 的修復在真實 Postgres 上成立。
+第三次 `delta=0` 冪等命中，證明對帳重跑安全。
+
+**資料影響：無。** rollback 後實查與套用前快照逐項一致：`payout_items` 10 列、
+`refund_adjustment` 0 列、`refund_event_id` 非空 0 列、`guide_balances` 合計 21,814、
+`operations_tracking` 有退款 3 筆、測試訂單無 ops 列、`payouts` 1 pending／0 paid、
+`actor='verify-1777'` 的 `audit_logs` 0 筆。
+
+### ⚠️ PR #1789 卡在 CI 停擺，尚未 merge
+
+GitHub Actions **自 2026-08-02T09:52Z 起全 repo 沒有任何 workflow run**——不是本 PR 的問題：
+26 支 workflow 的 `state` 全為 `active`，`ci.yml` 的 `on: pull_request` 也沒被改動，
+但 `opened` 與 `synchronize` 兩個事件都沒有觸發任何 run（PR 上只有 Vercel 的 check）。
+
+依鐵律 6（紅燈／無 CI 絕不 merge），**PR #1789 保持未 merge**。
+
+**目前的不一致窗口**：migration 已套用、程式碼未上線 → production 現行程式碼傳
+`p_refund_event_id` 會打不到新簽章 → wrapper fail-closed 拋 `SETTLEMENT_RPC_NOT_DEPLOYED`
+→ 退款仍成功，但累積額與 ledger 同步中止並記 incident。
+
+**曝險評估：零。** production `refund_adjustment` 歷來 0 筆、`refund_event_id` 非空 0 筆
+（此路徑從未觸發過）、payout confirm 仍 HOLD、`payouts` 0 paid、冷啟動尚未收正式訂單。
+
+**恢復步驟**：Actions 恢復後 → 重推或 re-run CI → 確認 conclusion=success（連結記入本 worklog）
+→ merge #1789 → 確認 Vercel production deployment READY → 窗口關閉。
