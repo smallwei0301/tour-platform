@@ -1,19 +1,20 @@
-<!-- query_timestamp: 2026-08-02T06:00:17.724Z -->
+<!-- query_timestamp: 2026-08-03T06:03:27.999Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-02T06:00:17.724Z  
-**Commit SHA:** `f51365d0966098a175933221343e92bd566d0182`
+**Query timestamp:** 2026-08-03T06:03:27.999Z  
+**Commit SHA:** `0a483817bde2f537d85abce143edc2b3eaeb07df`
 
 ---
 
-## Open PRs (11)
+## Open PRs (12)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1789 | [fix(payments): #1777 兩批 P0 — ON CONFLICT 推論不到部分索引、退款累積額被覆寫](https://github.com/smallwei0301/tour-platform/pull/1789) | `claude/1777-p0-on-conflict-fix` |
 | #1776 | [feat(shop): 完成導遊商店匯款 beta 文案與 SOP（#1607）](https://github.com/smallwei0301/tour-platform/pull/1776) _(draft)_ | `fix/issue-1607-guide-shop-beta` |
 | #1763 | [feat: midao2 導遊接案後台（接案 CRM）＋公開接案頁 /g/[slug]](https://github.com/smallwei0301/tour-platform/pull/1763) | `claude/superpowers-midao-backend-x90czx` |
 | #1690 | [docs(security): 建立「已接受安全風險」定案清單](https://github.com/smallwei0301/tour-platform/pull/1690) | `claude/code-workflow-architecture-mmm4ba` |
@@ -112,6 +113,7 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1788 | [docs: 對齊 #1758 production migration ledger](https://github.com/smallwei0301/tour-platform/pull/1788) | 2026-08-02 |
 | #1787 | [【#1758】Midao 服務草稿、發布與 wizard（S1–S9）](https://github.com/smallwei0301/tour-platform/pull/1787) | 2026-08-02 |
 | #1786 | [[Database] 收斂 Midao migration verified ledger 與回滾證據](https://github.com/smallwei0301/tour-platform/pull/1786) | 2026-07-30 |
 | #1785 | [fix(domain): 自訂網域切換前的網址盤點 — BRAND_BOOK 改 midao.com.tw、修死連結 fallback](https://github.com/smallwei0301/tour-platform/pull/1785) | 2026-07-30 |
@@ -121,7 +123,6 @@
 | #1781 | [feat(guide-apply): 申請流程單頁化、照片全選填、文案改用招募海報、用語統一「嚮導」](https://github.com/smallwei0301/tour-platform/pull/1781) | 2026-07-30 |
 | #1780 | [docs(worklog): #1777 收尾 — PR merged、AC 11/11 sign-off、剩餘兩項](https://github.com/smallwei0301/tour-platform/pull/1780) | 2026-07-29 |
 | #1779 | [feat(accounting): #1777 收尾 — 對帳補資格稽核維度，#1647 preview 實測](https://github.com/smallwei0301/tour-platform/pull/1779) | 2026-07-29 |
-| #1778 | [fix(payments): #1777 修正結算／部分退款／出款非原子鏈（Phase 1–4）](https://github.com/smallwei0301/tour-platform/pull/1778) | 2026-07-29 |
 
 ---
 
