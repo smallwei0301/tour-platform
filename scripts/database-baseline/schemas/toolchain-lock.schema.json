@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://midao.local/schemas/toolchain-lock.schema.json",
+  "title": "Midao baseline toolchain lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "requestSha256", "architecture", "cli", "docker", "images", "pg17", "renameNoReplace"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "requestSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "architecture": { "enum": ["amd64", "arm64"] },
+    "cli": { "$ref": "toolchain-supply-request.schema.json#/properties/cli" },
+    "docker": { "$ref": "toolchain-supply-request.schema.json#/properties/docker" },
+    "images": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "repository", "tag", "repoDigest", "imageId", "platform", "architecture"],
+        "properties": {
+          "role": { "type": "string", "minLength": 1 },
+          "repository": { "type": "string", "minLength": 1 },
+          "tag": { "type": "string", "minLength": 1 },
+          "repoDigest": { "type": "string", "pattern": "^[^@]+@sha256:[0-9a-f]{64}$" },
+          "imageId": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "platform": { "enum": ["linux/amd64", "linux/arm64"] },
+          "architecture": { "enum": ["amd64", "arm64"] }
+        }
+      }
+    },
+    "renameNoReplace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "realpath", "version", "sha256", "uid", "gid", "mode", "nlink", "platform", "architecture", "syscall", "flag"],
+      "properties": {
+        "path": { "const": "/usr/bin/perl" },
+        "realpath": { "const": "/usr/bin/perl" },
+        "version": { "const": "v5.36.0" },
+        "sha256": { "const": "f01fa7776dc21c9e4b5f60b2d231ca4d96dab958b8d06aff611cb1c16f871574" },
+        "uid": { "const": 0 },
+        "gid": { "const": 0 },
+        "mode": { "const": "0755" },
+        "nlink": { "const": 2 },
+        "platform": { "const": "linux" },
+        "architecture": { "const": "amd64" },
+        "syscall": { "const": 316 },
+        "flag": { "const": 1 }
+      }
+    },
+    "pg17": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "majorVersion", "binaries"],
+      "properties": {
+        "image": { "type": "string", "pattern": "^[^@]+@sha256:[0-9a-f]{64}$" },
+        "majorVersion": { "const": 17 },
+        "binaries": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["psql", "pg_dump", "pg_restore"],
+          "properties": {
+            "psql": { "$ref": "#/$defs/binary" },
+            "pg_dump": { "$ref": "#/$defs/binary" },
+            "pg_restore": { "$ref": "#/$defs/binary" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "binary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string", "pattern": "^/usr/bin/(psql|pg_dump|pg_restore)$" },
+        "version": { "type": "string", "pattern": "PostgreSQL\\) 17(\\.|$)" }
+      }
+    }
+  }
+}

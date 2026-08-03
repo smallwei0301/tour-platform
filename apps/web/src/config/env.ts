@@ -15,5 +15,5 @@ export function validateEnv(env: Record<string, string | undefined>) {
 
 /** 對外連結用的站台 base URL（email 內 CTA 等）。集中於此以符合 env 直讀 ratchet。 */
 export function getSiteBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform.vercel.app';
+  return process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform-nine.vercel.app';
 }

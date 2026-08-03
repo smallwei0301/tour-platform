@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://midao.local/schemas/baseline-manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "transactionId", "capture", "payloadDigests", "history"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "midao-baseline-expected-terminal" },
+    "transactionId": { "$ref": "#/$defs/sha256" },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transactionId", "captureManifestSha256", "captureLedgerSha256"],
+      "properties": {
+        "transactionId": { "$ref": "#/$defs/sha256" },
+        "captureManifestSha256": { "$ref": "#/$defs/sha256" },
+        "captureLedgerSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "payloadDigests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["catalog.expected-terminal.normalized.json", "catalog-expected-terminal.sha256"],
+      "properties": {
+        "catalog.expected-terminal.normalized.json": { "$ref": "#/$defs/sha256" },
+        "catalog-expected-terminal.sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "history": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[0-9]{14}_[a-z0-9_]+\\.sql$" }
+    }
+  },
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+}

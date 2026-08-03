@@ -1,4 +1,5 @@
-import { test as base, expect, Page, APIRequestContext } from '@playwright/test';
+import { test as base, expect, Page, Locator, APIRequestContext } from '@playwright/test';
+import { createImpersonationActorCookie } from '../src/lib/midao/impersonation-actor';
 
 const ADMIN_TOKEN = process.env.ADMIN_ACCESS_TOKEN || 'test-token-123';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@tour-platform.com';
@@ -157,6 +158,110 @@ async function setGuideSession(page: Page, guideId: string): Promise<void> {
   ]);
 }
 
+interface MidaoGuideLoginInput {
+  guideId: string;
+  email: string;
+  password: string;
+  expectedRedirect: '/midao' | '/guide/dashboard';
+}
+
+interface MidaoImpersonationActorInput {
+  guideId: string;
+  adminEmail: string;
+  issuedAt?: number;
+}
+
+async function loginMidaoGuideViaApi(page: Page, input: MidaoGuideLoginInput): Promise<void> {
+  const csrfRes = await page.request.get('/api/guide/auth/csrf', { failOnStatusCode: false });
+  const csrfBody = await csrfRes.json().catch(() => ({} as Record<string, unknown>));
+  const csrfToken = (csrfBody as { data?: { csrfToken?: string } })?.data?.csrfToken ?? '';
+  if (!csrfRes.ok() || !csrfToken) {
+    throw new Error(`loginMidaoGuideViaApi: csrf failed with status ${csrfRes.status()}`);
+  }
+
+  const sessionRes = await page.request.post('/api/guide/auth/session', {
+    headers: { 'content-type': 'application/json', 'x-csrf-token': csrfToken },
+    data: { email: input.email, password: input.password },
+    failOnStatusCode: false,
+  });
+  const sessionBody = await sessionRes.json().catch(() => ({} as Record<string, unknown>));
+  const sessionData = (sessionBody as { data?: { created?: boolean; redirectTo?: string }; error?: { code?: string } }).data;
+  if (!sessionRes.ok() || sessionData?.created !== true || sessionData.redirectTo !== input.expectedRedirect) {
+    const errorCode = (sessionBody as { error?: { code?: string } }).error?.code ?? 'INVALID_RESPONSE';
+    throw new Error(`loginMidaoGuideViaApi: session failed with status ${sessionRes.status()} code ${errorCode}`);
+  }
+
+  const cookies = await page.context().cookies();
+  const token = cookies.find((cookie) => cookie.name === 'guide_token' && cookie.value);
+  const guideId = cookies.find((cookie) => cookie.name === 'guide_id' && cookie.value === input.guideId);
+  if (!token || !guideId) {
+    throw new Error(`loginMidaoGuideViaApi: canonical guide cookies missing; present=${cookies.map((cookie) => cookie.name).join(',')}`);
+  }
+}
+
+async function setMidaoImpersonationActorCookie(
+  page: Page,
+  input: MidaoImpersonationActorInput,
+): Promise<void> {
+  const actorSetCookie = createImpersonationActorCookie({
+    adminEmail: input.adminEmail,
+    targetGuideId: input.guideId,
+    issuedAt: input.issuedAt,
+  });
+  const actorPair = actorSetCookie.split(';', 1)[0];
+  const separator = actorPair.indexOf('=');
+  if (separator < 1 || !actorPair.slice(separator + 1)) {
+    throw new Error('setMidaoImpersonationActorCookie: signed actor cookie was not created');
+  }
+  await page.context().addCookies([
+    {
+      name: actorPair.slice(0, separator),
+      value: actorPair.slice(separator + 1),
+      url: BASE_URL,
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+    { name: 'guide_impersonation', value: '1', url: BASE_URL, sameSite: 'Lax' },
+  ]);
+}
+
+/**
+ * Helper: 填一組受控欄位，並確保值撐過 hydration。
+ *
+ * Next dev 下 client component 的 SSR HTML 先到、React 才接上事件。若 `fill()`
+ * 落在 hydration 之前，React 掛載後會用初始 state（空字串）重繪，把剛打進去的
+ * 值直接抹掉 —— 症狀是後面欄位都正常、只有最前面一兩個莫名是空的，表單於是
+ * 永遠停在「必填未完成」、送出鈕不會 enable。
+ *
+ * 單獨回讀某一欄不夠：那一刻值可能還在，hydration 稍後才抹掉。所以這裡「全部
+ * 填完再全部回讀」，只要有任一欄被抹掉就整組重填，直到全部穩定。
+ */
+async function fillFormHydrated(page: Page, entries: [selector: string, value: string][]) {
+  await expect(async () => {
+    for (const [selector, value] of entries) await page.locator(selector).fill(value);
+    for (const [selector, value] of entries) {
+      expect(await page.locator(selector).inputValue()).toBe(value);
+    }
+  }).toPass({ timeout: 20_000 });
+}
+
+/**
+ * Helper: 點一個「展開型」按鈕，直到它真的展開為止。
+ *
+ * 與 fillFormHydrated 同源問題（見 lessons.md 2026-07-30）：`goto()` 後立刻
+ * `click()` 可能落在 hydration 之前，onClick 還沒掛上 → 點了等於沒點，接著
+ * 等展開內容就 timeout。
+ *
+ * 這裡用 React 控制的 `aria-expanded` 當成功信號並重試點擊。**前提是該按鈕
+ * 只會開、不會 toggle**（例如 `setOpen(true)`），否則重試會把它關回去。
+ */
+async function clickUntilExpanded(locator: Locator) {
+  await expect(async () => {
+    await locator.click();
+    await expect(locator).toHaveAttribute('aria-expanded', 'true', { timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
+}
+
 /** Fixture: authenticated page + isMobile flag */
 const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   authedPage: async ({ page }, use) => {
@@ -169,4 +274,15 @@ const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   },
 });
 
-export { test, expect, adminLogin, ensureLoggedIn, setGuideSession, setTravelerSession };
+export {
+  test,
+  expect,
+  adminLogin,
+  ensureLoggedIn,
+  setGuideSession,
+  setTravelerSession,
+  loginMidaoGuideViaApi,
+  setMidaoImpersonationActorCookie,
+  fillFormHydrated,
+  clickUntilExpanded,
+};

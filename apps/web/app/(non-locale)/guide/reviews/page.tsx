@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Issue #1592 — 導遊後台：評論回覆。
- * 列出自己活動的已核准評論，導遊可撰寫/覆寫/撤下公開回覆。
+ * Issue #1592 — 嚮導後台：評論回覆。
+ * 列出自己活動的已核准評論，嚮導可撰寫/覆寫/撤下公開回覆。
  * GET /api/v2/guide/reviews（session）；PUT /api/v2/guide/reviews/[id]/reply（session＋CSRF）。
  */
 
@@ -46,7 +46,7 @@ export default function GuideReviewsPage() {
     try {
       const res = await fetch('/api/v2/guide/reviews', { cache: 'no-store' });
       if (res.status === 401) {
-        setError('請重新登入導遊後台');
+        setError('請重新登入嚮導後台');
         setItems([]);
         return;
       }
@@ -132,7 +132,7 @@ export default function GuideReviewsPage() {
               <p style={{ margin: '10px 0 12px', fontSize: 14, lineHeight: 1.7, color: '#374151' }}>{r.text}</p>
 
               <label style={{ display: 'block', fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
-                導遊回覆
+                嚮導回覆
               </label>
               <textarea
                 value={draft}

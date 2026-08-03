@@ -12,21 +12,21 @@ type QAItem = {
 };
 
 type Props = {
-  /** 導遊 id（= guide_profiles.id，與導遊 session.guideId 同源） */
+  /** 嚮導 id（= guide_profiles.id，與嚮導 session.guideId 同源） */
   guideId: string;
   guideName: string;
 };
 
 /**
- * 「認識導遊」頁 sidebar 的「詢問導遊」inline 訊息表單。
+ * 「認識嚮導」頁 sidebar 的「詢問嚮導」inline 訊息表單。
  *
  * 行為（對齊行程詳情頁的旅客問答 ActivityQASection，但訊息不綁定行程）：
- *  1. 按下「✉️ 詢問導遊」先判斷旅客有沒有登入。
+ *  1. 按下「✉️ 詢問嚮導」先判斷旅客有沒有登入。
  *  2. 已登入 → 直接在此頁面下方展開輸入框與送出功能（和行程 QA 一樣）。
  *  3. 未登入 → 展開登入提示。
  *
  * 送出走既有的 /api/qa，但 activity_id 帶 sentinel `guide:<guideId>`，
- * 讓訊息流進同一個導遊後台收件匣（/api/guide/qa），後台卡片顯示「導遊頁面」。
+ * 讓訊息流進同一個嚮導後台收件匣（/api/guide/qa），後台卡片顯示「嚮導頁面」。
  */
 export function GuideContactQASection({ guideId, guideName }: Props) {
   const activityId = buildGuideContactActivityId(guideId);
@@ -101,7 +101,7 @@ export function GuideContactQASection({ guideId, guideName }: Props) {
         className="tp-btn tp-btn-primary"
         style={{ width: '100%', display: 'block', textAlign: 'center', marginTop: 12 }}
       >
-        ✉️ 詢問導遊
+        ✉️ 詢問嚮導
       </button>
 
       {open && (
@@ -159,7 +159,7 @@ export function GuideContactQASection({ guideId, guideName }: Props) {
                   name="question"
                   value={question}
                   onChange={e => setQuestion(e.target.value)}
-                  placeholder="有疑問嗎？歡迎傳訊息給導遊..."
+                  placeholder="有疑問嗎？歡迎傳訊息給嚮導..."
                   rows={3}
                   required
                   style={{
@@ -187,7 +187,7 @@ export function GuideContactQASection({ guideId, guideName }: Props) {
             )
           ) : (
             <p style={{ fontSize: 13, color: '#6b7280' }} data-testid="guide-qa-login-prompt">
-              請<a href="/login" style={{ color: '#a8511f', fontWeight: 600 }}>登入</a>後才能傳訊息給導遊
+              請<a href="/login" style={{ color: '#a8511f', fontWeight: 600 }}>登入</a>後才能傳訊息給嚮導
             </p>
           )}
         </div>

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://midao.local/schemas/toolchain-supply-request.schema.json",
+  "title": "Midao baseline toolchain supply request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "approval", "architecture", "cli", "docker", "images"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "approvedDigests"],
+      "properties": {
+        "status": { "enum": ["pending", "approved", "not-required"] },
+        "approvedDigests": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[^@]+@sha256:[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "architecture": { "enum": ["amd64", "arm64"] },
+    "cli": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "realpath", "version", "sha256", "uid", "gid", "mode", "nlink"],
+      "properties": {
+        "path": { "const": "/root/.hermes/toolchains/supabase/2.87.2/supabase" },
+        "realpath": { "const": "/root/.hermes/toolchains/supabase/2.87.2/supabase" },
+        "version": { "const": "2.87.2" },
+        "sha256": { "const": "e325dd50b274e88fd1416f93b9e063902827ae326d356ab7f9dc604c3eba5c59" },
+        "uid": { "const": 0 },
+        "gid": { "const": 0 },
+        "mode": { "const": "0755" },
+        "nlink": { "const": 1 }
+      }
+    },
+    "docker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "realpath", "endpoint", "architecture"],
+      "properties": {
+        "path": { "const": "/usr/bin/docker" },
+        "realpath": { "const": "/usr/bin/docker" },
+        "endpoint": { "const": "unix:///var/run/docker.sock" },
+        "architecture": { "enum": ["amd64", "arm64"] }
+      }
+    },
+    "images": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "repository", "tag", "repoDigest", "platform", "architecture", "localPresent", "localImageId", "estimatedMissingBytes"],
+        "properties": {
+          "role": { "type": "string", "minLength": 1 },
+          "repository": { "type": "string", "minLength": 1 },
+          "tag": { "type": "string", "minLength": 1 },
+          "repoDigest": { "type": "string", "pattern": "^[^@]+@sha256:[0-9a-f]{64}$" },
+          "platform": { "enum": ["linux/amd64", "linux/arm64"] },
+          "architecture": { "enum": ["amd64", "arm64"] },
+          "localPresent": { "type": "boolean" },
+          "localImageId": {
+            "oneOf": [
+              { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+              { "type": "null" }
+            ]
+          },
+          "estimatedMissingBytes": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

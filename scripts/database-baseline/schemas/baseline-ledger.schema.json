@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://midao.local/schemas/baseline-ledger.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "transactionId", "captureManifestSha256", "payloadDigests"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "midao-baseline-capture-ledger" },
+    "transactionId": { "$ref": "#/$defs/sha256" },
+    "captureManifestSha256": { "$ref": "#/$defs/sha256" },
+    "payloadDigests": { "$ref": "#/$defs/capturePayloadDigests" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "capturePayloadDigests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline.sql", "managed-overlays.sql", "catalog.cutoff.normalized.json", "toc.normalized.json", "use-list.txt", "toc-ownership-map.json", "dependency-closure.json", "role-map.json", "ownership-boundary.json", "exclusions.json", "platform-prerequisites.json", "security-drift.json", "catalog-cutoff.sha256"],
+      "properties": {
+        "baseline.sql": { "$ref": "#/$defs/sha256" },
+        "managed-overlays.sql": { "$ref": "#/$defs/sha256" },
+        "catalog.cutoff.normalized.json": { "$ref": "#/$defs/sha256" },
+        "toc.normalized.json": { "$ref": "#/$defs/sha256" },
+        "use-list.txt": { "$ref": "#/$defs/sha256" },
+        "toc-ownership-map.json": { "$ref": "#/$defs/sha256" },
+        "dependency-closure.json": { "$ref": "#/$defs/sha256" },
+        "role-map.json": { "$ref": "#/$defs/sha256" },
+        "ownership-boundary.json": { "$ref": "#/$defs/sha256" },
+        "exclusions.json": { "$ref": "#/$defs/sha256" },
+        "platform-prerequisites.json": { "$ref": "#/$defs/sha256" },
+        "security-drift.json": { "$ref": "#/$defs/sha256" },
+        "catalog-cutoff.sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

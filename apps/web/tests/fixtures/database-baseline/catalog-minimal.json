@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "extractorVersion": 1,
+  "serverVersionNum": 170010,
+  "transactionReadOnly": true,
+  "ownershipOverlayStatus": "pending",
+  "sections": {
+    "schemas": [{ "canonicalKey": ["schema", "public"] }],
+    "relations": [{ "canonicalKey": ["relation", "public", "example"] }],
+    "sequences": [{ "canonicalKey": ["sequence", "public", "example_id_seq"] }],
+    "columns": [{ "canonicalKey": ["column", "public", "example", "id"] }],
+    "types": [{ "canonicalKey": ["type", "public", "example"] }],
+    "constraints": [
+      { "canonicalKey": ["constraint", "relation", "public", "example", "example_pkey"] },
+      { "canonicalKey": ["constraint", "domain", "public", "positive_integer", "positive_integer_check"] }
+    ],
+    "indexes": [{ "canonicalKey": ["index", "public", "example_pkey"] }],
+    "routines": [{ "canonicalKey": ["routine", "public", "example", ""] }],
+    "triggers": [{ "canonicalKey": ["trigger", "public", "example", "example_trigger"] }],
+    "rls": [{ "canonicalKey": ["rls", "public", "example"] }],
+    "policies": [{ "canonicalKey": ["policy", "public", "example", "example_policy"], "roles": ["PUBLIC"] }],
+    "acl": [{ "canonicalKey": ["acl", "relation", "public", "example", "postgres", "PUBLIC", "SELECT", false] }],
+    "owners": [{ "canonicalKey": ["owner", "relation", "public", "example"] }],
+    "defaultPrivileges": [{ "canonicalKey": ["default_privilege", "postgres", "public", "r", "postgres", "PUBLIC", "SELECT", false] }],
+    "extensions": [{ "canonicalKey": ["extension", "pgcrypto"] }],
+    "extensionMemberships": [{ "canonicalKey": ["extension_member", "pgcrypto", "function", null, "digest(text,text)"] }],
+    "publicationMembership": [{ "canonicalKey": ["publication", "supabase_realtime"] }],
+    "managedSchemaInventory": [{
+      "canonicalKey": ["managed_schema_inventory", "targets_managed_relation", "rls", "auth", "users"],
+      "reason": "targets_managed_relation",
+      "objectKey": ["rls", "auth", "users"],
+      "managedSchema": "auth",
+      "classification": "unclassified"
+    }],
+    "managedSchemaOverlays": []
+  }
+}

@@ -23,17 +23,17 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { locale } = await params;
   return {
-    title: 'Midao 祕島｜台灣在地導遊預約平台',
-    description: '找到懂路的人，帶你走進台灣最有故事的地方。柴山探洞、大稻埕老街、花蓮溯溪⋯⋯ 預約實名認證在地導遊，安全透明。',
+    title: 'Midao 祕島｜台灣在地嚮導預約平台',
+    description: '找到懂路的人，帶你走進台灣最有故事的地方。柴山探洞、大稻埕老街、花蓮溯溪⋯⋯ 預約實名認證在地嚮導，安全透明。',
     alternates: buildAlternates('/home', locale),
     openGraph: {
-      title: 'Midao 祕島｜台灣在地導遊預約平台',
+      title: 'Midao 祕島｜台灣在地嚮導預約平台',
       description: '找到懂路的人，帶你走進台灣最有故事的地方。',
-      images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: 'Midao 祕島｜台灣在地導遊預約平台' }],
+      images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: 'Midao 祕島｜台灣在地嚮導預約平台' }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'Midao 祕島｜台灣在地導遊預約平台',
+      title: 'Midao 祕島｜台灣在地嚮導預約平台',
       description: '找到懂路的人，帶你走進台灣最有故事的地方。',
       images: ['/images/og-default.png'],
     },

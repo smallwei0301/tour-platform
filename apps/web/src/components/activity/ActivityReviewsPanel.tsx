@@ -36,10 +36,10 @@ function Stars({ value, aria }: { value?: number | null; aria: string }) {
 }
 
 /**
- * Issue #1592 — 活動頁評論互動：評分分佈長條 + 星等/有照片篩選 + 導遊回覆顯示。
+ * Issue #1592 — 活動頁評論互動：評分分佈長條 + 星等/有照片篩選 + 嚮導回覆顯示。
  * 分佈與篩選皆為前端純函式（review-distribution.mjs）。
  * 補強：社群口碑語錄（warmQuotes，管理者後台設定的暖場評論）經 toReviewDisplayList
- * 併入分佈與篩選，與真實評論同進正式評論邏輯（真實在前、暖場在後、暖場無日期/導遊回覆）。
+ * 併入分佈與篩選，與真實評論同進正式評論邏輯（真實在前、暖場在後、暖場無日期/嚮導回覆）。
  * 注意：此僅影響面板視覺；rating_avg／review_count／JSON-LD 仍只採真實評論（#1378 紅線）。
  */
 export function ActivityReviewsPanel({
@@ -122,7 +122,7 @@ export function ActivityReviewsPanel({
       <div className="kkd-review-list" role="region" aria-label={t('sectionReviews')} tabIndex={0}>
         {filtered.map((item) =>
           item.isWarm ? (
-            /* 社群口碑語錄（暖場）— 併入分佈/篩選，無日期/導遊回覆 */
+            /* 社群口碑語錄（暖場）— 併入分佈/篩選，無日期/嚮導回覆 */
             <div key={item.id} className="kkd-review-card">
               <div className="kkd-review-header">
                 <strong className="kkd-reviewer">{resolveSocialProofAuthor(item.author)}</strong>
@@ -148,7 +148,7 @@ export function ActivityReviewsPanel({
               {Array.isArray(item.photos) && item.photos.length > 0 && (
                 <ReviewPhotos photos={item.photos} authorLabel={item.author ?? ''} />
               )}
-              {/* #1592 導遊回覆 */}
+              {/* #1592 嚮導回覆 */}
               {item.guideReply && item.guideReply.text && (
                 <div className="kkd-review-guide-reply">
                   <strong className="kkd-review-guide-reply-label">

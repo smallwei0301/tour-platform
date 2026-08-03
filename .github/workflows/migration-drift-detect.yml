@@ -7,12 +7,24 @@ on:
       - 'scripts/production-schema-drift-preflight.mjs'
       - 'scripts/verify-migration-*.mjs'
       - 'scripts/check-migration-ledger.mjs'
+      - 'scripts/check-migration-source-gate.mjs'
+      - 'scripts/database-baseline/**'
+      - 'supabase/baselines/**'
+      - 'docs/operations/baseline-ledger.json'
+      - 'docs/operations/expected-terminal-ledger.json'
       - 'docs/operations/migration-ledger.json'
+      - 'apps/web/tests/unit/migration-source-gate.test.mjs'
+      - 'apps/web/tests/unit/migration-gate-callers.test.mjs'
       - '.github/workflows/migration-drift-detect.yml'
   push:
     branches: [main]
     paths:
       - 'supabase/migrations/**'
+      - 'supabase/baselines/**'
+      - 'scripts/database-baseline/**'
+      - 'scripts/check-migration-source-gate.mjs'
+      - 'scripts/check-migration-ledger.mjs'
+      - 'docs/operations/*ledger.json'
       - 'scripts/production-schema-drift-preflight.mjs'
   schedule:
     - cron: '0 4 * * *'   # Daily 04:00 UTC — catch drift from direct DB changes
@@ -34,7 +46,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.23.1'
 
       - name: Install deps
         run: npm install
@@ -46,12 +58,15 @@ jobs:
           node --test --test-concurrency=1 \
             tests/api/issue1286-migration-drift-source-contract.test.mjs
 
-      # #1293 apply ledger gate（選項 B）：純靜態、不需 secrets。
-      # 就算 live 探測 PASS，ledger 缺 verified record 仍要 fail（sign-off 才算完成）。
-      - name: Check migration apply ledger (#1293, static, no secrets)
-        run: node scripts/check-migration-ledger.mjs
+      - name: Check migration source contract (PR/local mode)
+        run: node scripts/check-migration-source-gate.mjs --mode source
+
+      - name: Check production apply ledger (release/monitor mode)
+        if: github.event_name != 'pull_request'
+        run: node scripts/check-migration-ledger.mjs --mode verified
 
   drift-detect:
+    if: github.event_name != 'pull_request'
     name: Production schema drift detection
     runs-on: ubuntu-latest
     # Only run when credentials are available (secrets cannot be exposed for
@@ -99,7 +114,7 @@ jobs:
         if: steps.check-secrets.outputs.skip != 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.23.1'
 
       - name: Install deps
         if: steps.check-secrets.outputs.skip != 'true'
@@ -180,7 +195,7 @@ jobs:
           exit 1
 
       - name: Notify on failure (Telegram + Email)
-        if: failure()
+        if: failure() && github.event_name != 'pull_request'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

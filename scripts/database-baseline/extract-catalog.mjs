@@ -1,0 +1,247 @@
+#!/usr/bin/env node
+import { chmod, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
+export const FIXED_PSQL = '/usr/bin/psql';
+export const FIXED_SQL = path.join(scriptDirectory, 'catalog-queries.sql');
+export const CATALOG_SECTIONS = Object.freeze([
+  'schemas', 'relations', 'sequences', 'columns', 'types', 'constraints', 'indexes', 'routines', 'triggers',
+  'rls', 'policies', 'acl', 'owners', 'defaultPrivileges', 'extensions', 'extensionMemberships',
+  'publicationMembership', 'managedSchemaInventory', 'managedSchemaOverlays',
+]);
+const ALLOWED_CONNECTION_ENV = new Set([
+  'PGHOST', 'PGPORT', 'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGSSLMODE', 'PGSSLROOTCERT',
+]);
+const REQUIRED_CONNECTION_ENV = ['PGHOST', 'PGPORT', 'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGSSLMODE'];
+const TOP_LEVEL_KEYS = ['schemaVersion', 'extractorVersion', 'serverVersionNum', 'transactionReadOnly', 'ownershipOverlayStatus', 'sections'];
+const OUTPUT_LIMIT = 16 * 1024 * 1024;
+
+function exactKeys(value, expected, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} must be an object`);
+  const actual = Object.keys(value);
+  const extra = actual.filter((key) => !expected.includes(key));
+  const missing = expected.filter((key) => !actual.includes(key));
+  if (extra.length) throw new Error(`${label} unexpected option or key: ${extra[0]}`);
+  if (missing.length) throw new Error(`${label} missing key: ${missing[0]}`);
+}
+
+function validateScalar(value, key) {
+  if (typeof value !== 'string' || value.length === 0 || value.includes('\0') || value.includes('\n') || value.includes('\r')) {
+    throw new Error(`${key} invalid`);
+  }
+}
+
+export function buildPsqlInvocation(options) {
+  exactKeys(options, ['psqlPath', 'sqlPath', 'home', 'connectionEnv'], 'extractor options');
+  const { psqlPath, sqlPath, home, connectionEnv } = options;
+  if (psqlPath !== FIXED_PSQL || !path.isAbsolute(psqlPath)) throw new Error('psql path substitution refused');
+  if (path.resolve(sqlPath) !== FIXED_SQL) throw new Error('SQL path substitution refused');
+  if (!path.isAbsolute(home)) throw new Error('runner HOME must be absolute');
+  if (!connectionEnv || typeof connectionEnv !== 'object' || Array.isArray(connectionEnv)) throw new Error('connection env invalid');
+  for (const key of Object.keys(connectionEnv)) {
+    if (!ALLOWED_CONNECTION_ENV.has(key)) throw new Error(`${key} is not allowed in connection env`);
+    validateScalar(connectionEnv[key], key);
+  }
+  for (const key of REQUIRED_CONNECTION_ENV) {
+    if (!(key in connectionEnv)) throw new Error(`connection env missing ${key}`);
+  }
+  if (!/^\d{1,5}$/.test(connectionEnv.PGPORT) || Number(connectionEnv.PGPORT) < 1 || Number(connectionEnv.PGPORT) > 65535) {
+    throw new Error('PGPORT invalid');
+  }
+  return {
+    executable: FIXED_PSQL,
+    args: ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--tuples-only', '--no-align', '--file', FIXED_SQL],
+    env: {
+      HOME: home,
+      LANG: 'C',
+      LC_ALL: 'C',
+      ...connectionEnv,
+      PGOPTIONS: '-c default_transaction_read_only=on',
+    },
+  };
+}
+
+export function validateRawCatalog(catalog) {
+  exactKeys(catalog, TOP_LEVEL_KEYS, 'catalog');
+  if (catalog.schemaVersion !== 1) throw new Error('catalog schema version mismatch');
+  if (catalog.extractorVersion !== 1) throw new Error('catalog extractor version mismatch');
+  if (!Number.isInteger(catalog.serverVersionNum) || catalog.serverVersionNum < 170000 || catalog.serverVersionNum >= 180000) {
+    throw new Error('catalog requires PostgreSQL major 17');
+  }
+  if (catalog.transactionReadOnly !== true) throw new Error('catalog connection was not read-only');
+  if (catalog.ownershipOverlayStatus !== 'pending') throw new Error('ownership overlay status must remain pending before reviewed ownership publication');
+  if (!catalog.sections || typeof catalog.sections !== 'object' || Array.isArray(catalog.sections)) throw new Error('catalog sections invalid');
+  for (const section of Object.keys(catalog.sections)) {
+    if (!CATALOG_SECTIONS.includes(section)) throw new Error(`unknown section: ${section}`);
+  }
+  for (const section of CATALOG_SECTIONS) {
+    if (!(section in catalog.sections)) throw new Error(`missing section: ${section}`);
+    const entries = catalog.sections[section];
+    if (!Array.isArray(entries)) throw new Error(`section ${section} must be an array`);
+    const seen = new Set();
+    for (const entry of entries) {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new Error(`section ${section} entry invalid`);
+      if (!Array.isArray(entry.canonicalKey) || entry.canonicalKey.length === 0
+        || entry.canonicalKey.some((component) => component !== null && !['string', 'number', 'boolean'].includes(typeof component))) {
+        throw new Error(`section ${section} canonical key must be a non-empty JSON scalar array`);
+      }
+      const canonicalKey = JSON.stringify(entry.canonicalKey);
+      if (seen.has(canonicalKey)) throw new Error(`duplicate canonical key in ${section}: ${canonicalKey}`);
+      seen.add(canonicalKey);
+    }
+  }
+  if (catalog.sections.managedSchemaOverlays.length !== 0) throw new Error('managed schema overlays must remain empty while ownership is pending');
+  return catalog;
+}
+
+export function assertNoDuplicateJsonKeys(text) {
+  let index = 0;
+  const skipWhitespace = () => { while (/\s/u.test(text[index] ?? '')) index += 1; };
+  const parseString = () => {
+    if (text[index] !== '"') throw new Error('catalog JSON string expected');
+    const start = index++;
+    while (index < text.length) {
+      if (text[index] === '\\') { index += 2; continue; }
+      if (text[index] === '"') {
+        index += 1;
+        return JSON.parse(text.slice(start, index));
+      }
+      index += 1;
+    }
+    throw new Error('catalog JSON string unterminated');
+  };
+  const parseValue = () => {
+    skipWhitespace();
+    if (text[index] === '{') {
+      index += 1;
+      skipWhitespace();
+      const keys = new Set();
+      if (text[index] === '}') { index += 1; return; }
+      while (index < text.length) {
+        const key = parseString();
+        if (keys.has(key)) throw new Error(`duplicate JSON key: ${key}`);
+        keys.add(key);
+        skipWhitespace();
+        if (text[index++] !== ':') throw new Error('catalog JSON colon expected');
+        parseValue();
+        skipWhitespace();
+        const delimiter = text[index++];
+        if (delimiter === '}') return;
+        if (delimiter !== ',') throw new Error('catalog JSON object delimiter expected');
+        skipWhitespace();
+      }
+      throw new Error('catalog JSON object unterminated');
+    }
+    if (text[index] === '[') {
+      index += 1;
+      skipWhitespace();
+      if (text[index] === ']') { index += 1; return; }
+      while (index < text.length) {
+        parseValue();
+        skipWhitespace();
+        const delimiter = text[index++];
+        if (delimiter === ']') return;
+        if (delimiter !== ',') throw new Error('catalog JSON array delimiter expected');
+      }
+      throw new Error('catalog JSON array unterminated');
+    }
+    if (text[index] === '"') { parseString(); return; }
+    const match = text.slice(index).match(/^(?:-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null)/u);
+    if (!match) throw new Error('catalog JSON value invalid');
+    index += match[0].length;
+  };
+  parseValue();
+  skipWhitespace();
+  if (index !== text.length) throw new Error('catalog must contain exactly one JSON document');
+}
+
+async function defaultRunChild(invocation, { timeoutMs = 60_000 } = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(invocation.executable, invocation.args, {
+      env: invocation.env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const stdout = [];
+    const stderr = [];
+    let size = 0;
+    let timedOut = false;
+    let overflow = false;
+    let killTimer;
+    const terminate = () => {
+      if (child.exitCode !== null || child.signalCode !== null) return;
+      child.kill('SIGTERM');
+      if (!killTimer) killTimer = setTimeout(() => child.kill('SIGKILL'), 2_000);
+    };
+    const collect = (target) => (chunk) => {
+      size += chunk.length;
+      if (size > OUTPUT_LIMIT) {
+        overflow = true;
+        terminate();
+      } else target.push(chunk);
+    };
+    child.stdout.on('data', collect(stdout));
+    child.stderr.on('data', collect(stderr));
+    const timer = setTimeout(() => { timedOut = true; terminate(); }, timeoutMs);
+    child.once('error', (error) => { clearTimeout(timer); if (killTimer) clearTimeout(killTimer); reject(error); });
+    child.once('close', (code, signal) => {
+      clearTimeout(timer);
+      if (killTimer) clearTimeout(killTimer);
+      if (timedOut) reject(new Error(`catalog extractor timeout after ${timeoutMs}ms`));
+      else if (overflow) reject(new Error('catalog extractor output exceeded limit'));
+      else resolve({ code, signal, stdout: Buffer.concat(stdout).toString('utf8'), stderr: Buffer.concat(stderr).toString('utf8') });
+    });
+  });
+}
+
+function childOutputText(value, label) {
+  if (Buffer.isBuffer(value)) {
+    if (value.length > OUTPUT_LIMIT) throw new Error('catalog extractor output exceeded limit');
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(value); }
+    catch (error) { throw new Error(`${label} must be valid UTF-8`, { cause: error }); }
+  }
+  if (typeof value !== 'string' || Buffer.byteLength(value) > OUTPUT_LIMIT) {
+    throw new Error('catalog extractor output exceeded limit');
+  }
+  return value;
+}
+
+export function parseCatalogChildResult(result) {
+  if (!result || result.code !== 0 || result.signal !== null) throw new Error('catalog psql child failed');
+  const stdout = childOutputText(result.stdout, 'catalog stdout');
+  const stderr = childOutputText(result.stderr, 'catalog stderr');
+  if (stderr.length !== 0) throw new Error('catalog psql emitted unexpected stderr');
+  if (!stdout.endsWith('\n') || stdout.endsWith('\n\n')) throw new Error('catalog must end with exactly one terminal LF');
+  const document = stdout.slice(0, -1);
+  if (!document.startsWith('{') || !document.endsWith('}')) throw new Error('catalog must contain exactly one JSON document');
+  let parsed;
+  try {
+    assertNoDuplicateJsonKeys(document);
+    parsed = JSON.parse(document);
+  } catch (error) {
+    if (/duplicate JSON key/iu.test(error.message)) throw error;
+    throw new Error('catalog must contain exactly one JSON document');
+  }
+  return validateRawCatalog(parsed);
+}
+
+export async function extractCatalog({
+  psqlPath = FIXED_PSQL,
+  sqlPath = FIXED_SQL,
+  connectionEnv,
+  runChild = defaultRunChild,
+  timeoutMs = 60_000,
+} = {}) {
+  const home = await mkdtemp(path.join(tmpdir(), 'midao-catalog-home-'));
+  await chmod(home, 0o700);
+  try {
+    const invocation = buildPsqlInvocation({ psqlPath, sqlPath, home, connectionEnv });
+    const result = await runChild(invocation, { timeoutMs });
+    return parseCatalogChildResult(result);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+}

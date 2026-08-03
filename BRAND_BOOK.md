@@ -30,7 +30,7 @@
 
 類似 MUJI、UNIQLO、KKDAY 的命名邏輯——用拼音建立國際識別碼。MIDAO 五個字母好記、無歧義、可註冊網域。國際旅客即使不懂中文，也能辨識並 Google 到品牌。
 
-**應用**：網域 midao.tw / 國際社群 @midao / 英文標頭
+**應用**：網域 midao.com.tw / 國際社群 @midao / 英文標頭
 
 #### 03 Descriptive Subname · 英文描述名
 
@@ -297,7 +297,7 @@ IG / FB / Threads / Twitter / LinkedIn 個人簡介模板。
 島嶼裡，還有一座島 ⛰️  
 台灣山野秘境 × 在地引路人  
 ↓ 本月精選路線  
-midao.tw
+midao.com.tw
 
 **Instagram · EN**
 
@@ -305,7 +305,7 @@ MIDAO · Secret Isle
 An island, untold ⛰️  
 Hidden Taiwan trails × Local guides  
 ↓ This month's routes  
-midao.tw
+midao.com.tw
 
 **LinkedIn**
 

@@ -17,6 +17,11 @@
 import { jsonOk, jsonError } from '../../../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../../../src/lib/route-error';
 import { createGuideSessionCookies } from '../../../../../../../src/lib/guide-auth';
+import { pickAdminCredentials } from '../../../../../../../src/lib/admin-auth.mjs';
+import {
+  MIDAO_IMPERSONATION_MAX_AGE_SECONDS,
+  createImpersonationActorCookie,
+} from '../../../../../../../src/lib/midao/impersonation-actor';
 import { getGuideAuthSupabaseClient, type GuideAuthSingleResult } from '../../../../../../../src/lib/guide-auth-session-supabase';
 import { getSupabaseUrl } from '../../../../../../../src/config/supabase-service-env.mjs';
 
@@ -26,17 +31,17 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-
 // 注意：Next.js App Router route 檔只允許匯出 HTTP method 與框架保留欄位，故此常數
 // 不得 export；導遊後台 layout 另有自己的同名本地常數。
 const IMPERSONATION_COOKIE_NAME = 'guide_impersonation';
-const IMPERSONATION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 與 guide session 一致
 
 type GuideImpersonationProfile = {
   id: string;
   display_name: string;
   guide_session_version: number | null;
   verification_status: string;
+  backend_mode: 'legacy' | 'midao';
 };
 
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ guideId: string }> }
 ) {
   const { guideId } = await context.params;
@@ -49,12 +54,17 @@ export async function POST(
     return jsonError('NOT_AVAILABLE', 'Auth not configured', 503);
   }
 
+  const adminEmail = String(pickAdminCredentials(request).email || '').trim().toLowerCase();
+  if (!adminEmail) {
+    return jsonError('ADMIN_ACTOR_REQUIRED', 'Admin email is required', 401);
+  }
+
   try {
     const supabase = await getGuideAuthSupabaseClient();
 
     const { data: guide, error } = (await supabase
       .from('guide_profiles')
-      .select<GuideImpersonationProfile>('id, display_name, guide_session_version, verification_status')
+      .select<GuideImpersonationProfile>('id, display_name, guide_session_version, verification_status, backend_mode')
       .eq('id', guideId)
       .single()) as GuideAuthSingleResult<GuideImpersonationProfile>;
 
@@ -67,19 +77,28 @@ export async function POST(
     }
 
     const sessionVersion = guide.guide_session_version ?? 1;
-    const cookies = createGuideSessionCookies(guide.id, guide.display_name, sessionVersion, false);
+    const cookies = createGuideSessionCookies(guide.id, guide.display_name, sessionVersion, false, {
+      sessionKind: 'admin-impersonation',
+      maxAgeSeconds: MIDAO_IMPERSONATION_MAX_AGE_SECONDS,
+    });
+    const actorCookie = createImpersonationActorCookie({
+      adminEmail,
+      targetGuideId: guide.id,
+    });
 
     // 與 guide session cookie 一致的 Secure 屬性（production 由 createGuideSessionCookies
     // 加上 '; Secure'）；此處鏡射同一結果，避免在本檔另行直讀環境變數。
     const securePart = cookies.some((c) => c.includes('; Secure')) ? '; Secure' : '';
     const markerCookie =
-      `${IMPERSONATION_COOKIE_NAME}=1; Path=/; SameSite=Lax; Max-Age=${IMPERSONATION_MAX_AGE_SECONDS}${securePart}`;
+      `${IMPERSONATION_COOKIE_NAME}=1; Path=/; SameSite=Lax; Max-Age=${MIDAO_IMPERSONATION_MAX_AGE_SECONDS}${securePart}`;
 
     const headers = new Headers();
     cookies.forEach((c) => headers.append('set-cookie', c));
+    headers.append('set-cookie', actorCookie);
     headers.append('set-cookie', markerCookie);
 
-    return jsonOk({ guideId: guide.id, guideName: guide.display_name }, { headers });
+    const redirectTo = guide.backend_mode === 'midao' ? '/midao' : '/guide/dashboard';
+    return jsonOk({ guideId: guide.id, guideName: guide.display_name, redirectTo }, { headers });
   } catch (err) {
     return handleRouteError(err, { route: 'v2/admin/guides/impersonate' });
   }

@@ -19,7 +19,7 @@ const stories = selectedReviews
       city: review.city,
       rating: review.rating,
       activityTitle: activity.title,
-      guideName: guide?.displayName ?? '在地導遊',
+      guideName: guide?.displayName ?? '在地嚮導',
       href: buildActivityHref({
         slug: activity.slug,
         region: activity.region,
@@ -41,7 +41,7 @@ export function StoryProofSection() {
           <div>
             <h2 style={{ marginBottom: 4 }}>旅客真實回饋</h2>
             <p style={{ margin: 0, color: 'var(--tp-muted)', fontSize: 14 }}>
-              每一則都來自真實旅客評價，幫你快速感受行程風格與導遊帶團節奏。
+              每一則都來自真實旅客評價，幫你快速感受行程風格與嚮導帶團節奏。
             </p>
           </div>
           <Link href="/activities" className="tp-link">看更多行程 →</Link>

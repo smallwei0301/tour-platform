@@ -37,7 +37,7 @@ const PRICE_TYPES = [
 ];
 const BOOKING_TYPES = [
   { value: 'scheduled', label: '依場次預約' },
-  { value: 'request', label: '需導遊確認' },
+  { value: 'request', label: '需嚮導確認' },
   { value: 'instant', label: '即時確認' },
 ];
 
@@ -159,7 +159,7 @@ export default function GuidePlanEditPage() {
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error?.message || '建立失敗');
-      // 建立後導向新方案的編輯頁，導遊可接著「送出審核」。
+      // 建立後導向新方案的編輯頁，嚮導可接著「送出審核」。
       router.push(`/guide/activities/${activityId}/plans/${json.data.plan.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : '建立失敗');

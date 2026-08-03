@@ -96,4 +96,24 @@ export function isTransferPaymentEnabled(env = process.env) {
   return isTruthy(env.NEXT_PUBLIC_TRANSFER_PAYMENT_ENABLED);
 }
 
+/** Midao backend read/runtime gate. Default OFF. */
+export function isMidaoBackendEnabled(env = process.env) {
+  return isTruthy(env.MIDAO_BACKEND_ENABLED);
+}
+
+/** Midao backend write gate. Independent from the read/runtime and mode-switch gates. Default OFF. */
+export function isMidaoBackendMutationsEnabled(env = process.env) {
+  return isTruthy(env.MIDAO_BACKEND_MUTATIONS_ENABLED);
+}
+
+/** Forward legacy → Midao mode-switch gate. Rollback must not depend on this flag. Default OFF. */
+export function isMidaoBackendModeSwitchEnabled(env = process.env) {
+  return isTruthy(env.MIDAO_BACKEND_MODE_SWITCH_ENABLED);
+}
+
+/** Local-only Midao E2E diagnostics gate. Default OFF. */
+export function isMidaoE2ELocal(env = process.env) {
+  return isTruthy(env.MIDAO_E2E_LOCAL);
+}
+
 export const __internal = { isTruthy };

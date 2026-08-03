@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-07-29T05:59:52.340Z -->
+<!-- query_timestamp: 2026-07-30T05:54:11.303Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-29T05:59:52.340Z  
-**Commit SHA:** `0e8c7823881e71570cac46955f4145696ae15656`
+**Query timestamp:** 2026-07-30T05:54:11.303Z  
+**Commit SHA:** `70f1da65b185b28bcd4209a86d66fd0c842f0087`
 
 ---
 
@@ -117,16 +117,16 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1781 | [feat(guide-apply): 申請流程單頁化、照片全選填、文案改用招募海報、用語統一「嚮導」](https://github.com/smallwei0301/tour-platform/pull/1781) | 2026-07-30 |
+| #1780 | [docs(worklog): #1777 收尾 — PR merged、AC 11/11 sign-off、剩餘兩項](https://github.com/smallwei0301/tour-platform/pull/1780) | 2026-07-29 |
+| #1779 | [feat(accounting): #1777 收尾 — 對帳補資格稽核維度，#1647 preview 實測](https://github.com/smallwei0301/tour-platform/pull/1779) | 2026-07-29 |
+| #1778 | [fix(payments): #1777 修正結算／部分退款／出款非原子鏈（Phase 1–4）](https://github.com/smallwei0301/tour-platform/pull/1778) | 2026-07-29 |
 | #1775 | [fix(ops): 對齊 readiness snapshot 刷新節奏與 freshness guard（#1654）](https://github.com/smallwei0301/tour-platform/pull/1775) | 2026-07-29 |
 | #1772 | [docs: 建立 README 文件架構索引與任務路由](https://github.com/smallwei0301/tour-platform/pull/1772) | 2026-07-28 |
 | #1768 | [fix: 方案啟用不再洗掉方案詳情＋小野教練文案潤飾/啟用 worklog](https://github.com/smallwei0301/tour-platform/pull/1768) | 2026-07-27 |
 | #1754 | [docs: 小野教練 41 行程 Unsplash 圖片與方案詳情補齊 worklog](https://github.com/smallwei0301/tour-platform/pull/1754) | 2026-07-22 |
 | #1753 | [docs(worklog): admin-csrf-impersonate-403 補記 PR #1752 CI 綠燈證據與 merge SHA](https://github.com/smallwei0301/tour-platform/pull/1753) | 2026-07-22 |
 | #1752 | [fix(admin): 進入導遊後台 403「CSRF token required」——CSRF 附掛補涵蓋 /api/v2/admin 並就地補發過期 cookie](https://github.com/smallwei0301/tour-platform/pull/1752) | 2026-07-22 |
-| #1750 | [修正 booking UUID 入口避免 slug-only API 404](https://github.com/smallwei0301/tour-platform/pull/1750) | 2026-07-21 |
-| #1744 | [fix: footer 手機版排版錯亂——#1739 拆分誤夾帶的全域響應式規則搬回 globals](https://github.com/smallwei0301/tour-platform/pull/1744) | 2026-07-17 |
-| #1743 | [docs: §9e 字重裁減驗收——@font-face CSS -43%、下載持平；建議關閉 #1735](https://github.com/smallwei0301/tour-platform/pull/1743) | 2026-07-17 |
-| #1742 | [perf: CJK 字重 7→4（Sans 400/700、Serif 700/900）——#1735 二階段字型瘦身](https://github.com/smallwei0301/tour-platform/pull/1742) | 2026-07-17 |
 
 ---
 

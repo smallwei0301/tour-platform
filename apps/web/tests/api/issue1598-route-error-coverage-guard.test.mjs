@@ -1,7 +1,9 @@
 /**
  * Issue #1598 — v2 route 事故上報覆蓋守門（source-contract）。
  *
- * 規則：app/api/v2/**​/route.ts 的例外處理一律過 handleRouteError／reportRouteError
+ * 規則：app/api/v2/**​/route.ts 的例外處理一律過 handleRouteError／reportRouteError，
+ * 或透過 canonical Midao guide wrapper（withMidaoGuideQuery／withMidaoGuideCommand）
+ * 進入相同的 handleMidaoRouteError → reportRouteError fail-safe chain。
  * （消滅「只 console.error」的靜默失敗）。少數 route 因結構或性質列白名單，需在此註明原因。
  *
  * 白名單只能縮不能擴：新增 v2 route 若不接上報又不進白名單，本測試會擋。
@@ -70,6 +72,49 @@ function isDelegationShell(src) {
   return lines.every((line) => allowed.some((re) => re.test(line)));
 }
 
+function maskNonCode(source) {
+  return source.replace(
+    /\/\*[\s\S]*?\*\/|\/\/[^\r\n]*|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`/g,
+    (chunk) => chunk.replace(/[^\n\r]/g, ' '),
+  );
+}
+
+function hasRouteErrorWiring(src) {
+  const code = maskNonCode(src);
+  return /\b(?:handleRouteError|reportRouteError|withMidaoGuideQuery|withMidaoGuideCommand)\s*\(/u.test(code);
+}
+
+test('T1598.source-contract — only actual direct or canonical invocations count as wiring', () => {
+  assert.equal(
+    hasRouteErrorWiring("import { handleRouteError } from '../../src/lib/route-error.ts';"),
+    false,
+  );
+  assert.equal(
+    hasRouteErrorWiring("// reportRouteError(error, { route: 'v2/test' });"),
+    false,
+  );
+  assert.equal(
+    hasRouteErrorWiring("/* withMidaoGuideCommand(request, handler); */"),
+    false,
+  );
+  assert.equal(
+    hasRouteErrorWiring("const text = 'withMidaoGuideQuery(request, handler);';"),
+    false,
+  );
+  assert.equal(
+    hasRouteErrorWiring("return handleRouteError(error, { route: 'v2/test' });"),
+    true,
+  );
+  assert.equal(
+    hasRouteErrorWiring('return withMidaoGuideQuery(request, handler);'),
+    true,
+  );
+  assert.equal(
+    hasRouteErrorWiring('return withMidaoGuideCommand(request, handler);'),
+    true,
+  );
+});
+
 test('T1598.coverage — 每個 v2 route 皆接事故上報，或在白名單且註明原因', () => {
   const routes = walk(V2_DIR);
   assert.ok(routes.length >= 25, `應掃到足量 v2 route（實得 ${routes.length}）`);
@@ -78,7 +123,7 @@ test('T1598.coverage — 每個 v2 route 皆接事故上報，或在白名單且
   for (const full of routes) {
     const rel = path.relative(V2_DIR, full);
     const src = readFileSync(full, 'utf8');
-    const wired = /handleRouteError|reportRouteError/.test(src);
+    const wired = hasRouteErrorWiring(src);
     const whitelisted = Object.prototype.hasOwnProperty.call(WHITELIST, rel);
     if (isDelegationShell(src)) continue; // #1649 委派殼：錯誤語意由 legacy 實作持有
     if (!wired && !whitelisted) uncovered.push(rel);
@@ -95,7 +140,7 @@ test('T1598.coverage-ratio — 實接上報比例 ≥ 90%（排除白名單與 #
   const applicable = routes.filter(
     (f) => !WHITELIST[path.relative(V2_DIR, f)] && !isDelegationShell(readFileSync(f, 'utf8'))
   );
-  const wired = applicable.filter((f) => /handleRouteError|reportRouteError/.test(readFileSync(f, 'utf8')));
+  const wired = applicable.filter((f) => hasRouteErrorWiring(readFileSync(f, 'utf8')));
   const ratio = wired.length / applicable.length;
   assert.ok(ratio >= 0.9, `applicable route 上報覆蓋率 ${(ratio * 100).toFixed(0)}% < 90%`);
 });
@@ -111,6 +156,6 @@ test('T1598.payment — 金流／退款鏈路 100% 接上報', () => {
   ];
   for (const rel of critical) {
     const src = readFileSync(path.resolve(__dirname, '../..', rel), 'utf8');
-    assert.match(src, /handleRouteError|reportRouteError/, `${rel} 金流鏈路必須接事故上報`);
+    assert.ok(hasRouteErrorWiring(src), `${rel} 金流鏈路必須接事故上報`);
   }
 });

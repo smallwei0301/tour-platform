@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://midao.local/schemas/capture-manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "transactionId", "payloadDigests", "capture", "toolchain", "assertions"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "midao-baseline-capture" },
+    "transactionId": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "payloadDigests": { "$ref": "#/$defs/capturePayloadDigests" },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count", "catalogSha256", "tocSha256", "renderedBaselineSha256", "renderedOverlaySha256"],
+      "properties": {
+        "count": { "const": 2 },
+        "catalogSha256": { "$ref": "#/$defs/sha256" },
+        "tocSha256": { "$ref": "#/$defs/sha256" },
+        "renderedBaselineSha256": { "$ref": "#/$defs/sha256" },
+        "renderedOverlaySha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "toolchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["supabaseCliVersion", "dumpSchemaSourceSha256", "postgresMajor", "postgresImage"],
+      "properties": {
+        "supabaseCliVersion": { "const": "2.87.2" },
+        "dumpSchemaSourceSha256": { "const": "5cd57189f6565ddf651ff149995398a4c9b1971ca34a0093a77c011a41f21d64" },
+        "postgresMajor": { "const": 17 },
+        "postgresImage": { "const": "postgres@sha256:0027bef26712baaee437a4ea48fdf3d2d2e2bc5f0d81615374408ca320f3c7e3" }
+      }
+    },
+    "assertions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["catalogEquivalent", "securityPolicyStatus", "secretScan", "dataScan"],
+      "properties": {
+        "catalogEquivalent": { "const": true },
+        "securityPolicyStatus": { "enum": ["equivalent", "known_drift"] },
+        "secretScan": { "const": "pass" },
+        "dataScan": { "const": "pass" }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "capturePayloadDigests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline.sql", "managed-overlays.sql", "catalog.cutoff.normalized.json", "toc.normalized.json", "use-list.txt", "toc-ownership-map.json", "dependency-closure.json", "role-map.json", "ownership-boundary.json", "exclusions.json", "platform-prerequisites.json", "security-drift.json", "catalog-cutoff.sha256"],
+      "properties": {
+        "baseline.sql": { "$ref": "#/$defs/sha256" },
+        "managed-overlays.sql": { "$ref": "#/$defs/sha256" },
+        "catalog.cutoff.normalized.json": { "$ref": "#/$defs/sha256" },
+        "toc.normalized.json": { "$ref": "#/$defs/sha256" },
+        "use-list.txt": { "$ref": "#/$defs/sha256" },
+        "toc-ownership-map.json": { "$ref": "#/$defs/sha256" },
+        "dependency-closure.json": { "$ref": "#/$defs/sha256" },
+        "role-map.json": { "$ref": "#/$defs/sha256" },
+        "ownership-boundary.json": { "$ref": "#/$defs/sha256" },
+        "exclusions.json": { "$ref": "#/$defs/sha256" },
+        "platform-prerequisites.json": { "$ref": "#/$defs/sha256" },
+        "security-drift.json": { "$ref": "#/$defs/sha256" },
+        "catalog-cutoff.sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

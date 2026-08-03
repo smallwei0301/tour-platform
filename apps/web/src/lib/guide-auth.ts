@@ -3,32 +3,15 @@
  * Guide session utilities (mirrors admin-auth pattern)
  * Uses crypto built-in: SHA-256 + salt for passwords, HMAC for session tokens
  */
-import { createHmac, randomBytes, createHash, scryptSync } from 'crypto';
+import { randomBytes, createHash, scryptSync } from 'crypto';
 import { constantTimeEquals } from './constant-time.mjs';
+import {
+  signGuideSession,
+  signImpersonatedGuideSession,
+  verifyGuideSessionSignature,
+  verifyImpersonatedGuideSessionSignature,
+} from './guide/session-crypto.ts';
 
-function resolveGuideSessionSecret(): string {
-  const configured = String(process.env.GUIDE_SESSION_SECRET || '').trim();
-  const isProduction = process.env.NODE_ENV === 'production';
-  const isNextBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
-
-  // Allow Next.js build phase to proceed (for preview/build checks),
-  // but enforce strict secret policy at production runtime.
-  if (isProduction && !isNextBuildPhase) {
-    if (!configured || configured.length < 32) {
-      throw new Error(
-        '[SECURITY_ENV_BLOCK] GUIDE_SESSION_SECRET missing/weak in production; set a strong secret (>=32 chars).'
-      );
-    }
-    return configured;
-  }
-
-  if (configured) return configured;
-
-  // Non-production fallback must never be a predictable hardcoded value.
-  return randomBytes(32).toString('hex');
-}
-
-const GUIDE_SESSION_SECRET = resolveGuideSessionSecret();
 const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 // ─── Invite Token ────────────────────────────────────────────────────────────
@@ -112,15 +95,17 @@ export function verifyPassword(plain: string, stored: string): boolean {
 
 // ─── Session Cookies ─────────────────────────────────────────────────────────
 
-function signToken(guideId: string, sessionVersion: number): string {
-  const payload = `${guideId}:${sessionVersion}`;
-  return createHmac('sha256', GUIDE_SESSION_SECRET).update(payload).digest('hex');
-}
-
 export interface GuideSessionPayload {
   guideId: string;
   guideName: string;
+  sessionVersion: number;
   isNew?: boolean;
+  sessionKind: 'guide' | 'admin-impersonation';
+}
+
+interface GuideSessionCookieOptions {
+  sessionKind?: 'guide' | 'admin-impersonation';
+  maxAgeSeconds?: number;
 }
 
 /**
@@ -132,10 +117,17 @@ export function createGuideSessionCookies(
   guideName: string,
   sessionVersion = 1,
   isNew = false,
+  options: GuideSessionCookieOptions = {},
 ): string[] {
-  const sig = signToken(guideId, sessionVersion);
+  const sessionKind = options.sessionKind ?? 'guide';
+  const sig = sessionKind === 'admin-impersonation'
+    ? signImpersonatedGuideSession(guideId, sessionVersion)
+    : signGuideSession(guideId, sessionVersion);
   const token = `${guideId}:${sessionVersion}:${sig}`;
-  const maxAge = SESSION_MAX_AGE_SECONDS;
+  const maxAge = options.maxAgeSeconds ?? SESSION_MAX_AGE_SECONDS;
+  if (!Number.isSafeInteger(maxAge) || maxAge < 1 || maxAge > SESSION_MAX_AGE_SECONDS) {
+    throw new Error('guide session maxAgeSeconds is invalid');
+  }
   // Add Secure flag in production (HTTPS only)
   const securePart = process.env.NODE_ENV === 'production' ? '; Secure' : '';
   const cookieBase = `; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${securePart}`;
@@ -194,11 +186,14 @@ export function verifyGuideSession(req: Request): GuideSessionPayload | null {
   const version = Number(versionStr);
   if (isNaN(version)) return null;
 
-  const expected = signToken(guideId, version);
-  // 常數時間比較 HMAC 簽章，避免 timing side-channel（健檢 v2 S2）
-  if (!constantTimeEquals(sig, expected)) return null;
+  const sessionKind = verifyGuideSessionSignature(guideId, version, sig)
+    ? 'guide' as const
+    : verifyImpersonatedGuideSessionSignature(guideId, version, sig)
+      ? 'admin-impersonation' as const
+      : null;
+  if (!sessionKind) return null;
 
-  return { guideId, guideName, isNew };
+  return { guideId, guideName, sessionVersion: version, isNew, sessionKind };
 }
 
 /** Mask email: john@example.com → j***@example.com */

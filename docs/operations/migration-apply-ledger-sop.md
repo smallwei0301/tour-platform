@@ -5,12 +5,13 @@
 
 ## Gate 如何運作
 
-- `scripts/check-migration-ledger.mjs` 純靜態比對 `supabase/migrations/*.sql`（排除 `.rollback.sql`）vs ledger records，**不需任何 secrets、不對任何 DB 寫入**。
-- 每支 migration 檔必須有 `status: "verified"` 的 record，或被 `baseline` record 涵蓋（baseline 涵蓋「檔名排序 <= baseline filename」的全部歷史檔案；2026-07-02 的首筆 baseline 依據 #1560 drift 大清查與補套結果回填）。
+- **Source gate（PR／local）：** `node scripts/check-migration-source-gate.mjs --mode source`。先驗證capture＋expected-terminal transactions及其交叉綁定，才讀frozen manifest／migration source；固定128支pre-cutoff bytes不可變，已pin post-cutoff不可變，允許排序正確的新post-cutoff source尚未套production。
+- **Verified gate（release／post-apply／schedule／manual）：** `node scripts/check-migration-ledger.mjs --mode verified`。同樣先驗兩個publication transactions，才靜態比對 `supabase/migrations/*.sql`（排除 `.rollback.sql`）vs production apply ledger；**不需任何 secrets、不對任何 DB 寫入**。
+- 每支migration在verified mode必須有 `status: "verified"` 的record，或被歷史 `baseline` record涵蓋。`supabase/baselines/v1` publication ledger不得冒充production apply ledger。
 - 接線位置：
-  - `scripts/preflight-check.sh`（release preflight，CI `ci.yml` 最後一步會跑）
-  - `.github/workflows/migration-drift-detect.yml` 的 static job（PR/push/每日 cron）
-- 手動執行：`node scripts/check-migration-ledger.mjs`（`--json` 出機器可讀報告）。exit 1 = HOLD。
+  - `scripts/preflight-check.sh`與`.github/workflows/ci.yml`：explicit source mode。
+  - `.github/workflows/migration-drift-detect.yml`：PR source mode；push/main、每日schedule與manual dispatch另跑verified mode。
+- Exit 1 = HOLD。新migration PR可source PASS但verified HOLD；只有完成下列備份→套用→驗證→更新production ledger後，verified才可PASS。
 
 ## 套用一支新 migration 的四步驟（缺一不可）
 
@@ -57,6 +58,12 @@
 | `applied_at` | ISO 8601 含時區（Asia/Taipei `+08:00`） |
 | `status` | `verified`（已套用且驗證）／`pending`（已套用、驗證未完成 — **gate 仍 HOLD**）／`baseline`（僅歷史回填用，之後不再擴大） |
 | `note` | 備份參考、rollback 參考、驗證指令與結果、相關 issue/PR — **全部 redacted** |
+
+### 歷史證據例外（僅限回填）
+
+若既有 production migration 的精確歷史套用時間已無法復原，`applied_at` 可記錄**第一個可稽核、可持久保存的確認時間戳**，而非宣稱它是實際套用時間。該 record 的 `note` 必須明確說明「此為 first durable confirmation timestamp，actual exact historical apply time is unavailable」並列出來源（例如 issue/comment URL）及目前 catalog 驗證方式。
+
+此例外只用於既有歷史回填；**不得用於任何新的 migration**。新 migration 仍必須記錄實際套用完成的精確 ISO 8601 時間、operator、備份與 post-apply 驗證證據。
 
 ## Rollback 時
 

@@ -10,6 +10,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+process.env.NODE_ENV = 'test';
+process.env.GUIDE_SESSION_SECRET = 'timing-safe-test-guide-secret-0123456789abcdef';
+
 const { constantTimeEquals } = await import('../../src/lib/constant-time.mjs');
 const { isAdminAuthorized } = await import('../../src/lib/admin-auth.mjs');
 const { createGuideSessionCookies, verifyGuideSession } = await import('../../src/lib/guide-auth.ts');
@@ -68,15 +71,16 @@ describe('isAdminAuthorized still behaves correctly with constant-time compare',
 describe('source contract: comparisons use constantTimeEquals, not !==', () => {
   const adminAuthSrc = readFileSync(resolve(__dirname, '../../src/lib/admin-auth.mjs'), 'utf8');
   const guideAuthSrc = readFileSync(resolve(__dirname, '../../src/lib/guide-auth.ts'), 'utf8');
+  const guideCryptoSrc = readFileSync(resolve(__dirname, '../../src/lib/guide/session-crypto.ts'), 'utf8');
 
   it('admin-auth.mjs compares token via constantTimeEquals', () => {
     assert.match(adminAuthSrc, /constantTimeEquals\(\s*token\s*,\s*requiredToken\s*\)/);
     assert.ok(!/token\s*!==\s*requiredToken/.test(adminAuthSrc), 'must not use short-circuit !== for token compare');
   });
 
-  it('guide-auth.ts verifies HMAC signature via constantTimeEquals', () => {
-    assert.match(guideAuthSrc, /constantTimeEquals\(\s*sig\s*,\s*expected\s*\)/);
-    assert.ok(!/sig\s*!==\s*expected/.test(guideAuthSrc), 'must not use short-circuit !== for signature compare');
+  it('guide session crypto verifies HMAC signature via constantTimeEquals', () => {
+    assert.match(guideCryptoSrc, /constantTimeEquals\(signature, signGuideSession\(guideId, sessionVersion\)\)/);
+    assert.ok(!/signature\s*!==/.test(guideCryptoSrc), 'must not use short-circuit !== for signature compare');
   });
 
   it('guide-auth.ts verifyPassword reuses the shared helper', () => {

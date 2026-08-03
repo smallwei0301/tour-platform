@@ -1,7 +1,7 @@
 'use client';
 
-// #1497 — 導遊「例外加開幫手確認」頁。
-// 管理者例外加開且需要幫手的時段會列在這裡，導遊可確認（找到幫手）或婉拒。
+// #1497 — 嚮導「例外加開幫手確認」頁。
+// 管理者例外加開且需要幫手的時段會列在這裡，嚮導可確認（找到幫手）或婉拒。
 import { useCallback, useEffect, useState } from 'react';
 import { csrfHeaders, ensureCsrfToken } from '../../../../src/lib/csrf-client';
 
@@ -136,7 +136,7 @@ export default function GuideConflictOverridesPage() {
               </div>
               {it.guideNote && (
                 <div style={{ marginTop: 4, fontSize: 13, color: '#6b7280' }}>
-                  <span style={{ fontWeight: 600, color: '#374151' }}>給導遊備註：</span>{it.guideNote}
+                  <span style={{ fontWeight: 600, color: '#374151' }}>給嚮導備註：</span>{it.guideNote}
                 </div>
               )}
 

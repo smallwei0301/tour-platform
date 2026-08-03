@@ -1,9 +1,9 @@
 import { test, expect } from './helpers';
 
-// /for-guides — 導遊開店 landing（非 localized root 路徑，靜態頁）。
+// /for-guides — 嚮導開店 landing（非 localized root 路徑，靜態頁）。
 // 驗：Hero 主張、Beta 定價（NT$0＋15%）、FAQ、CTA 指向既有 /guide/apply、Navbar 有入口。
 
-test('導遊開店 landing：主張、定價、FAQ、CTA 到 /guide/apply', async ({ page }) => {
+test('嚮導開店 landing：主張、定價、FAQ、CTA 到 /guide/apply', async ({ page }) => {
   await page.goto('/for-guides');
 
   // Hero
@@ -24,11 +24,11 @@ test('導遊開店 landing：主張、定價、FAQ、CTA 到 /guide/apply', asyn
   // 主要 CTA 指向既有申請表單頁（/guide/apply 本輪不改）
   const ctas = page.getByRole('link', { name: '免費開通我的預約頁' });
   await expect(ctas.first()).toHaveAttribute('href', '/guide/apply');
-  await expect(page.getByRole('link', { name: '登入導遊後台' })).toHaveAttribute('href', '/guide/login');
+  await expect(page.getByRole('link', { name: '登入嚮導後台' })).toHaveAttribute('href', '/guide/login');
 });
 
-test('Navbar 有「導遊開店」入口且連到 /for-guides', async ({ page }) => {
+test('Navbar 有「嚮導開店」入口且連到 /for-guides', async ({ page }) => {
   await page.goto('/');
-  const navLink = page.getByRole('navigation', { name: '主要導覽' }).getByRole('link', { name: '導遊開店' });
+  const navLink = page.getByRole('navigation', { name: '主要導覽' }).getByRole('link', { name: '嚮導開店' });
   await expect(navLink).toHaveAttribute('href', '/for-guides');
 });
