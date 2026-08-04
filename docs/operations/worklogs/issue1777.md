@@ -501,20 +501,46 @@ route 的說明註解裡引用了錯誤寫法當反例（`.update({ refund_amoun
 `operations_tracking` 有退款 3 筆、測試訂單無 ops 列、`payouts` 1 pending／0 paid、
 `actor='verify-1777'` 的 `audit_logs` 0 筆。
 
-### ⚠️ PR #1789 卡在 CI 停擺，尚未 merge
+### PR #1789 曾誤判為「CI 停擺」——實為 merge conflict（2026-08-04 訂正）
 
-GitHub Actions **自 2026-08-02T09:52Z 起全 repo 沒有任何 workflow run**——不是本 PR 的問題：
-26 支 workflow 的 `state` 全為 `active`，`ci.yml` 的 `on: pull_request` 也沒被改動，
-但 `opened` 與 `synchronize` 兩個事件都沒有觸發任何 run（PR 上只有 Vercel 的 check）。
+**先前記載有誤，在此更正。** 我一度判定「GitHub Actions 自 2026-08-02T09:52Z 起全 repo 停擺」，
+並據此請 owner 去查帳務／額度。**那是錯的。**
 
-依鐵律 6（紅燈／無 CI 絕不 merge），**PR #1789 保持未 merge**。
+錯在取樣：我只看了 `ci.yml` 與 `secret-scan.yml` 的 run 紀錄，而這兩支只在 push／PR 時觸發；
+`main` 自 08-02 之後沒有人推過（最新一筆是 bot 的 `[skip ci]` snapshot），所以「沒有 run」是
+預期結果，不是故障。把「沒被觸發」讀成「無法觸發」。
 
-**目前的不一致窗口**：migration 已套用、程式碼未上線 → production 現行程式碼傳
-`p_refund_event_id` 會打不到新簽章 → wrapper fail-closed 拋 `SETTLEMENT_RPC_NOT_DEPLOYED`
-→ 退款仍成功，但累積額與 ledger 同步中止並記 incident。
+排程 workflow 其實照常運作，這是決定性反證（排程不依賴 PR 作者或 merge 狀態）：
 
-**曝險評估：零。** production `refund_adjustment` 歷來 0 筆、`refund_event_id` 非空 0 筆
-（此路徑從未觸發過）、payout confirm 仍 HOLD、`payouts` 0 paid、冷啟動尚未收正式訂單。
+| workflow | 最近一次 | 結果 |
+|---|---|---|
+| `settlement-sweep` | 2026-08-03T03:05:49Z | success |
+| `booking-v2-daily-go-no-go` | 2026-08-03T02:18:46Z | success |
+| `unpaid-expiry-sweep` | 2026-08-03T18:30:50Z | success |
 
-**恢復步驟**：Actions 恢復後 → 重推或 re-run CI → 確認 conclusion=success（連結記入本 worklog）
-→ merge #1789 → 確認 Vercel production deployment READY → 窗口關閉。
+（`synthetic-health-probe` 自 06-29 起無 run 也非故障——其 `schedule:` 已刻意退役，
+改用外部 UptimeRobot，只留 `workflow_dispatch`。）
+
+**真正原因**：PR #1789 有 merge conflict。
+
+```
+CONFLICT (content): Merge conflict in docs/operations/migration-ledger.json
+```
+
+PR #1788（`docs: 對齊 #1758 production migration ledger`）在 `main` 上往 ledger 陣列尾端
+append 記錄，本分支也往同一個陣列尾端 append —— 兩邊都 append，必衝突。
+
+**機制（值得記住）**：`pull_request` 事件的 workflow 跑在 GitHub 產生的 merge ref
+（`refs/pull/<n>/merge`）上。合併衝突時該 ref 建不出來，**workflow 完全不會被觸發**——
+不是失敗、不是排隊，是連 run 都不存在（`list_workflow_runs` 對該分支回 `total_count: 0`）。
+PR 上只看得到 Vercel 的 check，因為 Vercel 是外部 app，跑的是 head commit，不需要 merge ref。
+API 上唯一的線索是 `mergeable_state: "dirty"`。
+
+這也解釋了為何早先的 `git merge-tree --write-tree` 檢查回報 CLEAN：那是對照舊的 `origin/main`
+（`4099f90`），#1788 的 ledger 變更當時還沒進來。
+
+**教訓**：判定「CI 停擺」前，先確認排程 workflow 是否照跑；PR 沒有任何 check 時先看
+`mergeable_state`，而不是先懷疑平台。
+
+**修法**：合併 `origin/main`，衝突解為保留兩邊記錄（main 28 筆 ＋ 本分支 2 筆 = 30 筆，
+JSON 驗證通過、ledger gate 測試綠）。推送後 CI 立即觸發，直接證實診斷。
