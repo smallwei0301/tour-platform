@@ -59,7 +59,9 @@ for (const { label, file } of routes) {
     );
     assert.match(
       helperSrc,
-      /effectiveTwd \* config\.commission_rate/,
+      // #1777 F8：乘法下移到 settlement/money.mjs 的整數基點實作；
+      // 不變量不變——commission 仍由 effectiveTwd × DB-backed commission_rate 得出。
+      /computeCommissionTwd\(effectiveTwd, config\.commission_rate\)/,
       'canonical helper must apply commission_rate from settlementConfig to effectiveTwd'
     );
   });

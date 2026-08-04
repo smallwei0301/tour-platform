@@ -6,10 +6,20 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isPayoutOnHold } from './post-trip-eligibility.mjs';
+import { computeCommissionTwd, computeNetTwd } from './settlement/money.mjs';
 
 export const SETTLEMENT_COMMISSION_RATE = parseFloat(process.env.SETTLEMENT_COMMISSION_RATE ?? '0.15')
 export const SETTLEMENT_T_DAYS = parseInt(process.env.SETTLEMENT_T_DAYS ?? '7', 10)
 export const SETTLEMENT_MIN_WITHDRAWAL_TWD = parseInt(process.env.SETTLEMENT_MIN_WITHDRAWAL_TWD ?? '5000', 10)
+
+// #1777 F8：結算金額一律走整數基點運算，與 DB 端 numeric 逐值一致。
+// 實作與完整理由見 settlement/money.mjs（.mjs 才能與 accounting/reconciliation.mjs 共用）。
+export {
+  commissionRateToBasisPoints,
+  floorByBasisPoints,
+  computeCommissionTwd,
+  computeNetTwd,
+} from './settlement/money.mjs';
 
 /**
  * Compute guide payout after platform commission.
@@ -17,7 +27,7 @@ export const SETTLEMENT_MIN_WITHDRAWAL_TWD = parseInt(process.env.SETTLEMENT_MIN
  * @returns Expected payout in TWD (floor to whole NT$)
  */
 export function computeExpectedPayout(gmvTwd: number): number {
-  return Math.floor(gmvTwd * (1 - SETTLEMENT_COMMISSION_RATE))
+  return computeNetTwd(gmvTwd, SETTLEMENT_COMMISSION_RATE)
 }
 
 /**
@@ -150,11 +160,12 @@ export function computeGuidePayoutEstimate(
   const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd)
 
   // Compute commission + net for transparency even when on hold / fully refunded.
+  // #1777 F8：整數基點運算，與 DB 端 numeric 逐值一致（見 floorByBasisPoints）。
   const commissionTwd = effectiveTwd > 0
-    ? Math.floor(effectiveTwd * config.commission_rate)
+    ? computeCommissionTwd(effectiveTwd, config.commission_rate)
     : 0
   const netTwd = effectiveTwd > 0
-    ? Math.floor(effectiveTwd * (1 - config.commission_rate))
+    ? computeNetTwd(effectiveTwd, config.commission_rate)
     : 0
 
   // Full refund — not payable, but no hold reason (it's a refund, not a hold).
@@ -240,8 +251,9 @@ export function computeSweepPayoutItem(
   })
   if (holdReason) return null
 
-  const commission_twd = Math.floor(effective * config.commission_rate)
-  const net_twd = Math.floor(effective * (1 - config.commission_rate))
+  // #1777 F8：整數基點運算，與 DB 端 numeric 逐值一致（見 floorByBasisPoints）。
+  const commission_twd = computeCommissionTwd(effective, config.commission_rate)
+  const net_twd = computeNetTwd(effective, config.commission_rate)
   return {
     order_id: order.id,
     guide_id: order.guide_id,

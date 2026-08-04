@@ -178,8 +178,9 @@ describe('Issue 447 — settlement sweep route structural checks', () => {
     // Helper file must still floor commission and net per rules version snapshot.
     const cfgPath = join(__dirname, '../../src/lib/settlement-config.ts')
     const cfgSrc = readFileSync(cfgPath, 'utf8')
-    assert.match(cfgSrc, /Math\.floor.*commission_rate/, 'helper must floor commission_twd')
-    assert.match(cfgSrc, /Math\.floor.*1\s*-\s*[^)]*commission_rate/, 'helper must floor net_twd using (1 - commission_rate)')
+    // #1777 F8：floor 下移到 settlement/money.mjs 的整數基點實作；不變量不變。
+    assert.match(cfgSrc, /computeCommissionTwd\(effective, config\.commission_rate\)/, 'helper must delegate commission_twd to canonical money helper')
+    assert.match(cfgSrc, /computeNetTwd\(effective, config\.commission_rate\)/, 'helper must delegate net_twd to canonical money helper')
     assert.match(cfgSrc, /rules_version/, 'helper must snapshot rules_version onto each payout item')
   })
 

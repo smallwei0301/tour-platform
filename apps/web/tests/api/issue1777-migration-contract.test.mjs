@@ -30,6 +30,10 @@ const ISSUE_1777_MIGRATIONS = [
   // 收尾稽核後的修復：累積退款額原子累加（F1）＋冪等鍵改由 DB 端推導（F2）＋
   // carry-forward 不再被 delta=0 早退跳過（F5）
   '20260730093000_issue1777_refund_delta_accumulation',
+  // F4：退款紅沖收斂為單一交易（最後一處應用層 read-modify-write）
+  '20260804103000_issue1777_atomic_refund_reversal',
+  // F3：結算金額改由 DB 端在交易內重算，不再信任呼叫端傳值
+  '20260804113000_issue1777_settlement_recompute_amounts',
 ];
 
 /** 本 issue 建立的財務函式——權限收斂必須涵蓋每一支。 */
@@ -37,6 +41,7 @@ const FINANCIAL_FUNCTIONS = [
   'fn_record_settlement_atomic',
   'fn_confirm_payout_atomic',
   'fn_apply_refund_adjustment_atomic',
+  'fn_record_refund_reversal_atomic',
 ];
 
 function readMigration(base) {
@@ -411,5 +416,85 @@ describe('#1777 退款鏈 — 最終生效的 fn_apply_refund_adjustment_atomic'
       /RETURNS\s+TABLE\s*\([\s\S]{0,400}?\brefund_event_id\b/i,
       'OUT 參數不得與 ON CONFLICT 用到的欄位同名',
     );
+  });
+});
+
+
+// ── F4：退款紅沖的原子性 ─────────────────────────────────────────────────────
+//
+// 舊實作（db.mjs 約 250 行）讀 guide_balances、在 JS 算新餘額、寫回**絕對值**，
+// 並用 status='started' 的 audit marker 做崩潰復原。那整套補償機制存在的理由就是
+// 三個寫入不在同一個交易裡。這裡鎖住取代它的三個性質。
+
+describe('#1777 F4 — fn_record_refund_reversal_atomic', () => {
+  const code = sqlCode(readMigration('20260804103000_issue1777_atomic_refund_reversal'));
+
+  it('pin search_path 且權限收斂到 service_role', () => {
+    assert.match(code, /SET\s+search_path\s*=\s*pg_catalog\s*,\s*public\s*,\s*pg_temp/i);
+    assert.match(
+      code,
+      /REVOKE\s+ALL\s+ON\s+FUNCTION\s+public\.fn_record_refund_reversal_atomic\s*\([^)]*\)\s*FROM\s+[^;]*anon[^;]*authenticated/i,
+    );
+    assert.match(
+      code,
+      /GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+public\.fn_record_refund_reversal_atomic\s*\([^)]*\)\s*TO\s+service_role/i,
+    );
+  });
+
+  it('對 orders 加鎖，序列化同一訂單上的帳務寫入', () => {
+    assert.match(code, /FROM\s+orders\s+o\s+WHERE\s+o\.id\s*=\s*p_order_id\s+FOR\s+UPDATE/i);
+  });
+
+  it('餘額是 SQL 層增減，不是應用層算好的絕對值覆寫（F4 的核心修法）', () => {
+    assert.match(
+      code,
+      /balance_twd\s*=\s*guide_balances\.balance_twd\s*\+\s*EXCLUDED\.balance_twd/i,
+      '必須是 balance + delta；寫回絕對值正是併發 lost update 的成因',
+    );
+    // 舊實作的絕對值語意：guide_balances 的 balance_twd 被指派成一個算好的值。
+    assert.doesNotMatch(
+      code,
+      /SET\s+balance_twd\s*=\s*v_after/i,
+      '不得把應用層／函式內算好的絕對值直接指派給餘額',
+    );
+  });
+
+  it('冪等由部分唯一索引判定：只有真正插入新分錄才動餘額', () => {
+    const match = code.match(/ON\s+CONFLICT\s*\(\s*order_id\s*,\s*settlement_kind\s*\)([\s\S]{0,120})/i);
+    assert.ok(match, '必須以 ON CONFLICT (order_id, settlement_kind) 判定冪等');
+    assert.match(
+      match[1],
+      /^\s*WHERE\s+settlement_kind\s+IN\s*\(/i,
+      'predicate 必須與部分索引一致，否則 42P10（#1777 已踩過一次）',
+    );
+    assert.match(code, /RETURNING\s+id\s+INTO\s+v_reversal_id/i);
+    // 餘額更新必須排在「確認真的插入了新分錄」之後。
+    const guardAt = code.search(/IF\s+v_reversal_id\s+IS\s+NULL\s+THEN/i);
+    const balanceAt = code.search(/INSERT\s+INTO\s+guide_balances/i);
+    assert.ok(guardAt >= 0 && balanceAt >= 0);
+    assert.ok(guardAt < balanceAt, '已紅沖時必須先 return，不得再動餘額');
+  });
+
+  it('餘額允許扣成負數（carry-forward），不得截斷', () => {
+    assert.doesNotMatch(
+      code,
+      /greatest\s*\(\s*0\s*,\s*[^)]*balance/i,
+      '紅沖不得把餘額截成 0——錢已經付出去了，必須留下欠款',
+    );
+  });
+
+  it('補償用的 audit marker 機制已隨舊實作消失', () => {
+    assert.doesNotMatch(
+      code,
+      /'started'/,
+      "status='started' 的 marker 是為了補救非原子而存在的；同一交易內不需要它",
+    );
+  });
+
+  it('尚未結算時零寫入', () => {
+    const preSettlementAt = code.search(/'pre_settlement'/i);
+    const insertAt = code.search(/INSERT\s+INTO\s+payout_items/i);
+    assert.ok(preSettlementAt >= 0 && insertAt >= 0);
+    assert.ok(preSettlementAt < insertAt, 'pre_settlement 必須在任何寫入之前 return');
   });
 });

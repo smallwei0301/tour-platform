@@ -567,3 +567,230 @@ Web build ✅／ISR smoke ✅／Preflight ✅。
 已由 `dirty` 轉為 `unstable`、關閉再開啟 PR 也未重新派工，判定為 GitHub 側的 dispatch
 掉單。處理方式：以本次 commit 重新推送觸發，並在 merge 前確認當前 head 有 conclusion=success
 的 CI run（鐵律 6 不因平台掉單而放寬）。
+
+### PR #1789 merged、production 部署完成（2026-08-04）
+
+- CI 在當前 head `e06b74e` 全綠後 merge：`main` = `0979727`。
+- Vercel production deployment `dpl_HHSbyxox…` **READY**，alias 含 `midao.com.tw`。
+- **「migration 已套用、程式碼未上線」的窗口已關閉**：DB 上是新簽章
+  `fn_apply_refund_adjustment_atomic(uuid,integer,text)`，線上程式碼傳的正是
+  `p_refund_delta_twd`，兩側一致。
+
+**GitHub dispatch 掉單的處理結論**：關閉再開啟 PR 無效；**推一個新 commit** 才重新派工。
+下次遇到「PR 有 CI 但停在舊 commit」可直接用這招。
+
+### AC 6／AC 7 重判（依 issue 原文）
+
+| AC | 原文 | 重判 |
+|---|---|---|
+| 6 | 已結算後部分退款，最終導遊淨應付等於未退款有效金額 × 導遊分潤率 | **PASS** — production 實跑：total 6000／ledger_net 5100，連退 1000+1000 → 收斂到 3400 = `floor((6000−2000) × 0.85)` |
+| 7 | 多次部分退款、callback／refund 重送具冪等性；每個事件最多記一次差額 | **PASS（附邊界）** — 兩次等額 1000 得 `cum:1000`／`cum:2000` 兩把鍵各記一次；`delta=0` 重跑回 `applied:false`。**邊界**：RPC 無法區分「同一次退款重送」與「金額相同的第二次部分退款」（無 client idempotency token）；實務安全是因為 route 只在 provider 本次真的退款成功後才呼叫，且 route 自身有 `alreadyRefunded` 守門 |
+
+11 條 AC 全部 PASS，但 AC 6／7 是**修復後**才成立——2026-07-29 的原判定是錯的，已在
+QA 報告 §2 逐列標註訂正理由，不掩蓋。
+
+### 仍未完成（誠實揭露）
+
+| 項目 | 狀態 |
+|---|---|
+| 端到端全鏈驗證 | `NOT_VERIFIED-live`（冷啟動無安全測試訂單，payout confirm 仍 HOLD） |
+| F3：RPC 未在交易內重算 gmv／commission／net，信任呼叫端傳值 | P1 待辦 |
+| F4：`recordRefundReversalDb`（`db.mjs`）仍是未加鎖 read-modify-write，且仍在 live 退款路徑 | P1 待辦 |
+| F6：對帳結構上找不到「該結算卻沒結算」的訂單 | P1 待辦 |
+| F8：rate=0.30 時 JS double 與 SQL numeric 的 floor 語意可能分歧 | P2 待辦 |
+| 出款 HOLD 解除 | 未解除（需端到端驗證後由 owner 設 `PAYOUT_CONFIRM_ENABLED=true`） |
+| #1647 項目一、三的 DML | 未執行（需 owner 逐項授權） |
+
+## F4 — 退款紅沖收斂為單一交易（2026-08-04）
+
+`recordRefundReversalDb`（`db.mjs`）是本 issue 四個缺口裡**唯一沒被改掉**的應用層
+read-modify-write，而且仍在 live 退款路徑上（refund-execute 三個呼叫點 ＋
+refund-requests 自動執行）。
+
+### 舊實作為什麼危險
+
+約 250 行，六個步驟全部沒有交易、沒有鎖。核心是第五步：
+
+```
+讀 guide_balances → 在 JS 算新餘額 → 寫回**絕對值**
+```
+
+1. **lost update**：兩個併發 writer 讀到同一個舊餘額，後寫的把前一筆整個蓋掉。
+2. **湊值**：新餘額由「可能過期的讀值」＋「audit marker 的歷史值」湊出來，湊法有
+   三個分支（`markerBefore`／`markerAfter`／`markerDebit` 不一致時改用 `currentBalance`），
+   任一分支判斷錯就把錯的絕對值寫進餘額。
+3. **永久漏扣**：reversal 分錄寫成功、餘額扣失敗 → 重跑因分錄已存在走
+   `already_reversed` → 餘額再也不會被扣。舊版用 `status='started'` 的 audit marker
+   想補這個洞，但 marker 機制本身也不是原子的。
+
+### 修法
+
+`fn_record_refund_reversal_atomic`（migration `20260804103000`）：與 `orders FOR UPDATE`
+同交易，冪等直接交給 `payout_items` 的部分唯一索引
+（`INSERT … ON CONFLICT DO NOTHING RETURNING id`，只有真正插入新分錄才動餘額），
+餘額改 SQL 層 `balance + delta`。**marker 機制整個消失**——同一交易內不可能有「做到一半」。
+
+`before_balance` 由 `after + debit` 反推：精確（不受併發影響）且省一次讀取。
+
+| 檔案 | 變更 |
+|---|---|
+| `20260804103000_issue1777_atomic_refund_reversal.sql`（＋rollback） | 新函式；ON CONFLICT predicate 與部分索引一致（避免 42P10）；REVOKE anon／authenticated、GRANT service_role；pin search_path |
+| `src/lib/settlement/db-refund-reversal-atomic.mjs`（新） | RPC wrapper，回傳形狀與舊版逐字相容 |
+| `src/lib/db.mjs` | 248 行實作 → 19 行委派（strangler：新資料存取進領域檔）。size guard CEILING 4847 → 4623 |
+
+保留的語意：`pre_settlement` 零寫入、`already_reversed` 零寫入不重複扣款、
+**餘額允許扣成負數**（carry-forward，#449 既有行為）、兩筆 audit。
+
+**刻意收緊一處**：訂單不存在時 `RAISE P0002`。舊版不檢查 `orders`，會對孤兒
+payout_item 照樣紅沖；新版因為要靠 orders 列加鎖，順帶擋成 fail-closed。
+
+### 測試：刪掉的比加的多
+
+新增 `tests/api/issue1777-atomic-refund-reversal.test.mjs`（14 case）：lost-update
+oracle、單一 writer（`from()` 一被呼叫就拋）、三種 outcome 逐字相容、錯誤傳遞、
+fail-closed、未知 outcome 不得當成功。
+`issue1777-migration-contract.test.mjs` 新增 7 條鎖 SQL 性質。
+
+**移除 13 個測試**，理由一致：它們測的是**已經不存在的補償機制**。
+
+- `issue614-*`：9 個 —— marker 先寫後扣、marker 與現值不一致的三分支修復、
+  「已扣款但 audit 寫失敗」的補寫路徑。這整套存在的理由就是三個寫入不在同一交易；
+  現在同成同敗，「做到一半」不可能發生。
+- `issue449-*`：4 個 `.from()` chain mock —— 紅沖已不從應用層讀寫資料表，
+  那些 mock 模擬的是一條不存在的路徑，留著只會測到 mock 自己。
+
+不變量沒有消失，只是改由 RPC 契約測試＋migration 契約測試覆蓋，每處都在檔內註明。
+**這件事必須說清楚**：#1777 已經踩過一次「契約測試斷言了壞形式的 ON CONFLICT、
+等於把 P0 鎖住」；把補償機制鎖成契約會擋住正確的修法，所以刪除是有意的，不是偷懶。
+
+### 順帶澄清（不是待修項）
+
+`issue1777-refund-adjustment.test.mjs` 的 (a) 區塊原本鎖「紅沖是整筆全額反轉」。
+這個性質**沒有改變也不該改變**：紅沖本來就不該知道本次退了多少，把 ledger 收斂到
+正確最終淨額的責任在 `fn_apply_refund_adjustment_atomic`（以「目標 − 現值」計算差額，
+因此不論紅沖是否過頭都會收斂）。兩者分工是 by-design。斷言改鎖 SQL 本身。
+
+### 實跑證據
+
+`.claude/hooks/run-checks.sh --typecheck …`：**291 pass / 0 fail / 0 skipped**；
+`tsc --noEmit` 綠燈；`npm run lint` 0 errors。
+另自 `apps/web` 跑全退款相關套件：**433 pass / 0 fail**。
+
+（`tests/unit/*.test.mjs` 有 30 個**既有**失敗，clean tree 上 `git stash` 實測同樣失敗，
+與本次變更無關；另 `issue1385`／`refund-auto-execute`／`refund-requests-policy-snapshot`
+的失敗是既有的 cwd 相對路徑問題，自 `apps/web` 執行即通過。）
+
+### 狀態
+
+⏳ migration `20260804103000` **尚未套用 production**，需新的 `SQL-OVERRIDE`。
+部署順序同前例：**migration 先、程式碼後**——wrapper 是 fail-closed 的，
+RPC 不存在時紅沖會中止（退款仍成功）而非退回舊的非原子路徑。
+
+## F3／F6／F8（2026-08-04）
+
+三者都不是「現在正在錯帳」，而是**下一次一定會踩到**的結構問題。
+
+### F3 — 結算金額信任呼叫端
+
+`fn_record_settlement_atomic` 對資格做了交易內重驗，**金額卻直接採用 `p_items` 傳入的
+`gmv_twd`／`commission_twd`／`net_twd`**。也就是資格用交易內資料、金額用交易外算好的值：
+
+- sweep 讀完訂單後、RPC 執行前發生一筆部分退款 → 資格用新的退款額判斷、金額還是舊的
+  → 導遊多領。
+- 決策 C 說「RPC 是唯一 writer」，但金額的真實來源仍在應用層，等於留了後門。
+
+**修法**（migration `20260804113000`）：金額與資格用同一份交易內資料重算，
+`rate` 與 `rules_version` 取自交易內 `settlement_rules` 的 active 列。呼叫端傳值降級為
+**對照值**，不一致時寫 `settlement_amount_mismatch` 稽核但**不阻斷結算**（DB 算的才是對的）。
+那筆稽核同時是 F8 的偵測器。
+
+簽章未變 → 呼叫端不需同步更新 → 不產生部署順序窗口。
+
+**production 決定性驗證**（強制 rollback 的交易內）：先 DELETE 既有分錄讓 INSERT 路徑真的
+被走到，再以 `gmv 999999／commission 0／net 999999／rules_version 'attacker-supplied'` 呼叫：
+
+| | 呼叫端聲稱 | 實際寫入 |
+|---|---|---|
+| gmv_twd | 999999 | **4500** |
+| commission_twd | 0 | **675** |
+| net_twd | 999999 | **3825** |
+| rules_version | attacker-supplied | **v1** |
+
+餘額 21814 → 25639，即 **+3825 而非 +999999**。舊版函式在同一情境會給導遊入帳 NT$999,999。
+
+### F6 — 對帳的結構盲點
+
+`buildOrderReconciliation` 與 `buildEligibilityAudit` 都以 `ledgerRows` 為起點過濾
+（`.filter((o) => ledgerByOrder.has(o.id))`），因此只看得見**已經進了 ledger** 的訂單。
+它們能回答「入帳的金額對不對」「不該入帳的有沒有入帳」，但**結構上不可能**回答
+「該入帳的有沒有漏掉」——沒有分錄的訂單根本進不了迴圈。
+
+這正是最惡劣的失敗模式：sweep 整批失敗（例如那次 42P10）導致某幾天完全沒結算時，
+**三方金額全都是 0，因此三方對帳一定「一致」**，報表會顯示完全正常。
+
+**修法**：新增 `buildMissedSettlementAudit`，過濾方向與其他兩支相反（只看**沒有**分錄的
+訂單），判定條件與 sweep／`fn_record_settlement_atomic` 的交易內重驗逐條對齊
+（completed／paid_at／四旗標／effective>0／`eligible_since` 早於 `asOf − tDays`）。
+`asOf` 由呼叫端提供以維持純函式；未提供時回 `evaluated: false` 並**不下任何結論**。
+
+`buildReconciliationReport` 的 `ok` 納入這一項；未提供時以
+`missedSettlementEvaluated: false` 誠實標示「這面向沒被檢查」，而不是默默當通過。
+
+### F8 — 浮點與 numeric 的 floor 分歧
+
+```
+rate = 0.30, effective = 90
+JS  : 1 − 0.30 = 0.6999999999999999556…  →  90 × 0.7 = 62.99999999999999  →  floor 62
+SQL : 90 × 0.7000 = 63.0000                                               →  floor 63
+```
+
+導遊少拿 NT$1，而且導遊 dashboard 的估算（JS）與實際結算（SQL）會給出不同數字。
+實測 rate=0.30、effective 1..200000：net 有 **4,676** 個值分歧，第一個是 90。
+
+**目前 active rate=0.15，分歧數為 0** —— 這是尚未觸發的陷阱，不是現存錯帳。
+
+**修法**：新增 `src/lib/settlement/money.mjs`（刻意用 `.mjs`，才能與
+`accounting/reconciliation.mjs` 共用同一份實作），改用基點整數運算
+`floor(amount × bp / 10000)`。因為 `commission_rate` 是 `numeric(5,4)`，
+`round(rate × 10000)` 無損，因此 JS 與 DB 端 numeric **逐值相同**。
+`settlement-config.ts`（sweep、導遊估算）與 `reconciliation.mjs`（對帳目標值）全部改用。
+
+### 實跑證據
+
+`.claude/hooks/run-checks.sh --typecheck …`（見下方 commit）。
+`issue1777-f3-f6-f8.test.mjs` 29 case，含：浮點分歧數 4,676 的規模鎖定、
+sweep 與導遊估算跨介面一致、F3 的 SQL 契約、F6 的「舊對帳看不見漏結算」問題重現
+＋九種「不算漏結算」的邊界。
+
+### 狀態
+
+兩支 migration（`20260804103000` F4、`20260804113000` F3）**均已套用 production 並驗證**，
+ledger 已補，資料影響皆為零。
+
+### F8 連帶更新的 8 個既有測試
+
+`Math.floor` 從 `settlement-config.ts` 下移到 `settlement/money.mjs` 後，8 個 source-string
+測試失效——它們把**表達式字面**釘死成 `Math.floor(effectiveTwd * config.commission_rate)`：
+
+| 檔案 | 原斷言 |
+|---|---|
+| `guide-payout-monthly-contract` | settlement-config.ts 內必須出現 `Math.floor` |
+| `issue447-settlement-sweep` | `Math\.floor.*commission_rate` |
+| `issue631-dashboard-expected-payout-policy` | `commissionTwd = Math.floor(effectiveTwd * config.commission_rate)` |
+| `settlement-rules-alignment`（2 處） | 同上 ＋ `effectiveTwd * config.commission_rate` |
+| `issue307-dashboard-settlement-wire`（2 處） | `effectiveTwd * config.commission_rate` |
+| `issue719-monthly-payout-db-rule` | 同上 |
+
+**不變量沒有改變**：commission 仍是由 `effectiveTwd × DB-backed commission_rate` 取 floor、
+且仍在 canonical helper 內完成（不得回到 route 自行計算，那是 GH-1284／#631 的原意）。
+改變的只有 floor 的實作位置與精度。因此斷言改指向新的 canonical 表達式
+（`computeCommissionTwd(effectiveTwd, config.commission_rate)`）＋`money.mjs` 內的
+`Math.floor`，每處都在檔內註明理由。
+
+值得注意的是 `guide-payout-monthly-contract` 的原註解已經寫過一次同樣的推理
+（「floor 邏輯移到 canonical helper，斷言 route 內的 Math.floor 會把邏輯逼回去」）——
+這次只是同一個邏輯再往下一層。
+
+**全套實跑**（自 `apps/web`）：`tests/api/*.test.mjs` **4,053 pass / 3 fail / 3 skipped**。
+剩下 3 個失敗是既有的 guide session HMAC 測試（`git stash` 於 clean tree 實測同樣失敗），
+與本次變更無關。

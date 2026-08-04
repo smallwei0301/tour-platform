@@ -72,10 +72,19 @@ test('route uses verifyGuideSession for auth', () => {
 
 const SETTLEMENT_CONFIG = path.join(ROOT, 'src/lib/settlement-config.ts');
 
-test('canonical helper computeGuidePayoutEstimate uses Math.floor for commission (GH-1284)', () => {
+// #1777 F8（2026-08-04）：floor 運算已從 settlement-config.ts 下移到
+// src/lib/settlement/money.mjs 的整數基點實作（computeCommissionTwd／computeNetTwd）。
+// 原因：`Math.floor(e * (1 - 0.30))` 的 IEEE754 結果與 DB 端 numeric 差 NT$1，
+// 導遊看到的估算會與實際結算不一致。**不變量沒有改變**——commission 仍是由
+// effectiveTwd × DB-backed commission_rate 取 floor、且仍在 canonical helper 內完成，
+// 只是 floor 本身改用整數運算。因此斷言改指向新的 canonical 表達式與 money.mjs。
+test('canonical helper computeGuidePayoutEstimate floors commission via canonical money helper (GH-1284 / #1777 F8)', () => {
   const helperSrc = readFileSync(SETTLEMENT_CONFIG, 'utf8');
   assert.match(helperSrc, /computeGuidePayoutEstimate/, 'computeGuidePayoutEstimate not found in settlement-config');
-  assert.match(helperSrc, /Math\.floor/, 'Math.floor not used in settlement-config canonical helper');
+  assert.match(helperSrc, /computeCommissionTwd\(effectiveTwd, config\.commission_rate\)/,
+    'canonical helper must delegate commission to computeCommissionTwd');
+  const moneySrc = readFileSync(path.join(ROOT, 'src/lib/settlement/money.mjs'), 'utf8');
+  assert.match(moneySrc, /Math\.floor/, 'floor semantics must live in the canonical money helper');
 });
 
 test('route delegates commission calculation to canonical helper and returns commissionTwd/netTwd', () => {
