@@ -685,3 +685,112 @@ fail-closed、未知 outcome 不得當成功。
 ⏳ migration `20260804103000` **尚未套用 production**，需新的 `SQL-OVERRIDE`。
 部署順序同前例：**migration 先、程式碼後**——wrapper 是 fail-closed 的，
 RPC 不存在時紅沖會中止（退款仍成功）而非退回舊的非原子路徑。
+
+## F3／F6／F8（2026-08-04）
+
+三者都不是「現在正在錯帳」，而是**下一次一定會踩到**的結構問題。
+
+### F3 — 結算金額信任呼叫端
+
+`fn_record_settlement_atomic` 對資格做了交易內重驗，**金額卻直接採用 `p_items` 傳入的
+`gmv_twd`／`commission_twd`／`net_twd`**。也就是資格用交易內資料、金額用交易外算好的值：
+
+- sweep 讀完訂單後、RPC 執行前發生一筆部分退款 → 資格用新的退款額判斷、金額還是舊的
+  → 導遊多領。
+- 決策 C 說「RPC 是唯一 writer」，但金額的真實來源仍在應用層，等於留了後門。
+
+**修法**（migration `20260804113000`）：金額與資格用同一份交易內資料重算，
+`rate` 與 `rules_version` 取自交易內 `settlement_rules` 的 active 列。呼叫端傳值降級為
+**對照值**，不一致時寫 `settlement_amount_mismatch` 稽核但**不阻斷結算**（DB 算的才是對的）。
+那筆稽核同時是 F8 的偵測器。
+
+簽章未變 → 呼叫端不需同步更新 → 不產生部署順序窗口。
+
+**production 決定性驗證**（強制 rollback 的交易內）：先 DELETE 既有分錄讓 INSERT 路徑真的
+被走到，再以 `gmv 999999／commission 0／net 999999／rules_version 'attacker-supplied'` 呼叫：
+
+| | 呼叫端聲稱 | 實際寫入 |
+|---|---|---|
+| gmv_twd | 999999 | **4500** |
+| commission_twd | 0 | **675** |
+| net_twd | 999999 | **3825** |
+| rules_version | attacker-supplied | **v1** |
+
+餘額 21814 → 25639，即 **+3825 而非 +999999**。舊版函式在同一情境會給導遊入帳 NT$999,999。
+
+### F6 — 對帳的結構盲點
+
+`buildOrderReconciliation` 與 `buildEligibilityAudit` 都以 `ledgerRows` 為起點過濾
+（`.filter((o) => ledgerByOrder.has(o.id))`），因此只看得見**已經進了 ledger** 的訂單。
+它們能回答「入帳的金額對不對」「不該入帳的有沒有入帳」，但**結構上不可能**回答
+「該入帳的有沒有漏掉」——沒有分錄的訂單根本進不了迴圈。
+
+這正是最惡劣的失敗模式：sweep 整批失敗（例如那次 42P10）導致某幾天完全沒結算時，
+**三方金額全都是 0，因此三方對帳一定「一致」**，報表會顯示完全正常。
+
+**修法**：新增 `buildMissedSettlementAudit`，過濾方向與其他兩支相反（只看**沒有**分錄的
+訂單），判定條件與 sweep／`fn_record_settlement_atomic` 的交易內重驗逐條對齊
+（completed／paid_at／四旗標／effective>0／`eligible_since` 早於 `asOf − tDays`）。
+`asOf` 由呼叫端提供以維持純函式；未提供時回 `evaluated: false` 並**不下任何結論**。
+
+`buildReconciliationReport` 的 `ok` 納入這一項；未提供時以
+`missedSettlementEvaluated: false` 誠實標示「這面向沒被檢查」，而不是默默當通過。
+
+### F8 — 浮點與 numeric 的 floor 分歧
+
+```
+rate = 0.30, effective = 90
+JS  : 1 − 0.30 = 0.6999999999999999556…  →  90 × 0.7 = 62.99999999999999  →  floor 62
+SQL : 90 × 0.7000 = 63.0000                                               →  floor 63
+```
+
+導遊少拿 NT$1，而且導遊 dashboard 的估算（JS）與實際結算（SQL）會給出不同數字。
+實測 rate=0.30、effective 1..200000：net 有 **4,676** 個值分歧，第一個是 90。
+
+**目前 active rate=0.15，分歧數為 0** —— 這是尚未觸發的陷阱，不是現存錯帳。
+
+**修法**：新增 `src/lib/settlement/money.mjs`（刻意用 `.mjs`，才能與
+`accounting/reconciliation.mjs` 共用同一份實作），改用基點整數運算
+`floor(amount × bp / 10000)`。因為 `commission_rate` 是 `numeric(5,4)`，
+`round(rate × 10000)` 無損，因此 JS 與 DB 端 numeric **逐值相同**。
+`settlement-config.ts`（sweep、導遊估算）與 `reconciliation.mjs`（對帳目標值）全部改用。
+
+### 實跑證據
+
+`.claude/hooks/run-checks.sh --typecheck …`（見下方 commit）。
+`issue1777-f3-f6-f8.test.mjs` 29 case，含：浮點分歧數 4,676 的規模鎖定、
+sweep 與導遊估算跨介面一致、F3 的 SQL 契約、F6 的「舊對帳看不見漏結算」問題重現
+＋九種「不算漏結算」的邊界。
+
+### 狀態
+
+兩支 migration（`20260804103000` F4、`20260804113000` F3）**均已套用 production 並驗證**，
+ledger 已補，資料影響皆為零。
+
+### F8 連帶更新的 8 個既有測試
+
+`Math.floor` 從 `settlement-config.ts` 下移到 `settlement/money.mjs` 後，8 個 source-string
+測試失效——它們把**表達式字面**釘死成 `Math.floor(effectiveTwd * config.commission_rate)`：
+
+| 檔案 | 原斷言 |
+|---|---|
+| `guide-payout-monthly-contract` | settlement-config.ts 內必須出現 `Math.floor` |
+| `issue447-settlement-sweep` | `Math\.floor.*commission_rate` |
+| `issue631-dashboard-expected-payout-policy` | `commissionTwd = Math.floor(effectiveTwd * config.commission_rate)` |
+| `settlement-rules-alignment`（2 處） | 同上 ＋ `effectiveTwd * config.commission_rate` |
+| `issue307-dashboard-settlement-wire`（2 處） | `effectiveTwd * config.commission_rate` |
+| `issue719-monthly-payout-db-rule` | 同上 |
+
+**不變量沒有改變**：commission 仍是由 `effectiveTwd × DB-backed commission_rate` 取 floor、
+且仍在 canonical helper 內完成（不得回到 route 自行計算，那是 GH-1284／#631 的原意）。
+改變的只有 floor 的實作位置與精度。因此斷言改指向新的 canonical 表達式
+（`computeCommissionTwd(effectiveTwd, config.commission_rate)`）＋`money.mjs` 內的
+`Math.floor`，每處都在檔內註明理由。
+
+值得注意的是 `guide-payout-monthly-contract` 的原註解已經寫過一次同樣的推理
+（「floor 邏輯移到 canonical helper，斷言 route 內的 Math.floor 會把邏輯逼回去」）——
+這次只是同一個邏輯再往下一層。
+
+**全套實跑**（自 `apps/web`）：`tests/api/*.test.mjs` **4,053 pass / 3 fail / 3 skipped**。
+剩下 3 個失敗是既有的 guide session HMAC 測試（`git stash` 於 clean tree 實測同樣失敗），
+與本次變更無關。

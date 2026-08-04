@@ -123,7 +123,9 @@ describe('issue #454 — guide dashboard settlement wire', () => {
       );
       assert.match(
         settlementConfigSrc,
-        /effectiveTwd \* config\.commission_rate/,
+        // #1777 F8：乘法下移到 settlement/money.mjs 的整數基點實作；
+        // 不變量不變——commission 仍由 effectiveTwd × DB-backed commission_rate 得出。
+        /computeCommissionTwd\(effectiveTwd, config\.commission_rate\)/,
         'canonical helper (settlement-config.ts) must apply commission_rate to effectiveTwd'
       );
     });

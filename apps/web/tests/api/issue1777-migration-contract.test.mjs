@@ -32,6 +32,8 @@ const ISSUE_1777_MIGRATIONS = [
   '20260730093000_issue1777_refund_delta_accumulation',
   // F4：退款紅沖收斂為單一交易（最後一處應用層 read-modify-write）
   '20260804103000_issue1777_atomic_refund_reversal',
+  // F3：結算金額改由 DB 端在交易內重算，不再信任呼叫端傳值
+  '20260804113000_issue1777_settlement_recompute_amounts',
 ];
 
 /** 本 issue 建立的財務函式——權限收斂必須涵蓋每一支。 */
