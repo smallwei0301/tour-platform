@@ -544,3 +544,26 @@ API 上唯一的線索是 `mergeable_state: "dirty"`。
 
 **修法**：合併 `origin/main`，衝突解為保留兩邊記錄（main 28 筆 ＋ 本分支 2 筆 = 30 筆，
 JSON 驗證通過、ledger gate 測試綠）。推送後 CI 立即觸發，直接證實診斷。
+
+### CI 證據（PR #1789）
+
+解衝突後的 commit `a9cdd32` 觸發完整 CI，**全數綠燈**：
+
+| check | run / job | conclusion |
+|---|---|---|
+| `test`（ci.yml） | [30865473365 / 91856254697](https://github.com/smallwei0301/tour-platform/actions/runs/30865473365/job/91856254697) | **success** |
+| `scan`（secret-scan） | [30865473346 / 91856254688](https://github.com/smallwei0301/tour-platform/actions/runs/30865473346/job/91856254688) | success |
+| `probe`（anon-rls-probe） | [30865473345 / 91856254666](https://github.com/smallwei0301/tour-platform/actions/runs/30865473345/job/91856254666) | success |
+| `Migration source-contract tests (static, no DB)` | [30865473360 / 91856254892](https://github.com/smallwei0301/tour-platform/actions/runs/30865473360/job/91856254892) | success |
+| `Production schema drift detection` | 同上 run / 91856374882 | skipped（PR 模式不連 production） |
+| `Vercel Preview Comments` | 91856253847 | success |
+
+`test` job 逐步驟（2026-08-04T00:24:32Z → 00:28:15Z）：
+Install deps ✅／Migration source gate ✅／Web lint ✅／Web typecheck ✅／Web tests ✅／
+Web build ✅／ISR smoke ✅／Preflight ✅。
+
+**已知落差**：上述 CI 跑在 `a9cdd32`；其後的 `b09fac7`（純文件：worklog 與 ledger 的
+誤判訂正，無程式碼／migration 變更）GitHub 未派工 —— 排程 workflow 正常、`mergeable_state`
+已由 `dirty` 轉為 `unstable`、關閉再開啟 PR 也未重新派工，判定為 GitHub 側的 dispatch
+掉單。處理方式：以本次 commit 重新推送觸發，並在 merge 前確認當前 head 有 conclusion=success
+的 CI run（鐵律 6 不因平台掉單而放寬）。
