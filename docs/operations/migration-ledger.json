@@ -221,6 +221,38 @@
       "note": "#1777 hotfix（P0 安全）：套用 Phase 2/3 後實查發現三支財務函式對 anon 與 authenticated 皆持有 EXECUTE——因 Supabase 在 public schema 對 FUNCTIONS 有 default privileges，而原 migration 只寫 REVOKE ALL … FROM PUBLIC（撤不掉具名角色）。未修正前未登入者可直接呼叫 fn_confirm_payout_atomic 標記出款並扣減導遊餘額。本檔對三支函式 REVOKE ALL FROM anon,authenticated,public 並重新 GRANT EXECUTE TO service_role，另以 ALTER DEFAULT PRIVILEGES 撤銷 anon/authenticated 對 FUNCTIONS 的預設 EXECUTE，避免日後新建金流函式重蹈覆轍（既有 20260709_issue1678 hardening 只涵蓋 TABLES）。apply_migration success。驗證：routine_privileges 實查三支函式的 grantee 僅剩 service_role 與 postgres。無資料異動。rollback：同名 .rollback.sql（只還原 default privileges，刻意不重新授權 anon——回滾不該把漏洞裝回去）。Refs #1777 #1678 #1293。"
     },
     {
+      "filename": "20260723020000_midao_service_drafts_and_questions.sql",
+      "environment": "production",
+      "operator": "Ava/controller（owner 已批准 production apply）+ Fiora/tp-builder-fix durable ledger confirmation",
+      "applied_at": "2026-08-02T17:31:47+08:00",
+      "status": "verified",
+      "note": "此 applied_at 僅代表本次首次 durable confirmation，非歷史實際 apply 時間。已由 direct pooler production apply；pre-apply backup/checksum retained privately；migration history exact 4/4 readback；catalog/ACL verification 確認 RLS、canonical indexes 與 RPC 權限邊界；PostgREST schema reload 已送出。rollback companion：20260723020000_midao_service_drafts_and_questions.rollback.sql。Refs #1758。"
+    },
+    {
+      "filename": "20260723021000_midao_service_publication_versions.sql",
+      "environment": "production",
+      "operator": "Ava/controller（owner 已批准 production apply）+ Fiora/tp-builder-fix durable ledger confirmation",
+      "applied_at": "2026-08-02T17:31:47+08:00",
+      "status": "verified",
+      "note": "此 applied_at 僅代表本次首次 durable confirmation，非歷史實際 apply 時間。已由 direct pooler production apply；pre-apply backup/checksum retained privately；migration history exact 4/4 readback；catalog/ACL verification 確認 RLS、canonical indexes 與 RPC 權限邊界；PostgREST schema reload 已送出。rollback companion：20260723021000_midao_service_publication_versions.rollback.sql。Refs #1758。"
+    },
+    {
+      "filename": "20260723022000_midao_atomic_service_publication.sql",
+      "environment": "production",
+      "operator": "Ava/controller（owner 已批准 production apply）+ Fiora/tp-builder-fix durable ledger confirmation",
+      "applied_at": "2026-08-02T17:31:47+08:00",
+      "status": "verified",
+      "note": "此 applied_at 僅代表本次首次 durable confirmation，非歷史實際 apply 時間。已由 direct pooler production apply；pre-apply backup/checksum retained privately；migration history exact 4/4 readback；catalog/ACL verification 確認 RLS、canonical indexes 與 RPC 權限邊界；PostgREST schema reload 已送出。rollback companion：20260723022000_midao_atomic_service_publication.rollback.sql。Refs #1758。"
+    },
+    {
+      "filename": "20260723023000_midao_atomic_publication_restore.sql",
+      "environment": "production",
+      "operator": "Ava/controller（owner 已批准 production apply）+ Fiora/tp-builder-fix durable ledger confirmation",
+      "applied_at": "2026-08-02T17:31:47+08:00",
+      "status": "verified",
+      "note": "此 applied_at 僅代表本次首次 durable confirmation，非歷史實際 apply 時間。已由 direct pooler production apply；pre-apply backup/checksum retained privately；migration history exact 4/4 readback；catalog/ACL verification 確認 RLS、canonical indexes 與 RPC 權限邊界；PostgREST schema reload 已送出。rollback companion：20260723023000_midao_atomic_publication_restore.rollback.sql。Refs #1758。"
+    },
+    {
       "filename": "20260729190000_issue1777_post_review_fixes.sql",
       "environment": "production",
       "operator": "Claude Code agent（SQL-OVERRIDE 授權：使用者「SQL-OVERRIDE 授權」）套用＋驗證",

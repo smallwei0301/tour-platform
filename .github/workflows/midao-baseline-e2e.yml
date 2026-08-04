@@ -173,6 +173,7 @@ jobs:
           apps/web/e2e/midao-auth-and-impersonation.spec.ts
           apps/web/e2e/midao-home.spec.ts
           apps/web/e2e/midao-requests.spec.ts
+          apps/web/e2e/midao-services.spec.ts
 
       - name: Run baseline-backed legacy login compatibility
         run: >-
