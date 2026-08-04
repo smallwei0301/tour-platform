@@ -600,3 +600,88 @@ QA 報告 §2 逐列標註訂正理由，不掩蓋。
 | F8：rate=0.30 時 JS double 與 SQL numeric 的 floor 語意可能分歧 | P2 待辦 |
 | 出款 HOLD 解除 | 未解除（需端到端驗證後由 owner 設 `PAYOUT_CONFIRM_ENABLED=true`） |
 | #1647 項目一、三的 DML | 未執行（需 owner 逐項授權） |
+
+## F4 — 退款紅沖收斂為單一交易（2026-08-04）
+
+`recordRefundReversalDb`（`db.mjs`）是本 issue 四個缺口裡**唯一沒被改掉**的應用層
+read-modify-write，而且仍在 live 退款路徑上（refund-execute 三個呼叫點 ＋
+refund-requests 自動執行）。
+
+### 舊實作為什麼危險
+
+約 250 行，六個步驟全部沒有交易、沒有鎖。核心是第五步：
+
+```
+讀 guide_balances → 在 JS 算新餘額 → 寫回**絕對值**
+```
+
+1. **lost update**：兩個併發 writer 讀到同一個舊餘額，後寫的把前一筆整個蓋掉。
+2. **湊值**：新餘額由「可能過期的讀值」＋「audit marker 的歷史值」湊出來，湊法有
+   三個分支（`markerBefore`／`markerAfter`／`markerDebit` 不一致時改用 `currentBalance`），
+   任一分支判斷錯就把錯的絕對值寫進餘額。
+3. **永久漏扣**：reversal 分錄寫成功、餘額扣失敗 → 重跑因分錄已存在走
+   `already_reversed` → 餘額再也不會被扣。舊版用 `status='started'` 的 audit marker
+   想補這個洞，但 marker 機制本身也不是原子的。
+
+### 修法
+
+`fn_record_refund_reversal_atomic`（migration `20260804103000`）：與 `orders FOR UPDATE`
+同交易，冪等直接交給 `payout_items` 的部分唯一索引
+（`INSERT … ON CONFLICT DO NOTHING RETURNING id`，只有真正插入新分錄才動餘額），
+餘額改 SQL 層 `balance + delta`。**marker 機制整個消失**——同一交易內不可能有「做到一半」。
+
+`before_balance` 由 `after + debit` 反推：精確（不受併發影響）且省一次讀取。
+
+| 檔案 | 變更 |
+|---|---|
+| `20260804103000_issue1777_atomic_refund_reversal.sql`（＋rollback） | 新函式；ON CONFLICT predicate 與部分索引一致（避免 42P10）；REVOKE anon／authenticated、GRANT service_role；pin search_path |
+| `src/lib/settlement/db-refund-reversal-atomic.mjs`（新） | RPC wrapper，回傳形狀與舊版逐字相容 |
+| `src/lib/db.mjs` | 248 行實作 → 19 行委派（strangler：新資料存取進領域檔）。size guard CEILING 4847 → 4623 |
+
+保留的語意：`pre_settlement` 零寫入、`already_reversed` 零寫入不重複扣款、
+**餘額允許扣成負數**（carry-forward，#449 既有行為）、兩筆 audit。
+
+**刻意收緊一處**：訂單不存在時 `RAISE P0002`。舊版不檢查 `orders`，會對孤兒
+payout_item 照樣紅沖；新版因為要靠 orders 列加鎖，順帶擋成 fail-closed。
+
+### 測試：刪掉的比加的多
+
+新增 `tests/api/issue1777-atomic-refund-reversal.test.mjs`（14 case）：lost-update
+oracle、單一 writer（`from()` 一被呼叫就拋）、三種 outcome 逐字相容、錯誤傳遞、
+fail-closed、未知 outcome 不得當成功。
+`issue1777-migration-contract.test.mjs` 新增 7 條鎖 SQL 性質。
+
+**移除 13 個測試**，理由一致：它們測的是**已經不存在的補償機制**。
+
+- `issue614-*`：9 個 —— marker 先寫後扣、marker 與現值不一致的三分支修復、
+  「已扣款但 audit 寫失敗」的補寫路徑。這整套存在的理由就是三個寫入不在同一交易；
+  現在同成同敗，「做到一半」不可能發生。
+- `issue449-*`：4 個 `.from()` chain mock —— 紅沖已不從應用層讀寫資料表，
+  那些 mock 模擬的是一條不存在的路徑，留著只會測到 mock 自己。
+
+不變量沒有消失，只是改由 RPC 契約測試＋migration 契約測試覆蓋，每處都在檔內註明。
+**這件事必須說清楚**：#1777 已經踩過一次「契約測試斷言了壞形式的 ON CONFLICT、
+等於把 P0 鎖住」；把補償機制鎖成契約會擋住正確的修法，所以刪除是有意的，不是偷懶。
+
+### 順帶澄清（不是待修項）
+
+`issue1777-refund-adjustment.test.mjs` 的 (a) 區塊原本鎖「紅沖是整筆全額反轉」。
+這個性質**沒有改變也不該改變**：紅沖本來就不該知道本次退了多少，把 ledger 收斂到
+正確最終淨額的責任在 `fn_apply_refund_adjustment_atomic`（以「目標 − 現值」計算差額，
+因此不論紅沖是否過頭都會收斂）。兩者分工是 by-design。斷言改鎖 SQL 本身。
+
+### 實跑證據
+
+`.claude/hooks/run-checks.sh --typecheck …`：**291 pass / 0 fail / 0 skipped**；
+`tsc --noEmit` 綠燈；`npm run lint` 0 errors。
+另自 `apps/web` 跑全退款相關套件：**433 pass / 0 fail**。
+
+（`tests/unit/*.test.mjs` 有 30 個**既有**失敗，clean tree 上 `git stash` 實測同樣失敗，
+與本次變更無關；另 `issue1385`／`refund-auto-execute`／`refund-requests-policy-snapshot`
+的失敗是既有的 cwd 相對路徑問題，自 `apps/web` 執行即通過。）
+
+### 狀態
+
+⏳ migration `20260804103000` **尚未套用 production**，需新的 `SQL-OVERRIDE`。
+部署順序同前例：**migration 先、程式碼後**——wrapper 是 fail-closed 的，
+RPC 不存在時紅沖會中止（退款仍成功）而非退回舊的非原子路徑。

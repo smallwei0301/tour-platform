@@ -9,8 +9,8 @@
  * 決策 B：每次退款只追加本次差額，不得重複全額紅沖。
  *
  * 本檔驗證：
- *   (a) 舊 recordRefundReversalDb 的確是全額紅沖（鎖住問題）
- *   (b) 冪等鍵語意：同次退款重送同鍵、二次部分退款得新鍵
+ *   (a) 紅沖固定是整筆全額反轉（by-design；差額由 adjustment 收斂）
+ *   (b) — 已移除，見該區塊說明（冪等鍵改由 DB 端推導）
  *   (c) wrapper 契約：單一 RPC、冪等回應、fail-closed
  *   (d) 決策 B 的金額模型在四情境下收斂到同一最終淨應付
  *
@@ -22,53 +22,42 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 
-// ── (a) 舊路徑：整筆全額紅沖 ─────────────────────────────────────────────────
+// ── (a) 缺口 2：紅沖不看本次退款金額 ────────────────────────────────────────
+//
+// ⚠️ 這裡原本有一個以 `.from()` chain 模擬 supabase 的測試，斷言
+// `recordRefundReversalDb` 會插入 `net_twd: -8500`（原 settlement 的完整 net），
+// 用來鎖住「部分退款也整筆全額反轉」這個問題。
+//
+// #1777 F4（2026-08-04）把紅沖整包搬進 `fn_record_refund_reversal_atomic`，
+// 應用層不再讀寫資料表，那個 mock 模擬的路徑已不存在。
+//
+// **但缺口 2 的性質沒有改變**：紅沖依然是整筆全額反轉（`-gmv/-commission/-net`），
+// 它本來就不該知道本次退了多少——把 ledger 收斂到正確最終淨額的責任在
+// `fn_apply_refund_adjustment_atomic`（以「目標 − 現值」計算差額，因此不論紅沖
+// 是否過頭都會收斂）。兩者的分工是 by-design，不是待修項。
+//
+// 因此改鎖 SQL 本身：紅沖分錄必須是原 settlement 的完整負值。
 
-describe('#1777 缺口 2 — 舊紅沖路徑不看本次退款金額', () => {
-  it('部分退款也把整筆 settlement 全額反轉', async () => {
-    const { recordRefundReversalDb } = await import('../../src/lib/db.mjs');
+describe('#1777 缺口 2 — 紅沖是整筆全額反轉（差額由 adjustment 收斂）', () => {
+  it('reversal 分錄寫的是原 settlement 的完整負值，不看本次退款金額', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+    const { dirname, join } = await import('node:path');
+    const here = dirname(fileURLToPath(import.meta.url));
+    const sql = readFileSync(
+      join(here, '../../../../supabase/migrations/20260804103000_issue1777_atomic_refund_reversal.sql'),
+      'utf8',
+    ).replace(/--.*$/gm, '');
 
-    const settlement = {
-      id: 'pi-1', order_id: 'o-1', guide_id: 'g-1',
-      gmv_twd: 10000, commission_twd: 1500, net_twd: 8500,
-      rules_version: 'v1', settlement_kind: 'settlement',
-    };
-    const inserted = [];
-
-    const client = {
-      from(table) {
-        const api = {
-          _f: {},
-          select() { return api; },
-          eq(k, v) { api._f[k] = v; return api; },
-          maybeSingle() {
-            if (table === 'payout_items' && api._f.settlement_kind === 'settlement') {
-              return Promise.resolve({ data: settlement, error: null });
-            }
-            if (table === 'guide_balances') {
-              return Promise.resolve({ data: { balance_twd: 8500 }, error: null });
-            }
-            return Promise.resolve({ data: null, error: null });
-          },
-          upsert(row) {
-            if (table === 'payout_items') inserted.push(row);
-            const chain = Promise.resolve({ data: row, error: null });
-            chain.select = () => ({ maybeSingle: () => Promise.resolve({ data: { id: 'pi-rev' }, error: null }) });
-            return chain;
-          },
-          insert(row) { return Promise.resolve({ data: row, error: null }); },
-        };
-        return api;
-      },
-    };
-
-    await recordRefundReversalDb(client, { orderId: 'o-1', actor: 'test' });
-
-    assert.equal(inserted.length, 1, '舊路徑會插入一筆 reversal');
-    assert.equal(
-      inserted[0].net_twd,
-      -8500,
-      '不論本次只退多少，一律以原 settlement 的完整 net 反轉——這就是剩餘應收被歸零的原因',
+    assert.match(
+      sql,
+      /-coalesce\(v_gmv,\s*0\),\s*-coalesce\(v_commission,\s*0\),\s*-coalesce\(v_net,\s*0\)/i,
+      '紅沖固定反轉原 settlement 的完整金額——這就是為什麼需要 adjustment 來收斂差額',
+    );
+    assert.doesNotMatch(
+      sql,
+      /p_refund_amount|refund_amount_twd/i,
+      '紅沖不讀退款金額；金額收斂是 fn_apply_refund_adjustment_atomic 的責任',
     );
   });
 });

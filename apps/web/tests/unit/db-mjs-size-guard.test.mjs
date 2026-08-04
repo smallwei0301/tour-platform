@@ -22,7 +22,9 @@ const DB_MJS = resolve(__dirname, '../../src/lib/db.mjs');
 // 2026-07-05 #1613 批次抽出 9 個領域檔（settlement-ops/guide-applications/wishlist/
 // payouts/reschedule/booking-approvals/order-messages/homepage-featured/
 // messaging-bindings）後降到 4,846 — 里程碑 <5,000 達成。
-const CEILING = 4847; // +1：#1616 env getter import 行
+// 2026-08-04 #1777 F4：recordRefundReversalDb 的 248 行實作抽到
+// settlement/db-refund-reversal-atomic.mjs（改由原子 RPC 完成），降到 4623。
+const CEILING = 4623;
 
 test('db.mjs 行數不得超過天花板（strangler 硬規則：只能降）', () => {
   const lines = readFileSync(DB_MJS, 'utf8').split('\n').length;
