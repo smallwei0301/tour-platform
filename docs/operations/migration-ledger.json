@@ -251,6 +251,22 @@
       "applied_at": "2026-08-02T17:31:47+08:00",
       "status": "verified",
       "note": "此 applied_at 僅代表本次首次 durable confirmation，非歷史實際 apply 時間。已由 direct pooler production apply；pre-apply backup/checksum retained privately；migration history exact 4/4 readback；catalog/ACL verification 確認 RLS、canonical indexes 與 RPC 權限邊界；PostgREST schema reload 已送出。rollback companion：20260723023000_midao_atomic_publication_restore.rollback.sql。Refs #1758。"
+    },
+    {
+      "filename": "20260729190000_issue1777_post_review_fixes.sql",
+      "environment": "production",
+      "operator": "Claude Code agent（SQL-OVERRIDE 授權：使用者「SQL-OVERRIDE 授權」）套用＋驗證",
+      "applied_at": "2026-07-30T12:49:00+08:00",
+      "status": "verified",
+      "note": "#1777 獨立審查後的 P0 修復：fn_record_settlement_atomic 的 ON CONFLICT 補上與部分索引一致的 predicate。背景——20260729170000 把 payout_items_order_kind_unique 改成 WHERE settlement_kind IN ('settlement','reversal') 的部分索引後，20260729160000 的無-predicate ON CONFLICT 推論不到該索引，production EXPLAIN 實測回 42P10，會使每日 02:00 UTC settlement sweep 整批失敗（fail-closed，不算錯錢但完全不結算）。apply_migration success。驗證：(a) pg_get_functiondef 確認含 predicate；(b) proconfig 仍 pin search_path=pg_catalog,public,pg_temp；(c) proacl 仍為 {postgres,service_role}，anon 未回流；(d) 端到端對一筆已有分錄且符合資格的訂單呼叫 RPC，回 settled_count=0／skipped_existing=1／guides_updated=0，無 42P10，冪等路徑零寫入。資料影響：無——套用後實查 payout_items 10 列、guide_balances 合計 21814、payouts 1 pending/0 paid/0 cancelled、近 2 小時財務 audit_logs 0 筆，全部與套用前一致。註：本檔原含 ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin，經實測 current_user=postgres 非 supabase_admin 成員亦非 superuser → 42501 且因單一交易導致 P0 一併回滾，故經 owner P0-OVERRIDE 授權自檔案移除，改以 scripts/admin/issue1777-function-grants-audit.mjs 的 ACL 稽核作為替代防線（涵蓋更廣：不限建立來源）。backup：Supabase 託管備份/PITR；本 migration 無資料異動。rollback：同名 .rollback.sql（刻意 no-op，單獨回滾 predicate 會重現 42P10）。Refs #1777 #1293。"
+    },
+    {
+      "filename": "20260730093000_issue1777_refund_delta_accumulation.sql",
+      "environment": "production",
+      "operator": "Claude Code agent（SQL-OVERRIDE 授權：使用者「SQL-OVERRIDE，繼續完成」）套用＋驗證",
+      "applied_at": "2026-08-03T13:03:00+08:00",
+      "status": "verified",
+      "note": "#1777 收尾稽核抓到的呼叫端 P0：F1 refund-execute route 以 .update({refund_amount_twd: 本次金額}) 覆寫而非累加（NT$2,000 訂單先退 500 再退 500 → 欄位停在 500 → sweep 的 effective GMV 多算 500 → 導遊多領 floor(500×0.85)=425；且為應用層 read-modify-write，併發會 lost update）；F2 冪等鍵由應用層以本次金額組成，兩次等額部分退款撞同一把鍵、第二筆差額被 ON CONFLICT DO NOTHING 吃掉。另修 F5（delta=0 早退跳過 carry-forward 稽核）。修法：DROP 舊簽章 (uuid,text,text)、CREATE (uuid,integer,text)，把 operations_tracking.refund_amount_twd += delta 移進同一把 orders FOR UPDATE，冪等鍵改由交易內累積額推導（'cum:'||累積額），負 delta RAISE，carry-forward 與超額稽核改全路徑檢查並以 refund_event_id 去重，RETURNS TABLE 改 RETURNS jsonb（舊版 OUT 參數與資料表欄位同名，而 ON CONFLICT 的 inference specification 以運算式解析，同名變數會被代換成 placeholder）。apply_migration success。驗證：(a) pg_proc 實查僅存 (uuid,integer,text) 一個簽章、returns=jsonb、prosecdef=false、proconfig 仍 pin search_path=pg_catalog,public,pg_temp、proacl={postgres,service_role}（DROP+CREATE 後 anon 未回流）；(b) 端到端功能驗證於強制 rollback 的 DO block 內執行（結尾 RAISE EXCEPTION 讓整個交易中止），對已結算訂單 466e6b29（total 6000／ledger_net 5100）連續呼叫 delta=1000、delta=1000、delta=0，得 r1 cum:1000/target 4250/delta -850/applied true、r2 cum:2000/target 3400/delta -850/applied true、r3 cum:2000/delta 0/applied false，operations_tracking.refund_amount_twd=2000、adjustment_rows=2 —— 兩次等額退款得到兩把不同鍵且累積額正確相加，F1/F2 修復成立。資料影響：無——rollback 後實查 payout_items 10 列、refund_adjustment 0 列、refund_event_id 非空 0 列、guide_balances 合計 21814、operations_tracking 有退款 3 筆、測試訂單無 ops 列、payouts 1 pending/0 paid、actor='verify-1777' 的 audit_logs 0 筆，全部與套用前快照一致。⚠️ 部署順序：本 migration 已先套用，程式碼 PR #1789 一度因 docs/operations/migration-ledger.json 與 PR #1788 的 append 衝突（mergeable_state=dirty）導致 GitHub 建不出 refs/pull/1789/merge、pull_request workflow 完全不觸發而無 CI 可依（先前誤判為 Actions 全 repo 停擺，實為排程 workflow 照常運作；已於 2026-08-04 解衝突後 CI 正常觸發）；merge 前 此期間 production 現行程式碼傳舊參數名會打不到新簽章，wrapper fail-closed 拋 SETTLEMENT_RPC_NOT_DEPLOYED（退款仍成功，累積額與 ledger 同步中止並記 incident）。冷啟動環境 refund_adjustment 歷來 0 筆、payout confirm 仍 HOLD，實際曝險為零。backup：Supabase 託管備份/PITR；本 migration 無資料異動。rollback：同名 .rollback.sql（刻意 no-op——單獨回滾 DB 一側不會回到舊行為，只會讓帳務同步停擺；要回舊行為須連同程式碼 PR 一起 revert）。Refs #1777 #1293。"
     }
   ]
 }

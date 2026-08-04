@@ -364,3 +364,206 @@
 ## P0-OVERRIDE 使用紀錄
 
 - 無。本輪未觸碰凍結區，未使用任何 override。
+
+---
+
+## 退款鏈修復（2026-07-30，接續獨立審查）
+
+獨立審查的三個 fresh-context reviewer 抓出 ON CONFLICT P0 之後，我把**呼叫端**再走一遍。
+Phase 3 的 RPC 本身是對的，錯在 `refund-execute/route.ts` 餵給它的值——這一段原本
+沒有任何測試覆蓋（route 是 `.ts`、測試是 `.mjs` 無 TS loader，只能寫 source-string
+測試；而字串全都在，傳的值錯）。
+
+### F1（P0）累積退款額被覆寫而非累加
+
+```
+route.ts:71  .update({ refund_amount_twd: refundAmountTwd, updated_at: now })
+```
+
+`refundAmountTwd` 是**本次**金額。NT$2,000 訂單先退 500 再退 500 → 欄位停在 500
+（實際已退 1,000）→ sweep 的 effective GMV 多算 500 → 導遊多領 `floor(500 × 0.85) = 425`。
+且該寫入是應用層 read-modify-write，兩筆併發退款會 lost update——正是 #1777 要消滅的模式。
+
+### F2（P0）冪等鍵以「本次金額」組成
+
+```
+route.ts:507  refundEventId: buildRefundEventId(orderId, opsRefundTwd)
+```
+
+`buildRefundEventId` 的 docstring 寫「累積退款總額」，但 route 傳的是本次金額。
+兩次等額部分退款（500、500）算出同一把鍵 → 第二筆差額分錄被
+`ON CONFLICT DO NOTHING` 吃掉 → ledger 只調整一次。
+
+**為什麼測試沒抓到**：`issue1777-refund-adjustment.test.mjs` 只驗 helper 在「餵累積額」
+時的語意（`buildRefundEventId('o-1', 3000) ≠ ('o-1', 5000)`），從未斷言呼叫端傳了什麼。
+這是本輪最該記住的一條：**契約測試若不覆蓋呼叫端傳值，等於沒測**。
+
+### F5（P1）`delta=0` 早退跳過 carry-forward 稽核
+
+舊版在 `v_delta = 0` 時直接 `RETURN`，早於「餘額轉負 → 記 carry-forward」的檢查。
+若上游 `recordRefundReversalDb` 已整筆紅沖（ledger 淨額已為 0、餘額已被扣成負數），
+本函式算出 target=0／previous=0／delta=0 → 早退 → **完全沒有 `payout_carry_forward_created`**。
+已經付出去的錢沒有可追蹤的回收紀錄。
+
+### 順帶修掉的一個潛在解析風險
+
+舊版 `RETURNS TABLE (order_id uuid, …, refund_event_id text)` 讓 plpgsql 變數與資料表
+欄位同名，而 `ON CONFLICT (order_id, refund_event_id)` 的 inference specification 是以
+**運算式**解析的——同名變數會被代換成參數 placeholder。該路徑要「已結算訂單 + 差額≠0」
+才會走到，production 至今 `refund_adjustment` 為 0 筆，因此從未觸發。新版改
+`RETURNS jsonb`，函式體內不再有與欄位同名的變數，整類問題消失。
+
+### 修法
+
+責任搬進 DB 交易內，呼叫端只說「本次退了多少」：
+
+| 檔案 | 變更 |
+|---|---|
+| `supabase/migrations/20260730093000_issue1777_refund_delta_accumulation.sql`（＋rollback） | 簽章 `(uuid, text, text)` → `(uuid, integer, text)`；舊簽章 `DROP`（避免 PostgREST 多載歧義 PGRST203）；`operations_tracking.refund_amount_twd += delta` 移入同一把 `orders FOR UPDATE`；冪等鍵改由交易內累積額推導（`'cum:' || 累積額`）；負 delta `RAISE`；carry-forward／超額稽核改為全路徑檢查並以 `refund_event_id` 去重；`RETURNS jsonb` |
+| `apps/web/src/lib/settlement/refund-payout-sync.mjs`（新） | `readCumulativeRefundTwd`、`checkRefundWithinRemaining`（純函式）、`syncRefundToPayoutLedger` |
+| `apps/web/src/lib/settlement/db-settlement-atomic.mjs` | 移除 `buildRefundEventId`；`applyRefundAdjustmentAtomicDb` 改收 `refundDeltaTwd`，拒絕負數／非整數 |
+| `apps/web/app/api/v2/admin/orders/[orderId]/refund-execute/route.ts` | 刪 `recordOperationsRefundAmount`；改呼叫 `syncRefundToPayoutLedger`；**新增呼叫 provider 前的「剩餘可退」把關**；incident 訊息改為誠實說明「累積額與 ledger 同交易、失敗代表兩者皆未寫入」 |
+
+### 順帶關掉的一個新缺口（F9）
+
+`resolveRefundAmount`（`refund-execute.ts`）只驗 `refundAmount ≤ total`，沒扣掉已退部分。
+NT$1,000 訂單連退兩次 800 都會通過驗證，累積 1,600 > 總額——而錢已經從 provider 出去了。
+新增的把關擋在**呼叫 provider 之前**，且只在「已有累積退款」時介入（純加法變更，首次退款
+的錯誤碼與行為不變）；累積額讀取失敗時放行並記 incident——擋掉所有退款的代價高於這個
+競態風險，且 RPC 端仍會對超額累積留下 `refund_exceeds_order_total` 稽核作為後手。
+
+### 為什麼要新開一支 `.mjs`
+
+route 是 `.ts`，本 repo 沒有 TS test loader，因此 route 只能寫 source-string 測試——
+而 F1／F2 正是 source-string 測試看不見的那一類。把決策邏輯搬到可 `import` 的模組後，
+才能用**行為測試**斷言「實際傳給 RPC 的參數」（`assert.deepEqual(args, {...})`＋
+「不得出現 `p_refund_event_id`」）。
+
+### 測試
+
+新增 `apps/web/tests/api/issue1777-refund-chain-accumulation.test.mjs`（20 個 case），
+含一組並列 oracle：`makeBrokenAppWorld`（修復前）vs `makeFixedRpcWorld`（修復後），
+以數字證明「兩次 500 → 導遊多領 425」與修復後收斂到 850。
+
+改動既有測試（機制變了、不變量沒變，均在檔內註明原因）：
+- `issue1777-refund-adjustment.test.mjs`：移除 `buildRefundEventId` 那組（helper 已刪），
+  wrapper 契約改為 `p_refund_delta_twd`
+- `issue1474-refund-payout-wiring.test.mjs`：#1474 的不變量（金額必須落到出帳讀的欄位）
+  不變，守門改鎖「route 委派到唯一 writer」＋「route 不得自行 update 該欄位」
+- `issue1777-migration-contract.test.mjs`：新增 migration 入列；新增「最終生效版本」
+  describe（migration 只增不改，掃全部檔案會被舊的壞版本假綠——與 ON CONFLICT 那次同一教訓）
+
+**實跑證據**（`.claude/hooks/run-checks.sh --typecheck …`，2026-07-30 20:38 CST）：
+**230 pass / 0 fail / 0 skipped**，`tsc --noEmit` 綠燈，`npm run lint` 0 errors。
+
+### 一個自己踩到的坑（記給下一輪）
+
+route 的說明註解裡引用了錯誤寫法當反例（`.update({ refund_amount_twd: … })`），
+結果我自己的守門斷言咬到自己的註解 → **假紅**。修法：字串守門一律先剝註解
+（`tsCode()`）。這與 2026-07-29 那次「斷言咬到 migration 註解 → 假綠」是同一個坑的兩面。
+
+### 狀態
+
+- ⏳ **migration 尚未套用 production**：需新的 `SQL-OVERRIDE` 授權（前一次已過期清除）。
+  在套用前，`applyRefundAdjustmentAtomicDb` 傳 `p_refund_delta_twd` 會打不到舊簽章
+  → wrapper fail-closed 拋 `SETTLEMENT_RPC_NOT_DEPLOYED` → 退款仍成功、帳務同步中止並記
+  incident。**因此部署順序必須是 migration 先、程式碼後**（與 Phase 2 同一條規則）。
+- ⚠️ **AC 6／AC 7 的 PASS 判定要撤回**：驗收報告與 issue 留言當時判 PASS，但 F1／F2 讓
+  「多次部分退款的最終淨應付正確」與「退款重送冪等」實際上不成立。修復套用並驗證後才能重判。
+- 緩解因素：production `refund_adjustment` 目前 0 筆，payout confirm 仍 HOLD。
+
+### Migration 套用與驗證（2026-08-03 13:03 Asia/Taipei）
+
+`20260730093000` 已套用 production（`SQL-OVERRIDE`：使用者「SQL-OVERRIDE，繼續完成」）。
+
+**結構驗證**：`pg_proc` 實查僅存 `fn_apply_refund_adjustment_atomic(uuid,integer,text)` 一個簽章
+（舊 `(uuid,text,text)` 已消失，無多載歧義）、`returns=jsonb`、`prosecdef=false`、
+`proconfig` 仍 pin `search_path=pg_catalog, public, pg_temp`、`proacl={postgres,service_role}`
+——**DROP + CREATE 後 anon 沒有回流**（Supabase 的 default privileges 會在新建函式時再放行一次，
+本 migration 的顯式 `REVOKE` 擋住了）。
+
+**端到端功能驗證（零寫入）**：在結尾 `RAISE EXCEPTION` 的 `DO` block 內執行，讓整個交易中止，
+以拋出的例外訊息當證據。對已結算訂單 `466e6b29`（total 6000／ledger_net 5100）連續呼叫：
+
+| 呼叫 | `refund_event_id` | `cumulative_refund_twd` | `target_net_twd` | `delta_twd` | `applied` |
+|---|---|---|---|---|---|
+| delta=1000 | `cum:1000` | 1000 | 4250 | −850 | true |
+| delta=1000 | **`cum:2000`** | **2000** | 3400 | −850 | true |
+| delta=0 | `cum:2000` | 2000 | 3400 | 0 | **false** |
+
+交易內實查 `operations_tracking.refund_amount_twd = 2000`、`adjustment_rows = 2`。
+
+**兩次等額退款得到兩把不同的鍵，且累積額正確相加** —— F1／F2 的修復在真實 Postgres 上成立。
+第三次 `delta=0` 冪等命中，證明對帳重跑安全。
+
+**資料影響：無。** rollback 後實查與套用前快照逐項一致：`payout_items` 10 列、
+`refund_adjustment` 0 列、`refund_event_id` 非空 0 列、`guide_balances` 合計 21,814、
+`operations_tracking` 有退款 3 筆、測試訂單無 ops 列、`payouts` 1 pending／0 paid、
+`actor='verify-1777'` 的 `audit_logs` 0 筆。
+
+### PR #1789 曾誤判為「CI 停擺」——實為 merge conflict（2026-08-04 訂正）
+
+**先前記載有誤，在此更正。** 我一度判定「GitHub Actions 自 2026-08-02T09:52Z 起全 repo 停擺」，
+並據此請 owner 去查帳務／額度。**那是錯的。**
+
+錯在取樣：我只看了 `ci.yml` 與 `secret-scan.yml` 的 run 紀錄，而這兩支只在 push／PR 時觸發；
+`main` 自 08-02 之後沒有人推過（最新一筆是 bot 的 `[skip ci]` snapshot），所以「沒有 run」是
+預期結果，不是故障。把「沒被觸發」讀成「無法觸發」。
+
+排程 workflow 其實照常運作，這是決定性反證（排程不依賴 PR 作者或 merge 狀態）：
+
+| workflow | 最近一次 | 結果 |
+|---|---|---|
+| `settlement-sweep` | 2026-08-03T03:05:49Z | success |
+| `booking-v2-daily-go-no-go` | 2026-08-03T02:18:46Z | success |
+| `unpaid-expiry-sweep` | 2026-08-03T18:30:50Z | success |
+
+（`synthetic-health-probe` 自 06-29 起無 run 也非故障——其 `schedule:` 已刻意退役，
+改用外部 UptimeRobot，只留 `workflow_dispatch`。）
+
+**真正原因**：PR #1789 有 merge conflict。
+
+```
+CONFLICT (content): Merge conflict in docs/operations/migration-ledger.json
+```
+
+PR #1788（`docs: 對齊 #1758 production migration ledger`）在 `main` 上往 ledger 陣列尾端
+append 記錄，本分支也往同一個陣列尾端 append —— 兩邊都 append，必衝突。
+
+**機制（值得記住）**：`pull_request` 事件的 workflow 跑在 GitHub 產生的 merge ref
+（`refs/pull/<n>/merge`）上。合併衝突時該 ref 建不出來，**workflow 完全不會被觸發**——
+不是失敗、不是排隊，是連 run 都不存在（`list_workflow_runs` 對該分支回 `total_count: 0`）。
+PR 上只看得到 Vercel 的 check，因為 Vercel 是外部 app，跑的是 head commit，不需要 merge ref。
+API 上唯一的線索是 `mergeable_state: "dirty"`。
+
+這也解釋了為何早先的 `git merge-tree --write-tree` 檢查回報 CLEAN：那是對照舊的 `origin/main`
+（`4099f90`），#1788 的 ledger 變更當時還沒進來。
+
+**教訓**：判定「CI 停擺」前，先確認排程 workflow 是否照跑；PR 沒有任何 check 時先看
+`mergeable_state`，而不是先懷疑平台。
+
+**修法**：合併 `origin/main`，衝突解為保留兩邊記錄（main 28 筆 ＋ 本分支 2 筆 = 30 筆，
+JSON 驗證通過、ledger gate 測試綠）。推送後 CI 立即觸發，直接證實診斷。
+
+### CI 證據（PR #1789）
+
+解衝突後的 commit `a9cdd32` 觸發完整 CI，**全數綠燈**：
+
+| check | run / job | conclusion |
+|---|---|---|
+| `test`（ci.yml） | [30865473365 / 91856254697](https://github.com/smallwei0301/tour-platform/actions/runs/30865473365/job/91856254697) | **success** |
+| `scan`（secret-scan） | [30865473346 / 91856254688](https://github.com/smallwei0301/tour-platform/actions/runs/30865473346/job/91856254688) | success |
+| `probe`（anon-rls-probe） | [30865473345 / 91856254666](https://github.com/smallwei0301/tour-platform/actions/runs/30865473345/job/91856254666) | success |
+| `Migration source-contract tests (static, no DB)` | [30865473360 / 91856254892](https://github.com/smallwei0301/tour-platform/actions/runs/30865473360/job/91856254892) | success |
+| `Production schema drift detection` | 同上 run / 91856374882 | skipped（PR 模式不連 production） |
+| `Vercel Preview Comments` | 91856253847 | success |
+
+`test` job 逐步驟（2026-08-04T00:24:32Z → 00:28:15Z）：
+Install deps ✅／Migration source gate ✅／Web lint ✅／Web typecheck ✅／Web tests ✅／
+Web build ✅／ISR smoke ✅／Preflight ✅。
+
+**已知落差**：上述 CI 跑在 `a9cdd32`；其後的 `b09fac7`（純文件：worklog 與 ledger 的
+誤判訂正，無程式碼／migration 變更）GitHub 未派工 —— 排程 workflow 正常、`mergeable_state`
+已由 `dirty` 轉為 `unstable`、關閉再開啟 PR 也未重新派工，判定為 GitHub 側的 dispatch
+掉單。處理方式：以本次 commit 重新推送觸發，並在 merge 前確認當前 head 有 conclusion=success
+的 CI run（鐵律 6 不因平台掉單而放寬）。

@@ -74,27 +74,15 @@ describe('#1777 缺口 2 — 舊紅沖路徑不看本次退款金額', () => {
 });
 
 // ── (b) 冪等鍵語意 ───────────────────────────────────────────────────────────
-
-describe('#1777 Phase 3 — 退款事件冪等鍵', () => {
-  it('同一次退款重送得到相同鍵（不重複記帳）', async () => {
-    const { buildRefundEventId } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
-    assert.equal(buildRefundEventId('o-1', 3000), buildRefundEventId('o-1', 3000));
-  });
-
-  it('第二次部分退款因累積額不同而得到新鍵（各記一次差額）', async () => {
-    const { buildRefundEventId } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
-    assert.notEqual(
-      buildRefundEventId('o-1', 3000),
-      buildRefundEventId('o-1', 5000),
-      '累積退款額不同必須是不同事件，否則第二次部分退款會被冪等吃掉',
-    );
-  });
-
-  it('不同訂單不共用鍵', async () => {
-    const { buildRefundEventId } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
-    assert.notEqual(buildRefundEventId('o-1', 3000), buildRefundEventId('o-2', 3000));
-  });
-});
+//
+// ⚠️ 原本這裡測的是應用層 helper `buildRefundEventId(orderId, cumulativeRefund)`。
+// 該 helper 已於 2026-07-30 移除：它的 docstring 寫「累積額」，但 route 傳的是
+// **本次金額**，兩次等額部分退款因此撞同一把鍵（#1777 F2）。這組測試當時全綠，
+// 因為它自己餵的是累積額——從未斷言呼叫端傳了什麼。
+//
+// 冪等鍵現由 fn_apply_refund_adjustment_atomic 在交易內以累積額推導，呼叫端無從
+// 傳錯。鍵語意與呼叫端傳值的守門移至
+// tests/api/issue1777-refund-chain-accumulation.test.mjs。
 
 // ── (c) wrapper 契約 ─────────────────────────────────────────────────────────
 
@@ -116,35 +104,35 @@ describe('#1777 Phase 3 — applyRefundAdjustmentAtomicDb 契約', () => {
     delta_twd: -2550, applied: true, carry_forward_twd: 0, balance_after: 5950,
   };
 
-  it('單一 RPC 呼叫，帶上冪等鍵', async () => {
+  it('單一 RPC 呼叫，只帶本次退款額（鍵由 DB 端推導）', async () => {
     const { applyRefundAdjustmentAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = rpcClient({ result: [row] });
 
     const out = await applyRefundAdjustmentAtomicDb(client, {
-      orderId: 'o-1', refundEventId: 'o-1:cum:3000', actor: 'refund-execute',
+      orderId: 'o-1', refundDeltaTwd: 3000, actor: 'refund-execute',
     });
 
     assert.equal(client.calls.length, 1);
     assert.equal(client.calls[0].fn, 'fn_apply_refund_adjustment_atomic');
-    assert.equal(client.calls[0].args.p_refund_event_id, 'o-1:cum:3000');
+    assert.equal(client.calls[0].args.p_refund_delta_twd, 3000);
     assert.equal(out.delta_twd, -2550);
     assert.equal(out.applied, true);
   });
 
-  it('重送同一事件回 applied:false 且差額為 0', async () => {
+  it('冪等命中時回 applied:false 且差額為 0', async () => {
     const { applyRefundAdjustmentAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = rpcClient({ result: [{ ...row, applied: false, delta_twd: 0 }] });
-    const out = await applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundEventId: 'o-1:cum:3000' });
-    assert.equal(out.applied, false, '同一退款事件不得記第二次差額');
+    const out = await applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundDeltaTwd: 0 });
+    assert.equal(out.applied, false, '同一累積額狀態不得記第二次差額');
     assert.equal(out.delta_twd, 0);
   });
 
-  it('缺冪等鍵直接拒絕（避免無鍵寫入導致重複記帳）', async () => {
+  it('缺 orderId 直接拒絕', async () => {
     const { applyRefundAdjustmentAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = rpcClient();
     await assert.rejects(
-      () => applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundEventId: '' }),
-      /refundEventId is required/,
+      () => applyRefundAdjustmentAtomicDb(client, { orderId: '', refundDeltaTwd: 100 }),
+      /orderId is required/,
     );
     assert.equal(client.calls.length, 0);
   });
@@ -153,7 +141,7 @@ describe('#1777 Phase 3 — applyRefundAdjustmentAtomicDb 契約', () => {
     const { applyRefundAdjustmentAtomicDb, RPC_MISSING_CODE } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = rpcClient({ error: { code: 'PGRST202', message: 'Could not find the function' } });
     await assert.rejects(
-      () => applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundEventId: 'k' }),
+      () => applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundDeltaTwd: 100 }),
       (err) => err.code === RPC_MISSING_CODE,
     );
   });
@@ -163,7 +151,7 @@ describe('#1777 Phase 3 — applyRefundAdjustmentAtomicDb 契約', () => {
     const client = rpcClient({
       result: [{ ...row, target_net_twd: 0, delta_twd: -8500, balance_after: -8500, carry_forward_twd: 8500 }],
     });
-    const out = await applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundEventId: 'o-1:cum:10000' });
+    const out = await applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundDeltaTwd: 10000 });
     assert.equal(out.carry_forward_twd, 8500, '已付出去的錢必須留下可追蹤的回收金額');
     assert.ok(out.balance_after < 0, '餘額轉負代表欠款，不得截成 0');
   });
