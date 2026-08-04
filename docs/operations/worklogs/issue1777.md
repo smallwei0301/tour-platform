@@ -567,3 +567,36 @@ Web build ✅／ISR smoke ✅／Preflight ✅。
 已由 `dirty` 轉為 `unstable`、關閉再開啟 PR 也未重新派工，判定為 GitHub 側的 dispatch
 掉單。處理方式：以本次 commit 重新推送觸發，並在 merge 前確認當前 head 有 conclusion=success
 的 CI run（鐵律 6 不因平台掉單而放寬）。
+
+### PR #1789 merged、production 部署完成（2026-08-04）
+
+- CI 在當前 head `e06b74e` 全綠後 merge：`main` = `0979727`。
+- Vercel production deployment `dpl_HHSbyxox…` **READY**，alias 含 `midao.com.tw`。
+- **「migration 已套用、程式碼未上線」的窗口已關閉**：DB 上是新簽章
+  `fn_apply_refund_adjustment_atomic(uuid,integer,text)`，線上程式碼傳的正是
+  `p_refund_delta_twd`，兩側一致。
+
+**GitHub dispatch 掉單的處理結論**：關閉再開啟 PR 無效；**推一個新 commit** 才重新派工。
+下次遇到「PR 有 CI 但停在舊 commit」可直接用這招。
+
+### AC 6／AC 7 重判（依 issue 原文）
+
+| AC | 原文 | 重判 |
+|---|---|---|
+| 6 | 已結算後部分退款，最終導遊淨應付等於未退款有效金額 × 導遊分潤率 | **PASS** — production 實跑：total 6000／ledger_net 5100，連退 1000+1000 → 收斂到 3400 = `floor((6000−2000) × 0.85)` |
+| 7 | 多次部分退款、callback／refund 重送具冪等性；每個事件最多記一次差額 | **PASS（附邊界）** — 兩次等額 1000 得 `cum:1000`／`cum:2000` 兩把鍵各記一次；`delta=0` 重跑回 `applied:false`。**邊界**：RPC 無法區分「同一次退款重送」與「金額相同的第二次部分退款」（無 client idempotency token）；實務安全是因為 route 只在 provider 本次真的退款成功後才呼叫，且 route 自身有 `alreadyRefunded` 守門 |
+
+11 條 AC 全部 PASS，但 AC 6／7 是**修復後**才成立——2026-07-29 的原判定是錯的，已在
+QA 報告 §2 逐列標註訂正理由，不掩蓋。
+
+### 仍未完成（誠實揭露）
+
+| 項目 | 狀態 |
+|---|---|
+| 端到端全鏈驗證 | `NOT_VERIFIED-live`（冷啟動無安全測試訂單，payout confirm 仍 HOLD） |
+| F3：RPC 未在交易內重算 gmv／commission／net，信任呼叫端傳值 | P1 待辦 |
+| F4：`recordRefundReversalDb`（`db.mjs`）仍是未加鎖 read-modify-write，且仍在 live 退款路徑 | P1 待辦 |
+| F6：對帳結構上找不到「該結算卻沒結算」的訂單 | P1 待辦 |
+| F8：rate=0.30 時 JS double 與 SQL numeric 的 floor 語意可能分歧 | P2 待辦 |
+| 出款 HOLD 解除 | 未解除（需端到端驗證後由 owner 設 `PAYOUT_CONFIRM_ENABLED=true`） |
+| #1647 項目一、三的 DML | 未執行（需 owner 逐項授權） |
