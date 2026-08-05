@@ -222,7 +222,6 @@ describe('#1777 F6 — 「該結算卻沒結算」的偵測', () => {
     ['超賣調查中', { has_oversell_issue: true }],
     ['已全額退款', { refund_amount_twd: 10000 }],
     ['尚未到 T+7', { eligible_since: yesterday }],
-    ['沒有 eligible_since', { eligible_since: null }],
   ]) {
     it(`${label} → 不算漏結算`, async () => {
       const { buildMissedSettlementAudit } = await import('../../src/lib/accounting/reconciliation.mjs');
@@ -232,6 +231,46 @@ describe('#1777 F6 — 「該結算卻沒結算」的偵測', () => {
       assert.equal(out.totals.missedCount, 0, `${label} 不該被誤報`);
     });
   }
+
+  it('算不出 eligible_since → 獨立歸為 notEvaluable，不得混進「沒事」', async () => {
+    const { buildMissedSettlementAudit } = await import('../../src/lib/accounting/reconciliation.mjs');
+    const out = buildMissedSettlementAudit({
+      orders: [eligibleOrder({ eligible_since: null })], ledgerRows: [], tDays: 7, asOf: ASOF,
+    });
+    // sweep 用的也是同一個欄位，因此這種訂單 sweep 同樣評估不了 ⇒ 永遠不會結算。
+    assert.equal(out.totals.missedCount, 0, '不是「已確認漏結算」');
+    assert.equal(out.totals.notEvaluableCount, 1, '但也絕不算通過');
+    assert.equal(out.totals.notEvaluableNetTwd, 8500);
+    assert.equal(out.orders[0].notEvaluable, true);
+    assert.equal(out.orders[0].needsAttention, false);
+  });
+
+  it('已在其他理由下不該結算者，不會被誤標成 notEvaluable', async () => {
+    const { buildMissedSettlementAudit } = await import('../../src/lib/accounting/reconciliation.mjs');
+    // 全額退款 ＋ 沒有 eligible_since：本來就不該結算，不是「無法評估」
+    const out = buildMissedSettlementAudit({
+      orders: [eligibleOrder({ eligible_since: null, refund_amount_twd: 10000 })],
+      ledgerRows: [], tDays: 7, asOf: ASOF,
+    });
+    assert.equal(out.totals.notEvaluableCount, 0);
+    assert.equal(out.totals.missedCount, 0);
+  });
+
+  it('notEvaluable 也讓報表的 ok 為 false', async () => {
+    const { buildMissedSettlementAudit, buildReconciliationReport } =
+      await import('../../src/lib/accounting/reconciliation.mjs');
+    const audit = buildMissedSettlementAudit({
+      orders: [eligibleOrder({ eligible_since: null })], ledgerRows: [], asOf: ASOF,
+    });
+    const report = buildReconciliationReport({
+      guideReconciliation: { mismatchCount: 0, guides: [], totals: {} },
+      orderReconciliation: { orders: [], totals: { mismatchCount: 0 } },
+      eligibilityAudit: { orders: [], totals: { needsAttentionCount: 0 } },
+      missedSettlementAudit: audit,
+    });
+    assert.equal(report.ok, false, '永遠不會結算的訂單不能算通過');
+    assert.equal(report.notEvaluableSettlementCount, 1);
+  });
 
   it('缺 asOf 時回 evaluated:false，不猜也不下結論', async () => {
     const { buildMissedSettlementAudit } = await import('../../src/lib/accounting/reconciliation.mjs');
