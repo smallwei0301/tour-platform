@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-08-04T05:57:46.065Z -->
+<!-- query_timestamp: 2026-08-05T05:55:37.532Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-04T05:57:46.065Z  
-**Commit SHA:** `3ec035a0526ef208b3f59fa69acdbbc1f07c0cb3`
+**Query timestamp:** 2026-08-05T05:55:37.532Z  
+**Commit SHA:** `15f2fa00486a6766a75988d58f767e38966ec3d9`
 
 ---
 
@@ -112,6 +112,7 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1791 | [test(payments): #1777 端到端全鏈驗證完成 ＋ #1647 重新 preview](https://github.com/smallwei0301/tour-platform/pull/1791) | 2026-08-05 |
 | #1790 | [fix(payments): #1777 收尾 — F3／F4／F6／F8 ＋ AC 6／7 重判](https://github.com/smallwei0301/tour-platform/pull/1790) | 2026-08-04 |
 | #1789 | [fix(payments): #1777 兩批 P0 — ON CONFLICT 推論不到部分索引、退款累積額被覆寫](https://github.com/smallwei0301/tour-platform/pull/1789) | 2026-08-04 |
 | #1788 | [docs: 對齊 #1758 production migration ledger](https://github.com/smallwei0301/tour-platform/pull/1788) | 2026-08-02 |
@@ -121,7 +122,6 @@
 | #1784 | [fix(seo): JSON-LD 絕對網址改走 SITE_URL，並修正 LINE 查詢的錯誤網域 fallback](https://github.com/smallwei0301/tour-platform/pull/1784) | 2026-07-30 |
 | #1783 | [fix(admin): 申請詳情欄位表手機版遮擋，並把 EMAIL_FROM 納入通知 env 診斷](https://github.com/smallwei0301/tour-platform/pull/1783) | 2026-07-30 |
 | #1782 | [feat(guide-application): 申請通知管理者（email＋Telegram）、後台顯示完整填寫與未填寫欄位、移除招募頁分潤文案](https://github.com/smallwei0301/tour-platform/pull/1782) | 2026-07-30 |
-| #1781 | [feat(guide-apply): 申請流程單頁化、照片全選填、文案改用招募海報、用語統一「嚮導」](https://github.com/smallwei0301/tour-platform/pull/1781) | 2026-07-30 |
 
 ---
 
