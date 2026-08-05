@@ -1,15 +1,24 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import test from 'node:test';
+import test, { afterEach } from 'node:test';
 
 const HELPER_URL = new URL(
   '../../src/lib/midao/public-inquiry-api-response.ts',
+  import.meta.url,
+);
+const DEPENDENCIES_URL = new URL(
+  '../../src/lib/midao/public-inquiry-dependencies.ts',
   import.meta.url,
 );
 const ROUTE_URL = new URL(
   '../../app/api/v2/public/guides/[slug]/inquiries/route.ts',
   import.meta.url,
 );
+const { getPublicInquiryDependencies, __setPublicInquiryDependenciesForTest } = await import(DEPENDENCIES_URL.href);
+
+afterEach(() => {
+  __setPublicInquiryDependenciesForTest(null);
+});
 
 const IDS = {
   traveler: '11111111-1111-4111-8111-111111111111',
@@ -111,7 +120,7 @@ async function setup({ rows = baseRows(), identity = { id: IDS.traveler }, csrf 
   const route = await loadRoute();
   const fake = createSupabaseFake(rows);
   const gatewayCalls = [];
-  route.__setPublicInquiryDependenciesForTest({
+  __setPublicInquiryDependenciesForTest({
     getTravelerIdentity: async () => identity,
     validateCsrf: () => csrf,
     getClientIp: () => '203.0.113.8',
@@ -149,6 +158,22 @@ function assertEnvelope(payload, { status, code, retryable = false }) {
 test('public inquiry route exports a POST handler', async () => {
   const route = await loadRoute();
   assert.equal(typeof route.POST, 'function');
+});
+
+test('public inquiry dependencies are read at POST request time and test setter is not a route export', async () => {
+  const route = await loadRoute();
+  assert.equal('__setPublicInquiryDependenciesForTest' in route, false);
+  __setPublicInquiryDependenciesForTest({ getTravelerIdentity: async () => ({ id: null }) });
+  const payload = await responseOf(await route.POST(requestFor(), { params: Promise.resolve({ slug: 'ocean-guide' }) }));
+  assertEnvelope(payload, { status: 401, code: 'AUTH_REQUIRED' });
+});
+
+test('public inquiry test dependency setter resets the exact production defaults', () => {
+  const defaults = getPublicInquiryDependencies();
+  __setPublicInquiryDependenciesForTest({ getTravelerIdentity: async () => ({ id: null }) });
+  assert.notEqual(getPublicInquiryDependencies(), defaults);
+  __setPublicInquiryDependenciesForTest(null);
+  assert.equal(getPublicInquiryDependencies(), defaults);
 });
 
 test('domain public-inquiry helper preserves exact success/error envelopes and route wiring', async () => {

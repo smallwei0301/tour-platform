@@ -1,11 +1,7 @@
-import { validateCsrf } from '../../../../../../../src/lib/csrf.mjs';
-import { createMidaoInquiryDb } from '../../../../../../../src/lib/midao/db-midao-inquiries.mjs';
-import { RateLimiter } from '../../../../../../../src/lib/rate-limit.ts';
 import { reportRouteError } from '../../../../../../../src/lib/route-error.ts';
-import { getSupabase } from '../../../../../../../src/lib/supabase-env.mjs';
 import { publicInquiryJsonError, publicInquiryJsonSuccess } from '../../../../../../../src/lib/midao/public-inquiry-api-response.ts';
+import { getPublicInquiryDependencies } from '../../../../../../../src/lib/midao/public-inquiry-dependencies.ts';
 
-const inquiryLimiter = new RateLimiter(5, 60_000);
 const SAFE_MESSAGE = '找不到可用的詢問資源。';
 const UNAVAILABLE_MESSAGE = '目前無法送出詢問，請稍後再試。';
 const SEASON_MESSAGE = '你選擇的旅遊日期不在這個方案的適用季節，請調整旅遊日期後再送出詢問。';
@@ -20,15 +16,6 @@ const ALLOWED_BODY_FIELDS = new Set([
 ]);
 const DANGEROUS_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 
-type RateLimitResult = { allowed: boolean; resetAt: number };
-type Dependencies = {
-  getTravelerIdentity: () => Promise<{ id: string | null; email?: string | null }>;
-  validateCsrf: typeof validateCsrf;
-  getClientIp: typeof RateLimiter.getClientIp;
-  checkRateLimit: (ip: string) => RateLimitResult;
-  getSupabase: typeof getSupabase;
-  createMidaoInquiryDb: typeof createMidaoInquiryDb;
-};
 type ParsedDate = { canonical: string; month: number; day: number };
 type RawInquiryBody = Record<string, unknown>;
 type NormalizedInquiryBody = {
@@ -48,23 +35,6 @@ type NormalizeBodyResult =
   | { kind: 'ok'; body: NormalizedInquiryBody }
   | { kind: 'invalid_activity_id' }
   | { kind: 'invalid_answers' };
-
-const defaults: Dependencies = {
-  getTravelerIdentity: async () => {
-    const { getTravelerIdentity } = await import('../../../../../../../src/lib/v2/traveler-auth.ts');
-    return getTravelerIdentity();
-  },
-  validateCsrf,
-  getClientIp: RateLimiter.getClientIp,
-  checkRateLimit: (ip) => inquiryLimiter.check(ip),
-  getSupabase,
-  createMidaoInquiryDb,
-};
-let dependencies: Dependencies = defaults;
-
-export function __setPublicInquiryDependenciesForTest(overrides: Partial<Dependencies> | null = null) {
-  dependencies = overrides ? { ...defaults, ...overrides } : defaults;
-}
 
 function errorResponse(status: number, code: string, message: string, retryable = false, headers?: HeadersInit) {
   return publicInquiryJsonError(code, message, retryable, status, headers === undefined ? undefined : { headers });
@@ -225,6 +195,7 @@ async function readBody(request: Request): Promise<NormalizeBodyResult> {
 
 export async function POST(request: Request, context: { params: Promise<{ slug: string }> }) {
   try {
+    const dependencies = getPublicInquiryDependencies();
     let identity: { id: string | null; email?: string | null; invalid?: boolean };
     try {
       identity = await dependencies.getTravelerIdentity();
