@@ -186,6 +186,12 @@ test('domain public-inquiry helper preserves exact success/error envelopes and r
   assert.doesNotMatch(routeSource, /src\/lib\/public-inquiry-api-response\.ts/u);
 });
 
+test('unexpected route errors report only the fixed public route label before preserving the O3 envelope', async () => {
+  const routeSource = await readFile(ROUTE_URL, 'utf8');
+  assert.match(routeSource, /import \{ reportRouteError \} from '\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/src\/lib\/route-error\.ts';/u);
+  assert.match(routeSource, /catch \(error\) \{\s+await reportRouteError\(error, \{ route: 'v2\/public\/guides\/\[slug\]\/inquiries' \}\);\s+return errorResponse\(503, 'INQUIRY_UNAVAILABLE', UNAVAILABLE_MESSAGE, true\);/u);
+});
+
 test('missing traveler identity returns AUTH_REQUIRED before CSRF or resolver work', async () => {
   const { route, fake } = await setup({ identity: { id: null } });
   const payload = await responseOf(await route.POST(requestFor(), { params: Promise.resolve({ slug: 'ocean-guide' }) }));

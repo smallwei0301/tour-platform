@@ -1,6 +1,7 @@
 import { validateCsrf } from '../../../../../../../src/lib/csrf.mjs';
 import { createMidaoInquiryDb } from '../../../../../../../src/lib/midao/db-midao-inquiries.mjs';
 import { RateLimiter } from '../../../../../../../src/lib/rate-limit.ts';
+import { reportRouteError } from '../../../../../../../src/lib/route-error.ts';
 import { getSupabase } from '../../../../../../../src/lib/supabase-env.mjs';
 import { publicInquiryJsonError, publicInquiryJsonSuccess } from '../../../../../../../src/lib/midao/public-inquiry-api-response.ts';
 
@@ -327,7 +328,8 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
       inquiry_no: result.inquiry.inquiryNo,
       status: result.inquiry.status,
     }, { status: 201 });
-  } catch {
+  } catch (error) {
+    await reportRouteError(error, { route: 'v2/public/guides/[slug]/inquiries' });
     return errorResponse(503, 'INQUIRY_UNAVAILABLE', UNAVAILABLE_MESSAGE, true);
   }
 }
