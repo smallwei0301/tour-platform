@@ -794,3 +794,49 @@ ledger 已補，資料影響皆為零。
 **全套實跑**（自 `apps/web`）：`tests/api/*.test.mjs` **4,053 pass / 3 fail / 3 skipped**。
 剩下 3 個失敗是既有的 guide session HMAC 測試（`git stash` 於 clean tree 實測同樣失敗），
 與本次變更無關。
+
+## 端到端全鏈驗證完成（2026-08-04）— `NOT_VERIFIED-live` 已解除
+
+issue Verification 唯一長期掛著的項目。過去掛著的理由是「沒有 staging DB、production
+沒有可安全操作的測試訂單、且不得執行真實退款／出款」——這三點都還成立，但**不代表
+不能驗證**。
+
+作法：**合成資料 ＋ 強制 rollback 的單一交易**，跑在 production Postgres 上。
+腳本 `scripts/admin/issue1777-e2e-chain-verify.sql`（可重跑，內含用法與安全說明）。
+
+10 條斷言全數成立：
+
+```
+A1 settle: ledger=8500 balance=8500;
+A2 settle-resend idempotent;
+A3 refund#1: ledger=5950 balance=5950 key=cum:3000;
+A4 refund#2(equal): ledger=3400 key=cum:6000 cum=6000;
+A5 reconcile-rerun idempotent;
+A6 full-refund ledger=0;
+B1 settle-B: balance=5100;
+B2 confirm: 5100->0;
+B3 confirm-resend no double debit;
+C1 insufficient-balance rejected, balance intact;
+```
+
+**最有價值的是 A3／A4**：它們同時驗證了 Phase 3 的設計意圖——紅沖是整筆全額反轉
+（ledger 歸 0），adjustment 再以「目標 − 現值」收斂回正確的剩餘應付。兩次**等額**
+退款拿到 `cum:3000` 與 `cum:6000` 兩把不同的鍵、各記一筆差額，`refund_amount_twd`
+正確累加到 6000 —— 這是 F1／F2 在真實 Postgres 上的端到端證明，不再只是 oracle。
+
+**C1** 驗證餘額不足時 RAISE 而非靜默截斷（舊 `Math.max(0, …)` 的問題）。
+
+資料影響：無。rollback 後逐項比對與執行前一致（合成 guide 0 筆、`payout_items` 10、
+`guide_balances` 合計 21,814、`payouts` 1 pending／0 paid、`actor='e2e'` audit 0 筆）。
+
+### 這一項不涵蓋什麼（誠實揭露）
+
+**ECPay provider 那一段**：實際請款與退刷。上述驗證涵蓋 settlement／refund adjustment／
+reversal／payout confirm 的所有 DB 語意，但 provider 呼叫維持 `NOT_AUTOMATABLE-env`，
+由 reusable contract test（`issue369-ecpay-allrefund-contract`、`issue614-*`）覆蓋。
+
+### 下一步
+
+出款 HOLD 的技術前提已滿足（全鏈驗證完成、四支財務函式全部原子化並驗證）。
+**解除 HOLD 需 owner 在 Vercel 設 `PAYOUT_CONFIRM_ENABLED=true`** —— 那是啟用真實
+金流的 production 設定，不在 agent 授權範圍。
