@@ -247,7 +247,9 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     if (publicationError) throw publicationError;
     if (!publication || !Number.isInteger(publication.version) || publication.version < 1 || !isPlainObject(publication.snapshot)) return notFound();
     if (body.questionnaire_version !== publication.version) return errorResponse(409, 'QUESTIONNAIRE_VERSION_MISMATCH', VERSION_MESSAGE);
-    const answers = validateAndMapAnswers(body.answers, publication.snapshot);
+    const questionnairePayload = publication.snapshot.payload;
+    if (!isPlainObject(questionnairePayload)) return notFound();
+    const answers = validateAndMapAnswers(body.answers, questionnairePayload);
     if (!answers) return invalidAnswers();
 
     const result = await dependencies.createMidaoInquiryDb({

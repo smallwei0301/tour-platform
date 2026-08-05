@@ -17,11 +17,18 @@ const basePublication = {
   activity_id: IDS.activity,
   version: 3,
   snapshot: {
-    questions: [
-      { question_key: 'meal', type: 'single_choice', required: true, options: ['葷食', '素食'] },
-      { question_key: 'needs', type: 'multi_choice', required: false, options: ['輪椅', '嬰兒車'] },
-      { question_key: 'note', type: 'short_text', required: false, options: [] },
-    ],
+    activityId: IDS.activity,
+    version: 3,
+    guideId: IDS.guide,
+    draftRevision: 7,
+    publishedAt: '2026-06-01T00:00:00.000Z',
+    payload: {
+      questions: [
+        { question_key: 'meal', type: 'single_choice', required: true, options: ['葷食', '素食'] },
+        { question_key: 'needs', type: 'multi_choice', required: false, options: ['輪椅', '嬰兒車'] },
+        { question_key: 'note', type: 'short_text', required: false, options: [] },
+      ],
+    },
   },
 };
 
@@ -259,6 +266,21 @@ test('missing publication collapses to RESOURCE_NOT_FOUND without writes', async
   assert.equal(gatewayCalls.length, 0);
 });
 
+test('malformed canonical questionnaire payload collapses to RESOURCE_NOT_FOUND without writes', async () => {
+  for (const snapshot of [
+    { ...basePublication.snapshot, payload: undefined },
+    { ...basePublication.snapshot, payload: null },
+    { ...basePublication.snapshot, payload: [] },
+    { ...basePublication.snapshot, payload: 'not-an-object' },
+  ]) {
+    const publication = { ...basePublication, snapshot };
+    const { route, gatewayCalls } = await setup({ rows: baseRows({ service_publication_versions: [publication] }) });
+    const payload = await responseOf(await route.POST(requestFor(), { params: Promise.resolve({ slug: 'ocean-guide' }) }));
+    assertEnvelope(payload, { status: 404, code: 'RESOURCE_NOT_FOUND' });
+    assert.equal(gatewayCalls.length, 0);
+  }
+});
+
 test('duplicate and unknown question ids reject the complete request before mapping or writing', async () => {
   for (const answers of [
     [...body().answers, { question_id: 'meal', value: '葷食' }],
@@ -299,7 +321,7 @@ test('valid answers are mapped only after validation and gateway is called exact
 
 test('dangerous question keys and forbidden client identity or internal plan fields fail closed', async () => {
   const dangerous = structuredClone(basePublication);
-  dangerous.snapshot.questions[0].question_key = '__proto__';
+  dangerous.snapshot.payload.questions[0].question_key = '__proto__';
   for (const options of [
     { rows: baseRows({ service_publication_versions: [dangerous] }), payload: { ...body(), answers: [{ question_id: '__proto__', value: '葷食' }, ...body().answers.slice(1)] } },
     { rows: baseRows(), payload: { ...body(), traveler_user_id: 'attacker' } },
