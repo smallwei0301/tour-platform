@@ -177,22 +177,33 @@ test('rate limit returns retryable V2 envelope and Retry-After before resolver w
 });
 
 test('missing or non-owned guide and activity collapse to RESOURCE_NOT_FOUND', async () => {
-  for (const rows of [baseRows({ guide_profiles: [] }), baseRows({ activities: [] })]) {
+  for (const rows of [
+    baseRows({ guide_profiles: [] }),
+    baseRows({ activities: [] }),
+    baseRows({ activities: [{ id: IDS.activity, guide_slug: 'another-guide', status: 'published', inquiry_enabled: true }] }),
+    baseRows({ activities: [{ id: IDS.activity, guide_slug: 'ocean-guide', status: 'draft', inquiry_enabled: true }] }),
+    baseRows({ activities: [{ id: IDS.activity, guide_slug: 'ocean-guide', status: 'published', inquiry_enabled: false }] }),
+  ]) {
     const { route, gatewayCalls } = await setup({ rows });
     const payload = await responseOf(await route.POST(requestFor(), { params: Promise.resolve({ slug: 'ocean-guide' }) }));
-    assertEnvelope(payload, { status: 404, code: 'RESOURCE_NOT_FOUND' });
+    assert.deepEqual(payload.body, { status: 'error', code: 'RESOURCE_NOT_FOUND', message: '找不到可用的詢問資源。', retryable: false });
+    assert.equal(payload.status, 404);
     assert.equal(gatewayCalls.length, 0);
   }
 });
 
 test('plan lookup is activity scoped and only server-resolved internal plan reaches the gateway', async () => {
   const { route, fake, gatewayCalls } = await setup();
-  const payload = await responseOf(await route.POST(requestFor(), { params: Promise.resolve({ slug: 'ocean-guide' }) }));
+  const rawActivityId = `  ${IDS.activity}  `;
+  const payload = await responseOf(await route.POST(requestFor(body({ activity_id: rawActivityId })), { params: Promise.resolve({ slug: 'ocean-guide' }) }));
   assert.equal(payload.status, 201);
   assert.equal(gatewayCalls.length, 1);
+  assert.equal(gatewayCalls[0].activityId, IDS.activity);
   assert.equal(gatewayCalls[0].activityPlanId, IDS.plan);
   assert.equal(gatewayCalls[0].guideId, IDS.guide);
   assert.equal(gatewayCalls[0].travelerUserId, IDS.traveler);
+  assert.equal(fake.calls.some((call) => call.table === 'activities' && call.field === 'id' && call.value === IDS.activity), true);
+  assert.equal(fake.calls.some((call) => call.table === 'activities' && call.field === 'id' && call.value === rawActivityId), false);
   assert.equal(fake.calls.some((call) => call.table === 'activity_plans' && call.field === 'activity_id' && call.value === IDS.activity), true);
   assert.equal(fake.calls.some((call) => call.table === 'activity_plans' && call.field === 'slug' && call.value === 'half-day'), true);
 });
@@ -342,6 +353,23 @@ test('malformed JSON or non-object body returns INVALID_ANSWERS without writes',
     assertEnvelope(payload, { status: 422, code: 'INVALID_ANSWERS' });
   }
   assert.equal(gatewayCalls.length, 0);
+
+  for (const activity_id of [123, null, '', '   ']) {
+    const { route: activityRoute, fake, gatewayCalls: activityGatewayCalls } = await setup();
+    const payload = await responseOf(await activityRoute.POST(requestFor(body({ activity_id })), { params: Promise.resolve({ slug: 'ocean-guide' }) }));
+    assert.deepEqual(payload, {
+      status: 400,
+      headers: payload.headers,
+      body: {
+        status: 'error',
+        code: 'INVALID_REQUEST',
+        message: 'activity_id must be a non-empty string',
+        retryable: false,
+      },
+    });
+    assert.equal(fake.calls.length, 0);
+    assert.equal(activityGatewayCalls.length, 0);
+  }
 });
 
 test('unexpected resolver or gateway errors are masked as retryable INQUIRY_UNAVAILABLE', async () => {

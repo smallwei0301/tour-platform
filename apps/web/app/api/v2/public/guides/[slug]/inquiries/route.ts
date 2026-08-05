@@ -27,6 +27,25 @@ type Dependencies = {
   getSupabase: typeof getSupabase;
   createMidaoInquiryDb: typeof createMidaoInquiryDb;
 };
+type ParsedDate = { canonical: string; month: number; day: number };
+type RawInquiryBody = Record<string, unknown>;
+type NormalizedInquiryBody = {
+  activityId: string;
+  preferredDate: ParsedDate | null;
+  planSelectorSlug: string;
+  questionnaireVersion: number;
+  answers: unknown[];
+  backupDate: string | undefined;
+  startTimeLocal: string | undefined;
+  partySize: number | undefined;
+  language: string | undefined;
+  pickupRequired: boolean | undefined;
+  travelerNote: string | undefined;
+};
+type NormalizeBodyResult =
+  | { kind: 'ok'; body: NormalizedInquiryBody }
+  | { kind: 'invalid_activity_id' }
+  | { kind: 'invalid_answers' };
 
 const defaults: Dependencies = {
   getTravelerIdentity: async () => {
@@ -61,7 +80,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function parseDate(value: unknown) {
+function parseDate(value: unknown): ParsedDate | null {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) return null;
   const [year, month, day] = value.split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
@@ -81,24 +100,56 @@ function isDateInSeason(date: { month: number; day: number }, plan: Record<strin
   });
 }
 
-function normalizeBody(value: unknown) {
-  if (!isPlainObject(value)) return null;
-  const keys = Object.keys(value);
-  if (keys.some((key) => FORBIDDEN_BODY_FIELDS.has(key) || !ALLOWED_BODY_FIELDS.has(key))) return null;
-  if (!isPlainObject(value.plan_selector) || typeof value.plan_selector.slug !== 'string' || !value.plan_selector.slug.trim()) return null;
-  if (Object.keys(value.plan_selector).some((key) => key !== 'slug')) return null;
-  if (!Array.isArray(value.answers)) return null;
-  if (!Number.isInteger(value.questionnaire_version) || Number(value.questionnaire_version) < 1) return null;
-  const preferredDate = parseDate(value.preferred_date);
-  if (!preferredDate) return { ...value, preferredDate: null };
-  const optionalDate = value.backup_date === undefined ? undefined : parseDate(value.backup_date);
-  if (value.backup_date !== undefined && !optionalDate) return null;
-  if (value.start_time_local !== undefined && (typeof value.start_time_local !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/u.test(value.start_time_local))) return null;
-  if (value.party_size !== undefined && (!Number.isInteger(value.party_size) || Number(value.party_size) < 1)) return null;
-  if (value.language !== undefined && (typeof value.language !== 'string' || !value.language.trim())) return null;
-  if (value.pickup_required !== undefined && typeof value.pickup_required !== 'boolean') return null;
-  if (value.traveler_note !== undefined && typeof value.traveler_note !== 'string') return null;
-  return { ...value, preferredDate, backupDate: optionalDate?.canonical };
+function normalizeBody(value: unknown): NormalizeBodyResult {
+  if (!isPlainObject(value)) return { kind: 'invalid_answers' };
+  const raw: RawInquiryBody = value;
+  const keys = Object.keys(raw);
+  if (keys.some((key) => FORBIDDEN_BODY_FIELDS.has(key) || !ALLOWED_BODY_FIELDS.has(key))) return { kind: 'invalid_answers' };
+
+  const activityId = raw.activity_id;
+  if (typeof activityId !== 'string' || !activityId.trim()) return { kind: 'invalid_activity_id' };
+
+  const planSelector = raw.plan_selector;
+  if (!isPlainObject(planSelector) || typeof planSelector.slug !== 'string' || !planSelector.slug.trim()) return { kind: 'invalid_answers' };
+  if (Object.keys(planSelector).some((key) => key !== 'slug')) return { kind: 'invalid_answers' };
+
+  const answers = raw.answers;
+  if (!Array.isArray(answers)) return { kind: 'invalid_answers' };
+  const questionnaireVersion = raw.questionnaire_version;
+  if (typeof questionnaireVersion !== 'number' || !Number.isInteger(questionnaireVersion) || questionnaireVersion < 1) return { kind: 'invalid_answers' };
+
+  const preferredDate = parseDate(raw.preferred_date);
+  const backupDate = raw.backup_date;
+  const parsedBackupDate = backupDate === undefined ? undefined : parseDate(backupDate);
+  if (backupDate !== undefined && !parsedBackupDate) return { kind: 'invalid_answers' };
+
+  const startTimeLocal = raw.start_time_local;
+  if (startTimeLocal !== undefined && (typeof startTimeLocal !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/u.test(startTimeLocal))) return { kind: 'invalid_answers' };
+  const partySize = raw.party_size;
+  if (partySize !== undefined && (typeof partySize !== 'number' || !Number.isInteger(partySize) || partySize < 1)) return { kind: 'invalid_answers' };
+  const language = raw.language;
+  if (language !== undefined && (typeof language !== 'string' || !language.trim())) return { kind: 'invalid_answers' };
+  const pickupRequired = raw.pickup_required;
+  if (pickupRequired !== undefined && typeof pickupRequired !== 'boolean') return { kind: 'invalid_answers' };
+  const travelerNote = raw.traveler_note;
+  if (travelerNote !== undefined && typeof travelerNote !== 'string') return { kind: 'invalid_answers' };
+
+  return {
+    kind: 'ok',
+    body: {
+      activityId: activityId.trim(),
+      preferredDate,
+      planSelectorSlug: planSelector.slug.trim(),
+      questionnaireVersion,
+      answers,
+      backupDate: parsedBackupDate?.canonical,
+      startTimeLocal: typeof startTimeLocal === 'string' ? startTimeLocal : undefined,
+      partySize: typeof partySize === 'number' ? partySize : undefined,
+      language: typeof language === 'string' ? language : undefined,
+      pickupRequired: typeof pickupRequired === 'boolean' ? pickupRequired : undefined,
+      travelerNote: typeof travelerNote === 'string' ? travelerNote : undefined,
+    },
+  };
 }
 
 function isEmpty(value: unknown) {
@@ -162,11 +213,11 @@ function validateAndMapAnswers(answers: unknown[], snapshot: Record<string, unkn
   return mapped;
 }
 
-async function readBody(request: Request) {
+async function readBody(request: Request): Promise<NormalizeBodyResult> {
   try {
     return normalizeBody(await request.json());
   } catch {
-    return null;
+    return { kind: 'invalid_answers' };
   }
 }
 
@@ -189,8 +240,10 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
       return errorResponse(429, 'RATE_LIMITED', '送出次數過多，請稍後再試。', true, { 'Retry-After': String(retryAfter) });
     }
 
-    const body = await readBody(request);
-    if (!body) return invalidAnswers();
+    const normalized = await readBody(request);
+    if (normalized.kind === 'invalid_activity_id') return errorResponse(400, 'INVALID_REQUEST', 'activity_id must be a non-empty string');
+    if (normalized.kind === 'invalid_answers') return invalidAnswers();
+    const body = normalized.body;
     const { slug } = await context.params;
     if (typeof slug !== 'string' || !slug.trim() || !body.preferredDate) return body.preferredDate === null
       ? errorResponse(422, 'PREFERRED_DATE_OUTSIDE_PLAN_SEASON', SEASON_MESSAGE)
@@ -209,7 +262,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     const { data: activity, error: activityError } = await supabase
       .from('activities')
       .select('id, guide_slug, status, inquiry_enabled')
-      .eq('id', body.activity_id)
+      .eq('id', body.activityId)
       .eq('guide_slug', slug)
       .eq('status', 'published')
       .eq('inquiry_enabled', true)
@@ -221,7 +274,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
       .from('activity_plans')
       .select('id, activity_id, slug, status, is_year_round')
       .eq('activity_id', activity.id)
-      .eq('slug', body.plan_selector.slug.trim())
+      .eq('slug', body.planSelectorSlug)
       .eq('status', 'active');
     if (planError) throw planError;
     if (!Array.isArray(plans) || plans.length !== 1 || !isPlainObject(plans[0])) return notFound();
@@ -246,7 +299,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
       .maybeSingle();
     if (publicationError) throw publicationError;
     if (!publication || !Number.isInteger(publication.version) || publication.version < 1 || !isPlainObject(publication.snapshot)) return notFound();
-    if (body.questionnaire_version !== publication.version) return errorResponse(409, 'QUESTIONNAIRE_VERSION_MISMATCH', VERSION_MESSAGE);
+    if (body.questionnaireVersion !== publication.version) return errorResponse(409, 'QUESTIONNAIRE_VERSION_MISMATCH', VERSION_MESSAGE);
     const questionnairePayload = publication.snapshot.payload;
     if (!isPlainObject(questionnairePayload)) return notFound();
     const answers = validateAndMapAnswers(body.answers, questionnairePayload);
@@ -259,11 +312,11 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
       activityPlanId: plan.id,
       preferredDate: body.preferredDate.canonical,
       ...(body.backupDate !== undefined ? { backupDate: body.backupDate } : {}),
-      ...(body.start_time_local !== undefined ? { startTimeLocal: body.start_time_local } : {}),
-      ...(body.party_size !== undefined ? { partySize: body.party_size } : {}),
+      ...(body.startTimeLocal !== undefined ? { startTimeLocal: body.startTimeLocal } : {}),
+      ...(body.partySize !== undefined ? { partySize: body.partySize } : {}),
       ...(body.language !== undefined ? { language: body.language.trim() } : {}),
-      ...(body.pickup_required !== undefined ? { pickupRequired: body.pickup_required } : {}),
-      ...(body.traveler_note !== undefined ? { travelerNote: body.traveler_note.trim() } : {}),
+      ...(body.pickupRequired !== undefined ? { pickupRequired: body.pickupRequired } : {}),
+      ...(body.travelerNote !== undefined ? { travelerNote: body.travelerNote.trim() } : {}),
       questionnaireSnapshot: structuredClone(publication.snapshot),
       answers,
     });
