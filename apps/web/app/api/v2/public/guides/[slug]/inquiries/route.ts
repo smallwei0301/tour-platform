@@ -1,0 +1,276 @@
+import { validateCsrf } from '../../../../../../../src/lib/csrf.mjs';
+import { createMidaoInquiryDb } from '../../../../../../../src/lib/midao/db-midao-inquiries.mjs';
+import { RateLimiter } from '../../../../../../../src/lib/rate-limit.ts';
+import { getSupabase } from '../../../../../../../src/lib/supabase-env.mjs';
+
+const inquiryLimiter = new RateLimiter(5, 60_000);
+const SAFE_MESSAGE = '找不到可用的詢問資源。';
+const UNAVAILABLE_MESSAGE = '目前無法送出詢問，請稍後再試。';
+const SEASON_MESSAGE = '你選擇的旅遊日期不在這個方案的適用季節，請調整旅遊日期後再送出詢問。';
+const VERSION_MESSAGE = '這份問題表已更新，請重新確認並填寫後再送出詢問。';
+const FORBIDDEN_BODY_FIELDS = new Set([
+  'traveler_user_id', 'travelerId', 'guide_id', 'guideId', 'activity_plan_id', 'activityPlanId',
+  'plan', 'plan_details', 'planDetails',
+]);
+const ALLOWED_BODY_FIELDS = new Set([
+  'activity_id', 'preferred_date', 'plan_selector', 'questionnaire_version', 'answers',
+  'backup_date', 'start_time_local', 'party_size', 'language', 'pickup_required', 'traveler_note',
+]);
+const DANGEROUS_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+type RateLimitResult = { allowed: boolean; resetAt: number };
+type Dependencies = {
+  getTravelerIdentity: () => Promise<{ id: string | null; email?: string | null }>;
+  validateCsrf: typeof validateCsrf;
+  getClientIp: typeof RateLimiter.getClientIp;
+  checkRateLimit: (ip: string) => RateLimitResult;
+  getSupabase: typeof getSupabase;
+  createMidaoInquiryDb: typeof createMidaoInquiryDb;
+};
+
+const defaults: Dependencies = {
+  getTravelerIdentity: async () => {
+    const { getTravelerIdentity } = await import('../../../../../../../src/lib/v2/traveler-auth.ts');
+    return getTravelerIdentity();
+  },
+  validateCsrf,
+  getClientIp: RateLimiter.getClientIp,
+  checkRateLimit: (ip) => inquiryLimiter.check(ip),
+  getSupabase,
+  createMidaoInquiryDb,
+};
+let dependencies: Dependencies = defaults;
+
+export function __setPublicInquiryDependenciesForTest(overrides: Partial<Dependencies> | null = null) {
+  dependencies = overrides ? { ...defaults, ...overrides } : defaults;
+}
+
+function errorResponse(status: number, code: string, message: string, retryable = false, headers?: HeadersInit) {
+  return Response.json({ status: 'error', code, message, retryable }, { status, headers });
+}
+
+function notFound() {
+  return errorResponse(404, 'RESOURCE_NOT_FOUND', SAFE_MESSAGE);
+}
+
+function invalidAnswers() {
+  return errorResponse(422, 'INVALID_ANSWERS', '詢問資料格式不正確。');
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseDate(value: unknown) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return { canonical: value, month, day };
+}
+
+function isDateInSeason(date: { month: number; day: number }, plan: Record<string, unknown>, seasons: Record<string, unknown>[]) {
+  if (plan.is_year_round === true) return true;
+  if (seasons.length === 0) return false;
+  const value = date.month * 100 + date.day;
+  return seasons.some((season) => {
+    const start = Number(season.start_month) * 100 + Number(season.start_day);
+    const end = Number(season.end_month) * 100 + Number(season.end_day);
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 101 || end < 101) return false;
+    return start <= end ? value >= start && value <= end : value >= start || value <= end;
+  });
+}
+
+function normalizeBody(value: unknown) {
+  if (!isPlainObject(value)) return null;
+  const keys = Object.keys(value);
+  if (keys.some((key) => FORBIDDEN_BODY_FIELDS.has(key) || !ALLOWED_BODY_FIELDS.has(key))) return null;
+  if (!isPlainObject(value.plan_selector) || typeof value.plan_selector.slug !== 'string' || !value.plan_selector.slug.trim()) return null;
+  if (Object.keys(value.plan_selector).some((key) => key !== 'slug')) return null;
+  if (!Array.isArray(value.answers)) return null;
+  if (!Number.isInteger(value.questionnaire_version) || Number(value.questionnaire_version) < 1) return null;
+  const preferredDate = parseDate(value.preferred_date);
+  if (!preferredDate) return { ...value, preferredDate: null };
+  const optionalDate = value.backup_date === undefined ? undefined : parseDate(value.backup_date);
+  if (value.backup_date !== undefined && !optionalDate) return null;
+  if (value.start_time_local !== undefined && (typeof value.start_time_local !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/u.test(value.start_time_local))) return null;
+  if (value.party_size !== undefined && (!Number.isInteger(value.party_size) || Number(value.party_size) < 1)) return null;
+  if (value.language !== undefined && (typeof value.language !== 'string' || !value.language.trim())) return null;
+  if (value.pickup_required !== undefined && typeof value.pickup_required !== 'boolean') return null;
+  if (value.traveler_note !== undefined && typeof value.traveler_note !== 'string') return null;
+  return { ...value, preferredDate, backupDate: optionalDate?.canonical };
+}
+
+function isEmpty(value: unknown) {
+  return value === null || value === undefined || (typeof value === 'string' && !value.trim()) || (Array.isArray(value) && value.length === 0);
+}
+
+function unicodeLength(value: string) {
+  return Array.from(value).length;
+}
+
+function validateAndMapAnswers(answers: unknown[], snapshot: Record<string, unknown>) {
+  const questions = snapshot.questions;
+  if (!Array.isArray(questions)) return null;
+  const published = new Map<string, Record<string, unknown>>();
+  for (const rawQuestion of questions) {
+    if (!isPlainObject(rawQuestion) || typeof rawQuestion.question_key !== 'string' || !rawQuestion.question_key || DANGEROUS_KEYS.has(rawQuestion.question_key)) return null;
+    if (published.has(rawQuestion.question_key)) return null;
+    published.set(rawQuestion.question_key, rawQuestion);
+  }
+
+  const received = new Map<string, unknown>();
+  for (const answer of answers) {
+    if (!isPlainObject(answer) || typeof answer.question_id !== 'string' || !answer.question_id || DANGEROUS_KEYS.has(answer.question_id) || !Object.hasOwn(answer, 'value')) return null;
+    if (received.has(answer.question_id) || !published.has(answer.question_id)) return null;
+    received.set(answer.question_id, answer.value);
+  }
+
+  for (const [questionId, question] of published) {
+    const value = received.get(questionId);
+    if (question.required === true && (!received.has(questionId) || isEmpty(value))) return null;
+    if (!received.has(questionId)) continue;
+    const options = Array.isArray(question.options) ? question.options : [];
+    switch (question.type) {
+      case 'single_choice':
+        if (typeof value !== 'string' || !options.includes(value)) return null;
+        break;
+      case 'multi_choice':
+        if (!Array.isArray(value) || new Set(value).size !== value.length || !value.every((item) => typeof item === 'string' && options.includes(item))) return null;
+        break;
+      case 'short_text':
+      case 'long_text': {
+        const maximum = typeof question.max_length === 'number' && Number.isInteger(question.max_length) && question.max_length > 0
+          ? question.max_length : question.type === 'short_text' ? 200 : 2_000;
+        if (typeof value !== 'string' || !value.trim() || unicodeLength(value.trim()) > maximum) return null;
+        received.set(questionId, value.trim());
+        break;
+      }
+      case 'boolean':
+        if (typeof value !== 'boolean') return null;
+        break;
+      case 'number':
+        if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+        break;
+      default:
+        return null;
+    }
+  }
+
+  const mapped: Record<string, unknown> = {};
+  for (const [questionId, value] of received) mapped[questionId] = value;
+  return mapped;
+}
+
+async function readBody(request: Request) {
+  try {
+    return normalizeBody(await request.json());
+  } catch {
+    return null;
+  }
+}
+
+export async function POST(request: Request, context: { params: Promise<{ slug: string }> }) {
+  try {
+    let identity: { id: string | null; email?: string | null; invalid?: boolean };
+    try {
+      identity = await dependencies.getTravelerIdentity();
+    } catch {
+      return errorResponse(401, 'SESSION_INVALID', '登入狀態已失效，請重新登入。');
+    }
+    if (!identity?.id) {
+      return errorResponse(401, identity?.invalid ? 'SESSION_INVALID' : 'AUTH_REQUIRED', identity?.invalid ? '登入狀態已失效，請重新登入。' : '請先登入後再送出詢問。');
+    }
+
+    if (dependencies.validateCsrf(request)) return errorResponse(403, 'CSRF_INVALID', '請重新取得安全憑證後再試。');
+    const limit = dependencies.checkRateLimit(dependencies.getClientIp(request));
+    if (!limit.allowed) {
+      const retryAfter = Math.max(1, Math.ceil((limit.resetAt - Date.now()) / 1_000));
+      return errorResponse(429, 'RATE_LIMITED', '送出次數過多，請稍後再試。', true, { 'Retry-After': String(retryAfter) });
+    }
+
+    const body = await readBody(request);
+    if (!body) return invalidAnswers();
+    const { slug } = await context.params;
+    if (typeof slug !== 'string' || !slug.trim() || !body.preferredDate) return body.preferredDate === null
+      ? errorResponse(422, 'PREFERRED_DATE_OUTSIDE_PLAN_SEASON', SEASON_MESSAGE)
+      : notFound();
+
+    const supabase = await dependencies.getSupabase();
+    const { data: guide, error: guideError } = await supabase
+      .from('guide_profiles')
+      .select('id, slug')
+      .eq('slug', slug)
+      .eq('verification_status', 'approved')
+      .maybeSingle();
+    if (guideError) throw guideError;
+    if (!guide) return notFound();
+
+    const { data: activity, error: activityError } = await supabase
+      .from('activities')
+      .select('id, guide_slug, status, inquiry_enabled')
+      .eq('id', body.activity_id)
+      .eq('guide_slug', slug)
+      .eq('status', 'published')
+      .eq('inquiry_enabled', true)
+      .maybeSingle();
+    if (activityError) throw activityError;
+    if (!activity) return notFound();
+
+    const { data: plans, error: planError } = await supabase
+      .from('activity_plans')
+      .select('id, activity_id, slug, status, is_year_round')
+      .eq('activity_id', activity.id)
+      .eq('slug', body.plan_selector.slug.trim())
+      .eq('status', 'active');
+    if (planError) throw planError;
+    if (!Array.isArray(plans) || plans.length !== 1 || !isPlainObject(plans[0])) return notFound();
+    const plan = plans[0];
+
+    const { data: seasons, error: seasonError } = await supabase
+      .from('activity_plan_seasons')
+      .select('start_month, start_day, end_month, end_day, is_active')
+      .eq('activity_plan_id', plan.id)
+      .eq('is_active', true);
+    if (seasonError) throw seasonError;
+    if (!isDateInSeason(body.preferredDate, plan, Array.isArray(seasons) ? seasons.filter(isPlainObject) : [])) {
+      return errorResponse(422, 'PREFERRED_DATE_OUTSIDE_PLAN_SEASON', SEASON_MESSAGE);
+    }
+
+    const { data: publication, error: publicationError } = await supabase
+      .from('service_publication_versions')
+      .select('version, snapshot')
+      .eq('activity_id', activity.id)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (publicationError) throw publicationError;
+    if (!publication || !Number.isInteger(publication.version) || publication.version < 1 || !isPlainObject(publication.snapshot)) return notFound();
+    if (body.questionnaire_version !== publication.version) return errorResponse(409, 'QUESTIONNAIRE_VERSION_MISMATCH', VERSION_MESSAGE);
+    const answers = validateAndMapAnswers(body.answers, publication.snapshot);
+    if (!answers) return invalidAnswers();
+
+    const result = await dependencies.createMidaoInquiryDb({
+      travelerUserId: identity.id,
+      guideId: guide.id,
+      activityId: activity.id,
+      activityPlanId: plan.id,
+      preferredDate: body.preferredDate.canonical,
+      ...(body.backupDate !== undefined ? { backupDate: body.backupDate } : {}),
+      ...(body.start_time_local !== undefined ? { startTimeLocal: body.start_time_local } : {}),
+      ...(body.party_size !== undefined ? { partySize: body.party_size } : {}),
+      ...(body.language !== undefined ? { language: body.language.trim() } : {}),
+      ...(body.pickup_required !== undefined ? { pickupRequired: body.pickup_required } : {}),
+      ...(body.traveler_note !== undefined ? { travelerNote: body.traveler_note.trim() } : {}),
+      questionnaireSnapshot: structuredClone(publication.snapshot),
+      answers,
+    });
+    if (!result?.ok || result.status !== 201 || !result.inquiry) throw new Error('inquiry gateway rejected normalized input');
+    return Response.json({
+      status: 'success',
+      data: { inquiry_id: result.inquiry.id, inquiry_no: result.inquiry.inquiryNo, status: result.inquiry.status },
+    }, { status: 201 });
+  } catch {
+    return errorResponse(503, 'INQUIRY_UNAVAILABLE', UNAVAILABLE_MESSAGE, true);
+  }
+}
