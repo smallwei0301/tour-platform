@@ -840,3 +840,88 @@ reversal／payout confirm 的所有 DB 語意，但 provider 呼叫維持 `NOT_A
 出款 HOLD 的技術前提已滿足（全鏈驗證完成、四支財務函式全部原子化並驗證）。
 **解除 HOLD 需 owner 在 Vercel 設 `PAYOUT_CONFIRM_ENABLED=true`** —— 那是啟用真實
 金流的 production 設定，不在 agent 授權範圍。
+
+---
+
+## 2026-08-05 — 測試資料收尾（owner 指示；本輪最重要的一次認知修正）
+
+### 前情：一個把整條結論翻掉的事實
+
+上一節結尾寫著「出款 HOLD 的技術前提已滿足」，並在 `issue1647-dml-execution-runbook.md`
+裡建議「執行項目一 → 觀察對帳 → 解除 HOLD」。owner 指出：**目前所有訂單、以及導遊
+andy，全部都是測試資料。**
+
+我事後查核，這個說法成立，而且比我原先以為的範圍更大：
+
+| 查核項 | 結果 |
+|---|---|
+| 14 筆卡單的 email 形狀 | 10/14 為明顯測試型 |
+| 卡單金額 | 多為 NT$2／NT$18 的 sandbox 值 |
+| 卡單 `payment_events` | **全部 0** |
+| NT$21,814 餘額的來源 10 筆 `payout_items` | guide／order 皆為 seed UUID（`22222222…`／`00000000…`），`payment_events` **全部 0** |
+
+### 我必須收回的三項判斷
+
+1. **runbook 項目一不可執行。** 它會把 NT$20,261 的假錢推進 `guide_balances`。
+   我原本把它列為「有金額後果但可控」，錯在**把「HOLD 未解除」當成安全網**——
+   安全網只在「錢是真的、只是時機未到」時成立；錢是假的時候，那不是安全網，
+   只是把錯誤延後到解除 HOLD 的那一刻。
+2. **項目三的「重產」不可做。** cancel 本身正確（餘額中性）並已執行，但「依最新餘額
+   重產」等於用測試餘額再造一張出款單。
+3. **「三方對帳無差異 ✅ ledger = 餘額 = NT$21,814」這句話我用錯了。** 它技術上為真，
+   但我把它當成上線準備度訊號寫進 runbook 的前提表。實際上那是**測試資料自己跟
+   自己對得起來**，對真實金流的正確性零證據力。
+
+**根因（值得記進 lessons）**：我的候選準則只看 `orders.paid_at`。`paid_at` 可以由測試
+路徑寫入，**不等於平台真的收到錢**。真正的實收證據是 `payment_events` 有列。
+日後任何碰錢的歷史資料處置，候選準則都必須含
+`EXISTS (SELECT 1 FROM payment_events pe WHERE pe.order_id = o.id)`。
+
+### 執行內容（owner 指示：「這些訂單都收尾標記，讓我以後真實訂單不要出問題」）
+
+全部走 DML（鐵律 2 自動執行＋事後回報），每步皆附 audit，batch 一律
+`2026-08-05-testdata-closeout`。
+
+| # | 動作 | 動到的表 | 筆數 | 結果 |
+|---|---|---|---|---|
+| 1 | 取消待出款單 | `payouts`, `audit_logs` | 1 + 1 | `77276203…` NT$7,168 → `cancelled`（餘額中性，`cancelPayoutDb` 不動 `guide_balances`） |
+| 2 | 已結算訂單走原子紅沖 | `payout_items`, `guide_balances`, `audit_logs` | 8 reversal + 8 餘額扣減 + 16 audit | 餘額 21814→20966→19691→18643→17595→11475→8925→3825→**0** |
+| 3 | 關閉卡單 | `orders`, `audit_logs` | 16 + 16 | 14 `paid` + 2 `refund_pending` → `cancelled` |
+| 4 | 關閉無導遊的 `completed` | `orders`, `audit_logs` | 2 + 2 | NT$11,000（seed UUID `22222222…`）→ `cancelled` |
+
+第 2 步刻意走 `fn_record_refund_reversal_atomic`（本 issue F4 的成果）而非手寫 UPDATE：
+append-only、雙 audit、餘額以 SQL delta 增減，收尾動作本身也留下完整帳務軌跡。
+
+**第 4 步是原計劃沒有的**。收尾途中查核才發現那 2 筆 `completed` 訂單**沒有 guide、
+沒有 `eligible_since`**，會永遠落在 F6 新增的 `notEvaluable` 桶裡讓
+`reconciliation.ok` 恆為 false。那正是 F6 想消滅的盲點的鏡像：一個**永遠紅著的燈**
+和一個永遠綠著的燈一樣沒用，都會蓋掉未來真實訂單的異常。故一併收掉。
+
+### 收尾後狀態（實測）
+
+```
+remaining_open        = 0    -- paid / refund_pending / confirmed
+settlement_candidates = 0    -- completed 但無 payout_item
+payouts_pending       = 0
+balance_total         = 0    -- guide_balances 合計
+ledger_net            = 0    -- payout_items 淨額合計
+closeout_audits       = 19   -- batch=2026-08-05-testdata-closeout
+```
+
+剩餘 44 筆 `pending_payment` 從未收款、無 ledger、無結算路徑，屬惰性資料，不處理。
+
+### 出款 HOLD 的狀態（更正上一節的結論）
+
+上一節寫「HOLD 的技術前提已滿足」——**程式碼層面仍然成立**（四支財務函式已原子化
+並經端到端驗證），但當時我把它寫得像是「可以解除了」。正確表述是：
+
+> HOLD 的**技術**前提已滿足；**資料**前提在今天之前並未滿足。現在兩者都滿足了。
+
+`PAYOUT_CONFIRM_ENABLED` 仍未設定，維持 HOLD。何時解除是 owner 的 production
+設定決策，不在 agent 授權範圍。
+
+### 建議的後續防線（提案，未實作）
+
+`orders` 加 `is_test_data boolean` 標記，並讓 settlement sweep 與對帳報告預設排除。
+今天這整輪的成本，本質上是「production 裡真假資料無法用查詢區分」。
+未實作，待 owner 決定是否另開 issue。
