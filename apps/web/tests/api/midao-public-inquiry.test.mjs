@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
+const HELPER_URL = new URL(
+  '../../src/lib/midao/public-inquiry-api-response.ts',
+  import.meta.url,
+);
 const ROUTE_URL = new URL(
   '../../app/api/v2/public/guides/[slug]/inquiries/route.ts',
   import.meta.url,
@@ -144,6 +149,41 @@ function assertEnvelope(payload, { status, code, retryable = false }) {
 test('public inquiry route exports a POST handler', async () => {
   const route = await loadRoute();
   assert.equal(typeof route.POST, 'function');
+});
+
+test('domain public-inquiry helper preserves exact success/error envelopes and route wiring', async () => {
+  const helper = await import(`${HELPER_URL.href}?test=${Math.random()}`);
+  assert.deepEqual(Object.keys(helper).sort(), ['publicInquiryJsonError', 'publicInquiryJsonSuccess']);
+
+  const success = helper.publicInquiryJsonSuccess(
+    { inquiry_id: '55555555-5555-4555-8555-555555555555', inquiry_no: 'INQ-0001', status: 'new' },
+    { status: 201 },
+  );
+  assert.equal(success.status, 201);
+  assert.deepEqual(await success.json(), {
+    status: 'success',
+    data: { inquiry_id: '55555555-5555-4555-8555-555555555555', inquiry_no: 'INQ-0001', status: 'new' },
+  });
+
+  const error = helper.publicInquiryJsonError(
+    'RATE_LIMITED',
+    '送出次數過多，請稍後再試。',
+    true,
+    429,
+    { status: 500, headers: { 'Retry-After': '3' } },
+  );
+  assert.equal(error.status, 429);
+  assert.equal(error.headers.get('Retry-After'), '3');
+  assert.deepEqual(await error.json(), {
+    status: 'error',
+    code: 'RATE_LIMITED',
+    message: '送出次數過多，請稍後再試。',
+    retryable: true,
+  });
+
+  const routeSource = await readFile(ROUTE_URL, 'utf8');
+  assert.ok(routeSource.includes("from '../../../../../../../src/lib/midao/public-inquiry-api-response.ts';"));
+  assert.doesNotMatch(routeSource, /src\/lib\/public-inquiry-api-response\.ts/u);
 });
 
 test('missing traveler identity returns AUTH_REQUIRED before CSRF or resolver work', async () => {

@@ -2,6 +2,7 @@ import { validateCsrf } from '../../../../../../../src/lib/csrf.mjs';
 import { createMidaoInquiryDb } from '../../../../../../../src/lib/midao/db-midao-inquiries.mjs';
 import { RateLimiter } from '../../../../../../../src/lib/rate-limit.ts';
 import { getSupabase } from '../../../../../../../src/lib/supabase-env.mjs';
+import { publicInquiryJsonError, publicInquiryJsonSuccess } from '../../../../../../../src/lib/midao/public-inquiry-api-response.ts';
 
 const inquiryLimiter = new RateLimiter(5, 60_000);
 const SAFE_MESSAGE = '找不到可用的詢問資源。';
@@ -65,7 +66,7 @@ export function __setPublicInquiryDependenciesForTest(overrides: Partial<Depende
 }
 
 function errorResponse(status: number, code: string, message: string, retryable = false, headers?: HeadersInit) {
-  return Response.json({ status: 'error', code, message, retryable }, { status, headers });
+  return publicInquiryJsonError(code, message, retryable, status, headers === undefined ? undefined : { headers });
 }
 
 function notFound() {
@@ -321,9 +322,10 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
       answers,
     });
     if (!result?.ok || result.status !== 201 || !result.inquiry) throw new Error('inquiry gateway rejected normalized input');
-    return Response.json({
-      status: 'success',
-      data: { inquiry_id: result.inquiry.id, inquiry_no: result.inquiry.inquiryNo, status: result.inquiry.status },
+    return publicInquiryJsonSuccess({
+      inquiry_id: result.inquiry.id,
+      inquiry_no: result.inquiry.inquiryNo,
+      status: result.inquiry.status,
     }, { status: 201 });
   } catch {
     return errorResponse(503, 'INQUIRY_UNAVAILABLE', UNAVAILABLE_MESSAGE, true);
