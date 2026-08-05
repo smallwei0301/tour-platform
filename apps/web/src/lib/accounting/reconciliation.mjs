@@ -308,27 +308,44 @@ export function buildMissedSettlementAudit({
       if (o.has_complaint) notDueReasons.push('complaint_under_review');
       if (o.has_oversell_issue) notDueReasons.push('oversell_investigation');
       if (effectiveTwd <= 0) notDueReasons.push('fully_refunded');
-      if (!Number.isFinite(sinceMs)) notDueReasons.push('no_eligible_since');
-      else if (sinceMs >= cutoffMs) notDueReasons.push('within_t_plus_n');
+      if (sinceMs >= cutoffMs) notDueReasons.push('within_t_plus_n');
+
+      // 「算不出 eligible_since」不是「不該結算」——是**根本無法判斷**。
+      // sweep 用的也是同一個欄位（booking.start_at fallback schedule.start_at），
+      // 因此這種訂單 sweep 同樣評估不了 ⇒ 永遠不會結算。把它混進 notDueReasons
+      // 會讓「無法評估」長得跟「沒事」一樣——那正是 F6 要消滅的那種盲點，只是
+      // 換了個小一號的版本。所以獨立成一類。
+      const notEvaluable = !Number.isFinite(sinceMs)
+        && notDueReasons.length === 0
+        && o.status === 'completed'
+        && !!o.paid_at
+        && effectiveTwd > 0;
 
       return {
         orderIdMasked: maskId(o.id),
         effectiveTwd,
         expectedNetTwd: computeNetTwd(effectiveTwd, commissionRate),
         notDueReasons,
-        needsAttention: notDueReasons.length === 0,
+        notEvaluable,
+        // 無法評估者不算「已確認漏結算」，但也絕不算通過。
+        needsAttention: notDueReasons.length === 0 && Number.isFinite(sinceMs),
       };
     })
-    .filter((r) => r.needsAttention)
+    .filter((r) => r.needsAttention || r.notEvaluable)
     .sort((a, b) => b.expectedNetTwd - a.expectedNetTwd);
+
+  const missed = rows.filter((r) => r.needsAttention);
+  const notEvaluable = rows.filter((r) => r.notEvaluable);
 
   return {
     evaluated: true,
     orders: rows,
     totals: {
       checkedCount: orders.filter((o) => o?.id && !settled.has(o.id)).length,
-      missedCount: rows.length,
-      missedNetTwd: rows.reduce((s, r) => s + r.expectedNetTwd, 0),
+      missedCount: missed.length,
+      missedNetTwd: missed.reduce((s, r) => s + r.expectedNetTwd, 0),
+      notEvaluableCount: notEvaluable.length,
+      notEvaluableNetTwd: notEvaluable.reduce((s, r) => s + r.expectedNetTwd, 0),
     },
   };
 }
@@ -360,13 +377,18 @@ export function buildReconciliationReport({
   const eligibilityIssues = eligibilityAudit?.totals?.needsAttentionCount ?? 0;
   const missedEvaluated = missedSettlementAudit?.evaluated === true;
   const missedCount = missedEvaluated ? (missedSettlementAudit?.totals?.missedCount ?? 0) : 0;
+  // 「算不出結算資格時點」的訂單同樣讓 ok 為 false：sweep 對它們也永遠評估不了，
+  // 放著就是永遠不會結算。它需要的是資料修復而非補結算，但不能當成通過。
+  const notEvaluableCount = missedEvaluated ? (missedSettlementAudit?.totals?.notEvaluableCount ?? 0) : 0;
 
   return {
-    ok: guideMismatch === 0 && orderMismatch === 0 && eligibilityIssues === 0 && missedCount === 0,
+    ok: guideMismatch === 0 && orderMismatch === 0 && eligibilityIssues === 0
+      && missedCount === 0 && notEvaluableCount === 0,
     guideMismatchCount: guideMismatch,
     orderMismatchCount: orderMismatch,
     eligibilityIssueCount: eligibilityIssues,
     missedSettlementCount: missedCount,
+    notEvaluableSettlementCount: notEvaluableCount,
     missedSettlementEvaluated: missedEvaluated,
     guides: guideReconciliation?.guides ?? [],
     guideTotals: guideReconciliation?.totals ?? null,

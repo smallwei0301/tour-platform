@@ -91,7 +91,8 @@ issue #1777 的四個財務鏈缺口與其 AC 清單。修復分四個 phase 實
 
 | 項目 | 狀態 | 說明 |
 |---|---|---|
-| 端到端金流全鏈驗證 | `NOT_VERIFIED-live` | payment → settlement → partial refund → payout confirm 尚未在真實環境跑過。冷啟動環境無安全的測試訂單，且 payout confirm 仍為 HOLD。已由契約測試＋production 錯誤路徑實測覆蓋最接近的部分。 |
+| 端到端金流全鏈驗證 | **已驗證**（2026-08-04） | payment → settlement → partial refund → payout confirm 全鏈已在 **production Postgres** 上以合成資料＋強制 rollback 的單一交易跑完，含重送與 fault injection，10 條斷言全數成立、零資料落地。腳本：`scripts/admin/issue1777-e2e-chain-verify.sql`（可重跑）。詳見 §7。 |
+| ECPay provider 段 | `NOT_AUTOMATABLE-env` | 上述全鏈驗證涵蓋 settlement／refund adjustment／reversal／payout confirm 的所有 DB 語意，**不涵蓋** ECPay 實際請款與退刷。該段維持 reusable contract test。 |
 | 真實 ECPay staging 部分退款 | `NOT_AUTOMATABLE-env` | 依 issue 條款保留 reusable contract test，未以 manual-only 取代核心金額測試。 |
 | Fresh independent review | **已執行**（2026-07-29） | 三個 fresh-context reviewer 獨立審查。**抓到本報告漏掉的 P0**：Phase 3 的部分索引讓 Phase 2 的 `ON CONFLICT` 推論不到索引（42P10，sweep 會整批失敗），且當時的契約測試斷言了那個壞形式、等於把 bug 鎖住。已修（migration `20260729190000`）。這條記錄本身就是「實作者自評不能取代獨立審查」的證據。 |
 | 呼叫端收尾稽核 | **已執行**（2026-07-30） | 獨立審查後我再走一遍呼叫端，抓到 F1／F2 兩個 P0（AC 6／AC 7 因此曾誤判 PASS，見 §2）＋F5／F9。已修（migration `20260730093000`，2026-08-04 套用＋部署，PR #1789 CI 全綠後 merge）。 |
@@ -104,3 +105,46 @@ issue #1777 的四個財務鏈缺口與其 AC 清單。修復分四個 phase 實
 - 全程未記錄 token、cookie、service-role key、connection string、完整付款 payload 或未遮罩 PII。
 - 對帳報告與 preview 一律遮罩識別碼（只留前 8 碼），且對帳路徑在程式碼層面無寫入呼叫（由測試鎖住）。
 - 未弱化 admin auth、CSRF、RLS、callback 驗簽或金額檢查；本次反而收緊了函式層權限。
+
+
+## 7. 端到端全鏈驗證（2026-08-04）
+
+### 為什麼是這個形式
+
+issue Verification 要求走 `payment → settlement → partial refund → payout confirm`，含重送與
+fault injection。現況：**沒有 staging DB**（Supabase 專案只有 production 一個 ACTIVE），
+production 是冷啟動環境沒有可安全操作的測試訂單，且 owner 授權明訂不得改真實訂單、
+執行真實退款或真實 payout confirm。
+
+作法：**合成資料 ＋ 強制 rollback 的單一交易**。在交易內建立臨時的 `guide_profiles`／
+`orders`／`operations_tracking`，依 refund-execute 的**真實呼叫順序**跑完整條鏈，
+每一步以 `RAISE EXCEPTION` 斷言，結尾必定 `RAISE` 使整個交易回滾。
+
+這比 fixture 強：跑的是 production 上真正生效的 plpgsql、真正的唯一索引、真正的
+`FOR UPDATE` 鎖與 CHECK 約束。唯一不涵蓋的是 ECPay provider 那一段。
+
+### 結果：10 條斷言全數成立
+
+| # | 情境 | 結果 |
+|---|---|---|
+| A1 | 結算（total 10000） | ledger=8500 balance=8500 = `floor(10000×0.85)` |
+| A2 | 結算重送 | `skipped_existing=1`、餘額未變 |
+| A3 | 第一次部分退款 3000 | 紅沖 → ledger 0；adjustment → ledger=**5950** = `floor(7000×0.85)`，鍵 `cum:3000` |
+| A4 | 第二次**等額** 3000 | 紅沖回 `already_reversed`（零寫入）；adjustment → ledger=**3400** = `floor(4000×0.85)`，鍵 **`cum:6000`**，`refund_amount_twd`=**6000** |
+| A5 | 對帳重跑（delta=0） | `applied=false`、`delta=0` |
+| A6 | 補到全額退款 | ledger=**0** |
+| B1 | 結算訂單 B（total 6000） | balance=5100 |
+| B2 | payout confirm | `state=paid`、balance **5100→0** |
+| B3 | confirm 重送 | `already_paid=true`、餘額仍 0（**未重扣**） |
+| C1 | 餘額不足時 confirm | RAISE `insufficient guide balance`，餘額未變（**不靜默截斷**） |
+
+**A3／A4 同時驗證了 Phase 3 的設計意圖**：紅沖是整筆全額反轉（ledger 歸 0），
+adjustment 再以「目標 − 現值」把它收斂回正確的剩餘應付。兩次**等額**退款拿到
+`cum:3000` 與 `cum:6000` 兩把不同的鍵、各記一筆差額，累積額正確累加到 6000 ——
+這是 F1／F2 在真實 Postgres 上的端到端證明。
+
+### 資料影響：無
+
+rollback 後實查：合成 guide 0 筆、`payout_items` 10 列、`refund_adjustment` 0 列、
+`guide_balances` 1 列合計 21,814、`orders` 81 筆、`payouts` 1 pending・0 paid、
+`actor='e2e'` 的 `audit_logs` 0 筆、`operations_tracking` 3 筆 —— 全部與執行前一致。
