@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-08-05T05:55:37.532Z -->
+<!-- query_timestamp: 2026-08-06T05:58:27.945Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-05T05:55:37.532Z  
-**Commit SHA:** `15f2fa00486a6766a75988d58f767e38966ec3d9`
+**Query timestamp:** 2026-08-06T05:58:27.945Z  
+**Commit SHA:** `da8c78df05b553d202c0d26fc2a3d9a585a410fe`
 
 ---
 
@@ -112,6 +112,7 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1792 | [Task 35：修正 public inquiry questionnaire snapshot contract](https://github.com/smallwei0301/tour-platform/pull/1792) | 2026-08-06 |
 | #1791 | [test(payments): #1777 端到端全鏈驗證完成 ＋ #1647 重新 preview](https://github.com/smallwei0301/tour-platform/pull/1791) | 2026-08-05 |
 | #1790 | [fix(payments): #1777 收尾 — F3／F4／F6／F8 ＋ AC 6／7 重判](https://github.com/smallwei0301/tour-platform/pull/1790) | 2026-08-04 |
 | #1789 | [fix(payments): #1777 兩批 P0 — ON CONFLICT 推論不到部分索引、退款累積額被覆寫](https://github.com/smallwei0301/tour-platform/pull/1789) | 2026-08-04 |
@@ -121,7 +122,6 @@
 | #1785 | [fix(domain): 自訂網域切換前的網址盤點 — BRAND_BOOK 改 midao.com.tw、修死連結 fallback](https://github.com/smallwei0301/tour-platform/pull/1785) | 2026-07-30 |
 | #1784 | [fix(seo): JSON-LD 絕對網址改走 SITE_URL，並修正 LINE 查詢的錯誤網域 fallback](https://github.com/smallwei0301/tour-platform/pull/1784) | 2026-07-30 |
 | #1783 | [fix(admin): 申請詳情欄位表手機版遮擋，並把 EMAIL_FROM 納入通知 env 診斷](https://github.com/smallwei0301/tour-platform/pull/1783) | 2026-07-30 |
-| #1782 | [feat(guide-application): 申請通知管理者（email＋Telegram）、後台顯示完整填寫與未填寫欄位、移除招募頁分潤文案](https://github.com/smallwei0301/tour-platform/pull/1782) | 2026-07-30 |
 
 ---
 
