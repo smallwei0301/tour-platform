@@ -9,9 +9,18 @@ ALTER TABLE public.bookings
 ALTER TABLE public.bookings
   ADD COLUMN IF NOT EXISTS traveler_confirmation_expires_at TIMESTAMPTZ;
 
-ALTER TABLE public.guide_inquiries
-  ADD CONSTRAINT midao_guide_inquiries_converted_booking_fk
-  FOREIGN KEY (converted_booking_id) REFERENCES public.bookings(id) ON DELETE RESTRICT;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'midao_guide_inquiries_converted_booking_fk'
+      AND conrelid = 'public.guide_inquiries'::regclass
+  ) THEN
+    ALTER TABLE public.guide_inquiries
+      ADD CONSTRAINT midao_guide_inquiries_converted_booking_fk
+      FOREIGN KEY (converted_booking_id) REFERENCES public.bookings(id) ON DELETE RESTRICT;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS midao_bookings_source_inquiry_idx
   ON public.bookings (source_inquiry_id)

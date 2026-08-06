@@ -28,6 +28,16 @@
 - 2026-08-05 local compatibility evidence: `NODE_OPTIONS=--max-old-space-size=768 timeout 120s node --test --test-concurrency=1 tests/api/midao-public-inquiry.test.mjs tests/api/midao-inquiries-gateway.test.mjs tests/unit/midao-inquiry-state-machine.test.mjs tests/unit/architecture-ratchet-guard.test.mjs` passed 35/35. `.claude/hooks/run-checks.sh --typecheck apps/web/tests/api/midao-public-inquiry.test.mjs` also passed 21/21 plus typecheck when invoked with Node TAP reporter.
 - No production mutation, migration apply, LINE send, payment, deploy, merge, credential or customer-data action was performed.
 
+## Task 32 migration source-side preflight（2026-08-06，Kanban t_266b8b10）
+- Branch：`fix/issue-1759-task32-migration-preflight-20260806`；Worktree：`/root/.openclaw/workspace/worktrees/tour-platform/issue-1759-task32-migration-preflight-20260806`；Base：`ed9e16053295a94241674f40dee636f628819f8c`。
+- 改名理由（owner 2026-08-06 拍板 A.3 選項 1）：原 `20260729190000_midao_inquiries.sql` 與 origin/main 已 verified 的 `20260729190000_issue1777_post_review_fixes.sql` 時間戳撞號，改為 `20260806090000_` / `20260806091000_` 避開。`git mv` 保留內容，sha256 不變：inquiries `2d7a2467540991d0a5faf33243ab06ca19d205f233f959fb76a8a07073638a70`、booking intake `d4349b811d3026771e6b2b46b059d567ebaaf3ee6f1bf2c20a2c2464f231b00a`（後者再套冪等修改）。
+- 冪等修復：`20260806091000_...sql` 的 `ADD CONSTRAINT midao_guide_inquiries_converted_booking_fk` 改為 `DO $$ ... IF NOT EXISTS (SELECT 1 FROM pg_constraint ...) ... END $$;`，重複套用不再拋 42710。
+- 新增 rollback companion 兩支（沿用既有 operator-only + `midao.rollback_owner_authorized` 授權寫法）：`20260806090000_midao_inquiries.rollback.sql`（drop policy → drop 三索引 → drop table）、`20260806091000_..._confirmation.rollback.sql`（drop 三表 → drop `midao_bookings_source_inquiry_idx` → drop FK constraint → drop bookings 三欄）。同時回退時順序必須先 091000 後 090000，兩檔標頭已載明。
+- 測試同步：`apps/web/tests/api/midao-inquiry-schema-migrations.test.mjs` 僅更新兩個 migration 路徑常數，未放寬任何斷言。
+- GREEN 證據（2026-08-06 Asia/Taipei）：`node --test apps/web/tests/api/midao-inquiry-schema-migrations.test.mjs` 3/3；`node --test apps/web/tests/api/midao-inquiries-gateway.test.mjs` 6/6；`node scripts/check-migration-source-gate.mjs --mode source` → `migration source gate: verified`，exit 0；`NODE_OPTIONS=--test-reporter=tap .claude/hooks/run-checks.sh apps/web/tests/api/midao-inquiry-schema-migrations.test.mjs apps/web/tests/api/midao-inquiries-gateway.test.mjs` → pass 9 / fail 0，exit 0，證據寫入 `.claude/state/last-checks.json`。（本機 node 為 v24，預設 spec reporter 不吐 `# tests` 行導致 hook 誤判 0 測試；改用 TAP reporter 即可，未修改 hook。）
+- 預期仍 RED（HOLD，正確結果）：`node scripts/check-migration-ledger.mjs --mode verified` exit 1，missing 恰為 2 支且已更新為新檔名 `20260806090000_midao_inquiries.sql`、`20260806091000_midao_booking_intake_pricing_and_confirmation.sql`；`node --test apps/web/tests/api/issue1293-migration-ledger-gate.test.mjs` 仍紅。此為 production-apply 需求，非程式缺陷。
+- 未動 `docs/operations/migration-ledger.json`、未改 gate 腳本、未連線 production、未在 primary checkout 施工。
+
 ## 下一步／未完成
 - [ ] Fresh Rita review of the final head.
 - [ ] Hosted typecheck/Vercel/browser/probe/scan/migration checks after the final head.

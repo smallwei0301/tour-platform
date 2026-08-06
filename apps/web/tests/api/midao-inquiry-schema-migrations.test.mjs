@@ -4,11 +4,11 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const inquiriesMigrationUrl = new URL(
-  '../../../../supabase/migrations/20260729190000_midao_inquiries.sql',
+  '../../../../supabase/migrations/20260806090000_midao_inquiries.sql',
   import.meta.url,
 );
 const bookingMigrationUrl = new URL(
-  '../../../../supabase/migrations/20260729191000_midao_booking_intake_pricing_and_confirmation.sql',
+  '../../../../supabase/migrations/20260806091000_midao_booking_intake_pricing_and_confirmation.sql',
   import.meta.url,
 );
 
