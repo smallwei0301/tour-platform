@@ -283,6 +283,22 @@
       "applied_at": "2026-08-04T13:10:00+08:00",
       "status": "verified",
       "note": "#1777 F3：結算金額改由 DB 端在交易內重算，不再信任呼叫端傳值。背景——fn_record_settlement_atomic 原本對資格（completed／paid_at／四個 hold 旗標／未全額退款）做交易內重驗，但金額直接採用 p_items 傳入的 gmv_twd／commission_twd／net_twd：資格用交易內資料、金額用交易外算好的值，兩者可能來自不同時點（sweep 讀完訂單後、RPC 執行前發生部分退款 → 資格用新退款額判斷、金額仍是舊的 → 導遊多領），且決策 C「RPC 是唯一 writer」等於留了後門。修法：effective=greatest(0, total−累積退款)、commission=floor(effective×rate)、net=floor(effective×(1−rate))，rate 與 rules_version 取自交易內 settlement_rules 的 active 列；呼叫端傳值降級為對照值，不一致時寫 settlement_amount_mismatch 稽核但不阻斷結算（DB 算的才是對的）。該稽核同時是 F8（JS IEEE754 與 SQL numeric 的 floor 分歧）的偵測器。簽章未變（jsonb, timestamptz），呼叫端不需同步更新，故不產生部署順序窗口；目前 active rate=0.15 下 JS 與 DB 重算逐值相同，對現行 sweep 無數值變化。apply_migration success。驗證（全部在強制 rollback 的 DO block 內，結尾 RAISE EXCEPTION 中止交易）：(a) 以正確金額重送已結算訂單 55ae67bb → settled_count=0／skipped_existing=1，無 mismatch 稽核、無 42P10；(b) 以謊報金額（gmv 999999／commission 0／net 999999）重送 → 產生 1 筆 settlement_amount_mismatch 稽核；(c) 決定性證明——交易內先 DELETE 該訂單既有 settlement 分錄讓 INSERT 路徑真的被走到，再以 gmv 999999／commission 0／net 999999／rules_version 'attacker-supplied' 呼叫，實際寫入的列為 **gmv=4500 commission=675 net=3825 rules_version=v1**（DB 自行重算值，呼叫端傳值完全未被採用），guide_balances 21814→25639 即 +3825 而非 +999999。舊版函式在同一情境會寫入 999999 並給導遊入帳 NT$999,999。資料影響：無——rollback 後實查 payout_items 10 列（9 settlement＋1 reversal）、balances 合計 21814、測試訂單分錄仍為 4500/675/3825/v1（DELETE 已回滾）、settlement_amount_mismatch 稽核 0 筆、驗證用 actor 的 audit_logs 0 筆、payouts 1 pending，全部與套用前一致。backup：Supabase 託管備份/PITR；本 migration 無資料異動。rollback：同名 .rollback.sql（刻意 no-op——簽章未變故單獨回滾不會 fail-closed，只會靜默把金額真實來源交還應用層，正是要修掉的東西）。Refs #1777 #847 #1293。"
+    },
+    {
+      "filename": "20260806090000_midao_inquiries.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301 授權 SQL-OVERRIDE) + Ava/controller 執行與驗證",
+      "applied_at": "2026-08-06T10:16:00+08:00",
+      "status": "verified",
+      "note": "Issue #1759 Task 32 inquiry schema（原檔名 20260729190000_midao_inquiries.sql，因與 origin/main 已 verified 的 20260729190000_issue1777_post_review_fixes.sql 時間戳撞號，經 owner 2026-08-06 拍板改名，sha256 內容不變 2d7a2467540991d0a5faf33243ab06ca19d205f233f959fb76a8a07073638a70）。經 Lane A 唯讀規劃（t_1eb6ccd2）與 Fiora source-side preflight（t_266b8b10, commit 46f375db）、Rita 全新獨立審查（t_03240089, PASS）後，由 direct pooler（session mode, aws-1-ap-northeast-1.pooler.supabase.com:5432）以 5s lock_timeout/60s statement_timeout 套用。backup: Supabase 專案標準每日備份+PITR 可回復（未連線 Management API 查詢確切時間戳，依循既有專案備份慣例）。套用前 preflight（REST API + 直連 catalog 雙重確認）：guide_inquiries/booking_intake_responses/booking_pricing_snapshots/booking_confirmation_tokens 四表皆不存在、bookings 三欄不存在、FK 約束不存在。套用後驗證：四表 to_regclass 存在、guide_inquiries 具 RLS+FORCE RLS 與 1 條 policy（midao_guide_inquiries_traveler_select）、3 個具名索引存在、REST API 200 可讀。PostgREST schema reload 已送出並經 REST 200 交叉確認。rollback: 同名 20260806090000_midao_inquiries.rollback.sql（drop policy → drop 三索引 → drop table，反序）。Refs #1759, PR #1792。"
+    },
+    {
+      "filename": "20260806091000_midao_booking_intake_pricing_and_confirmation.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301 授權 SQL-OVERRIDE) + Ava/controller 執行與驗證",
+      "applied_at": "2026-08-06T10:16:05+08:00",
+      "status": "verified",
+      "note": "Issue #1759 Task 32 booking intake/pricing/confirmation schema（原檔名 20260729191000_midao_booking_intake_pricing_and_confirmation.sql，因撞號一併改名；並將 ADD CONSTRAINT midao_guide_inquiries_converted_booking_fk 改為 DO/IF NOT EXISTS pg_constraint 冪等寫法，經 Rita 逐行核對邏輯正確、REFERENCES/ON DELETE 行為未變）。依存於本卡上一筆 20260806090000_midao_inquiries.sql，執行順序 1→2。經 Lane A 唯讀規劃（t_1eb6ccd2）與 Fiora source-side preflight（t_266b8b10, commit 46f375db）、Rita 全新獨立審查（t_03240089, PASS）後，由同一 direct pooler session（5s lock_timeout/60s statement_timeout）緊接套用。backup: 同上，Supabase 專案標準每日備份+PITR。套用前 preflight 與套用後驗證：bookings 三欄（source_inquiry_id/traveler_confirmation_status/traveler_confirmation_expires_at）存在且 nullable/default 符合設計（traveler_confirmation_status NOT NULL DEFAULT 'not_required'）、booking_intake_responses/booking_pricing_snapshots/booking_confirmation_tokens 三表皆 RLS+FORCE RLS 且僅 service_role 有權限、無 policy（預設全拒，符合設計）、FK 約束 midao_guide_inquiries_converted_booking_fk 存在、索引 midao_bookings_source_inquiry_idx 存在。REST API bookings 欄位查詢 200 可讀交叉確認。PostgREST schema reload 已送出。rollback: 同名 20260806091000_midao_booking_intake_pricing_and_confirmation.rollback.sql（同時回退時須先 091000 後 090000）。Refs #1759, PR #1792。"
     }
   ]
 }
