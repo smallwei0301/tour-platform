@@ -214,3 +214,59 @@ UPDATE payouts SET state = 'pending' WHERE id = :payout_id AND state = 'cancelle
 | 二 | ✅ 無需決定（已由 `20260622120000` 沖銷完畢，淨額 0） |
 | 三 | 確認 cancel 舊 pending 出款單（NT$7,168）並重產的時點 |
 | 全部 | production DML 的執行時窗與授權方式（`SQL-OVERRIDE` 僅涵蓋 schema 變更；DML 依 #1777 留言需另行明確授權） |
+
+---
+
+## 2026-08-04 重新 preview（執行前必做，已完成）
+
+依本文件 §「執行前必做：重新取得 preview」重跑，數字如下。**全程唯讀，未執行任何 DML。**
+
+### 項目一：卡在 `paid` 且從未結算的訂單
+
+| 指標 | 2026-07-29 | **2026-08-04** |
+|---|---|---|
+| 總筆數 | 14 | **14** |
+| `collectedCount`（`paid_at` 非空＝候選） | 14 | **14** |
+| 候選金額 | NT$23,838 | **NT$23,838** |
+| `notCollectedCount`（不處理） | 0 | **0** |
+| `paymentStatusMismatchCount`（需個別檢視） | — | **0** |
+| 建立區間 | — | 2026-04-01 ～ 2026-06-18 |
+
+與前次一致，且無欄位不同步者 —— 14 筆全部符合本文件的候選準則。
+
+### 項目二：已進導遊餘額但平台從未實收 ✅ 仍為已完成
+
+ledger 淨額 0，無需處理（2026-07-29 已由 `20260622120000` 沖銷）。
+
+### 項目三：過期 pending 出款單
+
+| 指標 | 值 |
+|---|---|
+| pending 筆數 | **1** |
+| 快照金額 | **NT$7,168** |
+| 該導遊目前餘額 | **NT$21,814** |
+| `exceedsBalance` | **false** |
+| `ageDays` | **54**（建立於 2026-06-11） |
+
+**與 2026-07-29 的判斷一致**：快照金額未超過現有餘額，因此 confirm 不會扣出負數。
+但它仍是舊快照（餘額已從 7,168 成長到 21,814），依本文件 proposal 仍應
+**cancel → 依最新餘額重產**，而非直接 confirm 舊快照。
+
+### 順帶：F6 漏結算稽核首次對真實資料執行
+
+`missedCount = 0` —— 沒有「該結算卻漏掉」的訂單。
+
+但稽核抓到 **2 筆 `notEvaluable`**：`status='completed'`、`paid_at` 非空、無任何
+payout item，卻**同時沒有 `booking_id` 也沒有 `schedule_id`** ⇒ 算不出 `eligible_since`。
+
+這一點重要：**sweep 用的是同一個欄位**（`booking.start_at` fallback
+`activity_schedules.start_at`），所以它對這些訂單同樣評估不了 ⇒ **永遠不會結算**。
+
+兩筆都是 `22222222…` 開頭的 seed／測試資料（冷啟動尚無真實訂單），其中一筆已全額
+退款（effective 0，本來就不該結算），另一筆部分退款（total 7,000、已退 2,000、
+effective 5,000）。**金額上無實害**，但暴露了稽核本身的一個小型盲點——
+`no_eligible_since` 原本被歸進「不算漏結算」，等於把「永遠無法評估」偽裝成「沒事」。
+已修：獨立成 `notEvaluable` 分類，且同樣讓 `buildReconciliationReport` 的 `ok` 為 false。
+
+**這是 F6 的教訓在小一號的尺度上重演一次**：任何把「無法判斷」與「判斷為正常」
+混為一談的分類，最後都會讓真問題隱形。

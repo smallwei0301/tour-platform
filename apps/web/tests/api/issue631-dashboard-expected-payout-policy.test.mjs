@@ -52,8 +52,9 @@ test('issue631: row policy handles partial refunds with effective_twd and floor 
   );
   assert.match(
     settlementConfigSrc,
-    /commissionTwd\s*=\s*(effectiveTwd > 0\s*\n\s*\?)?\s*Math\.floor\(effectiveTwd \* config\.commission_rate\)/,
+    /commissionTwd\s*=\s*(effectiveTwd > 0\s*\n?\s*\?)?\s*computeCommissionTwd\(effectiveTwd, config\.commission_rate\)/,
     'canonical helper must floor commission per row using commission_rate'
+    + '（#1777 F8：floor 改由 settlement/money.mjs 的整數基點實作完成，不變量不變）'
   );
   assert.match(
     settlementConfigSrc,

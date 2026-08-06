@@ -19,6 +19,8 @@
  * 付款明細（#1777 safety 條款：報告只放彙總或遮罩後識別碼）。
  */
 
+import { computeNetTwd, effectiveGmvTwd } from '../settlement/money.mjs';
+
 /** 遮罩 UUID／識別碼，只保留前 8 碼供人工追查。 */
 export function maskId(id) {
   const s = String(id ?? '');
@@ -37,8 +39,8 @@ export function maskId(id) {
  * @returns {number}
  */
 export function targetNetPayable(totalTwd, refundTwd, commissionRate) {
-  const effective = Math.max(0, (Number(totalTwd) || 0) - (Number(refundTwd) || 0));
-  return Math.floor(effective * (1 - commissionRate));
+  // #1777 F8：整數基點運算，與 DB 端 numeric 逐值一致（浮點在 rate=0.30 會少算 NT$1）。
+  return computeNetTwd(effectiveGmvTwd(totalTwd, refundTwd), commissionRate);
 }
 
 /**
@@ -235,24 +237,166 @@ export function buildEligibilityAudit({ orders = [], ledgerRows = [] } = {}) {
 }
 
 /**
- * 彙整成一份可直接呈現的對帳結論。
- * `ok: true` 代表三方金額一致、每張訂單淨額等於決策 B 目標，且沒有不符資格
- * 卻仍留有淨額的分錄。
+ * 漏結算稽核：找出「早就該結算、卻連一筆分錄都沒有」的訂單（#1777 F6）。
+ *
+ * ## 為什麼需要這一支
+ *
+ * 上面兩支對帳（`buildOrderReconciliation`／`buildEligibilityAudit`）都以
+ * `ledgerRows` 為起點過濾（`.filter((o) => ledgerByOrder.has(o.id))`），因此只看得見
+ * **已經進了 ledger** 的訂單。它們能回答「入帳的金額對不對」「不該入帳的有沒有入帳」，
+ * 但**結構上不可能**回答「該入帳的有沒有漏掉」——沒有分錄的訂單根本進不了迴圈。
+ *
+ * 這正是 #1777 缺口 3 的失敗模式會留下的痕跡：payout item 寫成功、餘額更新失敗，
+ * 重跑時因為「已有 payout item」被跳過；或反過來，sweep 整批失敗（例如 42P10）
+ * 導致某幾天完全沒結算。前者靠 `buildGuideReconciliation` 的金額差抓得到，
+ * **後者只會表現為「什麼都沒有」——三方金額全都一致，因為三方都是 0。**
+ *
+ * ## 判定條件
+ *
+ * 與 sweep（`app/api/internal/settlement/sweep/route.ts`）和
+ * `fn_record_settlement_atomic` 的交易內重驗逐條對齊：
+ *   - `status === 'completed'`
+ *   - `paid_at` 非空（未實收不得結算）
+ *   - 四個 hold 旗標皆為 false
+ *   - `effective = max(0, total − 累積退款) > 0`
+ *   - `eligibleSince`（sweep 用 booking.start_at，fallback activity_schedules.start_at）
+ *     早於 `asOf − tDays`
+ * 全部成立卻沒有任何 ledger 分錄 → 導遊該拿的錢沒進帳。
+ *
+ * `asOf` 由呼叫端提供（本模組維持純函式、無 `Date.now()`）；未提供時回
+ * `evaluated: false` 並且不下任何結論——**不猜**。
+ *
+ * @param {{
+ *   orders: Array<{id: string, status?: string, paid_at?: string|null,
+ *     total_twd?: number, refund_amount_twd?: number, eligible_since?: string|null,
+ *     is_disputed?: boolean, is_safety_case?: boolean,
+ *     has_complaint?: boolean, has_oversell_issue?: boolean}>,
+ *   ledgerRows: Array<{order_id: string}>,
+ *   commissionRate?: number,
+ *   tDays?: number,
+ *   asOf?: string|null,
+ * }} input
  */
-export function buildReconciliationReport({ guideReconciliation, orderReconciliation, eligibilityAudit }) {
+export function buildMissedSettlementAudit({
+  orders = [],
+  ledgerRows = [],
+  commissionRate = 0.15,
+  tDays = 7,
+  asOf = null,
+} = {}) {
+  const asOfMs = asOf ? Date.parse(asOf) : NaN;
+  if (!Number.isFinite(asOfMs)) {
+    return { evaluated: false, orders: [], totals: { checkedCount: 0, missedCount: 0, missedNetTwd: 0 } };
+  }
+
+  const cutoffMs = asOfMs - tDays * 24 * 60 * 60 * 1000;
+  const settled = new Set(ledgerRows.map((r) => r?.order_id).filter(Boolean));
+
+  const rows = orders
+    // 這裡的過濾方向與其他兩支相反：只看**沒有**分錄的訂單。
+    .filter((o) => o?.id && !settled.has(o.id))
+    .map((o) => {
+      const effectiveTwd = effectiveGmvTwd(o.total_twd, o.refund_amount_twd ?? 0);
+      const sinceMs = o.eligible_since ? Date.parse(o.eligible_since) : NaN;
+
+      // 「不該結算」的理由；一條都沒有＝本來就該結算，卻沒有分錄。
+      const notDueReasons = [];
+      if (o.status !== 'completed') notDueReasons.push(`status_${o.status ?? 'unknown'}`);
+      if (!o.paid_at) notDueReasons.push('never_collected');
+      if (o.is_disputed) notDueReasons.push('payment_dispute');
+      if (o.is_safety_case) notDueReasons.push('safety_review');
+      if (o.has_complaint) notDueReasons.push('complaint_under_review');
+      if (o.has_oversell_issue) notDueReasons.push('oversell_investigation');
+      if (effectiveTwd <= 0) notDueReasons.push('fully_refunded');
+      if (sinceMs >= cutoffMs) notDueReasons.push('within_t_plus_n');
+
+      // 「算不出 eligible_since」不是「不該結算」——是**根本無法判斷**。
+      // sweep 用的也是同一個欄位（booking.start_at fallback schedule.start_at），
+      // 因此這種訂單 sweep 同樣評估不了 ⇒ 永遠不會結算。把它混進 notDueReasons
+      // 會讓「無法評估」長得跟「沒事」一樣——那正是 F6 要消滅的那種盲點，只是
+      // 換了個小一號的版本。所以獨立成一類。
+      const notEvaluable = !Number.isFinite(sinceMs)
+        && notDueReasons.length === 0
+        && o.status === 'completed'
+        && !!o.paid_at
+        && effectiveTwd > 0;
+
+      return {
+        orderIdMasked: maskId(o.id),
+        effectiveTwd,
+        expectedNetTwd: computeNetTwd(effectiveTwd, commissionRate),
+        notDueReasons,
+        notEvaluable,
+        // 無法評估者不算「已確認漏結算」，但也絕不算通過。
+        needsAttention: notDueReasons.length === 0 && Number.isFinite(sinceMs),
+      };
+    })
+    .filter((r) => r.needsAttention || r.notEvaluable)
+    .sort((a, b) => b.expectedNetTwd - a.expectedNetTwd);
+
+  const missed = rows.filter((r) => r.needsAttention);
+  const notEvaluable = rows.filter((r) => r.notEvaluable);
+
+  return {
+    evaluated: true,
+    orders: rows,
+    totals: {
+      checkedCount: orders.filter((o) => o?.id && !settled.has(o.id)).length,
+      missedCount: missed.length,
+      missedNetTwd: missed.reduce((s, r) => s + r.expectedNetTwd, 0),
+      notEvaluableCount: notEvaluable.length,
+      notEvaluableNetTwd: notEvaluable.reduce((s, r) => s + r.expectedNetTwd, 0),
+    },
+  };
+}
+
+/**
+ * 彙整成一份可直接呈現的對帳結論。
+ *
+ * `ok: true` 代表：三方金額一致、每張訂單淨額等於決策 B 目標、沒有不符資格卻仍留有
+ * 淨額的分錄，且**沒有該結算卻漏掉的訂單**（#1777 F6）。
+ *
+ * 最後一項刻意納入 `ok`：漏結算的三方金額全都是 0，因此三方對帳一定「一致」——
+ * 不把它算進來，一整批漏結算會呈現為完全正常。
+ *
+ * `missedSettlementAudit` 未提供或 `evaluated: false`（缺 `asOf`）時，該項不計入
+ * `ok`，並以 `missedSettlementEvaluated: false` 誠實標示「這一面向沒被檢查」，
+ * 而不是默默當成通過。
+ *
+ * @param {{guideReconciliation?: any, orderReconciliation?: any,
+ *   eligibilityAudit?: any, missedSettlementAudit?: any}} input
+ */
+export function buildReconciliationReport({
+  guideReconciliation,
+  orderReconciliation,
+  eligibilityAudit,
+  missedSettlementAudit = null,
+}) {
   const guideMismatch = guideReconciliation?.mismatchCount ?? 0;
   const orderMismatch = orderReconciliation?.totals?.mismatchCount ?? 0;
   const eligibilityIssues = eligibilityAudit?.totals?.needsAttentionCount ?? 0;
+  const missedEvaluated = missedSettlementAudit?.evaluated === true;
+  const missedCount = missedEvaluated ? (missedSettlementAudit?.totals?.missedCount ?? 0) : 0;
+  // 「算不出結算資格時點」的訂單同樣讓 ok 為 false：sweep 對它們也永遠評估不了，
+  // 放著就是永遠不會結算。它需要的是資料修復而非補結算，但不能當成通過。
+  const notEvaluableCount = missedEvaluated ? (missedSettlementAudit?.totals?.notEvaluableCount ?? 0) : 0;
+
   return {
-    ok: guideMismatch === 0 && orderMismatch === 0 && eligibilityIssues === 0,
+    ok: guideMismatch === 0 && orderMismatch === 0 && eligibilityIssues === 0
+      && missedCount === 0 && notEvaluableCount === 0,
     guideMismatchCount: guideMismatch,
     orderMismatchCount: orderMismatch,
     eligibilityIssueCount: eligibilityIssues,
+    missedSettlementCount: missedCount,
+    notEvaluableSettlementCount: notEvaluableCount,
+    missedSettlementEvaluated: missedEvaluated,
     guides: guideReconciliation?.guides ?? [],
     guideTotals: guideReconciliation?.totals ?? null,
     orders: orderReconciliation?.orders?.filter((o) => o.needsAttention) ?? [],
     orderTotals: orderReconciliation?.totals ?? null,
     ineligibleSettlements: eligibilityAudit?.orders?.filter((o) => o.needsAttention) ?? [],
     eligibilityTotals: eligibilityAudit?.totals ?? null,
+    missedSettlements: missedSettlementAudit?.orders ?? [],
+    missedSettlementTotals: missedSettlementAudit?.totals ?? null,
   };
 }

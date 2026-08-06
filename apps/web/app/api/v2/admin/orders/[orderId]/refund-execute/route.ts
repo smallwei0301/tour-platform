@@ -30,6 +30,12 @@ import { dispatchOrderEventTelegram } from '../../../../../../../src/lib/order-t
 import { pushTravelerOrderEvent } from '../../../../../../../src/lib/line-traveler-push.mjs';
 import { pushGuideOrderEvent } from '../../../../../../../src/lib/line-guide-push.mjs';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../../src/config/supabase-service-env.mjs';
+import {
+  readCumulativeRefundTwd,
+  checkRefundWithinRemaining,
+  syncRefundToPayoutLedger,
+  REFUND_EXCEEDS_REMAINING_CODE,
+} from '../../../../../../../src/lib/settlement/refund-payout-sync.mjs';
 
 function getServiceClient() {
   return createClient(
@@ -40,50 +46,17 @@ function getServiceClient() {
 }
 
 /**
- * 把本次退款金額記入 operations_tracking.refund_amount_twd —— 這是導遊出帳結算
- * （settlement-config.ts / settlement sweep / guide payout）真正讀取的「已退款」欄位，
- * 部分退款必須寫到這裡才會反映到導遊撥款（effective GMV = total − refund_amount_twd）。
- *
- * 採針對性 upsert：只覆寫 refund_amount_twd，保留 ops 既有欄位（manual_minutes、
- * has_complaint、holds 等），避免清空人工輸入。失敗不阻斷退款回應（provider 端已退成功），
- * 改記 incident 供補登。
+ * 本次退款額（TWD）。`refundAmount` 省略 → 全額（沿用 back-compat 行為）；
+ * 傳了但不是正整數 → 回 null，交由 executor 的既有驗證回錯（不在此改變錯誤碼）。
  */
-async function recordOperationsRefundAmount(
-  supabase: ReturnType<typeof getServiceClient>,
-  orderId: string,
-  refundAmountTwd: number,
-): Promise<{ ok: boolean; error?: string }> {
-  try {
-    const now = new Date().toISOString();
-    const { data: existing, error: selectErr } = await supabase
-      .from('operations_tracking')
-      .select('id')
-      .eq('order_id', orderId)
-      .limit(1);
-
-    if (selectErr) {
-      return { ok: false, error: selectErr.message || 'failed to read operations_tracking' };
-    }
-
-    if (Array.isArray(existing) && existing.length > 0) {
-      const { error } = await supabase
-        .from('operations_tracking')
-        .update({ refund_amount_twd: refundAmountTwd, updated_at: now })
-        .eq('order_id', orderId);
-      if (error) return { ok: false, error: error.message || 'failed to update operations_tracking' };
-    } else {
-      const { error } = await supabase
-        .from('operations_tracking')
-        .insert({ id: crypto.randomUUID(), order_id: orderId, refund_amount_twd: refundAmountTwd, updated_at: now });
-      if (error) return { ok: false, error: error.message || 'failed to insert operations_tracking' };
-    }
-
-    return { ok: true };
-  } catch (err) {
-    // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
-    void reportRouteError(err, { route: 'v2/admin/orders/[orderId]/refund-execute' });
-    return { ok: false, error: err instanceof Error ? err.message : 'operations_tracking write failed' };
-  }
+function resolveRequestedRefundTwd(
+  refundAmount: number | string | null | undefined,
+  totalTwd: number,
+): number | null {
+  if (refundAmount == null || refundAmount === '') return totalTwd;
+  const parsed = Number(refundAmount);
+  if (!Number.isInteger(parsed) || parsed <= 0) return null;
+  return parsed;
 }
 
 export async function POST(
@@ -244,6 +217,41 @@ export async function POST(
     previousOrderStatus = null;
   }
   const partialTargetStatus = resolvePartialRefundStatus(previousOrderStatus);
+
+  // #1777：本次退款額必須落在「訂單總額 − 累積已退」之內。
+  // resolveRefundAmount（refund-execute.ts）只驗 `≤ total`，沒扣掉已退部分——
+  // NT$1,000 的訂單連退兩次 800 都會過關，累積 1,600 > 總額，而錢已經從 provider
+  // 出去了。這道關擋在呼叫 provider **之前**。
+  //
+  // 只在「已有累積退款」時介入，維持既有錯誤碼與行為不變（純加法變更）：
+  // 首次退款的金額驗證仍由 executor 負責。累積額讀取失敗時放行——擋掉所有退款
+  // 的代價高於這個競態風險，且 RPC 端仍會對超額累積留下
+  // `refund_exceeds_order_total` 稽核作為後手。
+  const priorRefund = await readCumulativeRefundTwd(supabase, orderId);
+  if (!priorRefund.ok) {
+    void recordIncident({
+      source: 'admin_refund_execute',
+      severity: 'warn',
+      category: 'payment',
+      message: 'failed to read cumulative refund before refund; remaining-amount guard skipped',
+      metadata: { orderId, error: priorRefund.error },
+    });
+  } else if (priorRefund.cumulativeRefundTwd > 0) {
+    const requestedRefundTwd = resolveRequestedRefundTwd(refundAmount, Number(order.total_twd) || 0);
+    if (requestedRefundTwd != null) {
+      const remaining = checkRefundWithinRemaining({
+        totalTwd: Number(order.total_twd) || 0,
+        cumulativeRefundTwd: priorRefund.cumulativeRefundTwd,
+        refundAmountTwd: requestedRefundTwd,
+      });
+      if (!remaining.ok) {
+        return Response.json(
+          fail(REFUND_EXCEEDS_REMAINING_CODE, remaining.reason || 'refund amount exceeds remaining refundable'),
+          { status: 409 },
+        );
+      }
+    }
+  }
 
   const latestReversiblePayment = await resolveLatestReversiblePayment(order.id);
   const shouldUseEcpayReversal = Boolean(latestReversiblePayment.payment) || latestReversiblePayment.ambiguous || Boolean(order.trade_no);
@@ -467,60 +475,84 @@ export async function POST(
       },
     });
 
-  // 出帳同步：把本次退款金額寫入 operations_tracking.refund_amount_twd，讓導遊撥款
-  // 反映（含部分退款）。冪等重放（alreadyRefunded）不覆寫；void 視為全額退款記 total。
+  // 出帳同步（#1777，owner 決策 B／C）：把**本次**退款額交給原子 RPC。
+  //
+  // RPC 在單一交易＋單一 `orders FOR UPDATE` 鎖內完成三件事：
+  //   1. operations_tracking.refund_amount_twd += 本次金額（出帳真正讀的欄位）
+  //   2. 以交易內累積額推導冪等鍵，追加 ledger 差額分錄
+  //   3. 同步導遊餘額；餘額轉負則留 carry-forward 稽核（不靜默截成 0）
+  //
+  // 應用層刻意**不**自行讀寫 refund_amount_twd：先前的
+  // `.update({ refund_amount_twd: 本次金額 })` 是覆寫而非累加，兩次部分退款只會
+  // 留下最後一次的金額（導遊被多撥）；而以本次金額組冪等鍵又會讓兩次等額部分
+  // 退款撞同一把鍵（第二次差額被吃掉）。兩者都是 #1777 的 P0。
+  //
+  // 冪等重放（alreadyRefunded）不進入本區塊；void 視為全額退款記 total。
   if (outcome.status === 200 && outcome.body && (outcome.body as { ok?: boolean }).ok) {
     const data = ((outcome.body as { data?: Record<string, unknown> }).data) ?? {};
     if (!data.alreadyRefunded) {
-      let opsRefundTwd: number | null = null;
+      let refundDeltaTwd: number | null = null;
       if (typeof data.refundedAmount === 'number') {
-        opsRefundTwd = data.refundedAmount;
+        refundDeltaTwd = data.refundedAmount;
       } else if (data.mode === 'authorization_voided') {
         // 授權尚未請款的全額 void：等同全額退款，記入訂單總額。
-        opsRefundTwd = Number(order.total_twd) || 0;
+        // （void 要求尚未請款，因此不可能有前置的部分退款，累加語意仍正確。）
+        refundDeltaTwd = Number(order.total_twd) || 0;
       }
 
-      if (opsRefundTwd != null) {
-        const result = await recordOperationsRefundAmount(supabase, orderId, opsRefundTwd);
-        if (!result.ok) {
-          void recordIncident({
-            source: 'admin_refund_execute',
-            severity: 'error',
-            category: 'payment',
-            message: 'refund executed but operations_tracking.refund_amount_twd write failed (payout may not reflect refund)',
-            metadata: { orderId, refundAmountTwd: opsRefundTwd, error: result.error },
+      if (refundDeltaTwd != null) {
+        try {
+          const sync = await syncRefundToPayoutLedger(supabase, {
+            orderId,
+            refundDeltaTwd,
+            actor: 'refund-execute',
           });
-        } else {
-          // #1777 Phase 3（決策 B）：把該訂單的 ledger 淨額調整到
-          // `max(0, 總額 − 累積退款) × 分潤率`，只追加本次差額。
-          //
-          // 必須排在 refund_amount_twd 寫入**之後**——RPC 讀的是累積退款額，
-          // 早一步呼叫會用到舊值。上游的 recordRefundReversalDb 仍可能已整筆
-          // 紅沖（與 order 狀態機、修復路徑深度耦合，本 phase 不拆）；本 RPC 以
-          // 「目標 − ledger 現值」計算差額，因此不論前置狀態如何都會收斂到正確
-          // 的最終淨應付，並自動補回被紅沖過頭的部分。
-          try {
-            const { applyRefundAdjustmentAtomicDb, buildRefundEventId } =
-              await import('../../../../../../../src/lib/settlement/db-settlement-atomic.mjs');
-            await applyRefundAdjustmentAtomicDb(supabase, {
-              orderId,
-              refundEventId: buildRefundEventId(orderId, opsRefundTwd),
-              actor: 'refund-execute',
-            });
-          } catch (adjustErr) {
-            // 退款本身已成功，不因帳務調整失敗而回滾；改記 incident 供人工補正。
+
+          if (sync.over_refund) {
             void recordIncident({
               source: 'admin_refund_execute',
               severity: 'error',
               category: 'payment',
-              message: 'refund executed but payout ledger adjustment failed (guide net payable may be stale)',
+              message: 'cumulative refund now exceeds order total (remaining-amount guard was bypassed)',
               metadata: {
                 orderId,
-                refundAmountTwd: opsRefundTwd,
-                error: adjustErr instanceof Error ? adjustErr.message : String(adjustErr),
+                refundDeltaTwd,
+                cumulativeRefundTwd: sync.cumulative_refund_twd,
+                orderTotalTwd: Number(order.total_twd) || 0,
               },
             });
           }
+
+          if (sync.carry_forward_twd > 0) {
+            void recordIncident({
+              source: 'admin_refund_execute',
+              severity: 'warn',
+              category: 'payment',
+              message: 'refund exceeded settled balance; guide balance is negative and must be recovered',
+              metadata: {
+                orderId,
+                refundDeltaTwd,
+                carryForwardTwd: sync.carry_forward_twd,
+                balanceAfter: sync.balance_after,
+              },
+            });
+          }
+        } catch (syncErr) {
+          // 退款本身已成功（provider 端已出款），不因帳務同步失敗而回滾。
+          // 注意：累積額與 ledger 差額在**同一交易**內，失敗代表**兩者皆未寫入**——
+          // 因此需要人工補登，而非只是「ledger 可能過時」。
+          void recordIncident({
+            source: 'admin_refund_execute',
+            severity: 'error',
+            category: 'payment',
+            message: 'refund executed but refund_amount_twd accumulation and payout ledger adjustment both failed'
+              + ' (single transaction; manual backfill required before next settlement)',
+            metadata: {
+              orderId,
+              refundDeltaTwd,
+              error: syncErr instanceof Error ? syncErr.message : String(syncErr),
+            },
+          });
         }
       }
     }

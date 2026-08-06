@@ -9,8 +9,8 @@
  * 決策 B：每次退款只追加本次差額，不得重複全額紅沖。
  *
  * 本檔驗證：
- *   (a) 舊 recordRefundReversalDb 的確是全額紅沖（鎖住問題）
- *   (b) 冪等鍵語意：同次退款重送同鍵、二次部分退款得新鍵
+ *   (a) 紅沖固定是整筆全額反轉（by-design；差額由 adjustment 收斂）
+ *   (b) — 已移除，見該區塊說明（冪等鍵改由 DB 端推導）
  *   (c) wrapper 契約：單一 RPC、冪等回應、fail-closed
  *   (d) 決策 B 的金額模型在四情境下收斂到同一最終淨應付
  *
@@ -22,79 +22,56 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 
-// ── (a) 舊路徑：整筆全額紅沖 ─────────────────────────────────────────────────
+// ── (a) 缺口 2：紅沖不看本次退款金額 ────────────────────────────────────────
+//
+// ⚠️ 這裡原本有一個以 `.from()` chain 模擬 supabase 的測試，斷言
+// `recordRefundReversalDb` 會插入 `net_twd: -8500`（原 settlement 的完整 net），
+// 用來鎖住「部分退款也整筆全額反轉」這個問題。
+//
+// #1777 F4（2026-08-04）把紅沖整包搬進 `fn_record_refund_reversal_atomic`，
+// 應用層不再讀寫資料表，那個 mock 模擬的路徑已不存在。
+//
+// **但缺口 2 的性質沒有改變**：紅沖依然是整筆全額反轉（`-gmv/-commission/-net`），
+// 它本來就不該知道本次退了多少——把 ledger 收斂到正確最終淨額的責任在
+// `fn_apply_refund_adjustment_atomic`（以「目標 − 現值」計算差額，因此不論紅沖
+// 是否過頭都會收斂）。兩者的分工是 by-design，不是待修項。
+//
+// 因此改鎖 SQL 本身：紅沖分錄必須是原 settlement 的完整負值。
 
-describe('#1777 缺口 2 — 舊紅沖路徑不看本次退款金額', () => {
-  it('部分退款也把整筆 settlement 全額反轉', async () => {
-    const { recordRefundReversalDb } = await import('../../src/lib/db.mjs');
+describe('#1777 缺口 2 — 紅沖是整筆全額反轉（差額由 adjustment 收斂）', () => {
+  it('reversal 分錄寫的是原 settlement 的完整負值，不看本次退款金額', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+    const { dirname, join } = await import('node:path');
+    const here = dirname(fileURLToPath(import.meta.url));
+    const sql = readFileSync(
+      join(here, '../../../../supabase/migrations/20260804103000_issue1777_atomic_refund_reversal.sql'),
+      'utf8',
+    ).replace(/--.*$/gm, '');
 
-    const settlement = {
-      id: 'pi-1', order_id: 'o-1', guide_id: 'g-1',
-      gmv_twd: 10000, commission_twd: 1500, net_twd: 8500,
-      rules_version: 'v1', settlement_kind: 'settlement',
-    };
-    const inserted = [];
-
-    const client = {
-      from(table) {
-        const api = {
-          _f: {},
-          select() { return api; },
-          eq(k, v) { api._f[k] = v; return api; },
-          maybeSingle() {
-            if (table === 'payout_items' && api._f.settlement_kind === 'settlement') {
-              return Promise.resolve({ data: settlement, error: null });
-            }
-            if (table === 'guide_balances') {
-              return Promise.resolve({ data: { balance_twd: 8500 }, error: null });
-            }
-            return Promise.resolve({ data: null, error: null });
-          },
-          upsert(row) {
-            if (table === 'payout_items') inserted.push(row);
-            const chain = Promise.resolve({ data: row, error: null });
-            chain.select = () => ({ maybeSingle: () => Promise.resolve({ data: { id: 'pi-rev' }, error: null }) });
-            return chain;
-          },
-          insert(row) { return Promise.resolve({ data: row, error: null }); },
-        };
-        return api;
-      },
-    };
-
-    await recordRefundReversalDb(client, { orderId: 'o-1', actor: 'test' });
-
-    assert.equal(inserted.length, 1, '舊路徑會插入一筆 reversal');
-    assert.equal(
-      inserted[0].net_twd,
-      -8500,
-      '不論本次只退多少，一律以原 settlement 的完整 net 反轉——這就是剩餘應收被歸零的原因',
+    assert.match(
+      sql,
+      /-coalesce\(v_gmv,\s*0\),\s*-coalesce\(v_commission,\s*0\),\s*-coalesce\(v_net,\s*0\)/i,
+      '紅沖固定反轉原 settlement 的完整金額——這就是為什麼需要 adjustment 來收斂差額',
+    );
+    assert.doesNotMatch(
+      sql,
+      /p_refund_amount|refund_amount_twd/i,
+      '紅沖不讀退款金額；金額收斂是 fn_apply_refund_adjustment_atomic 的責任',
     );
   });
 });
 
 // ── (b) 冪等鍵語意 ───────────────────────────────────────────────────────────
-
-describe('#1777 Phase 3 — 退款事件冪等鍵', () => {
-  it('同一次退款重送得到相同鍵（不重複記帳）', async () => {
-    const { buildRefundEventId } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
-    assert.equal(buildRefundEventId('o-1', 3000), buildRefundEventId('o-1', 3000));
-  });
-
-  it('第二次部分退款因累積額不同而得到新鍵（各記一次差額）', async () => {
-    const { buildRefundEventId } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
-    assert.notEqual(
-      buildRefundEventId('o-1', 3000),
-      buildRefundEventId('o-1', 5000),
-      '累積退款額不同必須是不同事件，否則第二次部分退款會被冪等吃掉',
-    );
-  });
-
-  it('不同訂單不共用鍵', async () => {
-    const { buildRefundEventId } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
-    assert.notEqual(buildRefundEventId('o-1', 3000), buildRefundEventId('o-2', 3000));
-  });
-});
+//
+// ⚠️ 原本這裡測的是應用層 helper `buildRefundEventId(orderId, cumulativeRefund)`。
+// 該 helper 已於 2026-07-30 移除：它的 docstring 寫「累積額」，但 route 傳的是
+// **本次金額**，兩次等額部分退款因此撞同一把鍵（#1777 F2）。這組測試當時全綠，
+// 因為它自己餵的是累積額——從未斷言呼叫端傳了什麼。
+//
+// 冪等鍵現由 fn_apply_refund_adjustment_atomic 在交易內以累積額推導，呼叫端無從
+// 傳錯。鍵語意與呼叫端傳值的守門移至
+// tests/api/issue1777-refund-chain-accumulation.test.mjs。
 
 // ── (c) wrapper 契約 ─────────────────────────────────────────────────────────
 
@@ -116,35 +93,35 @@ describe('#1777 Phase 3 — applyRefundAdjustmentAtomicDb 契約', () => {
     delta_twd: -2550, applied: true, carry_forward_twd: 0, balance_after: 5950,
   };
 
-  it('單一 RPC 呼叫，帶上冪等鍵', async () => {
+  it('單一 RPC 呼叫，只帶本次退款額（鍵由 DB 端推導）', async () => {
     const { applyRefundAdjustmentAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = rpcClient({ result: [row] });
 
     const out = await applyRefundAdjustmentAtomicDb(client, {
-      orderId: 'o-1', refundEventId: 'o-1:cum:3000', actor: 'refund-execute',
+      orderId: 'o-1', refundDeltaTwd: 3000, actor: 'refund-execute',
     });
 
     assert.equal(client.calls.length, 1);
     assert.equal(client.calls[0].fn, 'fn_apply_refund_adjustment_atomic');
-    assert.equal(client.calls[0].args.p_refund_event_id, 'o-1:cum:3000');
+    assert.equal(client.calls[0].args.p_refund_delta_twd, 3000);
     assert.equal(out.delta_twd, -2550);
     assert.equal(out.applied, true);
   });
 
-  it('重送同一事件回 applied:false 且差額為 0', async () => {
+  it('冪等命中時回 applied:false 且差額為 0', async () => {
     const { applyRefundAdjustmentAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = rpcClient({ result: [{ ...row, applied: false, delta_twd: 0 }] });
-    const out = await applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundEventId: 'o-1:cum:3000' });
-    assert.equal(out.applied, false, '同一退款事件不得記第二次差額');
+    const out = await applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundDeltaTwd: 0 });
+    assert.equal(out.applied, false, '同一累積額狀態不得記第二次差額');
     assert.equal(out.delta_twd, 0);
   });
 
-  it('缺冪等鍵直接拒絕（避免無鍵寫入導致重複記帳）', async () => {
+  it('缺 orderId 直接拒絕', async () => {
     const { applyRefundAdjustmentAtomicDb } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = rpcClient();
     await assert.rejects(
-      () => applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundEventId: '' }),
-      /refundEventId is required/,
+      () => applyRefundAdjustmentAtomicDb(client, { orderId: '', refundDeltaTwd: 100 }),
+      /orderId is required/,
     );
     assert.equal(client.calls.length, 0);
   });
@@ -153,7 +130,7 @@ describe('#1777 Phase 3 — applyRefundAdjustmentAtomicDb 契約', () => {
     const { applyRefundAdjustmentAtomicDb, RPC_MISSING_CODE } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
     const client = rpcClient({ error: { code: 'PGRST202', message: 'Could not find the function' } });
     await assert.rejects(
-      () => applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundEventId: 'k' }),
+      () => applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundDeltaTwd: 100 }),
       (err) => err.code === RPC_MISSING_CODE,
     );
   });
@@ -163,7 +140,7 @@ describe('#1777 Phase 3 — applyRefundAdjustmentAtomicDb 契約', () => {
     const client = rpcClient({
       result: [{ ...row, target_net_twd: 0, delta_twd: -8500, balance_after: -8500, carry_forward_twd: 8500 }],
     });
-    const out = await applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundEventId: 'o-1:cum:10000' });
+    const out = await applyRefundAdjustmentAtomicDb(client, { orderId: 'o-1', refundDeltaTwd: 10000 });
     assert.equal(out.carry_forward_twd, 8500, '已付出去的錢必須留下可追蹤的回收金額');
     assert.ok(out.balance_after < 0, '餘額轉負代表欠款，不得截成 0');
   });

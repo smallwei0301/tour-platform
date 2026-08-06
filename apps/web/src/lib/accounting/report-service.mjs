@@ -11,6 +11,7 @@ import {
   buildGuideReconciliation,
   buildOrderReconciliation,
   buildEligibilityAudit,
+  buildMissedSettlementAudit,
   buildReconciliationReport,
 } from './reconciliation.mjs';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../config/supabase-service-env.mjs';
@@ -56,6 +57,15 @@ export async function getMonthlyAccountingReport(month) {
       eligibilityAudit: buildEligibilityAudit({
         orders: reconciliationData.orders,
         ledgerRows: reconciliationData.ledgerRows,
+      }),
+      // #1777 F6：另一個方向——該結算卻連一筆分錄都沒有的訂單。
+      // 少了這一項，一整批漏結算會因為「三方金額都是 0」而顯示為完全正常。
+      missedSettlementAudit: buildMissedSettlementAudit({
+        orders: reconciliationData.orders,
+        ledgerRows: reconciliationData.ledgerRows,
+        commissionRate: reconciliationData.commissionRate,
+        tDays: reconciliationData.tDays,
+        asOf: new Date().toISOString(),
       }),
     });
   } catch (err) {

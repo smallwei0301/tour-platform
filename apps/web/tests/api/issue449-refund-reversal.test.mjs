@@ -70,41 +70,84 @@ test('migration creates compound unique index on (order_id, settlement_kind)', (
 
 // ── DB lib export check ───────────────────────────────────────────────────────
 
+// ⚠️ #1777 F4（2026-08-04）：以下原本是對 db.mjs 舊實作的 source-string 斷言
+// （newBalance = beforeBalance - debit、ignoreDuplicates、audit marker…）。那個
+// 實作已整包搬到 fn_record_refund_reversal_atomic —— 它正是本 issue 要修的最後
+// 一處應用層 read-modify-write（寫回絕對值 ⇒ 併發 lost update；reversal 寫成功
+// 但餘額扣失敗 ⇒ 重跑走 already_reversed ⇒ 餘額永久漏扣）。
+//
+// #449 的不變量沒有改變，只是換了執行機制，因此改鎖**不變量**而非舊實作的字串：
+//   - 匯出路徑仍在（既有 import 不必改）
+//   - 三種 outcome 的回傳形狀逐字相容
+//   - 餘額允許扣成負數（carry-forward）
+// 逐條行為由 tests/api/issue1777-atomic-refund-reversal.test.mjs 以行為測試覆蓋，
+// SQL 屬性由 tests/api/issue1777-migration-contract.test.mjs 鎖住。
+
 test('recordRefundReversalDb is exported from db.mjs', () => {
   assert.ok(dbSrc !== null, 'db.mjs must be readable');
   assert.match(dbSrc, /export async function recordRefundReversalDb/);
 });
 
-test('recordRefundReversalDb checks for existing settlement row', () => {
+test('recordRefundReversalDb 委派給原子 RPC（不再自行 read-modify-write）', () => {
   assert.ok(dbSrc !== null, 'db.mjs must be readable');
-  assert.match(dbSrc, /settlement_kind.*settlement/);
-  assert.match(dbSrc, /skipped.*pre_settlement/);
+  assert.match(dbSrc, /recordRefundReversalAtomicDb/, 'db.mjs 應委派到領域檔的原子實作');
+  const code = dbSrc.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  assert.doesNotMatch(
+    code,
+    /newBalance = beforeBalance - debit/,
+    '不得再於應用層算出餘額絕對值——那是 #1777 F4 的 lost update 成因',
+  );
+  assert.doesNotMatch(code, /ignoreDuplicates/, '冪等改由 payout_items 的部分唯一索引判定');
 });
 
-test('recordRefundReversalDb returns already_reversed on duplicate', () => {
-  assert.ok(dbSrc !== null, 'db.mjs must be readable');
-  assert.match(dbSrc, /skipped.*already_reversed/);
+test('紅沖的三種 outcome 仍是 #449 的原契約', async () => {
+  const { recordRefundReversalDb } = await import('../../src/lib/db.mjs');
+  const client = (result) => ({
+    from() { throw new Error('不得直接讀寫資料表'); },
+    rpc: () => Promise.resolve({ data: result, error: null }),
+  });
+
+  assert.deepEqual(
+    await recordRefundReversalDb(client({ outcome: 'pre_settlement' }), { orderId: 'o' }),
+    { skipped: 'pre_settlement' },
+  );
+  assert.deepEqual(
+    await recordRefundReversalDb(client({ outcome: 'already_reversed' }), { orderId: 'o' }),
+    { skipped: 'already_reversed' },
+  );
+
+  const reversed = await recordRefundReversalDb(
+    client({ outcome: 'reversed', reversal_id: 'rev-1', before_balance: 5000, after_balance: 2300 }),
+    { orderId: 'o' },
+  );
+  assert.equal(reversed.reversed, true);
+  assert.equal(reversed.reversal_id, 'rev-1');
+  assert.equal(reversed.before_balance, 5000);
+  assert.equal(reversed.after_balance, 2300);
 });
 
-test('recordRefundReversalDb uses ignoreDuplicates for idempotency', () => {
-  assert.ok(dbSrc !== null, 'db.mjs must be readable');
-  assert.match(dbSrc, /ignoreDuplicates.*true/);
+test('carry-forward：餘額可扣成負數，不得截成 0', async () => {
+  const { recordRefundReversalDb } = await import('../../src/lib/db.mjs');
+  const out = await recordRefundReversalDb(
+    {
+      from() { throw new Error('不得直接讀寫資料表'); },
+      rpc: () => Promise.resolve({
+        data: { outcome: 'reversed', reversal_id: 'rev-2', before_balance: 3000, after_balance: -6000 },
+        error: null,
+      }),
+    },
+    { orderId: 'o' },
+  );
+  assert.equal(out.after_balance, -6000, '3000 - 9000 = -6000（carry-forward）');
 });
 
-test('recordRefundReversalDb debits guide_balances (carry-forward, can go negative)', () => {
-  assert.ok(dbSrc !== null, 'db.mjs must be readable');
-  // Must compute newBalance = beforeBalance - debit (can be negative)
-  assert.match(dbSrc, /newBalance = beforeBalance - debit/);
-});
-
-test('recordRefundReversalDb writes payout_reversal_created audit log', () => {
-  assert.ok(dbSrc !== null, 'db.mjs must be readable');
-  assert.match(dbSrc, /payout_reversal_created/);
-});
-
-test('recordRefundReversalDb writes guide_balance_debited_reversal audit log', () => {
-  assert.ok(dbSrc !== null, 'db.mjs must be readable');
-  assert.match(dbSrc, /guide_balance_debited_reversal/);
+test('migration 帶兩筆 audit（payout_reversal_created ＋ guide_balance_debited_reversal）', () => {
+  const sql = readFileSync(
+    join(__dirname, '../../../../supabase/migrations/20260804103000_issue1777_atomic_refund_reversal.sql'),
+    'utf8',
+  ).replace(/--.*$/gm, '');
+  assert.match(sql, /payout_reversal_created/);
+  assert.match(sql, /guide_balance_debited_reversal/);
 });
 
 // ── refund-execute.ts structural checks ───────────────────────────────────────
@@ -135,222 +178,15 @@ test('admin refund-execute route passes postRefundHook to executeRefund', () => 
 
 // ── Behavioral mock tests ─────────────────────────────────────────────────────
 
-test('pre-settlement: recordRefundReversalDb returns {skipped: "pre_settlement"} when no settlement row', async () => {
-  const { recordRefundReversalDb } = await import('../../src/lib/db.mjs');
-
-  // Mock supabase: no settlement row found
-  const supabase = {
-    from: (table) => ({
-      select: () => ({
-        eq: () => ({
-          eq: () => ({
-            maybeSingle: async () => ({ data: null, error: null }),
-          }),
-        }),
-      }),
-      upsert: () => ({ select: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }),
-      insert: async () => ({ error: null }),
-    }),
-  };
-
-  const result = await recordRefundReversalDb(supabase, { orderId: 'order-123', actor: 'test' });
-  assert.deepEqual(result, { skipped: 'pre_settlement' });
-});
-
-test('post-settlement: creates reversal row, debits balance (carry-forward allowed)', async () => {
-  const { recordRefundReversalDb } = await import('../../src/lib/db.mjs');
-
-  const settlement = {
-    id: 'settle-1',
-    order_id: 'order-abc',
-    guide_id: 'guide-1',
-    gmv_twd: 3000,
-    commission_twd: 300,
-    net_twd: 2700,
-    rules_version: 'v1',
-    settlement_kind: 'settlement',
-  };
-
-  const reversal = {
-    id: 'reversal-1',
-    order_id: 'order-abc',
-    guide_id: 'guide-1',
-    gmv_twd: -3000,
-    commission_twd: -300,
-    net_twd: -2700,
-    rules_version: 'v1',
-    settlement_kind: 'reversal',
-  };
-
-  let upsertedBalance = null;
-  const auditRows = [];
-
-  let callCount = 0;
-  const supabase = {
-    from: (table) => {
-      if (table === 'payout_items') {
-        return {
-          select: (cols) => ({
-            eq: (col, val) => ({
-              eq: (col2, val2) => ({
-                maybeSingle: async () => {
-                  // First call: check settlement existence → return settlement
-                  // Second call (upsert select): return reversal
-                  return { data: settlement, error: null };
-                },
-              }),
-            }),
-          }),
-          upsert: (row, opts) => ({
-            select: () => ({
-              maybeSingle: async () => {
-                // Return reversal (new row created)
-                return { data: reversal, error: null };
-              },
-            }),
-          }),
-        };
-      }
-      if (table === 'guide_balances') {
-        return {
-          select: () => ({
-            eq: () => ({
-              maybeSingle: async () => ({ data: { balance_twd: 5000 }, error: null }),
-            }),
-          }),
-          upsert: (row, opts) => {
-            upsertedBalance = row.balance_twd;
-            return Promise.resolve({ error: null });
-          },
-        };
-      }
-      if (table === 'audit_logs') {
-        return {
-          insert: async (rows) => {
-            if (Array.isArray(rows)) {
-              auditRows.push(...rows);
-            } else {
-              auditRows.push(rows);
-            }
-            return { error: null };
-          },
-        };
-      }
-    },
-  };
-
-  const result = await recordRefundReversalDb(supabase, { orderId: 'order-abc', actor: 'test' });
-
-  assert.equal(result.reversed, true);
-  assert.equal(result.reversal_id, 'reversal-1');
-  assert.equal(result.before_balance, 5000);
-  // 5000 - 2700 = 2300
-  assert.equal(result.after_balance, 2300);
-  assert.equal(upsertedBalance, 2300);
-  assert.ok(Array.isArray(auditRows) && auditRows.length === 2, 'should write 2 audit entries');
-  assert.equal(auditRows[0].action, 'payout_reversal_created');
-  assert.equal(auditRows[1].action, 'guide_balance_debited_reversal');
-});
-
-test('carry-forward: balance goes negative when debit exceeds current balance', async () => {
-  const { recordRefundReversalDb } = await import('../../src/lib/db.mjs');
-
-  const settlement = {
-    id: 'settle-2',
-    order_id: 'order-xyz',
-    guide_id: 'guide-2',
-    gmv_twd: 10000,
-    commission_twd: 1000,
-    net_twd: 9000,
-    rules_version: 'v1',
-    settlement_kind: 'settlement',
-  };
-
-  const reversal = { id: 'reversal-2', ...settlement, net_twd: -9000, settlement_kind: 'reversal' };
-
-  let upsertedBalance = null;
-
-  const supabase = {
-    from: (table) => {
-      if (table === 'payout_items') {
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                maybeSingle: async () => ({ data: settlement, error: null }),
-              }),
-            }),
-          }),
-          upsert: () => ({
-            select: () => ({ maybeSingle: async () => ({ data: reversal, error: null }) }),
-          }),
-        };
-      }
-      if (table === 'guide_balances') {
-        return {
-          select: () => ({
-            eq: () => ({
-              maybeSingle: async () => ({ data: { balance_twd: 3000 }, error: null }),
-            }),
-          }),
-          upsert: (row) => {
-            upsertedBalance = row.balance_twd;
-            return Promise.resolve({ error: null });
-          },
-        };
-      }
-      if (table === 'audit_logs') {
-        return { insert: async () => ({ error: null }) };
-      }
-    },
-  };
-
-  const result = await recordRefundReversalDb(supabase, { orderId: 'order-xyz', actor: 'test' });
-
-  assert.equal(result.reversed, true);
-  // 3000 - 9000 = -6000 (carry-forward, balance goes negative)
-  assert.equal(result.after_balance, -6000);
-  assert.equal(upsertedBalance, -6000);
-});
-
-test('idempotency: already reversed returns {skipped: "already_reversed"}', async () => {
-  const { recordRefundReversalDb } = await import('../../src/lib/db.mjs');
-
-  const settlement = {
-    id: 'settle-3',
-    order_id: 'order-dup',
-    guide_id: 'guide-3',
-    gmv_twd: 2000,
-    commission_twd: 200,
-    net_twd: 1800,
-    rules_version: 'v1',
-    settlement_kind: 'settlement',
-  };
-
-  const supabase = {
-    from: (table) => {
-      if (table === 'payout_items') {
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                maybeSingle: async () => ({ data: settlement, error: null }),
-              }),
-            }),
-          }),
-          // upsert returns null (ignoreDuplicates: duplicate silently ignored)
-          upsert: () => ({
-            select: () => ({ maybeSingle: async () => ({ data: null, error: null }) }),
-          }),
-        };
-      }
-      return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }), insert: async () => ({}) };
-    },
-  };
-
-  const result = await recordRefundReversalDb(supabase, { orderId: 'order-dup', actor: 'test' });
-  assert.deepEqual(result, { skipped: 'already_reversed' });
-});
+// ⚠️ #1777 F4：這裡原本有四個以 `.from()` chain 模擬 supabase 的行為測試
+// （pre-settlement／post-settlement 建分錄扣餘額／carry-forward 轉負／已紅沖冪等）。
+// 紅沖已不再從應用層讀寫資料表，那些 mock 模擬的是一條不存在的路徑——留著只會
+// 測到 mock 自己。
+//
+// 同樣的四個不變量已改由上方「紅沖的三種 outcome 仍是 #449 的原契約」與
+// 「carry-forward：餘額可扣成負數」以 RPC 契約覆蓋，交易語意與冪等（部分唯一索引
+// ＋ 只有真正插入新分錄才動餘額）由 issue1777-migration-contract 鎖住 SQL，
+// 端到端由 production 實跑驗證。
 
 test('postRefundHook failure does not propagate in executeRefund', async () => {
   const { executeRefund } = await import('../../src/lib/refund-execute.ts');

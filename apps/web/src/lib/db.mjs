@@ -115,6 +115,8 @@ import {
   serialiseOrderMessage,
   validateOrderMessageBody,
 } from './order-messages.mjs';
+// #1777 F4：退款紅沖已收斂為單一 DB 交易，實作在領域檔（strangler 硬規則）。
+import { recordRefundReversalAtomicDb } from './settlement/db-refund-reversal-atomic.mjs';
 
 export async function listExperiencesDb() {
   if (!hasSupabaseEnv()) return listInMemory();
@@ -4552,252 +4554,28 @@ export async function listMyQaDb(input) {
 // #1613 strangler：本區塊已整塊搬至 db-payouts.mjs（re-export 維持既有匯入路徑）
 export { cancelPayoutDb, confirmPayoutDb, createPayoutDb, generateManualPayoutDb, getGuideBalancesAboveThresholdDb, listGuideBalancesWithProfilesDb } from './db-payouts.mjs';
 
-export async function recordRefundReversalDb(supabase, { orderId, actor = 'system' }) {
-  const normalizeError = (err) => {
-    if (!err) return new Error('database error');
-    if (err instanceof Error) return err;
-    return new Error(err.message ?? JSON.stringify(err));
-  };
-
-  const normalizeNumber = (value) => {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : null;
-  };
-
-  const readLog = async (action, reversalId) => {
-    const query = supabase.from('audit_logs');
-    if (!query || typeof query.select !== 'function') {
-      return null;
-    }
-
-    let chain = query.select('id,metadata');
-    if (typeof chain.eq !== 'function') {
-      return null;
-    }
-
-    chain = chain.eq('action', action);
-    if (typeof chain.eq !== 'function') {
-      return null;
-    }
-
-    chain = chain.eq('metadata->>order_id', orderId);
-    if (typeof chain.eq !== 'function') {
-      return null;
-    }
-
-    chain = chain.eq('metadata->>reversal_id', reversalId);
-    if (typeof chain.maybeSingle !== 'function') {
-      return null;
-    }
-
-    const { data, error } = await chain.maybeSingle();
-
-    if (error) throw normalizeError(error);
-    return data || null;
-  };
-
-  // Check if this order was already settled
-  const { data: settlement, error: settlementErr } = await supabase
-    .from('payout_items')
-    .select('*')
-    .eq('order_id', orderId)
-    .eq('settlement_kind', 'settlement')
-    .maybeSingle();
-
-  if (settlementErr) throw normalizeError(settlementErr);
-  if (!settlement) return { skipped: 'pre_settlement' };
-
-  const settledAt = new Date().toISOString();
-
-  // Insert reversal row (idempotent via UNIQUE(order_id, settlement_kind))
-  const reversalRow = {
-    order_id: orderId,
-    guide_id: settlement.guide_id,
-    gmv_twd: -settlement.gmv_twd,
-    commission_twd: -settlement.commission_twd,
-    net_twd: -settlement.net_twd,
-    rules_version: settlement.rules_version,
-    settlement_kind: 'reversal',
-    settled_at: settledAt,
-  };
-
-  const { data: reversal, error: insertErr } = await supabase
-    .from('payout_items')
-    .upsert(reversalRow, { onConflict: 'order_id,settlement_kind', ignoreDuplicates: true })
-    .select()
-    .maybeSingle();
-
-  if (insertErr) throw normalizeError(insertErr);
-
-  const readExistingReversalId = async () => {
-    const { data: existingReversal, error: existingReversalErr } = await supabase
-      .from('payout_items')
-      .select('id')
-      .eq('order_id', orderId)
-      .eq('settlement_kind', 'reversal')
-      .maybeSingle();
-
-    if (existingReversalErr) throw normalizeError(existingReversalErr);
-    return existingReversal?.id ? String(existingReversal.id) : null;
-  };
-
-  const hasAuditSelect = (() => {
-    const auditTable = supabase.from('audit_logs');
-    return !!(auditTable && typeof auditTable.select === 'function');
-  })();
-
-  const createdFresh = !!reversal?.id;
-
-  if (!createdFresh && !hasAuditSelect) {
-    return { skipped: 'already_reversed' };
-  }
-
-  let reversalIdRef = reversal?.id
-    ? String(reversal.id)
-    : await (async () => {
-        try {
-          const existingReversalId = await readExistingReversalId();
-          if (!existingReversalId) {
-            // no visible reversal row; keep old duplicate behavior
-            return null;
-          }
-          return existingReversalId;
-        } catch (err) {
-          if (err instanceof Error && /^Unexpected Supabase call/.test(err.message)) {
-            return null;
-          }
-          throw err;
-        }
-      })();
-
-
-  if (!reversalIdRef) {
-    return { skipped: 'already_reversed' };
-  }
-
-  const hasReversalCreatedLog = await readLog('payout_reversal_created', reversalIdRef);
-  let balanceDebitLog = await readLog('guide_balance_debited_reversal', reversalIdRef);
-  const isBalanceDebitInProgress =
-    !!balanceDebitLog &&
-    typeof balanceDebitLog.metadata === 'object' &&
-    balanceDebitLog.metadata?.status === 'started';
-
-  let beforeBalance = null;
-  let afterBalance = null;
-  let repaired = false;
-
-  if (!hasAuditSelect && !hasReversalCreatedLog) {
-    const { error: auditErr } = await supabase.from('audit_logs').insert({
-      actor,
-      action: 'payout_reversal_created',
-      metadata: {
-        order_id: orderId,
-        guide_id: settlement.guide_id,
-        net_twd: settlement.net_twd,
-        reversal_id: reversalIdRef,
-        settlement_id: settlement.id,
-        settled_at: settledAt,
-      },
-    });
-
-    if (auditErr) throw normalizeError(auditErr);
-  }
-
-  if (!balanceDebitLog || isBalanceDebitInProgress) {
-    const { data: balance, error: balanceReadErr } = await supabase
-      .from('guide_balances')
-      .select('balance_twd')
-      .eq('guide_id', settlement.guide_id)
-      .maybeSingle();
-
-    if (balanceReadErr) throw normalizeError(balanceReadErr);
-
-    const currentBalance = normalizeNumber(balance?.balance_twd) ?? 0;
-    const debit = Math.abs(normalizeNumber(settlement.net_twd) ?? 0);
-    const markerMeta = typeof balanceDebitLog?.metadata === 'object' ? balanceDebitLog.metadata : {};
-    const markerBefore = normalizeNumber(markerMeta.before_balance);
-    const markerAfter = normalizeNumber(markerMeta.after_balance);
-    const markerDebit = normalizeNumber(markerMeta.debit);
-
-    beforeBalance = markerBefore ?? currentBalance;
-    const newBalance = beforeBalance - debit;
-    afterBalance = markerAfter ?? newBalance;
-
-    if (markerDebit !== null && markerDebit !== debit) {
-      afterBalance = currentBalance - debit;
-    }
-
-    if (!balanceDebitLog) {
-      const markerPayload = {
-        actor,
-        action: 'guide_balance_debited_reversal',
-        metadata: {
-          order_id: orderId,
-          guide_id: settlement.guide_id,
-          before_balance: beforeBalance,
-          after_balance: afterBalance,
-          debit,
-          reversal_id: reversalIdRef,
-          settlement_id: settlement.id,
-          status: 'started',
-        },
-      };
-
-      const { error: auditBalanceErr } = await supabase.from('audit_logs').insert(markerPayload);
-      if (auditBalanceErr) throw normalizeError(auditBalanceErr);
-      balanceDebitLog = { metadata: markerPayload.metadata };
-    }
-
-    const shouldApplyDebit = currentBalance !== afterBalance;
-
-    if (shouldApplyDebit) {
-      const guideBalancesTable = supabase.from('guide_balances');
-      if (!guideBalancesTable || typeof guideBalancesTable.upsert !== 'function') {
-        if (!createdFresh) {
-          return { skipped: 'already_reversed' };
-        }
-        throw new Error('guide_balances upsert is not available');
-      }
-
-      const { error: balanceUpsertErr } = await guideBalancesTable.upsert(
-        { guide_id: settlement.guide_id, balance_twd: afterBalance, updated_at: new Date().toISOString() },
-        { onConflict: 'guide_id' }
-      );
-
-      if (balanceUpsertErr) throw normalizeError(balanceUpsertErr);
-    }
-
-    repaired = true;
-  }
-
-  if (hasAuditSelect && !hasReversalCreatedLog) {
-    const { error: auditErr } = await supabase.from('audit_logs').insert({
-      actor,
-      action: 'payout_reversal_created',
-      metadata: {
-        order_id: orderId,
-        guide_id: settlement.guide_id,
-        net_twd: settlement.net_twd,
-        reversal_id: reversalIdRef,
-        settlement_id: settlement.id,
-        settled_at: settledAt,
-      },
-    });
-
-    if (auditErr) throw normalizeError(auditErr);
-  }
-
-  if (repaired) {
-    return {
-      reversed: true,
-      repaired: true,
-      reversal_id: reversalIdRef,
-      before_balance: beforeBalance,
-      after_balance: afterBalance,
-    };
-  }
-
-  return { reversed: true, reversal_id: reversalIdRef, skipped: false };
+/**
+ * 退款紅沖（#449）——已搬到 settlement/db-refund-reversal-atomic.mjs（#1777 F4）。
+ *
+ * 舊實作在這裡有約 250 行：讀 settlement → upsert reversal → 讀回 id → 讀 audit_logs
+ * 猜「上次是不是做到一半」→ 讀 guide_balances、在 JS 算新餘額、**寫回絕對值** →
+ * 補寫 audit。第五步是 #1777 四個缺口裡唯一沒被改掉的應用層 read-modify-write，
+ * 而且仍在 live 退款路徑上：併發會 lost update，且 reversal 寫成功／餘額扣失敗時
+ * 重跑會走 already_reversed 導致餘額永久漏扣。
+ *
+ * 現在整包由 fn_record_refund_reversal_atomic 在單一交易內完成（冪等交給
+ * payout_items 的部分唯一索引，餘額改 SQL 層增減）。本函式只保留匯出路徑，
+ * 讓既有 import 不必改；回傳形狀與舊版逐字相容。
+ *
+ * strangler：新的資料存取一律進領域檔，不再寫回 db.mjs（#1385／#1570）。
+ *
+ * @param {any} supabase service-role Supabase client
+ * @param {{orderId: string, actor?: string}} input
+ * @returns {Promise<{skipped?: string, reversed?: boolean, repaired?: boolean,
+ *   reversal_id?: string, before_balance?: number, after_balance?: number}>}
+ */
+export async function recordRefundReversalDb(supabase, { orderId, actor = 'system' } = /** @type {any} */ ({})) {
+  return recordRefundReversalAtomicDb(supabase, { orderId, actor });
 }
 
 export async function updateGuideProfileByGuideId(guideId, fields) {

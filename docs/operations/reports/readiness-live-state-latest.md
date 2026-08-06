@@ -1,20 +1,19 @@
-<!-- query_timestamp: 2026-08-03T06:03:27.999Z -->
+<!-- query_timestamp: 2026-08-05T05:55:37.532Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-03T06:03:27.999Z  
-**Commit SHA:** `0a483817bde2f537d85abce143edc2b3eaeb07df`
+**Query timestamp:** 2026-08-05T05:55:37.532Z  
+**Commit SHA:** `15f2fa00486a6766a75988d58f767e38966ec3d9`
 
 ---
 
-## Open PRs (12)
+## Open PRs (11)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1789 | [fix(payments): #1777 兩批 P0 — ON CONFLICT 推論不到部分索引、退款累積額被覆寫](https://github.com/smallwei0301/tour-platform/pull/1789) | `claude/1777-p0-on-conflict-fix` |
 | #1776 | [feat(shop): 完成導遊商店匯款 beta 文案與 SOP（#1607）](https://github.com/smallwei0301/tour-platform/pull/1776) _(draft)_ | `fix/issue-1607-guide-shop-beta` |
 | #1763 | [feat: midao2 導遊接案後台（接案 CRM）＋公開接案頁 /g/[slug]](https://github.com/smallwei0301/tour-platform/pull/1763) | `claude/superpowers-midao-backend-x90czx` |
 | #1690 | [docs(security): 建立「已接受安全風險」定案清單](https://github.com/smallwei0301/tour-platform/pull/1690) | `claude/code-workflow-architecture-mmm4ba` |
@@ -113,6 +112,9 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1791 | [test(payments): #1777 端到端全鏈驗證完成 ＋ #1647 重新 preview](https://github.com/smallwei0301/tour-platform/pull/1791) | 2026-08-05 |
+| #1790 | [fix(payments): #1777 收尾 — F3／F4／F6／F8 ＋ AC 6／7 重判](https://github.com/smallwei0301/tour-platform/pull/1790) | 2026-08-04 |
+| #1789 | [fix(payments): #1777 兩批 P0 — ON CONFLICT 推論不到部分索引、退款累積額被覆寫](https://github.com/smallwei0301/tour-platform/pull/1789) | 2026-08-04 |
 | #1788 | [docs: 對齊 #1758 production migration ledger](https://github.com/smallwei0301/tour-platform/pull/1788) | 2026-08-02 |
 | #1787 | [【#1758】Midao 服務草稿、發布與 wizard（S1–S9）](https://github.com/smallwei0301/tour-platform/pull/1787) | 2026-08-02 |
 | #1786 | [[Database] 收斂 Midao migration verified ledger 與回滾證據](https://github.com/smallwei0301/tour-platform/pull/1786) | 2026-07-30 |
@@ -120,9 +122,6 @@
 | #1784 | [fix(seo): JSON-LD 絕對網址改走 SITE_URL，並修正 LINE 查詢的錯誤網域 fallback](https://github.com/smallwei0301/tour-platform/pull/1784) | 2026-07-30 |
 | #1783 | [fix(admin): 申請詳情欄位表手機版遮擋，並把 EMAIL_FROM 納入通知 env 診斷](https://github.com/smallwei0301/tour-platform/pull/1783) | 2026-07-30 |
 | #1782 | [feat(guide-application): 申請通知管理者（email＋Telegram）、後台顯示完整填寫與未填寫欄位、移除招募頁分潤文案](https://github.com/smallwei0301/tour-platform/pull/1782) | 2026-07-30 |
-| #1781 | [feat(guide-apply): 申請流程單頁化、照片全選填、文案改用招募海報、用語統一「嚮導」](https://github.com/smallwei0301/tour-platform/pull/1781) | 2026-07-30 |
-| #1780 | [docs(worklog): #1777 收尾 — PR merged、AC 11/11 sign-off、剩餘兩項](https://github.com/smallwei0301/tour-platform/pull/1780) | 2026-07-29 |
-| #1779 | [feat(accounting): #1777 收尾 — 對帳補資格稽核維度，#1647 preview 實測](https://github.com/smallwei0301/tour-platform/pull/1779) | 2026-07-29 |
 
 ---
 

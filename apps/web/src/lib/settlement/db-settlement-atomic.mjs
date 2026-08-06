@@ -27,21 +27,6 @@ function isMissingFunctionError(error) {
     && /fn_record_settlement_atomic|fn_confirm_payout_atomic|fn_apply_refund_adjustment_atomic/i.test(message);
 }
 
-/**
- * 退款事件的確定性冪等鍵。
- *
- * 用「訂單 + 本次退款後的累積退款總額」而非隨機 id：同一次退款重送會得到相同
- * 的鍵（因此不重複記帳），而第二次部分退款因累積額不同而得到新鍵（因此各自
- * 留下一筆差額分錄）。這正是 #1777 要的冪等語意，且不需要外部事件 id。
- *
- * @param {string} orderId
- * @param {number} cumulativeRefundTwd 本次退款完成後的累積退款總額
- * @returns {string}
- */
-export function buildRefundEventId(orderId, cumulativeRefundTwd) {
-  return `${orderId}:cum:${Number(cumulativeRefundTwd) || 0}`;
-}
-
 function toError(error, fallbackMessage) {
   if (isMissingFunctionError(error)) {
     const err = new Error(
@@ -146,28 +131,41 @@ export async function confirmPayoutAtomicDb(supabase, payoutId, confirmedBy = 'a
 }
 
 /**
- * 把訂單的 ledger 淨額調整到「未退款有效金額 × 導遊分潤率」，只追加本次差額。
+ * 記入本次退款額，並把訂單的 ledger 淨額調整到「未退款有效金額 × 導遊分潤率」。
  *
  * 決策 B（owner 2026-07-29）：`max(0, 總額 − 累積退款) × active rate`；
  * 每次退款只記差額，不重複全額紅沖。
  *
- * 冪等：以 refundEventId 為鍵，同一退款事件重送回 `applied: false`。
- * 尚未結算的訂單（無任何 ledger 分錄）不介入——結算前的退款由 sweep 的
- * effective-gmv 直接處理，避免對從未入帳的訂單記出負餘額。
+ * 呼叫端只傳「本次退了多少」（`refundDeltaTwd`）。累積退款額的累加、冪等鍵的
+ * 推導、差額計算與餘額同步全部在 RPC 的單一交易內完成——這是 #1777 兩個 P0
+ * 的修法：
+ *   - F1：`operations_tracking.refund_amount_twd` 原本在應用層被**覆寫**，
+ *     兩次部分退款只留最後一次的金額 → 導遊被多撥。
+ *   - F2：冪等鍵原本由應用層以「本次金額」組成，兩次等額部分退款撞同一把鍵 →
+ *     第二次差額被吃掉。改由 DB 端以交易內累積額推導後，呼叫端無從傳錯。
+ *
+ * 冪等：`refundDeltaTwd = 0` 表示「只對帳、不累加」，鍵等於當前累積額，可安全
+ * 重跑做修復。尚未結算的訂單（無任何 ledger 分錄）回 `settled: false` 且不介入
+ * ledger——但累積退款額仍已記好，供 sweep 的 effective-gmv 使用。
  *
  * @param {any} supabase service-role Supabase client
- * @param {{orderId: string, refundEventId: string, actor?: string}} input
- * @returns {Promise<{order_id: string, guide_id: string|null, target_net_twd: number,
- *   previous_net_twd: number, delta_twd: number, applied: boolean,
- *   carry_forward_twd: number, balance_after: number}>}
+ * @param {{orderId: string, refundDeltaTwd?: number, actor?: string}} input
+ * @returns {Promise<{order_id: string, guide_id: string|null, refund_event_id: string,
+ *   cumulative_refund_twd: number, target_net_twd: number, previous_net_twd: number,
+ *   delta_twd: number, applied: boolean, settled: boolean,
+ *   carry_forward_twd: number, balance_after: number, over_refund: boolean}>}
  */
-export async function applyRefundAdjustmentAtomicDb(supabase, { orderId, refundEventId, actor = 'refund-execute' } = {}) {
+export async function applyRefundAdjustmentAtomicDb(supabase, { orderId, refundDeltaTwd = 0, actor = 'refund-execute' } = {}) {
   if (!orderId) throw new Error('orderId is required');
-  if (!refundEventId) throw new Error('refundEventId is required');
+
+  const delta = Number(refundDeltaTwd);
+  if (!Number.isInteger(delta) || delta < 0) {
+    throw new Error('refundDeltaTwd must be a non-negative integer（累積額必須單調遞增）');
+  }
 
   const { data, error } = await supabase.rpc('fn_apply_refund_adjustment_atomic', {
     p_order_id: orderId,
-    p_refund_event_id: refundEventId,
+    p_refund_delta_twd: delta,
     p_actor: actor,
   });
 
@@ -178,11 +176,14 @@ export async function applyRefundAdjustmentAtomicDb(supabase, { orderId, refundE
 
   return {
     ...row,
+    cumulative_refund_twd: Number(row.cumulative_refund_twd ?? 0),
     target_net_twd: Number(row.target_net_twd ?? 0),
     previous_net_twd: Number(row.previous_net_twd ?? 0),
     delta_twd: Number(row.delta_twd ?? 0),
     carry_forward_twd: Number(row.carry_forward_twd ?? 0),
     balance_after: Number(row.balance_after ?? 0),
     applied: row.applied === true,
+    settled: row.settled === true,
+    over_refund: row.over_refund === true,
   };
 }

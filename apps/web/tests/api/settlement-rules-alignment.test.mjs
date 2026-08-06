@@ -66,7 +66,9 @@ describe('settlement rules alignment', () => {
       );
       assert.match(
         settlementConfigSrc,
-        /effectiveTwd \* config\.commission_rate/,
+        // #1777 F8：乘法下移到 settlement/money.mjs 的整數基點實作；
+        // 不變量不變——commission 仍由 effectiveTwd × DB-backed commission_rate 得出。
+        /computeCommissionTwd\(effectiveTwd, config\.commission_rate\)/,
         'canonical helper must calculate commission from effectiveTwd using DB-backed commission_rate'
       );
       assert.doesNotMatch(route, /totalTwd \* settlementConfig\.commission_rate/, `${path} must not calculate commission from gross totalTwd`);
@@ -88,8 +90,9 @@ describe('settlement rules alignment', () => {
     );
     assert.match(
       settlementConfigSrc,
-      /commissionTwd\s*=[\s\S]{1,60}Math\.floor\(effectiveTwd \* config\.commission_rate\)/,
+      /commissionTwd\s*=[\s\S]{1,120}computeCommissionTwd\(effectiveTwd, config\.commission_rate\)/,
       'canonical helper must floor commission using settlementConfig.commission_rate'
+      + '（#1777 F8：floor 改由 settlement/money.mjs 的整數基點實作完成，不變量不變）'
     );
   });
 });
