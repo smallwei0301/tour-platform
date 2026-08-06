@@ -38,8 +38,15 @@
 - 預期仍 RED（HOLD，正確結果）：`node scripts/check-migration-ledger.mjs --mode verified` exit 1，missing 恰為 2 支且已更新為新檔名 `20260806090000_midao_inquiries.sql`、`20260806091000_midao_booking_intake_pricing_and_confirmation.sql`；`node --test apps/web/tests/api/issue1293-migration-ledger-gate.test.mjs` 仍紅。此為 production-apply 需求，非程式缺陷。
 - 未動 `docs/operations/migration-ledger.json`、未改 gate 腳本、未連線 production、未在 primary checkout 施工。
 
+## Task 32 migration production apply（2026-08-06，owner 授權 SQL-OVERRIDE，Kanban t_1eb6ccd2 規劃）
+- **閘門一（備份+唯讀 preflight）**：REST API + 直連資料庫 catalog 雙重確認 4 張新表（guide_inquiries/booking_intake_responses/booking_pricing_snapshots/booking_confirmation_tokens）皆不存在、bookings 三欄不存在、FK 約束不存在。備份：Supabase 專案標準每日備份+PITR。
+- **閘門二（原子套用+立即驗證）**：owner 提供正確 direct pooler session mode 連線資訊（`aws-1-ap-northeast-1.pooler.supabase.com:5432`）。以 `psql -f`、`lock_timeout=5s`/`statement_timeout=60s` 依序套用 `20260806090000_midao_inquiries.sql` → `20260806091000_midao_booking_intake_pricing_and_confirmation.sql`，兩者皆無錯誤。套用後立即驗證：4 張表 `to_regclass` 存在、`bookings` 三欄存在且 nullable/default 符合設計、FK 約束存在、4 張表皆 RLS+FORCE RLS、`guide_inquiries` 具 1 條 policy（其餘三表無 policy＝預設全拒，符合設計）、4 個具名索引存在。`NOTIFY pgrst, 'reload schema'` 送出後，REST API 對 `guide_inquiries` 與 `bookings.source_inquiry_id` 皆回 200，交叉確認 schema 已生效。
+- **閘門三（ledger 更新）**：`docs/operations/migration-ledger.json` 追加兩筆 `verified` record（六個 key 精確符合 gate 要求），`applied_at` 為實際套用完成時間。`node scripts/check-migration-ledger.mjs --mode verified` 轉為 exit 0；`node --test apps/web/tests/api/issue1293-migration-ledger-gate.test.mjs` 14/14 全綠（原本唯一失敗的 case 現已通過）。
+- 未做：production 功能性 API smoke（inquiries 建立/查詢流程）、Task 36–43 應用層邏輯；那些不在本次 migration apply 範圍內。
+
 ## 下一步／未完成
-- [ ] Fresh Rita review of the final head.
+- [ ] Fresh Rita review of this ledger-update commit（僅 ledger 一檔）。
+- [ ] 重新確認 hosted PR #1792 CI 的 `test` job 是否轉綠（原本唯一失敗點已在本機修復並驗證）。
 - [ ] Hosted typecheck/Vercel/browser/probe/scan/migration checks after the final head.
 - [ ] Remaining Issue #1759 Task 36–43 implementation and acceptance.
 - [ ] Parent Issue remains OPEN and PR must remain `Refs #1759`, not `Closes #1759`.
