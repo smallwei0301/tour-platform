@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-08-06T05:58:27.945Z -->
+<!-- query_timestamp: 2026-08-07T05:31:21.004Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-06T05:58:27.945Z  
-**Commit SHA:** `da8c78df05b553d202c0d26fc2a3d9a585a410fe`
+**Query timestamp:** 2026-08-07T05:31:21.004Z  
+**Commit SHA:** `9586ede77ddca3ef9fd762e45e18ce77bfcabb45`
 
 ---
 
@@ -26,7 +26,7 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (53 total)
+## Open Issues (55 total)
 
 ### P0 (1)
 
@@ -94,10 +94,12 @@
 |---|-------|--------|
 | #1647 | [[Payments] Decide and verify post-#1637 historical paid-order / payout reconciliation](https://github.com/smallwei0301/tour-platform/issues/1647) | triaged, priority:P1, owner:human-decision, status:needs-decision, type:decision, payments, orders |
 
-### Other (7)
+### Other (9)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1796 | [fn_expire_unpaid_order_atomic 有 42702 ambiguous column 缺陷（OUT 參數 booking_id 遮蔽表欄位）](https://github.com/smallwei0301/tour-platform/issues/1796) | bug |
+| #1795 | [旅客自助下單（POST /api/v2/bookings/draft）非原子交易，存在超賣競態風險](https://github.com/smallwei0301/tour-platform/issues/1795) | bug |
 | #1662 | [[Cleanup][P3] legacy 訂單/金流 endpoint 退役清單 — 系統穩定後執行（#1649 follow-up）](https://github.com/smallwei0301/tour-platform/issues/1662) | owner:mixed, status:blocked, priority:P3, payments, booking-v2, type:chore |
 | #1609 | [導遊開店第 4–6 週：導遊訂閱方案（plan tier）SaaS 化 — placeholder，待 owner 拍板定價](https://github.com/smallwei0301/tour-platform/issues/1609) | — |
 | #1608 | [導遊開店第 2–3 週：導遊後台「開店進度」新頁＋「本月商店表現」](https://github.com/smallwei0301/tour-platform/issues/1608) | — |
@@ -112,6 +114,9 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1797 | [#1759 Package4／Task38: atomic inquiry conversion RPC (conversion/accept/expire)](https://github.com/smallwei0301/tour-platform/pull/1797) | 2026-08-07 |
+| #1794 | [#1759 Package 4／Task 37：inquiry conversion 純函式輸入驗證](https://github.com/smallwei0301/tour-platform/pull/1794) | 2026-08-06 |
+| #1793 | [#1759 Package 4／Task 36：LINE reply template 純函式與導遊端唯讀路由](https://github.com/smallwei0301/tour-platform/pull/1793) | 2026-08-06 |
 | #1792 | [Task 35：修正 public inquiry questionnaire snapshot contract](https://github.com/smallwei0301/tour-platform/pull/1792) | 2026-08-06 |
 | #1791 | [test(payments): #1777 端到端全鏈驗證完成 ＋ #1647 重新 preview](https://github.com/smallwei0301/tour-platform/pull/1791) | 2026-08-05 |
 | #1790 | [fix(payments): #1777 收尾 — F3／F4／F6／F8 ＋ AC 6／7 重判](https://github.com/smallwei0301/tour-platform/pull/1790) | 2026-08-04 |
@@ -119,9 +124,6 @@
 | #1788 | [docs: 對齊 #1758 production migration ledger](https://github.com/smallwei0301/tour-platform/pull/1788) | 2026-08-02 |
 | #1787 | [【#1758】Midao 服務草稿、發布與 wizard（S1–S9）](https://github.com/smallwei0301/tour-platform/pull/1787) | 2026-08-02 |
 | #1786 | [[Database] 收斂 Midao migration verified ledger 與回滾證據](https://github.com/smallwei0301/tour-platform/pull/1786) | 2026-07-30 |
-| #1785 | [fix(domain): 自訂網域切換前的網址盤點 — BRAND_BOOK 改 midao.com.tw、修死連結 fallback](https://github.com/smallwei0301/tour-platform/pull/1785) | 2026-07-30 |
-| #1784 | [fix(seo): JSON-LD 絕對網址改走 SITE_URL，並修正 LINE 查詢的錯誤網域 fallback](https://github.com/smallwei0301/tour-platform/pull/1784) | 2026-07-30 |
-| #1783 | [fix(admin): 申請詳情欄位表手機版遮擋，並把 EMAIL_FROM 納入通知 env 診斷](https://github.com/smallwei0301/tour-platform/pull/1783) | 2026-07-30 |
 
 ---
 
