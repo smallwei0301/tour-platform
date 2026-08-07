@@ -198,6 +198,15 @@ BEGIN
   -- 層 3：capacity mutex（唯一 local_date 計算式）
   v_local_date := (p_start_at AT TIME ZONE 'Asia/Taipei')::date;
 
+  -- 層 2d：plan 存在性前置檢查（Canary round2 缺陷 1）
+  -- 必須早於層 3 mutex INSERT——mutex.activity_plan_id 對 activity_plans 有 FK（本檔行 32），
+  -- 不存在的 p_activity_plan_id 會讓 FK 先爆 23503，使行 248-251 的 P0002 永遠不可達。
+  -- 只做存在性確認，刻意不加 FOR UPDATE，避免把 activity_plans 拉進本交易的鎖圖。
+  PERFORM 1 FROM public.activity_plans WHERE id = p_activity_plan_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION USING ERRCODE = 'P0002', MESSAGE = 'PLAN_NOT_FOUND';
+  END IF;
+
   INSERT INTO public.midao_booking_capacity_locks (guide_id, activity_plan_id, local_date)
   VALUES (p_guide_id, p_activity_plan_id, v_local_date)
   ON CONFLICT (guide_id, activity_plan_id, local_date) DO NOTHING;

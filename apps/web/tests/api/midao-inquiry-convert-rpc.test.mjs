@@ -575,6 +575,9 @@ describeOrSkip('midao atomic inquiry conversion RPC', () => {
   // ---------------------------------------------------------------- Canary J
   test('J: 20 rounds of mixed atomic commands produce no deadlock_detected (40P01)', async () => {
     const rounds = 20;
+    const d = await newClient();
+    const e = await newClient();
+    const f = await newClient();
     for (let round = 0; round < rounds; round += 1) {
       await resetSeed(8);
       const created = (await admin.query(CONVERT_SQL, convertArgs({
@@ -582,11 +585,31 @@ describeOrSkip('midao atomic inquiry conversion RPC', () => {
         token: `J${round}`, reqHash: `J${round}`, ttlHours: 1,
       }))).rows[0].result;
 
+      const rescheduleRequestId = (await admin.query(
+        `INSERT INTO public.reschedule_requests
+           (order_id, request_id, from_schedule_id, to_schedule_id, status, prior_order_status)
+         VALUES ($1, $2, NULL, gen_random_uuid(), 'requested', 'pending_payment')
+         RETURNING id`,
+        [created.order_id, `task38-J-${round}-${randomUUID()}`],
+      )).rows[0].id;
+
       const acceptSql = 'SELECT public.midao_accept_traveler_confirmation($1::uuid,$2::text,$3::text,$4::text) AS result';
       const settled = await Promise.allSettled([
         a.query(acceptSql, [TRAVELER_A, tokenHash(`J${round}`), `task38-JA-${round}-${randomUUID()}`, requestHash(`JA${round}`)]),
         b.query('SELECT * FROM public.fn_expire_unpaid_order_atomic($1::uuid, now() + interval \'48 hours\')', [created.order_id]),
         control.query('SELECT public.midao_expire_stale_confirmation_atomic($1::uuid, now() + interval \'48 hours\') AS result', [created.booking_id]),
+        // ↓ Canary round2 缺陷 2：補上 conversion / payment-callback / reschedule 三個爭用者
+        d.query(CONVERT_SQL, convertArgs({
+          inquiryId: INQ(2), participants: 1,
+          idempotencyKey: `task38-Jconv-${round}-${randomUUID()}`,
+          token: `Jconv${round}`, reqHash: `Jconv${round}`, ttlHours: 1,
+        })),
+        e.query(
+          `SELECT * FROM public.fn_process_payment_callback_atomic(
+             $1::uuid, $2::text, $3::text, $4::jsonb, $5::text, $6::text)`,
+          [created.order_id, `TASK38J${round}`, 'task38@example.test', '{"source":"task38-j"}', null, 'ecpay'],
+        ),
+        f.query('SELECT public.fn_reschedule_booking_atomic($1::uuid, $2::text)', [rescheduleRequestId, 'guide']),
       ]);
 
       for (const result of settled) {
@@ -595,6 +618,15 @@ describeOrSkip('midao atomic inquiry conversion RPC', () => {
           assert.notEqual(result.reason.code, '55P03', `lock timeout in round ${round}: ${result.reason.message}`);
           assert.notEqual(result.reason.code, '57014', `statement timeout in round ${round}: ${result.reason.message}`);
         }
+      }
+
+      const rescheduleOutcome = settled[5];
+      if (rescheduleOutcome.status === 'rejected') {
+        assert.match(
+          String(rescheduleOutcome.reason.message),
+          /order_not_in_reschedule|request_not_pending|order_not_found/,
+          `reschedule must fail only after acquiring the orders row lock; got ${rescheduleOutcome.reason.message}`,
+        );
       }
     }
   });
@@ -861,6 +893,37 @@ describeOrSkip('midao atomic inquiry conversion RPC', () => {
     assert.equal(authRow[0].count, 1, 'the negative fixture must actually exist in auth.users');
     assert.equal((await bookingsForInquiry(INQ_ORPHAN)).length, 0);
     assert.equal(await countRows("SELECT count(*) FROM public.midao_idempotency_records WHERE scope_type='inquiry' AND scope_id=$1", [INQ_ORPHAN]), 0);
+  });
+
+  // ------------------------------------------------------------------- T-K5
+  test('T-K5: a nonexistent activity plan raises P0002 PLAN_NOT_FOUND, never 23503 foreign_key_violation', async () => {
+    const missingPlanId = randomUUID();
+    const mutexBefore = await countRows('SELECT count(*) FROM public.midao_booking_capacity_locks');
+
+    await assert.rejects(
+      () => admin.query(CONVERT_SQL, convertArgs({
+        inquiryId: INQ(1),
+        planId: missingPlanId,
+        idempotencyKey: `task38-TK5-${randomUUID()}`,
+        token: 'TK5',
+        reqHash: 'TK5',
+      })),
+      (error) => {
+        assert.equal(error.code, 'P0002');
+        assert.notEqual(error.code, '23503');
+        assert.match(String(error.message), /PLAN_NOT_FOUND/);
+        return true;
+      },
+    );
+
+    // 整段呼叫必須在交易內失敗並回滾：不得留下 mutex 列、不得留下 idempotency 列、不得建立 booking。
+    assert.equal(
+      await countRows('SELECT count(*) FROM public.midao_booking_capacity_locks WHERE activity_plan_id = $1', [missingPlanId]),
+      0,
+    );
+    assert.equal(await countRows('SELECT count(*) FROM public.midao_booking_capacity_locks'), mutexBefore);
+    assert.equal(await countRows("SELECT count(*) FROM public.midao_idempotency_records WHERE scope_type='inquiry' AND scope_id=$1", [INQ(1)]), 0);
+    assert.equal((await bookingsForInquiry(INQ(1))).length, 0);
   });
 
   // ------------------------------------------------------------------- D-checks
