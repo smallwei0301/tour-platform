@@ -299,6 +299,14 @@
       "applied_at": "2026-08-06T10:16:05+08:00",
       "status": "verified",
       "note": "Issue #1759 Task 32 booking intake/pricing/confirmation schema（原檔名 20260729191000_midao_booking_intake_pricing_and_confirmation.sql，因撞號一併改名；並將 ADD CONSTRAINT midao_guide_inquiries_converted_booking_fk 改為 DO/IF NOT EXISTS pg_constraint 冪等寫法，經 Rita 逐行核對邏輯正確、REFERENCES/ON DELETE 行為未變）。依存於本卡上一筆 20260806090000_midao_inquiries.sql，執行順序 1→2。經 Lane A 唯讀規劃（t_1eb6ccd2）與 Fiora source-side preflight（t_266b8b10, commit 46f375db）、Rita 全新獨立審查（t_03240089, PASS）後，由同一 direct pooler session（5s lock_timeout/60s statement_timeout）緊接套用。backup: 同上，Supabase 專案標準每日備份+PITR。套用前 preflight 與套用後驗證：bookings 三欄（source_inquiry_id/traveler_confirmation_status/traveler_confirmation_expires_at）存在且 nullable/default 符合設計（traveler_confirmation_status NOT NULL DEFAULT 'not_required'）、booking_intake_responses/booking_pricing_snapshots/booking_confirmation_tokens 三表皆 RLS+FORCE RLS 且僅 service_role 有權限、無 policy（預設全拒，符合設計）、FK 約束 midao_guide_inquiries_converted_booking_fk 存在、索引 midao_bookings_source_inquiry_idx 存在。REST API bookings 欄位查詢 200 可讀交叉確認。PostgREST schema reload 已送出。rollback: 同名 20260806091000_midao_booking_intake_pricing_and_confirmation.rollback.sql（同時回退時須先 091000 後 090000）。Refs #1759, PR #1792。"
+    },
+    {
+      "filename": "20260806120000_midao_atomic_inquiry_conversion.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301 授權 SQL-OVERRIDE) + Ava/controller 執行與驗證",
+      "applied_at": "2026-08-07T17:20:00+08:00",
+      "status": "verified",
+      "note": "Issue #1759 Task 38 atomic inquiry conversion RPC（PR #1797，commit f580d2007e8d044d93c73c9228823db4a743fb59）。三支 RPC＋midao_booking_capacity_locks mutex 表。第一輪 Canary 諮詢給出5項硬阻塞設計問題，Pandora逐項定案（t_75ef9b4a/t_441b0c65）；PLAN_DRIFT（t_7fc893de）修正案例H矛盾，M1/M2未動。Rita第一次審查（t_d8ec57d1）PASS。第二輪Canary（production-migration-apply-gate-v2）NO_GO，發現2缺陷：(1)plan存在性檢查順序錯誤致23503而非P0002；(2)案例J併發矩陣漏測2/5函式。窄範圍修復（t_8875505e→t_cc773218→Rita t_9e8a7db1 PASS，獨立第三容器重跑）修復兩缺陷。第三輪Canary（production-migration-apply-gate-v3）GO，逐項確認已解決。owner(smallwei0301) SQL-OVERRIDE授權套用。經direct pooler（aws-1-ap-northeast-1.pooler.supabase.com:5432）以5s lock_timeout/60s statement_timeout套用，全部成功。backup: Supabase專案標準每日備份+PITR（Management API token對此project回401，依循Task32既有慣例）。套用前preflight：mutex表與三支函式皆不存在。套用後直連catalog驗證：mutex表relrowsecurity=t/relforcerowsecurity=t；三支函式prosecdef=t、proconfig=search_path=pg_catalog；anon/authenticated零EXECUTE權限，service_role有權限。REST交叉確認：NEXT_PUBLIC_SUPABASE_ANON_KEY已失效（既有憑證過期，非本次引入，與#1121一致），改用service_role執行非破壞性smoke test（傳不存在id得22023驗證錯誤，套用後capacity_locks/idempotency_records/bookings三表0殘留）。套用後健康檢查：pg_locks零blocked、無長交易，既有三支相關函式簽章/prosecdef未受影響。rollback: 同名.rollback.sql（只revoke/drop三支函式，保留mutex表，不刪業務資料）。此migration上線時無應用程式呼叫端（builder RPC-only，前端串接為後續Task），dormant-but-verified視窗經第三輪Canary評估可接受（anon/authenticated零grant）。Refs #1759 #1795 #1796 PR#1797。"
     }
   ]
 }
