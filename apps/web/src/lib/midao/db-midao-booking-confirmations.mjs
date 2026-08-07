@@ -415,6 +415,8 @@ function convertInMemory(command) {
     totalTwd: command.quotedTotalTwd,
     status: 'pending_payment',
     paymentStatus: 'pending',
+    // Task 40：accept 需回傳付款期限；對齊 migration 的 v_now + INTERVAL '24 hours'。
+    paymentDeadlineAt: new Date(Date.parse(createdAt) + (24 * 60 * 60 * 1000)).toISOString(),
     createdAt,
   });
   bookingStore.set(bookingId, {
@@ -425,6 +427,8 @@ function convertInMemory(command) {
     activityId: inquiry.activityId,
     activityPlanId: plan.id,
     sourceInquiryId: inquiry.id,
+    // Task 40：accept 需驗歸屬（bookings.traveler_id ⇄ getTravelerIdentity().id 同 id space）。
+    travelerId: inquiry.travelerUserId,
     participants: command.participants,
     localDate,
     startAt: command.startAt,
@@ -658,4 +662,28 @@ export const __internal = {
   violationToRouteError,
   taipeiLocalDate,
   inspectStoresForTest,
+};
+
+/**
+ * Task 40 accept 模組專用的執行期接縫（additive，不改動任何既有匯出）。
+ *
+ * in-memory store（bookingStore／orderStore／confirmationTokenStore／
+ * idempotencyStore／planFixtureStore）是模組私有 Map、未匯出；accept 分支若自建
+ * store，「轉換後接受」的串接測試會失真。但把 accept 實作直接寫進本檔會讓本檔
+ * 達 933 行，超過 architecture-ratchet-guard 的 800 行一般上限（該 guard 是本卡
+ * GREEN_CONDITION 的必跑項），故改為單向匯出執行期把手，由
+ * db-midao-traveler-confirmation.mjs 匯入。本檔不反向 import 該模組，無 ESM 循環。
+ */
+export const __confirmationRuntime = {
+  ACTIVE_BOOKING_STATUSES,
+  UUID_PATTERN,
+  HASH_PATTERN,
+  bookingStore,
+  orderStore,
+  confirmationTokenStore,
+  idempotencyStore,
+  planFixtureStore,
+  clone,
+  nowIso,
+  normalizeTimestamp,
 };
