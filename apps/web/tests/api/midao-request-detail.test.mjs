@@ -134,7 +134,9 @@ function createSupabaseFake({ detailRow = bookingRow(), detailError = null, runt
           };
         },
         async maybeSingle() {
-          assert.equal(table, 'bookings');
+          // Task 42：inquiry 分支現在會查 guide_inquiries／activity_plans。
+          // 這裡只放行「查得到就回 null」，booking fallback 的斷言仍由下方 calls 檢查守住。
+          if (table !== 'bookings') return { data: null, error: null };
           if (detailError) return { data: null, error: { message: detailError } };
           return { data: state.rows[0] ?? null, error: null };
         },
