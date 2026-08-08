@@ -1,6 +1,6 @@
 'use client';
 
-import type { RequestDetail } from './RequestDetailScreen';
+import type { BookingRequestDetail, InquiryRequestDetail, RequestDetail } from './RequestDetailScreen';
 
 const BUCKET_LABELS: Readonly<Record<string, string>> = {
   new: '待確認',
@@ -10,6 +10,51 @@ const BUCKET_LABELS: Readonly<Record<string, string>> = {
 };
 
 export function RequestSummaryCard({ detail }: { detail: RequestDetail }) {
+  return detail.kind === 'inquiry'
+    ? <InquirySummaryCard detail={detail} />
+    : <BookingSummaryCard detail={detail} />;
+}
+
+function InquirySummaryCard({ detail }: { detail: InquiryRequestDetail }) {
+  const bucketLabel = BUCKET_LABELS[detail.bucket] || '需求';
+  const serviceTitle = detail.service.title || '未命名服務';
+
+  return (
+    <section className="midao-request-detail-card" aria-labelledby="midao-request-summary-title">
+      <div className="midao-request-detail-card__header">
+        <div>
+          <p className="midao-home-eyebrow">LINE 詢問單</p>
+          <h3 id="midao-request-summary-title" className="midao-heading">{serviceTitle}</h3>
+        </div>
+        <span className="midao-request-card__status">{bucketLabel}</span>
+      </div>
+
+      <dl className="midao-request-detail-grid">
+        <DetailField label="詢問單編號" value={detail.inquiryNo} />
+        <DetailField label="希望日期" value={detail.request.preferredDate || '日期待確認'} />
+        <DetailField label="備選日期" value={detail.request.backupDate || '未提供'} />
+        <DetailField label="希望出發時間" value={detail.request.startTimeLocal || '時間待確認'} />
+        <DetailField label="人數" value={detail.request.partySize ? `${detail.request.partySize} 位` : '人數待確認'} />
+        <DetailField label="方案" value={detail.service.planName || '尚未指定方案'} />
+        <DetailField label="語言" value={detail.request.language || '未提供'} />
+        <DetailField label="接送需求" value={pickupLabel(detail.request.pickupRequired)} />
+        <DetailField label="收到時間" value={formatDateTime(detail.receivedAt)} />
+      </dl>
+
+      <div className="midao-request-detail-note">
+        <span className="midao-request-detail-note__label">旅人備註</span>
+        <p>{detail.request.travelerNote || '旅人沒有留下備註'}</p>
+      </div>
+    </section>
+  );
+}
+
+function pickupLabel(value: boolean | null): string {
+  if (value === null) return '未提供';
+  return value ? '需要接送' : '不需要接送';
+}
+
+function BookingSummaryCard({ detail }: { detail: BookingRequestDetail }) {
   const bucketLabel = BUCKET_LABELS[detail.bucket] || '需求';
   const serviceTitle = detail.service.title || '未命名服務';
 

@@ -4,10 +4,12 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { InlineError } from '../ui/InlineError';
 import { LoadingSkeleton } from '../ui/LoadingSkeleton';
+import { InquiryConversionSheet, type InquiryPlanSummary } from './InquiryConversionSheet';
 import { RequestProgressActions } from './RequestProgressActions';
 import { RequestSummaryCard } from './RequestSummaryCard';
+import { TravelerContactActions } from './TravelerContactActions';
 
-export interface RequestDetail {
+export interface BookingRequestDetail {
   kind: 'booking';
   requestRef: string;
   bookingId: string;
@@ -58,6 +60,51 @@ export interface RequestDetail {
   };
 }
 
+export interface InquiryRequestDetail {
+  kind: 'inquiry';
+  requestRef: string;
+  inquiryId: string;
+  inquiryNo: string;
+  inquiryStatus: string;
+  bucket: string;
+  secondaryState: string | null;
+  needsReply: boolean;
+  traveler: {
+    displayName: null;
+    emailMasked: null;
+  };
+  service: {
+    activityId: string;
+    activityPlanId: string | null;
+    title: string | null;
+    planName: string | null;
+    bookingType: 'request' | null;
+  };
+  request: {
+    preferredDate: string | null;
+    backupDate: string | null;
+    startTimeLocal: string | null;
+    partySize: number | null;
+    language: string | null;
+    pickupRequired: boolean | null;
+    travelerNote: string | null;
+  };
+  plan: InquiryPlanSummary | null;
+  convertedBookingId: string | null;
+  lastRepliedAt: string | null;
+  expiresAt: string | null;
+  receivedAt: string;
+  updatedAt: string;
+  allowedActions: {
+    approve: boolean;
+    reject: boolean;
+    markReplied: boolean;
+    convertInquiry: boolean;
+  };
+}
+
+export type RequestDetail = BookingRequestDetail | InquiryRequestDetail;
+
 type DetailState =
   | { kind: 'loading' }
   | { kind: 'error' }
@@ -71,7 +118,7 @@ function isStringOrNull(value: unknown): value is string | null {
   return value === null || typeof value === 'string';
 }
 
-function isDetailData(value: unknown): value is RequestDetail {
+function isBookingDetailData(value: unknown): value is BookingRequestDetail {
   if (!isRecord(value)
     || value.kind !== 'booking'
     || typeof value.requestRef !== 'string'
@@ -120,6 +167,66 @@ function isDetailData(value: unknown): value is RequestDetail {
     return false;
   }
   return true;
+}
+
+function isPlanSummary(value: unknown): value is InquiryPlanSummary | null {
+  if (value === null) return true;
+  return isRecord(value)
+    && typeof value.activityPlanId === 'string'
+    && isStringOrNull(value.name)
+    && typeof value.bookingType === 'string'
+    && typeof value.status === 'string'
+    && Number.isInteger(value.minParticipants)
+    && Number.isInteger(value.maxParticipants)
+    && typeof value.basePrice === 'number';
+}
+
+function isInquiryDetailData(value: unknown): value is InquiryRequestDetail {
+  if (!isRecord(value)
+    || value.kind !== 'inquiry'
+    || typeof value.requestRef !== 'string'
+    || typeof value.inquiryId !== 'string'
+    || typeof value.inquiryNo !== 'string'
+    || typeof value.inquiryStatus !== 'string'
+    || typeof value.bucket !== 'string'
+    || !isStringOrNull(value.secondaryState)
+    || typeof value.needsReply !== 'boolean'
+    || !isRecord(value.traveler)
+    || value.traveler.displayName !== null
+    || value.traveler.emailMasked !== null
+    || !isRecord(value.service)
+    || typeof value.service.activityId !== 'string'
+    || !isStringOrNull(value.service.activityPlanId)
+    || !isStringOrNull(value.service.title)
+    || !isStringOrNull(value.service.planName)
+    || (value.service.bookingType !== 'request' && value.service.bookingType !== null)
+    || !isRecord(value.request)
+    || !isStringOrNull(value.request.preferredDate)
+    || !isStringOrNull(value.request.backupDate)
+    || !isStringOrNull(value.request.startTimeLocal)
+    || (value.request.partySize !== null
+      && (!Number.isInteger(value.request.partySize) || (value.request.partySize as number) < 1))
+    || !isStringOrNull(value.request.language)
+    || (value.request.pickupRequired !== null && typeof value.request.pickupRequired !== 'boolean')
+    || !isStringOrNull(value.request.travelerNote)
+    || !isPlanSummary(value.plan)
+    || !isStringOrNull(value.convertedBookingId)
+    || !isStringOrNull(value.lastRepliedAt)
+    || !isStringOrNull(value.expiresAt)
+    || typeof value.receivedAt !== 'string'
+    || typeof value.updatedAt !== 'string'
+    || !isRecord(value.allowedActions)
+    || typeof value.allowedActions.approve !== 'boolean'
+    || typeof value.allowedActions.reject !== 'boolean'
+    || typeof value.allowedActions.markReplied !== 'boolean'
+    || typeof value.allowedActions.convertInquiry !== 'boolean') {
+    return false;
+  }
+  return true;
+}
+
+function isDetailData(value: unknown): value is RequestDetail {
+  return isBookingDetailData(value) || isInquiryDetailData(value);
 }
 
 function isSuccessEnvelope(value: unknown): value is { success: true; data: unknown } {
@@ -195,6 +302,9 @@ export function RequestDetailScreen({ requestRef }: { requestRef: string }) {
 }
 
 function DetailContent({ detail, onReload }: { detail: RequestDetail; onReload: () => Promise<void> }) {
+  if (detail.kind === 'inquiry') {
+    return <InquiryDetailContent detail={detail} onReload={onReload} />;
+  }
   const isPendingDecision = detail.allowedActions.approve || detail.allowedActions.reject;
   return (
     <div className="midao-request-detail-content">
@@ -206,6 +316,43 @@ function DetailContent({ detail, onReload }: { detail: RequestDetail; onReload: 
         </div>
         {isPendingDecision ? <RequestProgressActions bookingId={detail.bookingId} allowedActions={detail.allowedActions} onReload={onReload} /> : null}
       </section>
+    </div>
+  );
+}
+
+function InquiryDetailContent({
+  detail,
+  onReload,
+}: {
+  detail: InquiryRequestDetail;
+  onReload: () => Promise<void>;
+}) {
+  return (
+    <div className="midao-request-detail-content" data-testid="midao-inquiry-detail">
+      <RequestSummaryCard detail={detail} />
+      <section className="midao-request-detail-status" aria-labelledby="midao-request-status-title">
+        <div>
+          <p className="midao-home-eyebrow">處理狀態</p>
+          <h3 id="midao-request-status-title" className="midao-heading">{statusLabel(detail)}</h3>
+        </div>
+      </section>
+      <TravelerContactActions
+        requestRef={detail.requestRef}
+        inquiryId={detail.inquiryId}
+        canMarkReplied={detail.allowedActions.markReplied}
+        onReload={onReload}
+      />
+      {detail.allowedActions.convertInquiry || detail.plan === null ? (
+        <InquiryConversionSheet
+          inquiryId={detail.inquiryId}
+          plan={detail.plan}
+          defaultParticipants={detail.request.partySize}
+          preferredDate={detail.request.preferredDate}
+          startTimeLocal={detail.request.startTimeLocal}
+          onConverted={() => { /* 結果由 sheet 自行呈現，避免覆蓋確認連結。 */ }}
+          onReload={onReload}
+        />
+      ) : null}
     </div>
   );
 }
