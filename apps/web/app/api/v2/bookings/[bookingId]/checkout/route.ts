@@ -22,7 +22,7 @@ import { createClient } from '../../../../../../src/lib/supabase/server';
 import { generateCheckMacValue, getECPayCredentials } from '../../../../../../src/lib/ecpay';
 import { findReusableCheckoutPayment } from '../../../../../../src/lib/checkout-idempotency';
 import { isTransferPaymentEnabled } from '../../../../../../src/config/feature-flags.mjs';
-import { canCheckout } from '../../../../../../src/lib/booking-type-flow.mjs';
+import { canCheckout, canCheckoutTravelerConfirmation } from '../../../../../../src/lib/booking-type-flow.mjs';
 import { isPaymentExpired } from '../../../../../../src/lib/payment-deadline.mjs';
 import { selectWithOptionalColumnFallback } from '../../../../../../src/lib/optional-column-fallback.mjs';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
@@ -123,6 +123,8 @@ export async function POST(
         booking_no,
         status,
         guide_approval_status,
+        source_inquiry_id,
+        traveler_confirmation_status,
         order_id,
         activity_id,
         activity_plan_id,
@@ -163,6 +165,21 @@ export async function POST(
       const gate = canCheckout(planBookingType, approvalStatus);
       if (!gate.allowed) {
         return Response.json(errorV2(gate.code, gate.messageZh), { status: 409 });
+      }
+    }
+
+    // #1759 Task 41：LINE 詢問單轉來的 booking，旅客未完成確認前不得進付款。
+    {
+      const row = booking as {
+        source_inquiry_id?: string | null;
+        traveler_confirmation_status?: string;
+      };
+      const cGate = canCheckoutTravelerConfirmation({
+        sourceInquiryId: row.source_inquiry_id,
+        travelerConfirmationStatus: row.traveler_confirmation_status,
+      });
+      if (!cGate.allowed) {
+        return Response.json(errorV2(cGate.code, cGate.messageZh), { status: 409 });
       }
     }
 
