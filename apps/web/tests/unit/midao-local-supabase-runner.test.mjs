@@ -57,6 +57,119 @@ test('package-lock pin and canonical repo basename are exact and fail closed', (
   for (const path of ['/tmp/Bad Project', '/tmp/project.name', '/']) assert.throws(() => canonicalProjectId(path));
 });
 
+// #1759: canonical project id must mirror the pinned Supabase CLI 2.87.2 normalization.
+// Expectations below are transcribed from the measured CLI probe table in
+// docs/operations/session-handoffs/2026-08-08-issue1759-infra-40char-truncation-plan.md (§2.2).
+const truncatedIssueProjectId = 'issue-1759-task42-inquiry-detail-ui-2026';
+
+test('canonical project id mirrors the pinned Supabase CLI 2.87.2 normalization', () => {
+  const { normalizeSupabaseProjectId } = runner;
+  // R1 main case (measured against the pinned CLI): 44 chars -> exact 40-char prefix.
+  assert.equal(canonicalProjectId('/tmp/issue-1759-task42-inquiry-detail-ui-20260808'), truncatedIssueProjectId);
+  assert.equal(truncatedIssueProjectId.length, 40);
+  // R2 boundary: exactly 40 stays untouched.
+  const exactly40 = 'a'.repeat(40);
+  assert.equal(canonicalProjectId(`/tmp/${exactly40}`), exactly40);
+  // R3 boundary: 41 -> first 40 characters, pure prefix slice.
+  const fortyOne = `${'b'.repeat(40)}c`;
+  assert.equal(canonicalProjectId(`/tmp/${fortyOne}`), 'b'.repeat(40));
+  // R4 truncation landing on a hyphen keeps the trailing hyphen verbatim (no beautification).
+  assert.equal(
+    canonicalProjectId('/tmp/abcdefghij-abcdefghij-abcdefghij-abcdef-ghij'),
+    'abcdefghij-abcdefghij-abcdefghij-abcdef-',
+  );
+  // R5/R6 leading punctuation is stripped greedily.
+  assert.equal(canonicalProjectId('/tmp/-leading-hyphen'), 'leading-hyphen');
+  assert.equal(canonicalProjectId('/tmp/_leading-underscore'), 'leading-underscore');
+  assert.equal(canonicalProjectId('/tmp/--double-hyphen'), 'double-hyphen');
+  assert.equal(canonicalProjectId('/tmp/-_mixed-lead'), 'mixed-lead');
+  // R7 stripping happens BEFORE truncation (CLI probe case 11).
+  const leadingThenLong = `-${'a'.repeat(39)}zz`;
+  const r7 = canonicalProjectId(`/tmp/${leadingThenLong}`);
+  assert.equal(r7, `${'a'.repeat(39)}z`);
+  assert.equal(r7.length, 40);
+  // R8 all-punctuation names normalize to empty and must fail closed.
+  for (const path of ['/tmp/____', '/tmp/---', '/tmp/-_-']) {
+    assert.throws(() => canonicalProjectId(path), /INVALID_PROJECT_ID/u);
+  }
+  // R9 idempotency: normalize(normalize(x)) === normalize(x).
+  assert.equal(typeof normalizeSupabaseProjectId, 'function');
+  for (const value of [
+    'issue-1759-task42-inquiry-detail-ui-20260808',
+    'abcdefghij-abcdefghij-abcdefghij-abcdef-ghij',
+    leadingThenLong,
+    'midao-backend-design',
+  ]) {
+    const once = normalizeSupabaseProjectId(value);
+    assert.equal(normalizeSupabaseProjectId(once), once);
+    assert.ok(once.length <= 40);
+  }
+  // R10 existing negative contract must not regress.
+  for (const path of ['/tmp/Bad Project', '/tmp/project.name', '/']) assert.throws(() => canonicalProjectId(path));
+});
+
+test('status classifier stays exact for a >40-character worktree basename', () => {
+  // S1: with the truncated (CLI-real) id the pinned fixture still classifies.
+  const truncatedMissingLine = `failed to inspect container health: Error response from daemon: No such container: supabase_db_${truncatedIssueProjectId}`;
+  assert.equal(classifySupabaseStatus({
+    exitCode: 1,
+    stdout: '',
+    stderr: `${truncatedMissingLine}\n${helpLine}\n`,
+    expectedProjectId: truncatedIssueProjectId,
+  }), 'not-running');
+  // S2: an un-normalized (44-char) expectedProjectId is a caller defect and must surface as such.
+  assert.throws(() => classifySupabaseStatus({
+    exitCode: 1,
+    stdout: '',
+    stderr: `${truncatedMissingLine}\n${helpLine}\n`,
+    expectedProjectId: 'issue-1759-task42-inquiry-detail-ui-20260808',
+  }), /STATUS_PROJECT_ID_NOT_NORMALIZED/u);
+  assert.throws(() => classifySupabaseStatus({
+    exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n`, expectedProjectId: `-${projectId}`,
+  }), /STATUS_PROJECT_ID_NOT_NORMALIZED/u);
+  // S3: a genuinely unclassifiable stderr must carry expected/actual diagnostics.
+  let thrown = null;
+  try {
+    classifySupabaseStatus({
+      exitCode: 1,
+      stdout: '',
+      stderr: `${truncatedMissingLine}\nunexpected-extra-line\n${helpLine}\n`,
+      expectedProjectId: truncatedIssueProjectId,
+    });
+  } catch (error) { thrown = error; }
+  assert.ok(thrown instanceof Error);
+  assert.match(thrown.message, /^STATUS_UNCLASSIFIED:/u);
+  assert.match(thrown.message, /supabase_db_issue-1759-task42-inquiry-detail-ui-2026/u);
+  assert.match(thrown.message, /unexpected-extra-line/u);
+  // S4: secrets present in stderr must be redacted inside the diagnostic.
+  let secretThrown = null;
+  try {
+    classifySupabaseStatus({
+      exitCode: 1,
+      stdout: '',
+      stderr: `postgresql://postgres:sekret@127.0.0.1:54322/postgres\n${helpLine}\n`,
+      expectedProjectId: truncatedIssueProjectId,
+    });
+  } catch (error) { secretThrown = error; }
+  assert.ok(secretThrown instanceof Error);
+  assert.match(secretThrown.message, /^STATUS_UNCLASSIFIED:/u);
+  assert.doesNotMatch(secretThrown.message, /sekret/u);
+  assert.match(secretThrown.message, /\[REDACTED\]/u);
+});
+
+test('runner failure formatter surfaces status diagnostics', () => {
+  const message = `STATUS_UNCLASSIFIED: expected=${JSON.stringify(`supabase_db_${truncatedIssueProjectId}`)} actual=${JSON.stringify('unexpected-extra-line service-secret')}`;
+  const formatted = formatMidaoRunnerFailure(new Error(message), ['service-secret']);
+  assert.doesNotMatch(formatted, /\[REDACTED_ERROR\]/u);
+  assert.match(formatted, /STATUS_UNCLASSIFIED/u);
+  assert.match(formatted, /supabase_db_issue-1759-task42-inquiry-detail-ui-2026/u);
+  assert.match(formatted, /unexpected-extra-line/u);
+  assert.doesNotMatch(formatted, /service-secret/u);
+  const guardFormatted = formatMidaoRunnerFailure(new Error('STATUS_PROJECT_ID_NOT_NORMALIZED: expected="x" actual="-x"'), []);
+  assert.doesNotMatch(guardFormatted, /\[REDACTED_ERROR\]/u);
+  assert.match(guardFormatted, /STATUS_PROJECT_ID_NOT_NORMALIZED/u);
+});
+
 test('runner invocation reserves an exact Node integration lane for the pinned PostgREST runtime', () => {
   const integration = 'apps/web/tests/integration/midao-requests-postgrest.test.mjs';
   const decisionIntegration = 'apps/web/tests/integration/midao-booking-decision-postgrest.test.mjs';

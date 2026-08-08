@@ -571,10 +571,30 @@ export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir, fullServic
   });
 }
 
+export const SUPABASE_PROJECT_ID_MAX_LENGTH = 40;
+
+// Mirrors the project id normalization of the pinned Supabase CLI 2.87.2, measured with 20 clean-room
+// probes recorded in docs/operations/session-handoffs/2026-08-08-issue1759-infra-40char-truncation-plan.md (§2.2).
+// The order below is load-bearing (probe case 11 proves stripping happens before truncation):
+//   1. strip every leading non-[A-Za-z0-9] character (greedy)
+//   2. spaces -> underscore, then drop every non-ASCII character (no lowercasing, dots kept verbatim)
+//   3. slice(0, 40) — a plain prefix slice: no hash, no ellipsis, trailing punctuation is kept as-is
+// When the pinned CLI version changes, rerun the §2.1 probe and update only this function.
+export function normalizeSupabaseProjectId(value) {
+  return String(value ?? '')
+    .replace(/^[^A-Za-z0-9]+/u, '')
+    .replace(/ /gu, '_')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[^\x00-\x7F]/gu, '')
+    .slice(0, SUPABASE_PROJECT_ID_MAX_LENGTH);
+}
+
 export function canonicalProjectId(repoRoot) {
   const projectId = basename(resolve(repoRoot));
   if (!projectId || !/^[a-z0-9_-]+$/u.test(projectId)) throw new Error('INVALID_PROJECT_ID');
-  return projectId;
+  const normalized = normalizeSupabaseProjectId(projectId);
+  if (!normalized) throw new Error('INVALID_PROJECT_ID');
+  return normalized;
 }
 
 function nonemptyLines(text) {
@@ -660,17 +680,27 @@ export function validateCliWorkdirNotice(stderr, expectedWorkdir, expectedProjec
 }
 
 export function classifySupabaseStatus({ exitCode, stdout, stderr, expectedProjectId, expectedWorkdir }) {
+  // #1759 guard: every caller must go through canonicalProjectId(). A non-normalized id here means a new
+  // call path bypassed it, and the mismatch would otherwise degrade into an opaque STATUS_UNCLASSIFIED.
+  if (expectedProjectId !== normalizeSupabaseProjectId(expectedProjectId)) {
+    throw new Error(`STATUS_PROJECT_ID_NOT_NORMALIZED: expected=${JSON.stringify(normalizeSupabaseProjectId(expectedProjectId))} actual=${JSON.stringify(String(expectedProjectId ?? ''))}`);
+  }
+  const unclassified = (expected) => new Error(
+    `STATUS_UNCLASSIFIED: expected=${JSON.stringify(redactSupabaseOutput(expected))}`
+    + ` actual=${JSON.stringify(redactSupabaseOutput(String(stderr ?? '')).slice(-2000))}`
+    + ` exitCode=${JSON.stringify(exitCode)} stdoutLength=${String(stdout ?? '').length}`,
+  );
   if (exitCode === 0) {
     if (String(stderr || '').trim()) throw new Error('STATUS_UNEXPECTED_STDERR');
     return 'running';
   }
-  if (exitCode !== 1 || String(stdout || '').length !== 0) throw new Error('STATUS_UNCLASSIFIED');
   const exactLine = `failed to inspect container health: Error response from daemon: No such container: supabase_db_${expectedProjectId}`;
   const prefixLf = expectedWorkdir ? `Using workdir ${expectedWorkdir}\n` : '';
   const prefixCrlf = expectedWorkdir ? `Using workdir ${expectedWorkdir}\r\n` : '';
   const lf = `${prefixLf}${exactLine}\n${HELP_LINE}\n`;
   const crlf = `${prefixCrlf}${exactLine}\r\n${HELP_LINE}\r\n`;
-  if (stderr !== lf && stderr !== crlf) throw new Error('STATUS_UNCLASSIFIED');
+  if (exitCode !== 1 || String(stdout || '').length !== 0) throw unclassified(lf);
+  if (stderr !== lf && stderr !== crlf) throw unclassified(lf);
   return 'not-running';
 }
 
@@ -838,6 +868,13 @@ const SAFE_RUNNER_ERROR_PREFIX_CODES = Object.freeze([
   'SUPABASE_DATABASE_HANDOFF_STOP_FAILED',
   'SUPABASE_SERVICE_START_FAILED',
 ]);
+// #1759 route (a): diagnostic-bearing codes surface their full redacted message instead of the bare code,
+// so an unclassifiable `supabase status` no longer collapses into an opaque `[REDACTED_ERROR]`.
+// Kept as a separate set on purpose: SAFE_RUNNER_ERROR_PREFIX_CODES semantics stay byte-identical.
+const SAFE_RUNNER_DIAGNOSTIC_PREFIX_CODES = Object.freeze([
+  'STATUS_UNCLASSIFIED',
+  'STATUS_PROJECT_ID_NOT_NORMALIZED',
+]);
 
 export function formatMidaoRunnerFailure(error, secrets = []) {
   const lines = [];
@@ -846,8 +883,10 @@ export function formatMidaoRunnerFailure(error, secrets = []) {
     if (!entry || seen.has(entry)) return;
     seen.add(entry);
     const message = entry instanceof Error ? entry.message : String(entry);
-    const safePrefix = SAFE_RUNNER_ERROR_PREFIX_CODES.find((code) => message === code || message.startsWith(`${code}:`));
-    const safe = SAFE_RUNNER_AGGREGATE_MESSAGES.has(message) || SAFE_RUNNER_ERROR_CODES.has(message)
+    const matchesCode = (code) => message === code || message.startsWith(`${code}:`);
+    const safePrefix = SAFE_RUNNER_ERROR_PREFIX_CODES.find(matchesCode);
+    const diagnosticPrefix = SAFE_RUNNER_DIAGNOSTIC_PREFIX_CODES.find(matchesCode);
+    const safe = SAFE_RUNNER_AGGREGATE_MESSAGES.has(message) || SAFE_RUNNER_ERROR_CODES.has(message) || diagnosticPrefix
       ? redactSupabaseOutput(message, secrets)
       : safePrefix ?? '[REDACTED_ERROR]';
     lines.push(safe);
