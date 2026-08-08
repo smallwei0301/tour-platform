@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-08-07T05:31:21.004Z -->
+<!-- query_timestamp: 2026-08-08T05:16:26.488Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-07T05:31:21.004Z  
-**Commit SHA:** `9586ede77ddca3ef9fd762e45e18ce77bfcabb45`
+**Query timestamp:** 2026-08-08T05:16:26.488Z  
+**Commit SHA:** `fd358ea2b8d945aebdc9519b215dc33f64af706d`
 
 ---
 
@@ -114,6 +114,9 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1800 | [#1759 Package 4 / Task 41: 擴充 checkout gate（旅客確認守門）](https://github.com/smallwei0301/tour-platform/pull/1800) | 2026-08-08 |
+| #1799 | [#1759 Package 4 / Task 40: 建立 traveler confirmation helper/RPC/API](https://github.com/smallwei0301/tour-platform/pull/1799) | 2026-08-07 |
+| #1798 | [#1759 Package 4 / Task 39: 建立 conversion gateway/API](https://github.com/smallwei0301/tour-platform/pull/1798) | 2026-08-07 |
 | #1797 | [#1759 Package4／Task38: atomic inquiry conversion RPC (conversion/accept/expire)](https://github.com/smallwei0301/tour-platform/pull/1797) | 2026-08-07 |
 | #1794 | [#1759 Package 4／Task 37：inquiry conversion 純函式輸入驗證](https://github.com/smallwei0301/tour-platform/pull/1794) | 2026-08-06 |
 | #1793 | [#1759 Package 4／Task 36：LINE reply template 純函式與導遊端唯讀路由](https://github.com/smallwei0301/tour-platform/pull/1793) | 2026-08-06 |
@@ -121,9 +124,6 @@
 | #1791 | [test(payments): #1777 端到端全鏈驗證完成 ＋ #1647 重新 preview](https://github.com/smallwei0301/tour-platform/pull/1791) | 2026-08-05 |
 | #1790 | [fix(payments): #1777 收尾 — F3／F4／F6／F8 ＋ AC 6／7 重判](https://github.com/smallwei0301/tour-platform/pull/1790) | 2026-08-04 |
 | #1789 | [fix(payments): #1777 兩批 P0 — ON CONFLICT 推論不到部分索引、退款累積額被覆寫](https://github.com/smallwei0301/tour-platform/pull/1789) | 2026-08-04 |
-| #1788 | [docs: 對齊 #1758 production migration ledger](https://github.com/smallwei0301/tour-platform/pull/1788) | 2026-08-02 |
-| #1787 | [【#1758】Midao 服務草稿、發布與 wizard（S1–S9）](https://github.com/smallwei0301/tour-platform/pull/1787) | 2026-08-02 |
-| #1786 | [[Database] 收斂 Midao migration verified ledger 與回滾證據](https://github.com/smallwei0301/tour-platform/pull/1786) | 2026-07-30 |
 
 ---
 
