@@ -184,11 +184,79 @@ test('a plan owned by another guide or another activity is never exposed', async
   assert.equal(projection.plan, null);
 });
 
-test('inquiry detail route returns the resolved projection with allowedActions', async () => {
-  useMemoryBackend();
+function createSupabaseFake({ inquiryRows = [], planRows = [], backendMode = 'midao' } = {}) {
+  const calls = [];
+  const client = {
+    from(table) {
+      const state = {
+        rows: table === 'guide_inquiries'
+          ? [...inquiryRows]
+          : table === 'activity_plans' ? [...planRows] : [],
+      };
+      const query = {
+        select(columns) {
+          calls.push({ type: 'select', table, columns });
+          return query;
+        },
+        eq(field, value) {
+          calls.push({ type: 'eq', table, field, value });
+          state.rows = state.rows.filter((row) => {
+            if (field === 'activities.guide_id') return row.activities?.guide_id === value;
+            const column = field.includes('.') ? field.split('.').pop() : field;
+            return row[column] === value;
+          });
+          return query;
+        },
+        async single() {
+          assert.equal(table, 'guide_profiles');
+          return {
+            data: {
+              id: GUIDE_ID,
+              display_name: 'DB Canonical Name',
+              backend_mode: backendMode,
+              guide_session_version: 7,
+              verification_status: 'approved',
+            },
+            error: null,
+          };
+        },
+        async maybeSingle() {
+          return { data: state.rows[0] ?? null, error: null };
+        },
+      };
+      return query;
+    },
+  };
+  return { client, calls };
+}
+
+function supabasePlanRow(overrides = {}) {
+  const fixture = planFixture(overrides);
+  return {
+    id: fixture.id,
+    activity_id: fixture.activity_id,
+    name: fixture.name,
+    booking_type: fixture.booking_type,
+    status: fixture.status,
+    min_participants: fixture.min_participants,
+    max_participants: fixture.max_participants,
+    base_price: fixture.base_price,
+    activities: { id: fixture.activity_id, guide_id: fixture.guide_id, title: fixture.activity_title },
+  };
+}
+
+function useSupabaseBackend(fake) {
   process.env.MIDAO_BACKEND_ENABLED = '1';
-  __seedMidaoInquiryForTest(inquiryRow());
-  __seedMidaoInquiryPlanForTest(planFixture());
+  process.env.SUPABASE_URL = 'http://example.test';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
+  __setSupabaseClientForTest(fake.client);
+}
+
+test('inquiry detail route returns the resolved projection with allowedActions', async () => {
+  useSupabaseBackend(createSupabaseFake({
+    inquiryRows: [inquiryRow()],
+    planRows: [supabasePlanRow()],
+  }));
 
   const cookie = createGuideSessionCookies(GUIDE_ID, 'Cookie Guide Name', 7)
     .map((value) => value.split(';')[0]).join('; ');
@@ -208,12 +276,17 @@ test('inquiry detail route returns the resolved projection with allowedActions',
     markReplied: false,
     convertInquiry: true,
   });
+  const serialized = JSON.stringify(body);
+  for (const forbidden of ['travelerUserId', 'questionnaireSnapshot', 'answers', TRAVELER_ID]) {
+    assert.equal(serialized.includes(forbidden), false, forbidden);
+  }
 });
 
 test('inquiry detail route keeps a sanitized 404 for another guide', async () => {
-  useMemoryBackend();
-  process.env.MIDAO_BACKEND_ENABLED = '1';
-  __seedMidaoInquiryForTest(inquiryRow({ guide_id: OTHER_GUIDE_ID }));
+  useSupabaseBackend(createSupabaseFake({
+    inquiryRows: [inquiryRow({ guide_id: OTHER_GUIDE_ID })],
+    planRows: [supabasePlanRow()],
+  }));
 
   const cookie = createGuideSessionCookies(GUIDE_ID, 'Cookie Guide Name', 7)
     .map((value) => value.split(';')[0]).join('; ');

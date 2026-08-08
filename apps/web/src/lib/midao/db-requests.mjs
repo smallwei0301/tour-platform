@@ -32,9 +32,17 @@ const BOOKING_DETAIL_SELECT = `
 `;
 
 const bookingRequestStore = new Map();
+const inquiryPlanStore = new Map();
 
 export function __resetMidaoRequestsStoreForTest() {
   bookingRequestStore.clear();
+  inquiryPlanStore.clear();
+}
+
+export function __seedMidaoInquiryPlanForTest(row) {
+  const copy = structuredClone(row);
+  inquiryPlanStore.set(copy.id, copy);
+  return structuredClone(copy);
 }
 
 export function __seedMidaoBookingRequestForTest(row) {
@@ -522,7 +530,144 @@ export async function getMidaoBookingRequestDb(input = {}) {
   return mapBookingRequestRow(row, { detail: true });
 }
 
+const INQUIRY_PLAN_SELECT = `
+  id,
+  activity_id,
+  name,
+  booking_type,
+  status,
+  min_participants,
+  max_participants,
+  base_price,
+  activities!inner(id, guide_id, title)
+`;
+
+function mapInquiryPlanSummaryRow(row, { activityId, guideId }) {
+  if (!row || typeof row !== 'object') return null;
+  const activity = Array.isArray(row.activities) ? row.activities[0] : row.activities;
+  if (!activity || typeof activity !== 'object') return null;
+  if (activity.guide_id !== guideId) return null;
+  if (row.activity_id !== activityId) return null;
+  if (!Number.isInteger(row.min_participants) || !Number.isInteger(row.max_participants)) return null;
+  if (typeof row.booking_type !== 'string' || !row.booking_type) return null;
+  if (typeof row.status !== 'string' || !row.status) return null;
+  if (typeof row.base_price !== 'number' || !Number.isFinite(row.base_price)) return null;
+  return {
+    plan: {
+      activityPlanId: row.id,
+      name: typeof row.name === 'string' ? row.name : null,
+      bookingType: row.booking_type,
+      status: row.status,
+      minParticipants: row.min_participants,
+      maxParticipants: row.max_participants,
+      basePrice: row.base_price,
+    },
+    activityTitle: typeof activity.title === 'string' ? activity.title : null,
+  };
+}
+
+async function fetchInquiryPlanSummary({ activityPlanId, activityId, guideId }) {
+  if (!activityPlanId) return null;
+
+  if (hasSupabaseEnv()) {
+    const supabase = await getSupabase();
+    const { data, error } = await supabase
+      .from('activity_plans')
+      .select(INQUIRY_PLAN_SELECT)
+      .eq('id', activityPlanId)
+      .eq('activity_id', activityId)
+      .eq('activities.guide_id', guideId)
+      .maybeSingle();
+    if (error) throw new Error('MIDAO_REQUESTS_BACKEND_ERROR: inquiry plan query failed');
+    return mapInquiryPlanSummaryRow(data, { activityId, guideId });
+  }
+
+  const fixture = inquiryPlanStore.get(activityPlanId);
+  if (!fixture) return null;
+  return mapInquiryPlanSummaryRow(
+    {
+      id: fixture.id,
+      activity_id: fixture.activity_id,
+      name: fixture.name,
+      booking_type: fixture.booking_type,
+      status: fixture.status,
+      min_participants: fixture.min_participants,
+      max_participants: fixture.max_participants,
+      base_price: fixture.base_price,
+      activities: {
+        id: fixture.activity_id,
+        guide_id: fixture.guide_id,
+        title: fixture.activity_title ?? null,
+      },
+    },
+    { activityId, guideId },
+  );
+}
+
+function mapInquiryRequestRow(inquiry, planSummary) {
+  const inquiryStatus = inquiry.status;
+  const needsReply = inquiryStatus === 'new' || inquiryStatus === 'opened';
+  const bucket = resolveRequestBucket({ kind: 'inquiry', inquiryStatus, needsReply });
+  if (!bucket?.ok) throw new Error('INVALID_REQUEST_ROW: inquiry bucket');
+
+  return {
+    kind: 'inquiry',
+    requestRef: formatRequestRef('inquiry', inquiry.id),
+    inquiryId: inquiry.id,
+    inquiryNo: inquiry.inquiryNo,
+    inquiryStatus,
+    bucket: bucket.bucket,
+    secondaryState: bucket.secondaryState,
+    needsReply,
+    traveler: { displayName: null, emailMasked: null },
+    service: {
+      activityId: inquiry.activityId,
+      activityPlanId: inquiry.activityPlanId,
+      title: planSummary ? planSummary.activityTitle : null,
+      planName: planSummary ? planSummary.plan.name : null,
+      bookingType: planSummary ? 'request' : null,
+    },
+    request: {
+      preferredDate: inquiry.preferredDate,
+      backupDate: inquiry.backupDate,
+      startTimeLocal: inquiry.startTimeLocal,
+      partySize: inquiry.partySize,
+      language: inquiry.language,
+      pickupRequired: inquiry.pickupRequired,
+      travelerNote: inquiry.travelerNote,
+    },
+    plan: planSummary ? planSummary.plan : null,
+    convertedBookingId: inquiry.convertedBookingId,
+    lastRepliedAt: inquiry.lastRepliedAt,
+    expiresAt: inquiry.expiresAt,
+    receivedAt: inquiry.createdAt,
+    updatedAt: inquiry.updatedAt,
+  };
+}
+
 export async function getMidaoInquiryRequestDb(input = {}) {
-  requireGuideId(input?.guideId);
-  throw new Error('INQUIRY_NOT_FOUND: inquiry not found');
+  const guideId = requireGuideId(input?.guideId);
+  const inquiryId = typeof input?.inquiryId === 'string' ? input.inquiryId.trim() : '';
+  if (!inquiryId) badRequest('inquiryId required');
+
+  const { getMidaoInquiryDetailDb } = await import('./db-midao-inquiries.mjs');
+  const result = await getMidaoInquiryDetailDb({
+    inquiryId,
+    actor: { role: 'guide', id: guideId },
+  });
+  if (!result?.ok || !result.inquiry) {
+    throw new Error('INQUIRY_NOT_FOUND: inquiry not found');
+  }
+  const inquiry = result.inquiry;
+  if (inquiry.guideId !== guideId) {
+    throw new Error('INQUIRY_NOT_FOUND: inquiry not found');
+  }
+
+  const planSummary = await fetchInquiryPlanSummary({
+    activityPlanId: inquiry.activityPlanId,
+    activityId: inquiry.activityId,
+    guideId,
+  });
+
+  return mapInquiryRequestRow(inquiry, planSummary);
 }
