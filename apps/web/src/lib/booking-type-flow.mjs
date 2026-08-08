@@ -105,6 +105,62 @@ export function canCheckout(bookingType, approvalStatus) {
   return { allowed: true };
 }
 
+/** @typedef {'not_required' | 'pending' | 'confirmed' | 'expired'} TravelerConfirmationStatus */
+
+export const TRAVELER_CONFIRMATION_STATUSES = /** @type {const} */ ([
+  'not_required',
+  'pending',
+  'confirmed',
+  'expired',
+]);
+
+/**
+ * Checkout gate #2（#1759 Task 41）：LINE 詢問單轉來的 booking，必須旅客本人
+ * 透過一次性確認連結接受後才能進付款。
+ *
+ * 判準（Lane A 定案 D1/D2）：
+ *   - 主判準為 traveler_confirmation_status 狀態機；
+ *   - source_inquiry_id 作為不變量交叉檢查與未知值 fail-closed 依據。
+ *
+ * 零影響保證：既有 booking 為 source_inquiry_id=NULL + status='not_required'
+ * （DB default），落在唯一 allow 分支。
+ *
+ * @param {{ sourceInquiryId?: unknown, travelerConfirmationStatus?: unknown }} booking
+ * @returns {{ allowed: true } | { allowed: false; code: string; messageZh: string }}
+ */
+export function canCheckoutTravelerConfirmation(booking) {
+  const { sourceInquiryId, travelerConfirmationStatus: status } = booking ?? {};
+  const hasInquiry =
+    sourceInquiryId !== null && sourceInquiryId !== undefined && sourceInquiryId !== '';
+
+  // R1：旅客已確認 → 放行。
+  if (status === 'confirmed') {
+    return { allowed: true };
+  }
+
+  // R3：一次性 token 已逾期 → 不可自助恢復，請導遊重新出單。
+  if (status === 'expired') {
+    return {
+      allowed: false,
+      code: 'TRAVELER_CONFIRMATION_EXPIRED',
+      messageZh: '確認連結已逾期，請聯繫導遊重新產生預約',
+    };
+  }
+
+  // R2：待旅客確認 → 可自助恢復（旅客確認頁）。
+  // R4/R6：inquiry booking 落在 not_required / 未知值 → 不變量已違反，fail-closed。
+  if (status === 'pending' || hasInquiry) {
+    return {
+      allowed: false,
+      code: 'TRAVELER_CONFIRMATION_REQUIRED',
+      messageZh: '此預約需旅客完成確認後才能付款',
+    };
+  }
+
+  // R5/R7：非 inquiry booking（含 in-memory fallback 無此欄位者）→ 放行，零影響。
+  return { allowed: true };
+}
+
 /**
  * After a successful payment callback, should the booking auto-confirm
  * (draft → confirmed) instead of stopping at pending_confirmation?
