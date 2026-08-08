@@ -313,3 +313,267 @@ test('activityPlanId 為 null 時停用整個轉單區塊', async ({ page }) => 
   await expect(page.getByTestId('midao-conversion-disabled')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId('midao-conversion-submit')).toHaveCount(0);
 });
+
+// ---------------------------------------------------------------------------
+// #1759 Package 4 / Task 43b：旅客確認頁 `/booking/confirm/[token]`（append only）
+//
+// 契約來源（唯一權威）：
+// docs/operations/session-handoffs/2026-08-08-issue1759-task43-traveler-confirm-page-plan.md
+// §4.4（六態狀態機與 accept 分支）／§5.3 T1–T9（本區塊的案例表）。
+//
+// 本區塊是**旅客**視角，故用 `setTravelerSession`（F27）而非 `loginMidaoGuideViaApi`。
+// 檔案上方的 file-scope `test.beforeEach` 仍會先鋪一份導遊 session；那不影響本頁，
+// 因為本頁的唯一授權真值來源是被 mock 的 GET preview API 回應碼（計畫 §2 D7）。
+// 以獨立 import 追加而非改寫第 1 行，是為了守住「既有測試一行不得改」的 append-only 約束。
+// ---------------------------------------------------------------------------
+import { setTravelerSession } from './helpers';
+
+const CONFIRM_TOKEN = 'a'.repeat(64);
+const CONFIRM_PATH = `/booking/confirm/${CONFIRM_TOKEN}`;
+const CONFIRM_BOOKING_ID = '33333333-3333-4333-8333-333333333333';
+const CONFIRM_ORDER_ID = '44444444-4444-4444-8444-444444444444';
+
+function confirmPreview(overrides: Record<string, unknown> = {}) {
+  return {
+    status: 'pending',
+    bookingId: CONFIRM_BOOKING_ID,
+    orderId: CONFIRM_ORDER_ID,
+    service: {
+      activityId: ACTIVITY_ID,
+      activityPlanId: PLAN_ID,
+      title: '山徑晨光小旅行',
+      planName: '日間小團',
+    },
+    schedule: {
+      startAt: '2026-09-01T01:00:00.000Z',
+      endAt: '2026-09-01T05:00:00.000Z',
+    },
+    partySize: 2,
+    price: { quotedTotalTwd: 3600, currency: 'TWD' },
+    expiresAt: '2026-08-09T02:00:00.000Z',
+    ...overrides,
+  };
+}
+
+type ConfirmCounters = {
+  preview: number;
+  accept: number;
+  acceptHeaders: Record<string, string>[];
+  acceptBodies: string[];
+};
+
+async function installConfirmRoutes(
+  page: import('@playwright/test').Page,
+  options: {
+    previewStatus?: number;
+    previewBody?: unknown;
+    acceptStatus?: number;
+    acceptBody?: unknown;
+  } = {},
+): Promise<ConfirmCounters> {
+  const counters: ConfirmCounters = { preview: 0, accept: 0, acceptHeaders: [], acceptBodies: [] };
+
+  // accept 必須先註冊：Playwright 後註冊者優先，若順序顛倒 preview 的 glob 會先吃掉 accept。
+  await page.route('**/api/v2/me/booking-confirmations/*/accept', async (route) => {
+    counters.accept += 1;
+    counters.acceptHeaders.push(route.request().headers());
+    counters.acceptBodies.push(route.request().postData() || '');
+    await route.fulfill({
+      status: options.acceptStatus ?? 200,
+      contentType: 'application/json',
+      body: JSON.stringify(options.acceptBody ?? {
+        success: true,
+        data: {
+          accepted: true,
+          replayed: false,
+          bookingId: CONFIRM_BOOKING_ID,
+          orderId: CONFIRM_ORDER_ID,
+          bookingStatus: 'confirmed',
+          travelerConfirmationStatus: 'confirmed',
+          paymentDeadlineAt: '2026-08-10T02:00:00.000Z',
+        },
+      }),
+    });
+  });
+
+  await page.route('**/api/v2/me/booking-confirmations/*', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+    counters.preview += 1;
+    const status = options.previewStatus ?? 200;
+    await route.fulfill({
+      status,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        options.previewBody
+          ?? (status === 200
+            ? { success: true, data: confirmPreview() }
+            : { success: false, error: { code: 'NOT_FOUND', message: 'Resource not found' } }),
+      ),
+    });
+  });
+
+  // 導向目標是既有付款頁；本區塊只驗導向，不驗付款頁內容，故把它的資料呼叫短路掉。
+  await page.route('**/api/v2/orders/*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: { id: CONFIRM_ORDER_ID, status: 'pending_payment', totalTwd: 3600, peopleCount: 2 },
+      }),
+    });
+  });
+
+  return counters;
+}
+
+test.describe('Task 43 traveler confirmation page', () => {
+  test('T1: pending 顯示卡片與服務／日期／人數／價格／期限五項', async ({ page }) => {
+    test.setTimeout(180_000);
+    await setTravelerSession(page);
+    await installConfirmRoutes(page);
+
+    await page.goto(CONFIRM_PATH, { waitUntil: 'domcontentloaded' });
+
+    const card = page.getByTestId('booking-confirm-card');
+    await expect(card).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('booking-confirm-service')).toContainText('山徑晨光小旅行');
+    await expect(page.getByTestId('booking-confirm-schedule')).toContainText('2026');
+    await expect(page.getByTestId('booking-confirm-party-size')).toContainText('2');
+    await expect(page.getByTestId('booking-confirm-price')).toContainText('3,600');
+    await expect(page.getByTestId('booking-confirm-expires-at')).toContainText('2026');
+    await expect(page.getByTestId('booking-confirm-accept')).toBeEnabled();
+  });
+
+  test('T2: GET 401 顯示登入提示，連結帶 safe next', async ({ page }) => {
+    test.setTimeout(180_000);
+    await setTravelerSession(page);
+    await installConfirmRoutes(page, {
+      previewStatus: 401,
+      previewBody: { success: false, error: { code: 'UNAUTHORIZED', message: 'Please login first' } },
+    });
+
+    await page.goto(CONFIRM_PATH, { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('booking-confirm-login-required')).toBeVisible({ timeout: 30_000 });
+    const link = page.getByTestId('booking-confirm-login-link');
+    await expect(link).toHaveAttribute('href', `/login?next=%2Fbooking%2Fconfirm%2F${CONFIRM_TOKEN}`);
+    await expect(page.getByTestId('booking-confirm-accept')).toHaveCount(0);
+  });
+
+  test('T3: GET 404 顯示連結無效或不屬於此帳號', async ({ page }) => {
+    test.setTimeout(180_000);
+    await setTravelerSession(page);
+    await installConfirmRoutes(page, { previewStatus: 404 });
+
+    await page.goto(CONFIRM_PATH, { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('booking-confirm-invalid')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('booking-confirm-accept')).toHaveCount(0);
+  });
+
+  test('T4: status=expired 顯示過期且無確認鈕', async ({ page }) => {
+    test.setTimeout(180_000);
+    await setTravelerSession(page);
+    await installConfirmRoutes(page, {
+      previewBody: { success: true, data: confirmPreview({ status: 'expired' }) },
+    });
+
+    await page.goto(CONFIRM_PATH, { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('booking-confirm-expired')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('booking-confirm-accept')).toHaveCount(0);
+  });
+
+  test('T5: status=used 顯示已確認並提供前往付款', async ({ page }) => {
+    test.setTimeout(180_000);
+    await setTravelerSession(page);
+    await installConfirmRoutes(page, {
+      previewBody: { success: true, data: confirmPreview({ status: 'used' }) },
+    });
+
+    await page.goto(CONFIRM_PATH, { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('booking-confirm-used')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('booking-confirm-pay-link')).toHaveAttribute(
+      'href',
+      `/order/pay?orderId=${CONFIRM_ORDER_ID}`,
+    );
+    await expect(page.getByTestId('booking-confirm-accept')).toHaveCount(0);
+  });
+
+  test('T6: accept 200 帶 CSRF 與 idempotency-key 並導向付款頁', async ({ page }) => {
+    test.setTimeout(180_000);
+    await setTravelerSession(page);
+    const counters = await installConfirmRoutes(page);
+
+    await page.goto(CONFIRM_PATH, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('booking-confirm-card')).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId('booking-confirm-accept').click();
+
+    await page.waitForURL(`**/order/pay?orderId=${CONFIRM_ORDER_ID}`, { timeout: 30_000 });
+    expect(counters.accept).toBe(1);
+    const headers = counters.acceptHeaders[0];
+    expect(Object.hasOwn(headers, 'x-csrf-token')).toBe(true);
+    expect(typeof headers['idempotency-key']).toBe('string');
+    expect(headers['idempotency-key'].length).toBeGreaterThan(0);
+    expect(counters.acceptBodies[0]).toBe('{}');
+  });
+
+  test('T7: accept 410 切換到過期狀態', async ({ page }) => {
+    test.setTimeout(180_000);
+    await setTravelerSession(page);
+    await installConfirmRoutes(page, {
+      acceptStatus: 410,
+      acceptBody: { success: false, error: { code: 'CONFIRMATION_TOKEN_EXPIRED', message: 'expired' } },
+    });
+
+    await page.goto(CONFIRM_PATH, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('booking-confirm-card')).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId('booking-confirm-accept').click();
+
+    await expect(page.getByTestId('booking-confirm-expired')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('booking-confirm-card')).toHaveCount(0);
+  });
+
+  test('T8: accept 409 CAPACITY_EXCEEDED 停在卡片並顯示名額已滿', async ({ page }) => {
+    test.setTimeout(180_000);
+    await setTravelerSession(page);
+    await installConfirmRoutes(page, {
+      acceptStatus: 409,
+      acceptBody: { success: false, error: { code: 'CAPACITY_EXCEEDED', message: 'capacity' } },
+    });
+
+    await page.goto(CONFIRM_PATH, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('booking-confirm-card')).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId('booking-confirm-accept').click();
+
+    await expect(page.getByTestId('booking-confirm-error')).toContainText('名額已滿');
+    await expect(page.getByTestId('booking-confirm-card')).toBeVisible();
+    expect(page.url()).toContain('/booking/confirm/');
+  });
+
+  test('T9: 連按兩次確認只送出一次且重放同一把 idempotency-key', async ({ page }) => {
+    test.setTimeout(180_000);
+    await setTravelerSession(page);
+    const counters = await installConfirmRoutes(page, {
+      acceptStatus: 409,
+      acceptBody: { success: false, error: { code: 'IDEMPOTENCY_IN_PROGRESS', message: 'in progress' } },
+    });
+
+    await page.goto(CONFIRM_PATH, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('booking-confirm-card')).toBeVisible({ timeout: 30_000 });
+
+    const accept = page.getByTestId('booking-confirm-accept');
+    await accept.click();
+    await expect(page.getByTestId('booking-confirm-error')).toBeVisible({ timeout: 30_000 });
+    await accept.click();
+    await expect.poll(() => counters.accept, { timeout: 30_000 }).toBe(2);
+
+    // 重試同一次確認必須重放同一把鑰匙，否則會撞 IDEMPOTENCY_CONFLICT／製造第二筆紀錄。
+    expect(counters.acceptHeaders[1]['idempotency-key']).toBe(counters.acceptHeaders[0]['idempotency-key']);
+  });
+});
