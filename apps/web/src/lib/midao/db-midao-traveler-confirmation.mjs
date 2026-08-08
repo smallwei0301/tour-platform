@@ -26,6 +26,10 @@ import {
   hashConfirmationToken,
   validateAcceptProjection,
 } from './booking-confirmation.ts';
+import {
+  buildConfirmationPreview,
+  resolveConfirmationPreviewStatus,
+} from './booking-confirmation-preview.ts';
 import { __confirmationRuntime } from './db-midao-booking-confirmations.mjs';
 import { parseIdempotencyKey } from './idempotency.ts';
 
@@ -259,6 +263,238 @@ export async function acceptMidaoTravelerConfirmationDb(input = {}) {
   const command = normalizeAcceptCommand(input);
   if (hasSupabaseEnv()) return acceptInSupabase(command);
   return acceptInMemory(command);
+}
+
+// ---------------------------------------------------------------------------
+// #1759 Task 43a：traveler confirmation **preview**（唯讀，additive）
+//
+// 契約來源：docs/operations/session-handoffs/
+//   2026-08-08-issue1759-task43-traveler-confirm-page-plan.md §2 D1/D3/D4／§4.3。
+//
+// 與 accept 的關鍵差異：本段完全唯讀——不取鎖、不寫入、不碰 idempotency、
+// 不呼叫任何 RPC（計畫 §2 D1：唯讀不需要交易，且零 migration 可免時間戳碰撞）。
+// 上方任何既有 accept 函式一行未改。
+//
+// 安全鐵則：raw token 於入口即轉 sha256；原值不得進入任何查詢變數、
+// console.*、錯誤訊息或回傳值。Supabase error 一律吞掉原訊息換固定安全字串。
+// ---------------------------------------------------------------------------
+
+/** preview 入口參數正規化（與 accept 同構，但無 idempotency／requestHash）。 */
+function normalizePreviewCommand(input = {}) {
+  const travelerUserId = typeof input.travelerUserId === 'string'
+    ? input.travelerUserId.trim().toLowerCase()
+    : '';
+  if (!UUID_PATTERN.test(travelerUserId)) {
+    throw acceptUnexpected('Midao traveler confirmation traveler id is invalid');
+  }
+  const rawToken = typeof input.rawToken === 'string' ? input.rawToken.trim().toLowerCase() : '';
+  if (!HASH_PATTERN.test(rawToken)) {
+    throw acceptUnexpected('Midao traveler confirmation token is invalid');
+  }
+  return {
+    travelerUserId,
+    // raw token 到此為止：只留 sha256。
+    tokenHash: hashConfirmationToken(rawToken),
+  };
+}
+
+/**
+ * §4.3 in-memory 分支。S0/S1 塌成 404（不存在與非本人不可區分），
+ * 其餘交給純函式層依 RPC 順序判定。
+ */
+function previewInMemory(command) {
+  // 1. 線性掃 confirmationTokenStore 比對 tokenHash（store 形狀不得改動）。
+  let tokenRow = null;
+  for (const row of confirmationTokenStore.values()) {
+    if (row.tokenHash === command.tokenHash) {
+      tokenRow = row;
+      break;
+    }
+  }
+  if (!tokenRow) throw acceptNotFound(); // S0
+
+  // 2. booking
+  const booking = bookingStore.get(tokenRow.bookingId) ?? null;
+  if (!booking) throw acceptNotFound(); // S0
+
+  // 3. ownership：他人 token 與不存在 token 同碼同訊息同狀態。
+  if (booking.travelerId !== command.travelerUserId) throw acceptNotFound(); // S1
+
+  // 4. order 關聯損毀 → 500（與 accept 對 orders 關聯的處理一致）。
+  let order = null;
+  for (const row of orderStore.values()) {
+    if (row.bookingId === booking.bookingId) {
+      order = row;
+      break;
+    }
+  }
+  if (!order) throw acceptUnexpected('Midao traveler confirmation order relation is invalid');
+
+  // 5. 純顯示欄位：查無一律 null，不得 500。
+  const plan = planFixtureStore.get(booking.activityPlanId) ?? null;
+
+  // 6./7. 狀態判定 + 投影。
+  const status = resolveConfirmationPreviewStatus({
+    bookingStatus: booking.status,
+    travelerConfirmationStatus: booking.travelerConfirmationStatus,
+    travelerConfirmationExpiresAt: booking.travelerConfirmationExpiresAt,
+    tokenConsumedAt: tokenRow.consumedAt,
+    tokenExpiresAt: tokenRow.expiresAt,
+    now: nowIso(),
+  });
+
+  return buildConfirmationPreview({
+    status,
+    bookingId: booking.bookingId,
+    orderId: order.orderId,
+    activityId: booking.activityId,
+    activityPlanId: booking.activityPlanId,
+    title: plan?.activityTitle ?? null,
+    planName: plan?.name ?? null,
+    startAt: booking.startAt,
+    endAt: booking.endAt,
+    partySize: booking.participants,
+    // in-memory 的定價真值＝conversion 當下的 quotedTotalTwd（計畫 §2 D4）。
+    // 不得在 in-memory 另建 pricing snapshot store（那是 Supabase 專屬形狀）。
+    quotedTotalTwd: order.totalTwd,
+    currency: 'TWD',
+    expiresAt: booking.travelerConfirmationExpiresAt,
+  });
+}
+
+/** Supabase 讀取封裝：吞掉 driver 原訊息，換固定安全訊息。 */
+async function previewSelectMaybeSingle(query) {
+  let response;
+  try {
+    response = await query;
+  } catch {
+    throw acceptUnexpected();
+  }
+  if (response?.error) throw acceptUnexpected();
+  return response?.data ?? null;
+}
+
+/**
+ * §4.3 Supabase 分支（service-role）。三張 Task 32 表對 anon/authenticated 全撤權，
+ * 授權責任由 route 的 getTravelerIdentity() + 本函式的 ownership 比對承擔
+ * ——與 accept 完全同構（計畫 §2 D1 論證 2）。
+ */
+async function previewInSupabase(command) {
+  const supabase = await getSupabase();
+
+  // 1. token
+  const tokenRow = await previewSelectMaybeSingle(
+    supabase
+      .from('booking_confirmation_tokens')
+      .select('booking_id, expires_at, consumed_at')
+      .eq('token_hash', command.tokenHash)
+      .maybeSingle(),
+  );
+  if (!tokenRow) throw acceptNotFound(); // S0
+
+  // 2. booking
+  const booking = await previewSelectMaybeSingle(
+    supabase
+      .from('bookings')
+      .select([
+        'id',
+        'traveler_id',
+        'status',
+        'traveler_confirmation_status',
+        'traveler_confirmation_expires_at',
+        'participants',
+        'start_at',
+        'end_at',
+        'activity_id',
+        'activity_plan_id',
+      ].join(', '))
+      .eq('id', tokenRow.booking_id)
+      .maybeSingle(),
+  );
+  if (!booking) throw acceptNotFound(); // S0
+  if (booking.traveler_id !== command.travelerUserId) throw acceptNotFound(); // S1
+
+  // 3. orders：與 accept RPC 同一取法（created_at, id 遞增取第一筆）。
+  const orderRows = await previewSelectMaybeSingle(
+    supabase
+      .from('orders')
+      .select('id')
+      .eq('booking_id', booking.id)
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(1),
+  );
+  const orderId = Array.isArray(orderRows) ? orderRows[0]?.id ?? null : orderRows?.id ?? null;
+  if (!orderId) throw acceptUnexpected('Midao traveler confirmation order relation is invalid');
+
+  // 4. pricing snapshot＝定價真值；查無視為關聯損毀 → 500 並上報。
+  const snapshot = await previewSelectMaybeSingle(
+    supabase
+      .from('booking_pricing_snapshots')
+      .select('quoted_total_twd, currency, party_size')
+      .eq('booking_id', booking.id)
+      .maybeSingle(),
+  );
+  if (!snapshot) throw acceptUnexpected('Midao traveler confirmation pricing snapshot is invalid');
+
+  // 5. 純顯示欄位：查無一律 null，不得 500。
+  const activity = await previewSelectMaybeSingle(
+    supabase.from('activities').select('title').eq('id', booking.activity_id).maybeSingle(),
+  );
+  const plan = await previewSelectMaybeSingle(
+    supabase.from('activity_plans').select('name').eq('id', booking.activity_plan_id).maybeSingle(),
+  );
+
+  // 6. participants 與 snapshot.party_size 同源寫入；若不一致以 participants 為準
+  //    （容量真值），僅記 warn，不得 500。訊息不含 token、不含 PII。
+  if (Number(snapshot.party_size) !== Number(booking.participants)) {
+    console.warn('[midao] traveler confirmation preview party size mismatch', {
+      bookingId: booking.id,
+      participants: booking.participants,
+      snapshotPartySize: snapshot.party_size,
+    });
+  }
+
+  // 7. 狀態判定 + 投影。
+  const status = resolveConfirmationPreviewStatus({
+    bookingStatus: booking.status,
+    travelerConfirmationStatus: booking.traveler_confirmation_status,
+    travelerConfirmationExpiresAt: booking.traveler_confirmation_expires_at,
+    tokenConsumedAt: tokenRow.consumed_at,
+    tokenExpiresAt: tokenRow.expires_at,
+    now: nowIso(),
+  });
+
+  return buildConfirmationPreview({
+    status,
+    bookingId: booking.id,
+    orderId,
+    activityId: booking.activity_id,
+    activityPlanId: booking.activity_plan_id,
+    title: activity?.title ?? null,
+    planName: plan?.name ?? null,
+    startAt: booking.start_at,
+    endAt: booking.end_at,
+    partySize: booking.participants,
+    quotedTotalTwd: snapshot.quoted_total_twd,
+    currency: snapshot.currency,
+    expiresAt: booking.traveler_confirmation_expires_at,
+  });
+}
+
+/**
+ * traveler 以一次性 raw token 預覽「要確認的是什麼」（route 直接把回傳交給 jsonOk）。
+ *
+ * 誠實邊界：本函式是**預測**，accept 才是權威。兩次呼叫之間存在 TOCTOU 窗口
+ * （過期時點跨越、他處併發 accept、容量被吃滿），UI 不得假設 pending 就必然 accept 成功。
+ *
+ * @param {{ travelerUserId: string, rawToken: string }} input
+ * @returns {Promise<import('./booking-confirmation-preview.ts').ConfirmationPreview>}
+ */
+export async function getMidaoTravelerConfirmationPreviewDb(input = {}) {
+  const command = normalizePreviewCommand(input);
+  if (hasSupabaseEnv()) return previewInSupabase(command);
+  return previewInMemory(command);
 }
 
 /** 測試接縫：塞入同 plan／同 local date 的其他 active booking（容量衝突用）。 */
