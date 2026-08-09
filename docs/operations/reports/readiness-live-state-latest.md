@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-08-08T05:16:26.488Z -->
+<!-- query_timestamp: 2026-08-09T05:21:25.338Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-08T05:16:26.488Z  
-**Commit SHA:** `fd358ea2b8d945aebdc9519b215dc33f64af706d`
+**Query timestamp:** 2026-08-09T05:21:25.338Z  
+**Commit SHA:** `69727ebc805f0ddfcdf551f9b84ccae93b0f4f76`
 
 ---
 
@@ -26,7 +26,7 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (55 total)
+## Open Issues (56 total)
 
 ### P0 (1)
 
@@ -34,10 +34,11 @@
 |---|-------|--------|
 | #1777 | [[Payments][P0] 修正結算／部分退款／出款非原子鏈，避免漏帳、重扣與錯誤撥款](https://github.com/smallwei0301/tour-platform/issues/1777) | triaged, type:bug, priority:P0, agent:backlog, owner:ai-agent, status:ready, payments, orders, database |
 
-### P1 (31)
+### P1 (32)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1802 | [[Midao] /order/pay ECPay 付款路徑缺少 traveler_confirmation 閘門檢查](https://github.com/smallwei0301/tour-platform/issues/1802) | P1 |
 | #1773 | [[QA] Daily test checklist for recent merged PRs 2026-07-29](https://github.com/smallwei0301/tour-platform/issues/1773) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, docs, post-merge |
 | #1770 | [[QA] Daily test checklist for recent merged PRs 2026-07-28](https://github.com/smallwei0301/tour-platform/issues/1770) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, admin, post-merge |
 | #1762 | [[QA] Daily test checklist for recent merged PRs 2026-07-23](https://github.com/smallwei0301/tour-platform/issues/1762) | priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, auth, admin, post-merge |
@@ -114,6 +115,8 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1803 | [fix(testing): 修復本地 E2E 40字元路徑截斷缺陷（#1759 複盤衍生）](https://github.com/smallwei0301/tour-platform/pull/1803) | 2026-08-08 |
+| #1801 | [#1759 Package 4 / Task 42: 建立 inquiry request detail UI](https://github.com/smallwei0301/tour-platform/pull/1801) | 2026-08-08 |
 | #1800 | [#1759 Package 4 / Task 41: 擴充 checkout gate（旅客確認守門）](https://github.com/smallwei0301/tour-platform/pull/1800) | 2026-08-08 |
 | #1799 | [#1759 Package 4 / Task 40: 建立 traveler confirmation helper/RPC/API](https://github.com/smallwei0301/tour-platform/pull/1799) | 2026-08-07 |
 | #1798 | [#1759 Package 4 / Task 39: 建立 conversion gateway/API](https://github.com/smallwei0301/tour-platform/pull/1798) | 2026-08-07 |
@@ -122,8 +125,6 @@
 | #1793 | [#1759 Package 4／Task 36：LINE reply template 純函式與導遊端唯讀路由](https://github.com/smallwei0301/tour-platform/pull/1793) | 2026-08-06 |
 | #1792 | [Task 35：修正 public inquiry questionnaire snapshot contract](https://github.com/smallwei0301/tour-platform/pull/1792) | 2026-08-06 |
 | #1791 | [test(payments): #1777 端到端全鏈驗證完成 ＋ #1647 重新 preview](https://github.com/smallwei0301/tour-platform/pull/1791) | 2026-08-05 |
-| #1790 | [fix(payments): #1777 收尾 — F3／F4／F6／F8 ＋ AC 6／7 重判](https://github.com/smallwei0301/tour-platform/pull/1790) | 2026-08-04 |
-| #1789 | [fix(payments): #1777 兩批 P0 — ON CONFLICT 推論不到部分索引、退款累積額被覆寫](https://github.com/smallwei0301/tour-platform/pull/1789) | 2026-08-04 |
 
 ---
 
