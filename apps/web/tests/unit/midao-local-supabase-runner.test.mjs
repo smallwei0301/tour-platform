@@ -263,6 +263,16 @@ test('API real-auth lane is an explicit single-spec allowlist without a browser 
   ]) assert.throws(() => parseMidaoRunnerInvocation(rejected), /ARGS_INVALID/u);
 });
 
+test('real-auth lanes use an isolated full-service seed with direct GoTrue-only fixture columns', async () => {
+  const source = await readFile(new URL('../../../../scripts/testing/with-midao-local-supabase.mjs', import.meta.url), 'utf8');
+  const seed = await readFile(new URL('../../../../scripts/testing/midao-api-real-auth-seed.sql', import.meta.url), 'utf8');
+  assert.match(source, /if \(realAuthMode\) \{\s+const overlayPath = join\(repoRoot, 'scripts\/testing\/midao-api-real-auth-seed\.sql'\);/u);
+  assert.match(source, /else if \(playwrightMode \|\| postgrestMode\) \{\s+const overlayPath = join\(repoRoot, 'scripts\/testing\/midao-e2e-seed\.sql'\);/u);
+  assert.match(seed, /encrypted_password, email_confirmed_at/u);
+  assert.match(seed, /inquiry_enabled/u);
+  assert.doesNotMatch(seed, /information_schema|EXECUTE \$real_auth_fixture\$/u);
+});
+
 test('API real-auth runner keeps durable redacted output separate from the browser lane', async () => {
   const source = await readFile(new URL('../../../../scripts/testing/run-midao-e2e.sh', import.meta.url), 'utf8');
   assert.match(source, /apps\/web\/tests\/integration\/midao-inquiry-conversion-api-chain\.test\.mjs/u);

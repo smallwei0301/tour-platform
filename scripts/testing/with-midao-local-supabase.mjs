@@ -1638,7 +1638,7 @@ async function main() {
         let child;
         let childSecrets = Object.values(localEnv);
         if (realAuthMode) {
-          const overlayPath = join(repoRoot, 'scripts/testing/midao-e2e-seed.sql');
+          const overlayPath = join(repoRoot, 'scripts/testing/midao-api-real-auth-seed.sql');
           const overlay = await runCommand('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', overlayPath], {
             cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
           });
