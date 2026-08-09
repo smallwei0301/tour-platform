@@ -321,6 +321,11 @@ export function __seedMidaoInquiryConversionFixtureForTest(fixture = {}) {
       status: String(plan.status),
       minParticipants: plan.minParticipants,
       maxParticipants: plan.maxParticipants,
+      // Task 43a additive：preview 需顯示方案名／服務名（Supabase 分支分別來自
+      // activity_plans.name 與 activities.title）。既有呼叫端未傳時一律 null，
+      // 行為位元級不變（計畫 §2 D4 in-memory parity）。
+      name: plan.name ?? null,
+      activityTitle: plan.activityTitle ?? null,
     });
   }
   if (traveler) {
