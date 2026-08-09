@@ -199,7 +199,8 @@ test('real-auth chain runner captures diagnostics in a persistent ignored worktr
   assert.match(source, /LOG_DIR="\$\{MIDAO_E2E_LOG_DIR:-"\$ROOT\/\.e2e-run-logs"\}"/u);
   assert.match(source, /mkdir -p "\$LOG_DIR"/u);
   assert.match(source, /MIDAO_DB_HEALTH_TIMEOUT_SECONDS="\$\{MIDAO_DB_HEALTH_TIMEOUT_SECONDS:-600\}"/u);
-  assert.match(source, /tee "\$LOG_DIR\/midao-inquiry-conversion-chain\.log"/u);
+  assert.match(source, /LOG_NAME='midao-inquiry-conversion-chain\.log'/u);
+  assert.match(source, /tee "\$LOG_DIR\/\$LOG_NAME"/u);
 });
 
 test('runner invocation reserves an exact Node integration lane for the pinned PostgREST runtime', () => {
@@ -247,6 +248,27 @@ test('real-auth Playwright lane is an explicit allowlist and retains GoTrue in i
   assert.match(rewritten, /\[storage\]\nenabled = false/u);
   assert.match(rewritten, /\[realtime\]\nenabled = false\n$/u);
   assert.doesNotMatch(rewritten, /\[auth\]\nenabled = false/u);
+});
+
+test('API real-auth lane is an explicit single-spec allowlist without a browser runtime', () => {
+  const chainTest = 'apps/web/tests/integration/midao-inquiry-conversion-api-chain.test.mjs';
+  assert.deepEqual(parseMidaoRunnerInvocation(['--api-real-auth', chainTest]), {
+    mode: 'api-real-auth',
+    childArgs: [chainTest],
+  });
+  for (const rejected of [
+    ['--api-real-auth'],
+    ['--api-real-auth', 'apps/web/tests/integration/midao-requests-postgrest.test.mjs'],
+    ['--api-real-auth', '../escape.test.mjs'],
+  ]) assert.throws(() => parseMidaoRunnerInvocation(rejected), /ARGS_INVALID/u);
+});
+
+test('API real-auth runner keeps durable redacted output separate from the browser lane', async () => {
+  const source = await readFile(new URL('../../../../scripts/testing/run-midao-e2e.sh', import.meta.url), 'utf8');
+  assert.match(source, /apps\/web\/tests\/integration\/midao-inquiry-conversion-api-chain\.test\.mjs/u);
+  assert.match(source, /MODE='--api-real-auth'/u);
+  assert.match(source, /midao-inquiry-conversion-api-chain\.log/u);
+  assert.doesNotMatch(source, /playwright.*api-chain|api-chain.*playwright/iu);
 });
 
 test('status classifier accepts only pinned exact two-line CRLF-aware missing fixture', () => {

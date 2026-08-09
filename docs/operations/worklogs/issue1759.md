@@ -88,3 +88,10 @@
 - real-auth chain runner 會在 worktree 的 `.e2e-run-logs/midao-inquiry-conversion-chain.log` 寫入 stdout/stderr；`.e2e-run-logs/.gitignore` 保留目錄並忽略實際 log，避免將執行資料加入 Git。
 - 2026-08-10 00:00 Asia/Taipei focused verification：`/root/.hermes/toolchains/node/22.23.1/node --test --test-concurrency=1 apps/web/tests/unit/midao-local-supabase-runner.test.mjs` → 49 passed／0 failed；`bash -n scripts/testing/run-midao-e2e.sh`、`git diff --check` → exit 0。
 - chain gate 未重跑（正確遵守 pre-flight）：可用記憶體 1.0Gi，未達 >=1.5Gi；load average 4.50／4.85／4.53，未達 <4。待主機資源達標後以 `MIDAO_DB_HEALTH_TIMEOUT_SECONDS=600` 執行，並以 `.e2e-run-logs/chain-gate-run.log` 與 runner 內部 log 提供證據。
+
+### API-only HTTP gate 實作（2026-08-10，Kanban t_162e4a6f）
+
+- 新增 `apps/web/tests/integration/midao-inquiry-conversion-api-chain.test.mjs`：只以 Node `fetch` 走 local GoTrue password session、真實 guide session API 與六段 HTTP 主鏈；沒有 Playwright、`page.route()` 或 mock response。斷言順序是 inquiry 201 → mark-replied → convert created → transfer checkout 409 `TRAVELER_CONFIRMATION_REQUIRED` → traveler accept → transfer checkout `awaitingManualPayment=true`。
+- local runner 新增 strict single-spec `--api-real-auth` allowlist；以 Node 22 啟動 loopback Next API server，保留 local GoTrue、排除 browser/Playwright。`run-midao-e2e.sh` 對 API-only lane 的 durable log 為 `.e2e-run-logs/midao-inquiry-conversion-api-chain.log`。
+- TDD RED：新 runner parser case 先得到 `MIDAO_RUNNER_ARGS_INVALID`；GREEN：`/root/.hermes/toolchains/node/22.23.1/node --test --test-concurrency=1 apps/web/tests/unit/midao-local-supabase-runner.test.mjs` 為 51 passed／0 failed。`tsc --noEmit` exit 0、`bash -n scripts/testing/run-midao-e2e.sh` exit 0、`git diff --check` exit 0。
+- 實際 API chain 尚未驗證：本 Hermes gateway 內對 `run-midao-e2e.sh`／完整 local runner 的執行遭安全控制阻擋（訊息：不能從 gateway process restart/stop gateway），不得繞過或重試可能含 child process-group cleanup 的 runner。需由 gateway 外部 shell 以 Node 22 執行 API-only command，讀取 `.e2e-run-logs/midao-inquiry-conversion-api-chain.log` 後，才能宣稱 Package 4 API gate PASS。

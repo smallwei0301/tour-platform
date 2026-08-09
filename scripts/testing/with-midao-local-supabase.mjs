@@ -1131,6 +1131,75 @@ export function runCommand(command, args, { cwd, env = process.env, signal } = {
   });
 }
 
+export async function startMidaoApiServer({ repoRoot, nodeBin, environment, signal, port = 43127 }) {
+  const numericPort = Number(port);
+  if (!isAbsolute(repoRoot) || !isAbsolute(nodeBin) || !environment || typeof environment !== 'object'
+    || !Number.isSafeInteger(numericPort) || numericPort < 1024 || numericPort > 65535) {
+    throw new Error('MIDAO_API_SERVER_CONTRACT_INVALID');
+  }
+  const nextBin = join(repoRoot, 'node_modules/next/dist/bin/next');
+  const [nodeStat, nextStat] = await Promise.all([fsPromises.lstat(nodeBin), fsPromises.lstat(nextBin)]);
+  if (!nodeStat.isFile() || nodeStat.isSymbolicLink() || (nodeStat.mode & 0o111) === 0
+    || !nextStat.isFile() || nextStat.isSymbolicLink()) {
+    throw new Error('MIDAO_API_SERVER_BINARY_INVALID');
+  }
+  const baseUrl = `http://127.0.0.1:${numericPort}`;
+  const child = spawn(nodeBin, [nextBin, 'dev', '--hostname', '127.0.0.1', '--port', String(numericPort)], {
+    cwd: join(repoRoot, 'apps/web'),
+    env: {
+      ...environment,
+      PORT: String(numericPort),
+      NODE_ENV: 'development',
+      VERCEL_ENV: 'preview',
+      MIDAO_E2E_LOCAL: '1',
+      NEXT_TELEMETRY_DISABLED: '1',
+      CHOKIDAR_USEPOLLING: '1',
+      WATCHPACK_POLLING: 'true',
+      CHOKIDAR_INTERVAL: '1000',
+    },
+    detached: true,
+    stdio: ['ignore', 'ignore', 'ignore'],
+  });
+  let exited = false;
+  const closed = new Promise((resolveClose) => {
+    child.once('close', () => { exited = true; resolveClose(); });
+    child.once('error', () => { exited = true; resolveClose(); });
+  });
+  const close = async () => {
+    if (!exited) {
+      try { process.kill(-child.pid, 'SIGTERM'); } catch (error) {
+        if (error?.code !== 'ESRCH') child.kill('SIGTERM');
+      }
+      await Promise.race([closed, new Promise((resolveDelay) => setTimeout(resolveDelay, 10_000))]);
+    }
+    if (!exited) {
+      try { process.kill(-child.pid, 'SIGKILL'); } catch (error) {
+        if (error?.code !== 'ESRCH') child.kill('SIGKILL');
+      }
+      await closed;
+    }
+  };
+  try {
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      if (signal?.aborted) throw new Error('RUNNER_SIGNALLED');
+      if (exited) throw new Error('MIDAO_API_SERVER_EXITED');
+      try {
+        const response = await fetch(`${baseUrl}/images/placeholder-avatar.svg`, {
+          signal: AbortSignal.timeout(2_000),
+        });
+        if (response.status === 200) return { baseUrl, close };
+      } catch (error) {
+        if (signal?.aborted) throw new Error('RUNNER_SIGNALLED');
+      }
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
+    }
+    throw new Error('MIDAO_API_SERVER_TIMEOUT');
+  } catch (error) {
+    await close();
+    throw error;
+  }
+}
+
 function parseContainerRows(stdout, expectedProjectId) {
   return nonemptyLines(stdout).map((line) => {
     const [id, name, label] = line.split('\t');
@@ -1465,6 +1534,9 @@ export function parseMidaoRunnerInvocation(args) {
   } else if (childArgs[0] === '--playwright-real-auth') {
     mode = 'playwright-real-auth';
     childArgs = childArgs.slice(1);
+  } else if (childArgs[0] === '--api-real-auth') {
+    mode = 'api-real-auth';
+    childArgs = childArgs.slice(1);
   } else if (childArgs[0] === '--postgrest') {
     mode = 'postgrest';
     childArgs = childArgs.slice(1);
@@ -1475,10 +1547,12 @@ export function parseMidaoRunnerInvocation(args) {
     ? /^apps\/web\/e2e\/[a-z0-9][a-z0-9-]*\.spec\.ts$/u
     : /^apps\/web\/tests\/integration\/midao-[a-z0-9][a-z0-9-]*\.test\.mjs$/u;
   const realAuthSpec = 'apps/web/e2e/midao-inquiry-conversion-chain.spec.ts';
+  const apiRealAuthTest = 'apps/web/tests/integration/midao-inquiry-conversion-api-chain.test.mjs';
   if (
     (mode !== 'postgres' && childArgs.length === 0)
     || childArgs.some((entry) => !pattern.test(entry))
     || (mode === 'playwright-real-auth' && (childArgs.length !== 1 || childArgs[0] !== realAuthSpec))
+    || (mode === 'api-real-auth' && (childArgs.length !== 1 || childArgs[0] !== apiRealAuthTest))
   ) {
     throw new Error(`MIDAO_${mode.toUpperCase()}_ARGS_INVALID`);
   }
@@ -1509,6 +1583,7 @@ async function main() {
   let databaseBridge;
   let apiBridge;
   let apiCompatProxy;
+  let apiServer;
   let databaseWorkdir;
   let replay;
   let primaryError;
@@ -1522,13 +1597,15 @@ async function main() {
     const invocation = parseMidaoRunnerInvocation(process.argv.slice(2));
     const playwrightMode = invocation.mode === 'playwright';
     const realAuthPlaywrightMode = invocation.mode === 'playwright-real-auth';
+    const apiRealAuthMode = invocation.mode === 'api-real-auth';
+    const realAuthMode = realAuthPlaywrightMode || apiRealAuthMode;
     const postgrestMode = invocation.mode === 'postgrest';
     const childArgs = invocation.childArgs;
-    if (gateway && (playwrightMode || realAuthPlaywrightMode || postgrestMode)) {
+    if (gateway && (playwrightMode || realAuthMode || postgrestMode)) {
       apiBridge = await startLoopbackBridge({ listenPort: 54321, targetHost: gateway, targetPort: 54321 });
     }
     databaseWorkdir = await prepareDatabaseOnlyWorkdir({
-      repoRoot, lockDir: LOCK_PATH, fullServices: realAuthPlaywrightMode, realAuth: realAuthPlaywrightMode,
+      repoRoot, lockDir: LOCK_PATH, fullServices: realAuthMode, realAuth: realAuthMode,
     });
     replay = await databaseWorkdir.stageCliReplay();
     if (!playwrightMode && childArgs.length === 0) childArgs.push(
@@ -1542,8 +1619,8 @@ async function main() {
       adapter: createActualAdapter({
         repoRoot, pin, nodeBin, signal: controller.signal, cliWorkdir: databaseWorkdir.workdir,
         lifecycleContract: { migrationNames: [replay.bootstrapName], noticesByMigration: {} },
-        fullServices: realAuthPlaywrightMode,
-        enableFullServices: realAuthPlaywrightMode ? () => databaseWorkdir.enableFullServices() : undefined,
+        fullServices: realAuthMode,
+        enableFullServices: realAuthMode ? () => databaseWorkdir.enableFullServices() : undefined,
       }),
       expectedProjectId: projectId,
       initialize: 'start-only',
@@ -1559,7 +1636,8 @@ async function main() {
         });
         if (seed.exitCode !== 0 || seed.signal !== null) throw new Error(`MIDAO_SEED_FAILED: ${redactSupabaseOutput(seed.stderr).slice(-4000).trim()}`);
         let child;
-        if (realAuthPlaywrightMode) {
+        let childSecrets = Object.values(localEnv);
+        if (realAuthMode) {
           const overlayPath = join(repoRoot, 'scripts/testing/midao-e2e-seed.sql');
           const overlay = await runCommand('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', overlayPath], {
             cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
@@ -1575,9 +1653,24 @@ async function main() {
             MIDAO_E2E_TRAVELER_PASSWORD: 'midao-e2e-traveler-local-only',
             NEXT_PUBLIC_TRANSFER_PAYMENT_ENABLED: '1',
           };
-          child = await runCommand(join(repoRoot, 'node_modules/.bin/playwright'), [
-            'test', '--workers=1', ...childArgs.map((entry) => entry.slice('apps/web/'.length)),
-          ], { cwd: join(repoRoot, 'apps/web'), env: e2eEnv, signal: controller.signal });
+          childSecrets = Object.values(e2eEnv);
+          if (apiRealAuthMode) {
+            apiServer = await startMidaoApiServer({
+              repoRoot,
+              nodeBin,
+              environment: e2eEnv,
+              signal: controller.signal,
+            });
+            child = await runCommand(nodeBin, ['--test', '--test-concurrency=1', ...childArgs], {
+              cwd: repoRoot,
+              env: { ...e2eEnv, MIDAO_API_BASE_URL: apiServer.baseUrl },
+              signal: controller.signal,
+            });
+          } else {
+            child = await runCommand(join(repoRoot, 'node_modules/.bin/playwright'), [
+              'test', '--workers=1', ...childArgs.map((entry) => entry.slice('apps/web/'.length)),
+            ], { cwd: join(repoRoot, 'apps/web'), env: e2eEnv, signal: controller.signal });
+          }
         } else if (playwrightMode || postgrestMode) {
           const overlayPath = join(repoRoot, 'scripts/testing/midao-e2e-seed.sql');
           const overlay = await runCommand('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', overlayPath], {
@@ -1635,8 +1728,8 @@ async function main() {
             cwd: repoRoot, env: { ...process.env, ...localEnv, NODE_OPTIONS: '--experimental-strip-types' }, signal: controller.signal,
           });
         }
-        if (child.stdout) process.stdout.write(redactSupabaseOutput(child.stdout, Object.values(localEnv)));
-        if (child.stderr) process.stderr.write(redactSupabaseOutput(child.stderr, Object.values(localEnv)));
+        if (child.stdout) process.stdout.write(redactSupabaseOutput(child.stdout, childSecrets));
+        if (child.stderr) process.stderr.write(redactSupabaseOutput(child.stderr, childSecrets));
         if (child.exitCode !== 0 || child.signal !== null) throw new Error(`CHILD_FAILED_${child.exitCode}`);
       },
       signal: controller.signal,
@@ -1662,6 +1755,10 @@ async function main() {
   if (apiCompatProxy) {
     try { await apiCompatProxy.close(); }
     catch (error) { cleanupErrors.push(new Error('API_COMPAT_PROXY_CLOSE_FAILED', { cause: error })); }
+  }
+  if (apiServer) {
+    try { await apiServer.close(); }
+    catch (error) { cleanupErrors.push(new Error('MIDAO_API_SERVER_CLOSE_FAILED', { cause: error })); }
   }
   if (apiBridge) {
     try { await apiBridge.close(); }
