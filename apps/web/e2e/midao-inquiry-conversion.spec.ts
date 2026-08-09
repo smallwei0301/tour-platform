@@ -110,7 +110,7 @@ async function installRoutes(
           travelerConfirmationStatus: 'pending',
           travelerConfirmationExpiresAt: '2026-08-09T02:00:00.000Z',
           confirmationToken: null,
-          confirmationUrl: 'https://midao.example.test/api/v2/me/booking-confirmations/e2e-token/accept',
+          confirmationUrl: 'https://midao.example.test/booking/confirm/e2e-token',
           confirmationTokenNote: null,
         },
       }),
@@ -220,7 +220,8 @@ test('E4: created 顯示 confirmation URL；replayed 不得假造連結', async 
   await page.getByTestId('midao-conversion-submit').click();
 
   const url = page.getByTestId('midao-confirmation-url');
-  await expect(url).toContainText('/api/v2/me/booking-confirmations/');
+  await expect(url).toContainText('/booking/confirm/');
+  await expect(url).not.toContainText('/api/v2/me/booking-confirmations/');
   await expect(page.getByTestId('midao-copy-confirmation-url')).toBeVisible();
 
   const replayedPage = await page.context().newPage();

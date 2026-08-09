@@ -382,9 +382,7 @@ test('T1 in-memory conversion returns the fixed created projection with a one-ti
   assert.equal(result.travelerConfirmationExpiresAt, '2026-08-07T12:00:00.000Z');
   assert.match(result.confirmationToken, HEX64_PATTERN);
   assert.equal(result.confirmationToken, FIXED_RAW_TOKEN);
-  assert.equal(result.confirmationUrl.startsWith(SITE_URL), true);
-  assert.equal(result.confirmationUrl.endsWith('/accept'), true);
-  assert.equal(result.confirmationUrl.includes(FIXED_RAW_TOKEN), true);
+  assert.equal(result.confirmationUrl, `${SITE_URL}/booking/confirm/${FIXED_RAW_TOKEN}`);
   assert.equal(typeof result.confirmationTokenNote, 'string');
   assert.equal(result.confirmationTokenNote.length > 0, true);
 });
