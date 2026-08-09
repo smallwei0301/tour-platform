@@ -1,7 +1,13 @@
 import { fail, ok } from '../../../../../src/lib/api';
-import { getOrderDetailForPayment, upsertEcpayPaymentAttemptDb } from '../../../../../src/lib/db.mjs';
+import {
+  getOrderDetailForPayment,
+  getSupabase,
+  hasSupabaseEnv,
+  upsertEcpayPaymentAttemptDb,
+} from '../../../../../src/lib/db.mjs';
 import { generateCheckMacValue, getECPayCredentials } from '../../../../../src/lib/ecpay';
 import { buildEcpayCheckoutParams } from '../../../../../src/lib/ecpay-create-orchestration.mjs';
+import { canCheckoutTravelerConfirmation } from '../../../../../src/lib/booking-type-flow.mjs';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../../../src/lib/rate-limit';
 
 /**
@@ -59,6 +65,34 @@ export async function POST(request: Request) {
         fail('INVALID_STATE', `Order is not pending payment (current: ${order.status})`),
         { status: 400 }
       );
+    }
+
+    // #1802：/order/pay 走 ECPay create 時，同樣必須擋下尚未完成旅客確認的 LINE 詢問單。
+    let booking: {
+      source_inquiry_id?: string | null;
+      traveler_confirmation_status?: string;
+    } | null = null;
+    if (hasSupabaseEnv()) {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('source_inquiry_id, traveler_confirmation_status')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        throw new Error(error.message || 'Failed to fetch booking confirmation status');
+      }
+      booking = data;
+    }
+
+    const cGate = canCheckoutTravelerConfirmation({
+      sourceInquiryId: booking?.source_inquiry_id,
+      travelerConfirmationStatus: booking?.traveler_confirmation_status,
+    });
+    if (!cGate.allowed) {
+      return Response.json(fail(cGate.code, cGate.messageZh), { status: 409 });
     }
 
     // 取得 ECPay 憑證
