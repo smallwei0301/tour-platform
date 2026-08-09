@@ -576,4 +576,47 @@ test.describe('Task 43 traveler confirmation page', () => {
     // 重試同一次確認必須重放同一把鑰匙，否則會撞 IDEMPOTENCY_CONFLICT／製造第二筆紀錄。
     expect(counters.acceptHeaders[1]['idempotency-key']).toBe(counters.acceptHeaders[0]['idempotency-key']);
   });
+
+  test('T10: GET 404 保留 invalid testid 並顯示連結無效主文案', async ({ page }) => {
+    test.setTimeout(180_000);
+    await setTravelerSession(page);
+    await installConfirmRoutes(page, { previewStatus: 404 });
+
+    await page.goto(CONFIRM_PATH, { waitUntil: 'domcontentloaded' });
+
+    const invalid = page.getByTestId('booking-confirm-invalid');
+    const expectedCopy = '此確認連結無效，或不屬於目前登入的帳號。';
+    await expect(invalid).toBeVisible({ timeout: 30_000 });
+    await expect(invalid).toContainText(expectedCopy);
+    await expect(invalid.getByText(expectedCopy, { exact: true })).toHaveCount(1);
+  });
+
+  test('T11: GET 503 與 500 保留 invalid testid，但各自只顯示服務錯誤主文案', async ({ page }) => {
+    test.setTimeout(180_000);
+    await setTravelerSession(page);
+    await installConfirmRoutes(page, { previewStatus: 503 });
+
+    await page.goto(CONFIRM_PATH, { waitUntil: 'domcontentloaded' });
+
+    const unavailableCopy = '服務暫時無法使用，請稍後再試。';
+    const invalidCopy = '此確認連結無效';
+    const unavailable = page.getByTestId('booking-confirm-invalid');
+    await expect(unavailable).toBeVisible({ timeout: 30_000 });
+    await expect(unavailable).toContainText(unavailableCopy);
+    await expect(unavailable.getByText(unavailableCopy, { exact: true })).toHaveCount(1);
+    await expect(unavailable).not.toContainText(invalidCopy);
+
+    const genericPage = await page.context().newPage();
+    await setTravelerSession(genericPage);
+    await installConfirmRoutes(genericPage, { previewStatus: 500 });
+    await genericPage.goto(CONFIRM_PATH, { waitUntil: 'domcontentloaded' });
+
+    const genericCopy = '暫時無法完成確認，請稍後再試。';
+    const generic = genericPage.getByTestId('booking-confirm-invalid');
+    await expect(generic).toBeVisible({ timeout: 30_000 });
+    await expect(generic).toContainText(genericCopy);
+    await expect(generic.getByText(genericCopy, { exact: true })).toHaveCount(1);
+    await expect(generic).not.toContainText(invalidCopy);
+    await genericPage.close();
+  });
 });
