@@ -416,7 +416,7 @@ async function overwriteSafeFile(filePath, bytes) {
   } finally { await handle?.close(); }
 }
 
-export function buildMidaoE2ELocalConfig(canonical) {
+function buildMidaoE2ELocalConfigWithAuth(canonical, authEnabled) {
   if (typeof canonical !== 'string' || canonical.includes('\0')) {
     throw new Error('MIDAO_E2E_LOCAL_CONFIG_AMBIGUOUS');
   }
@@ -438,12 +438,20 @@ export function buildMidaoE2ELocalConfig(canonical) {
     if (enabled.length !== 1 || !/^\s*enabled\s*=\s*true\s*$/u.test(lines[enabled[0]])) {
       throw new Error('MIDAO_E2E_LOCAL_CONFIG_AMBIGUOUS');
     }
-    lines[enabled[0]] = 'enabled = false';
+    lines[enabled[0]] = `enabled = ${section === 'auth' ? String(authEnabled) : 'false'}`;
   }
   return `${lines.join('\n').trimEnd()}\n\n`
     + '# Task 14 local E2E only: disable unused one-shot jobs that CLI 2.87.2 cannot stream to EOF\n'
     + '# on Docker Engine API 1.43. App guide/admin auth, PostgREST, Kong, and PostgreSQL remain enabled.\n'
     + '[realtime]\nenabled = false\n';
+}
+
+export function buildMidaoE2ELocalConfig(canonical) {
+  return buildMidaoE2ELocalConfigWithAuth(canonical, false);
+}
+
+export function buildMidaoRealAuthE2ELocalConfig(canonical) {
+  return buildMidaoE2ELocalConfigWithAuth(canonical, true);
 }
 
 export async function prepareBaselineWorkdirWithAdapters({
@@ -537,7 +545,8 @@ export async function prepareBaselineWorkdirWithAdapters({
   } finally { expected?.dispose(); capture?.dispose(); }
 }
 
-export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir, fullServices = false }) {
+export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir, fullServices = false, realAuth = false }) {
+  if (realAuth && !fullServices) throw new Error('MIDAO_REAL_AUTH_REQUIRES_FULL_SERVICES');
   return prepareBaselineWorkdirWithAdapters({
     repoRoot, lockDir, fullServices,
     verifyCapture: () => verifyCaptureTransaction({
@@ -565,7 +574,7 @@ export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir, fullServic
     readFullConfig: () => readSafeSourceFile(join(repoRoot, 'supabase/config.toml')).then((text) => Buffer.from(text)),
     rewriteFullConfig: async (workdir, bytes) => {
       const canonical = bytes.toString('utf8');
-      const localOverlay = buildMidaoE2ELocalConfig(canonical);
+      const localOverlay = realAuth ? buildMidaoRealAuthE2ELocalConfig(canonical) : buildMidaoE2ELocalConfig(canonical);
       await overwriteSafeFile(join(workdir, 'supabase/config.toml'), Buffer.from(localOverlay));
     },
   });
@@ -840,6 +849,11 @@ export function redactSupabaseOutput(text, secrets = []) {
   return redacted;
 }
 
+function redactRunnerDiagnostic(text, secrets = []) {
+  return redactSupabaseOutput(text, secrets)
+    .replace(/postgres(?:ql)?:\/\/[^\s]+/giu, '[REDACTED_DATABASE_URL]');
+}
+
 const SAFE_RUNNER_AGGREGATE_MESSAGES = new Set([
   'baseline workdir cleanup failed',
   'baseline workdir setup failed and cleanup held',
@@ -869,8 +883,7 @@ const SAFE_RUNNER_ERROR_PREFIX_CODES = Object.freeze([
   'SUPABASE_SERVICE_START_FAILED',
 ]);
 // #1759 route (a): diagnostic-bearing codes surface their full redacted message instead of the bare code,
-// so an unclassifiable `supabase status` no longer collapses into an opaque `[REDACTED_ERROR]`.
-// Kept as a separate set on purpose: SAFE_RUNNER_ERROR_PREFIX_CODES semantics stay byte-identical.
+// while connection URLs remain hidden from durable runner output.
 const SAFE_RUNNER_DIAGNOSTIC_PREFIX_CODES = Object.freeze([
   'STATUS_UNCLASSIFIED',
   'STATUS_PROJECT_ID_NOT_NORMALIZED',
@@ -886,8 +899,10 @@ export function formatMidaoRunnerFailure(error, secrets = []) {
     const matchesCode = (code) => message === code || message.startsWith(`${code}:`);
     const safePrefix = SAFE_RUNNER_ERROR_PREFIX_CODES.find(matchesCode);
     const diagnosticPrefix = SAFE_RUNNER_DIAGNOSTIC_PREFIX_CODES.find(matchesCode);
-    const safe = SAFE_RUNNER_AGGREGATE_MESSAGES.has(message) || SAFE_RUNNER_ERROR_CODES.has(message) || diagnosticPrefix
+    const safe = SAFE_RUNNER_AGGREGATE_MESSAGES.has(message) || SAFE_RUNNER_ERROR_CODES.has(message)
       ? redactSupabaseOutput(message, secrets)
+      : diagnosticPrefix || safePrefix
+        ? redactRunnerDiagnostic(message, secrets)
       : safePrefix ?? '[REDACTED_ERROR]';
     lines.push(safe);
     if (entry instanceof AggregateError && Array.isArray(entry.errors)) {
@@ -1170,11 +1185,22 @@ export function buildMidaoPlaywrightEnvironment({ parentEnv = process.env, local
   return environment;
 }
 
+export function resolveMidaoDatabaseHealthTimeoutSeconds(value = process.env.MIDAO_DB_HEALTH_TIMEOUT_SECONDS) {
+  if (value === undefined || value === '') return 180;
+  if (typeof value !== 'string' || !/^[1-9]\d*$/u.test(value)) {
+    throw new Error('MIDAO_DB_HEALTH_TIMEOUT_SECONDS_INVALID');
+  }
+  const seconds = Number(value);
+  if (!Number.isSafeInteger(seconds)) throw new Error('MIDAO_DB_HEALTH_TIMEOUT_SECONDS_INVALID');
+  return seconds;
+}
+
 export function createActualAdapter({
   repoRoot, pin, nodeBin, signal, cliWorkdir, lifecycleContract,
   fullServices = false, enableFullServices, commandRunner = runCommand,
 }) {
   const expectedProjectId = canonicalProjectId(repoRoot);
+  const databaseHealthTimeoutSeconds = resolveMidaoDatabaseHealthTimeoutSeconds(process.env.MIDAO_DB_HEALTH_TIMEOUT_SECONDS);
   if (cliWorkdir && basename(resolve(cliWorkdir)) !== expectedProjectId) throw new Error('CLI_WORKDIR_PROJECT_IDENTITY_MISMATCH');
   if (fullServices && typeof enableFullServices !== 'function') throw new Error('FULL_SERVICE_CONFIG_ADAPTER_INVALID');
   const cli = (args, { cleanup = false } = {}) => {
@@ -1284,7 +1310,7 @@ export function createActualAdapter({
     const expectedName = `supabase_db_${canonicalProjectId(repoRoot)}`;
     const database = owned.filter((container) => container.name === expectedName);
     if (database.length !== 1) throw new Error('DATABASE_CONTAINER_IDENTITY_INVALID');
-    for (let attempt = 0; attempt < 180; attempt += 1) {
+    for (let attempt = 0; attempt < databaseHealthTimeoutSeconds; attempt += 1) {
       if (signal?.aborted) throw new Error('RUNNER_SIGNALLED');
       const result = await commandRunner('docker', ['inspect', '--format', '{{.State.Health.Status}}', database[0].id], { cwd: repoRoot });
       if (result.exitCode !== 0 || result.stderr.trim()) throw new Error('DATABASE_HEALTH_INSPECT_FAILED');
@@ -1436,16 +1462,24 @@ export function parseMidaoRunnerInvocation(args) {
   if (childArgs[0] === '--playwright') {
     mode = 'playwright';
     childArgs = childArgs.slice(1);
+  } else if (childArgs[0] === '--playwright-real-auth') {
+    mode = 'playwright-real-auth';
+    childArgs = childArgs.slice(1);
   } else if (childArgs[0] === '--postgrest') {
     mode = 'postgrest';
     childArgs = childArgs.slice(1);
   } else if (childArgs[0]?.startsWith('--')) {
     throw new Error('MIDAO_RUNNER_ARGS_INVALID');
   }
-  const pattern = mode === 'playwright'
+  const pattern = mode === 'playwright' || mode === 'playwright-real-auth'
     ? /^apps\/web\/e2e\/[a-z0-9][a-z0-9-]*\.spec\.ts$/u
     : /^apps\/web\/tests\/integration\/midao-[a-z0-9][a-z0-9-]*\.test\.mjs$/u;
-  if ((mode !== 'postgres' && childArgs.length === 0) || childArgs.some((entry) => !pattern.test(entry))) {
+  const realAuthSpec = 'apps/web/e2e/midao-inquiry-conversion-chain.spec.ts';
+  if (
+    (mode !== 'postgres' && childArgs.length === 0)
+    || childArgs.some((entry) => !pattern.test(entry))
+    || (mode === 'playwright-real-auth' && (childArgs.length !== 1 || childArgs[0] !== realAuthSpec))
+  ) {
     throw new Error(`MIDAO_${mode.toUpperCase()}_ARGS_INVALID`);
   }
   return { mode, childArgs };
@@ -1487,12 +1521,15 @@ async function main() {
     if (gateway) databaseBridge = await startLoopbackBridge({ listenPort: 54322, targetHost: gateway, targetPort: 54322 });
     const invocation = parseMidaoRunnerInvocation(process.argv.slice(2));
     const playwrightMode = invocation.mode === 'playwright';
+    const realAuthPlaywrightMode = invocation.mode === 'playwright-real-auth';
     const postgrestMode = invocation.mode === 'postgrest';
     const childArgs = invocation.childArgs;
-    if (gateway && (playwrightMode || postgrestMode)) {
+    if (gateway && (playwrightMode || realAuthPlaywrightMode || postgrestMode)) {
       apiBridge = await startLoopbackBridge({ listenPort: 54321, targetHost: gateway, targetPort: 54321 });
     }
-    databaseWorkdir = await prepareDatabaseOnlyWorkdir({ repoRoot, lockDir: LOCK_PATH });
+    databaseWorkdir = await prepareDatabaseOnlyWorkdir({
+      repoRoot, lockDir: LOCK_PATH, fullServices: realAuthPlaywrightMode, realAuth: realAuthPlaywrightMode,
+    });
     replay = await databaseWorkdir.stageCliReplay();
     if (!playwrightMode && childArgs.length === 0) childArgs.push(
       'apps/web/tests/integration/midao-foundation-schema-postgres.test.mjs',
@@ -1505,6 +1542,8 @@ async function main() {
       adapter: createActualAdapter({
         repoRoot, pin, nodeBin, signal: controller.signal, cliWorkdir: databaseWorkdir.workdir,
         lifecycleContract: { migrationNames: [replay.bootstrapName], noticesByMigration: {} },
+        fullServices: realAuthPlaywrightMode,
+        enableFullServices: realAuthPlaywrightMode ? () => databaseWorkdir.enableFullServices() : undefined,
       }),
       expectedProjectId: projectId,
       initialize: 'start-only',
@@ -1520,7 +1559,26 @@ async function main() {
         });
         if (seed.exitCode !== 0 || seed.signal !== null) throw new Error(`MIDAO_SEED_FAILED: ${redactSupabaseOutput(seed.stderr).slice(-4000).trim()}`);
         let child;
-        if (playwrightMode || postgrestMode) {
+        if (realAuthPlaywrightMode) {
+          const overlayPath = join(repoRoot, 'scripts/testing/midao-e2e-seed.sql');
+          const overlay = await runCommand('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', overlayPath], {
+            cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
+          });
+          if (overlay.exitCode !== 0 || overlay.signal !== null) throw new Error(`MIDAO_E2E_SEED_FAILED: ${redactSupabaseOutput(overlay.stderr).slice(-4000).trim()}`);
+          for (const name of ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
+            if (typeof localEnv[name] !== 'string' || !localEnv[name]) throw new Error(`MIDAO_E2E_LOCAL_ENV_MISSING:${name}`);
+          }
+          reportStage('real-auth-runtime-fixture-ready');
+          const e2eEnv = {
+            ...buildMidaoPlaywrightEnvironment({ localEnv }),
+            MIDAO_E2E_TRAVELER_EMAIL: 'midao-e2e-traveler@example.invalid',
+            MIDAO_E2E_TRAVELER_PASSWORD: 'midao-e2e-traveler-local-only',
+            NEXT_PUBLIC_TRANSFER_PAYMENT_ENABLED: '1',
+          };
+          child = await runCommand(join(repoRoot, 'node_modules/.bin/playwright'), [
+            'test', '--workers=1', ...childArgs.map((entry) => entry.slice('apps/web/'.length)),
+          ], { cwd: join(repoRoot, 'apps/web'), env: e2eEnv, signal: controller.signal });
+        } else if (playwrightMode || postgrestMode) {
           const overlayPath = join(repoRoot, 'scripts/testing/midao-e2e-seed.sql');
           const overlay = await runCommand('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', overlayPath], {
             cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,

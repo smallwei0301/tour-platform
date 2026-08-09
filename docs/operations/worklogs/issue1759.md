@@ -58,3 +58,33 @@
 
 ## P0-OVERRIDE 使用紀錄（如有）
 - 無。
+
+## Package 4 真實 inquiry → convert → traveler confirm → checkout E2E gate 規劃（2026-08-09，Kanban t_4c29effc）
+
+- 規劃檔：`docs/plans/2026-08-09-issue1759-package4-inquiry-conversion-e2e-gate-plan.md`；範圍為真實本機資料鏈，不是現有 mock UI contract case 的重複。
+- 現況裁決：`apps/web/e2e/midao-inquiry-conversion.spec.ts` 保持不動（含 Task 43b append-only 區）；新增獨立 `midao-inquiry-conversion-chain.spec.ts`。chain spec 禁止攔截 public inquiry、mark-replied、convert、confirmation preview/accept、checkout 等主鏈 API。
+- 關鍵架構差距：現有 `with-midao-local-supabase.mjs --playwright` 使用 standalone PostgREST，沒有 GoTrue；現有 traveler helper 是 fake cookie + browser interception，不能當 server-side `getTravelerIdentity()` 的真實鏈證據。新 gate 需新增嚴格 allowlisted 的 local real-auth lane、真實 traveler auth session、最小 overlay seed（traveler/activity/request plan/questionnaire publication）。
+- Checkout AC：accept 前真實 transfer checkout 必為 `409 TRAVELER_CONFIRMATION_REQUIRED`；accept 後同 booking 必通過 confirmation gate 並回傳 local transfer 成功。不得呼叫 ECPay、LINE、production 或 staging。
+- 2026-08-09 focused baseline：設定 local-only `GUIDE_SESSION_SECRET` 後執行 `node --test --test-concurrency=1 apps/web/tests/api/midao-checkout-confirmation-gate.test.mjs apps/web/tests/api/midao-inquiry-convert.test.mjs`，42 passed／0 failed。這不是新 full-chain E2E PASS；新 gate 尚待 builder 實作與 Rita final-head review。
+- 風險/owner：runner full-auth service 啟動、SSR cookie 派生與 request-plan approval 資格均需由 builder 落實並在 clean local runner 驗證；完成後交 Rita (`tp-reviewer`) 獨立審查，並確認「Issue 目標是否已直接驗證：yes/no」。
+
+## Package 4 E2E gate 實作嘗試（2026-08-09，Kanban t_7bc58832）
+
+- 已新增 strict `--playwright-real-auth` allowlist lane、real-auth local config（保留 GoTrue，停用 storage/realtime）、deterministic traveler/activity/request-plan/publication seed，以及 `apps/web/e2e/midao-inquiry-conversion-chain.spec.ts` 的無攔截 API 主鏈。
+- TDD 證據：新增 runner unit case 後先 RED（`MIDAO_RUNNER_ARGS_INVALID`）；實作後 `apps/web/tests/unit/midao-local-supabase-runner.test.mjs` 46/46 PASS（Node 22.23.1）。
+- Chain gate 未驗證：以 Node 22 PATH 執行 `scripts/testing/run-midao-e2e.sh apps/web/e2e/midao-inquiry-conversion-chain.spec.ts`，runner 到 `MIDAO_STAGE=start` 後 `MIDAO_STAGE=start-failed-identity`，最終 `SUPABASE_SERVICE_START_FAILED`。此為 local Supabase full-service startup／identity gate blocker，未產出 Playwright assertion 結果，故不得宣稱 full chain pass。
+- 未執行 production/staging、migration apply、ECPay 或 LINE；尚未交 Rita review，等待 startup blocker 修復並取得 clean chain evidence。
+
+### full-service identity retry（2026-08-09，run 700）
+
+- Ava 授權的單次診斷重試以 Node 22.23.1 執行滿 300 秒，結果仍停在 `MIDAO_STAGE=start-failed-identity`；runner 被 timeout 結束（exit 124），cleanup 再回報 `SUPABASE_DATABASE_HANDOFF_STOP_FAILED`。
+- 啟動期 container 監看顯示只曾建立 `supabase_db_gh1759-pkg4-gate`，在 timeout cleanup 時 exit 137；未曾出現 auth／GoTrue 或其他 full-service identity container，因此沒有可擷取的 failing auth service log。DB container cleanup 後已移除，最後一次 docker log 呼叫的 redacted 摘要是 `Error response from daemon: No such container`。
+- 此為與前次相同的 local full-service identity startup blocker；依 Ava 指示不再重跑。無 Playwright assertion、無 production/staging、migration apply、ECPay 或 LINE 呼叫。
+
+### DB health timeout + durable diagnostic repair（2026-08-10，Kanban t_333356bf）
+
+- `MIDAO_DB_HEALTH_TIMEOUT_SECONDS` 現可調整 `waitForDatabase` 的 health retry 秒數；未設定或空值維持既有 180 秒，非正整數 fail-closed。real-auth chain runner 預設顯式傳入 600 秒，仍可由環境變數覆寫。
+- `SUPABASE_SERVICE_START_FAILED`、`SUPABASE_START_FAILED` 與 `SUPABASE_DATABASE_HANDOFF_STOP_FAILED` 現保留完整 redacted diagnostic，而非只有 bare error code；connection URL 會替換為 `[REDACTED_DATABASE_URL]`。
+- real-auth chain runner 會在 worktree 的 `.e2e-run-logs/midao-inquiry-conversion-chain.log` 寫入 stdout/stderr；`.e2e-run-logs/.gitignore` 保留目錄並忽略實際 log，避免將執行資料加入 Git。
+- 2026-08-10 00:00 Asia/Taipei focused verification：`/root/.hermes/toolchains/node/22.23.1/node --test --test-concurrency=1 apps/web/tests/unit/midao-local-supabase-runner.test.mjs` → 49 passed／0 failed；`bash -n scripts/testing/run-midao-e2e.sh`、`git diff --check` → exit 0。
+- chain gate 未重跑（正確遵守 pre-flight）：可用記憶體 1.0Gi，未達 >=1.5Gi；load average 4.50／4.85／4.53，未達 <4。待主機資源達標後以 `MIDAO_DB_HEALTH_TIMEOUT_SECONDS=600` 執行，並以 `.e2e-run-logs/chain-gate-run.log` 與 runner 內部 log 提供證據。
