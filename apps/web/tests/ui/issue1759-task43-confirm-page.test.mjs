@@ -176,6 +176,27 @@ test('accept 錯誤分支逐一對齊計畫 §4.4 步驟 3', () => {
   assert.match(src, /服務暫時無法使用/u, '503 必須有繁中提示');
 });
 
+test('GET 503/5xx 保留 invalid testid，但不得把服務錯誤呈現為連結無效', () => {
+  const src = readSource(CLIENT_REL);
+  const invalidBlock = src.slice(src.indexOf("if (state === 'invalid')"), src.indexOf("if (state === 'expired')"));
+
+  assert.match(
+    src,
+    /response\.status === 503 \? SERVICE_UNAVAILABLE_ERROR : GENERIC_ERROR/u,
+    'GET 非 2xx／401／404 時，503 與其他 5xx 必須各自保留服務錯誤文案',
+  );
+  assert.match(
+    invalidBlock,
+    /errorMessage === SERVICE_UNAVAILABLE_ERROR \|\| errorMessage === GENERIC_ERROR/u,
+    'invalid render 必須辨識服務錯誤，避免把 503/5xx 誤報為連結無效',
+  );
+  assert.match(
+    invalidBlock,
+    /\{isServiceIssue \? errorMessage : '此確認連結無效，或不屬於目前登入的帳號。'\}/u,
+    '服務錯誤時必須以服務錯誤取代連結無效主文案，404 維持原文案',
+  );
+});
+
 test('送出中必須停用確認鈕（避免重複送出，對齊 E2E T9）', () => {
   const cardSrc = readSource(CARD_REL);
   assert.match(cardSrc, /disabled=\{submitting\}/u, '確認鈕必須在 submitting 時 disabled');

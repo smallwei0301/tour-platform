@@ -216,11 +216,16 @@ export function BookingConfirmClient({ token }: { token: string }) {
   }
 
   if (state === 'invalid') {
+    const isServiceIssue =
+      errorMessage === SERVICE_UNAVAILABLE_ERROR || errorMessage === GENERIC_ERROR;
+
     return (
       <main className="booking-confirm-page">
         <section className="booking-confirm-status" data-testid="booking-confirm-invalid" role="alert">
-          <p>此確認連結無效，或不屬於目前登入的帳號。</p>
-          {errorMessage ? <p className="booking-confirm-status__hint">{errorMessage}</p> : null}
+          <p>{isServiceIssue ? errorMessage : '此確認連結無效，或不屬於目前登入的帳號。'}</p>
+          {!isServiceIssue && errorMessage ? (
+            <p className="booking-confirm-status__hint">{errorMessage}</p>
+          ) : null}
         </section>
       </main>
     );
