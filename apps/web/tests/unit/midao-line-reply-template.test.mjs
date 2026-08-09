@@ -11,7 +11,7 @@ const {
 const UUID_REGEX = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/giu;
 const EMAIL_REGEX = /[^\s@]+@[^\s@]+/u;
 const PHONE_REGEX = /(?:\+?\d[\d\s()-]{7,}\d)/u;
-const CONFIRMATION_URL = 'https://tour-platform-nine.vercel.app/me/orders';
+const CONFIRMATION_URL = 'https://tour-platform-nine.vercel.app/booking/confirm/example-token';
 
 function bookingInput(overrides = {}) {
   return {
@@ -81,8 +81,10 @@ test('payment_link 在具備合法 https confirmation URL 時輸出付款連結'
   );
 
   assert.equal(result.intent, 'payment_link');
+  assert.equal(new URL(CONFIRMATION_URL).pathname, '/booking/confirm/example-token');
   assert.match(result.text, /付款/u);
   assert.ok(result.text.includes(CONFIRMATION_URL));
+  assert.doesNotMatch(result.text, /\/api\/v2\/me\/booking-confirmations\/.*\/accept/u);
   assert.match(result.text, /NT\$ 3,600/u);
 });
 

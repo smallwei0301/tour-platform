@@ -251,7 +251,7 @@ function assertConversionAllowed({ inquiry, plan, command, actorGuideId }) {
 }
 
 function buildConfirmationUrl(rawToken) {
-  return `${SITE_URL}/api/v2/me/booking-confirmations/${rawToken}/accept`;
+  return `${SITE_URL}/booking/confirm/${rawToken}`;
 }
 
 function issueConfirmationToken() {
