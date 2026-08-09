@@ -591,7 +591,7 @@ test.describe('Task 43 traveler confirmation page', () => {
     await expect(invalid.getByText(expectedCopy, { exact: true })).toHaveCount(1);
   });
 
-  test('T11: GET 503 與 500 保留 invalid testid，但各自只顯示服務錯誤主文案', async ({ page }) => {
+  test('T11: GET 503 保留 invalid testid，且只顯示服務暫時無法使用主文案', async ({ page }) => {
     test.setTimeout(180_000);
     await setTravelerSession(page);
     await installConfirmRoutes(page, { previewStatus: 503 });
@@ -605,18 +605,21 @@ test.describe('Task 43 traveler confirmation page', () => {
     await expect(unavailable).toContainText(unavailableCopy);
     await expect(unavailable.getByText(unavailableCopy, { exact: true })).toHaveCount(1);
     await expect(unavailable).not.toContainText(invalidCopy);
+  });
 
-    const genericPage = await page.context().newPage();
-    await setTravelerSession(genericPage);
-    await installConfirmRoutes(genericPage, { previewStatus: 500 });
-    await genericPage.goto(CONFIRM_PATH, { waitUntil: 'domcontentloaded' });
+  test('T12: GET 500 保留 invalid testid，且只顯示暫時無法完成確認主文案', async ({ page }) => {
+    test.setTimeout(180_000);
+    await setTravelerSession(page);
+    await installConfirmRoutes(page, { previewStatus: 500 });
+
+    await page.goto(CONFIRM_PATH, { waitUntil: 'domcontentloaded' });
 
     const genericCopy = '暫時無法完成確認，請稍後再試。';
-    const generic = genericPage.getByTestId('booking-confirm-invalid');
+    const invalidCopy = '此確認連結無效';
+    const generic = page.getByTestId('booking-confirm-invalid');
     await expect(generic).toBeVisible({ timeout: 30_000 });
     await expect(generic).toContainText(genericCopy);
     await expect(generic.getByText(genericCopy, { exact: true })).toHaveCount(1);
     await expect(generic).not.toContainText(invalidCopy);
-    await genericPage.close();
   });
 });
