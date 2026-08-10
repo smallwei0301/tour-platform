@@ -1580,42 +1580,38 @@ const MIDAO_E2E_TRAVELER_EMAIL = 'midao-e2e-traveler@example.invalid';
 const MIDAO_E2E_TRAVELER_PASSWORD = 'midao-e2e-traveler-local-only';
 
 async function createOrUpdateMidaoTravelerAuthUser({ supabaseUrl, serviceRoleKey, signal }) {
-  const endpoint = new URL(`/auth/v1/admin/users/${MIDAO_E2E_TRAVELER_ID}`, supabaseUrl);
-  const headers = {
-    apikey: serviceRoleKey,
-    authorization: `Bearer ${serviceRoleKey}`,
-    'content-type': 'application/json',
-  };
-  const body = JSON.stringify({
-    email: MIDAO_E2E_TRAVELER_EMAIL,
-    password: MIDAO_E2E_TRAVELER_PASSWORD,
-    email_confirm: true,
-    user_metadata: { full_name: 'Midao E2E Traveler', role: 'traveler' },
-  });
-  const timeoutSignal = AbortSignal.timeout(30_000);
-  const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
-  let response;
   try {
-    response = await fetch(endpoint, { method: 'PUT', headers, body, signal: combinedSignal });
-  } catch (error) {
-    throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG: PUT_FETCH_THREW ${endpoint} ${error && error.message}`);
-  }
-  if (response.status === 404) {
-    const createEndpoint = new URL('/auth/v1/admin/users', supabaseUrl);
-    try {
+    const endpoint = new URL(`/auth/v1/admin/users/${MIDAO_E2E_TRAVELER_ID}`, supabaseUrl);
+    const headers = {
+      apikey: serviceRoleKey,
+      authorization: `Bearer ${serviceRoleKey}`,
+      'content-type': 'application/json',
+    };
+    const body = JSON.stringify({
+      email: MIDAO_E2E_TRAVELER_EMAIL,
+      password: MIDAO_E2E_TRAVELER_PASSWORD,
+      email_confirm: true,
+      user_metadata: { full_name: 'Midao E2E Traveler', role: 'traveler' },
+    });
+    const timeoutSignal = AbortSignal.timeout(30_000);
+    const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+    let response = await fetch(endpoint, { method: 'PUT', headers, body, signal: combinedSignal });
+    if (response.status === 404) {
+      const createEndpoint = new URL('/auth/v1/admin/users', supabaseUrl);
       response = await fetch(createEndpoint, {
         method: 'POST',
         headers,
         body: JSON.stringify({ id: MIDAO_E2E_TRAVELER_ID, ...JSON.parse(body) }),
         signal: combinedSignal,
       });
-    } catch (error) {
-      throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG: POST_FETCH_THREW ${createEndpoint} ${error && error.message}`);
     }
-  }
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG: ${response.status} ${text.slice(0, 2000)}`);
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG: HTTP_${response.status} ${text.slice(0, 2000)}`);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG:')) throw error;
+    throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG: UNEXPECTED ${error && error.name} ${error && error.message}`);
   }
 }
 
