@@ -148,12 +148,16 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
   assert.match(inquiryId, UUID);
 
   const guide = await loginGuide(apiBaseUrl);
+  const homeProbe = await jsonRequest(apiUrl(apiBaseUrl, '/api/v2/guide/home'), {
+    method: 'GET',
+    headers: { cookie: guide.jar.header(), 'x-csrf-token': guide.csrf },
+  });
   const replied = await jsonRequest(apiUrl(apiBaseUrl, `/api/v2/guide/inquiries/${inquiryId}/commands/mark-replied`), {
     method: 'POST',
     headers: commandHeaders(guide, `midao-api-chain-reply-${inquiryId}`),
     body: '{}',
   });
-  if (replied.status !== 200) console.error('MARK_REPLIED_DEBUG_STATUS', replied.status, 'BODY', JSON.stringify(replied.body), 'COOKIE_FLAGS', [/(?:^|; )guide_token=/u.test(guide.jar.header()) ? 'TOKq' : 'TOKn', /(?:^|; )guide_id=/u.test(guide.jar.header()) ? 'GIDy' : 'GIDn', guide.csrf ? 'CSRy' : 'CSRn'].join('_'));
+  if (replied.status !== 200) console.error('MARK_REPLIED_DEBUG_STATUS', replied.status, 'BODY', JSON.stringify(replied.body), 'HOMEPROBE', homeProbe.status, JSON.stringify(homeProbe.body), 'COOKIE_FLAGS', [/(?:^|; )guide_token=/u.test(guide.jar.header()) ? 'TOKq' : 'TOKn', /(?:^|; )guide_id=/u.test(guide.jar.header()) ? 'GIDy' : 'GIDn', guide.csrf ? 'CSRy' : 'CSRn'].join('_'));
   assert.equal(replied.status, 200);
   assert.equal(replied.body?.success, true);
 
