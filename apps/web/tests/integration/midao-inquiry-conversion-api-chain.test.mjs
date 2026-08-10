@@ -153,7 +153,7 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
     headers: commandHeaders(guide, `midao-api-chain-reply-${inquiryId}`),
     body: '{}',
   });
-  if (replied.status !== 200) console.error('MARK_REPLIED_DEBUG_STATUS', replied.status, 'BODY', JSON.stringify(replied.body));
+  if (replied.status !== 200) console.error('MARK_REPLIED_DEBUG_STATUS', replied.status, 'BODY', JSON.stringify(replied.body), 'HAS_GUIDE_TOKEN', /(?:^|; )guide_token=/u.test(guide.jar.header()), 'HAS_GUIDE_ID', /(?:^|; )guide_id=/u.test(guide.jar.header()), 'HAS_CSRF', Boolean(guide.csrf));
   assert.equal(replied.status, 200);
   assert.equal(replied.body?.success, true);
 
