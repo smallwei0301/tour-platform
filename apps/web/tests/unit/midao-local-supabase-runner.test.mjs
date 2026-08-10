@@ -268,7 +268,7 @@ test('real-auth lanes use an isolated full-service seed with direct GoTrue-only 
   const seed = await readFile(new URL('../../../../scripts/testing/midao-api-real-auth-seed.sql', import.meta.url), 'utf8');
   assert.match(source, /if \(realAuthMode\) \{\s+const overlayPath = join\(repoRoot, 'scripts\/testing\/midao-api-real-auth-seed\.sql'\);/u);
   assert.match(source, /else if \(playwrightMode \|\| postgrestMode\) \{\s+const overlayPath = join\(repoRoot, 'scripts\/testing\/midao-e2e-seed\.sql'\);/u);
-  assert.match(seed, /encrypted_password, email_confirmed_at/u);
+  assert.match(seed, /encrypted_password, confirmed_at/u);
   assert.match(seed, /inquiry_enabled/u);
   assert.doesNotMatch(seed, /information_schema|EXECUTE \$real_auth_fixture\$/u);
 });
