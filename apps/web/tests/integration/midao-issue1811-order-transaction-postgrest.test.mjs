@@ -1,15 +1,23 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import test, { after, before, beforeEach } from 'node:test';
 import pg from 'pg';
 
 const GUIDE_ID = '18110000-0000-4000-8000-000000000001';
 const ACTIVITY_ID = '18110000-0000-4000-8000-000000000002';
 const PLAN_ID = '18110000-0000-4000-8000-000000000003';
+const SCHEDULE_ID = '18110000-0000-4000-8000-000000000004';
+const TRAVELER_ID = '18110000-0000-4000-8000-000000000005';
 const START_AT = '2027-01-15T02:00:00.000Z';
 const END_AT = '2027-01-15T04:00:00.000Z';
 const PAYMENT_DEADLINE_AT = '2027-01-16T02:00:00.000Z';
 const CONTACT_EMAIL = 'issue1811-atomic@example.invalid';
 const BASE_TOTAL_TWD = 7_400;
+const CANCEL_LOCK_CLASS = 1_811;
+const CANCEL_LOCK_OBJECT = 18_110_001;
 const FUNCTION_SIGNATURE = [
   'public.fn_create_booking_draft_atomic(',
   'uuid,uuid,timestamptz,timestamptz,text,integer,text,text,text,text,text,uuid,jsonb,text,timestamptz',
@@ -32,22 +40,140 @@ const IDENTITY_ARGUMENTS = [
   'p_correlation_id text',
   'p_payment_deadline_at timestamp with time zone',
 ].join(', ');
+const FAULT_CASES = [
+  { name: 'orders_insert', table: 'orders', operation: 'INSERT', marker: 'ISSUE1811_ORDERS_INSERT_BOOM' },
+  { name: 'bookings_insert', table: 'bookings', operation: 'INSERT', marker: 'ISSUE1811_BOOKINGS_INSERT_BOOM' },
+  { name: 'orders_link', table: 'orders', operation: 'UPDATE', marker: 'ISSUE1811_ORDERS_LINK_BOOM' },
+  { name: 'order_items_insert', table: 'order_items', operation: 'INSERT', marker: 'ISSUE1811_ORDER_ITEMS_BOOM' },
+  { name: 'status_log_insert', table: 'booking_status_logs', operation: 'INSERT', marker: 'ISSUE1811_STATUS_LOG_BOOM' },
+];
+const EXTERNAL_EFFECT_ENV_OVERRIDES = Object.freeze({
+  RESEND_API_KEY: '',
+  SENTRY_DSN: '',
+  NEXT_PUBLIC_SENTRY_DSN: '',
+  SENTRY_AUTH_TOKEN: '',
+  LINE_MESSAGING_ENABLED: 'false',
+  LINE_PUSH_ENABLED: 'false',
+  LINE_GUIDE_PUSH_ENABLED: 'false',
+  LINE_CHANNEL_ACCESS_TOKEN: '',
+  LINE_CHANNEL_SECRET: '',
+  LINE_OPS_GROUP_ID: '',
+  TELEGRAM_NOTIFY_ENABLED: 'false',
+  TELEGRAM_GUIDE_NOTIFY_ENABLED: 'false',
+  TELEGRAM_TRAVELER_NOTIFY_ENABLED: 'false',
+  TELEGRAM_BOT_TOKEN: '',
+  TELEGRAM_WEBHOOK_SECRET: '',
+  TELEGRAM_BOT_USERNAME: '',
+  TELEGRAM_ORDER_CHAT_ID: '',
+  TELEGRAM_ALERT_BOT_TOKEN: '',
+  TELEGRAM_ALERT_CHAT_ID: '',
+  ECPAY_ENV: 'stage',
+  ECPAY_MERCHANT_ID: '',
+  ECPAY_HASH_KEY: '',
+  ECPAY_HASH_IV: '',
+});
 
 const databaseUrl = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
 const apiUrl = process.env.SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const anonKey = process.env.SUPABASE_ANON_KEY;
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+const publicRoutePort = 43_128;
+const publicRouteBase = `http://127.0.0.1:${publicRoutePort}`;
 
 assert.ok(databaseUrl, 'issue #1811 PostgREST runner must provide a local database URL');
 assert.ok(apiUrl && serviceRoleKey && anonKey, 'issue #1811 runner must provide local API credentials');
-for (const value of [databaseUrl, apiUrl]) {
-  const parsed = new URL(value);
-  assert.equal(parsed.hostname, '127.0.0.1', 'issue #1811 integration must remain on exact loopback');
-  assert.equal(parsed.search, '');
-  assert.equal(parsed.hash, '');
-}
+const parsedDatabaseUrl = new URL(databaseUrl);
+assert.equal(parsedDatabaseUrl.protocol, 'postgresql:');
+assert.equal(parsedDatabaseUrl.hostname, '127.0.0.1', 'issue #1811 integration must remain on exact loopback');
+assert.equal(parsedDatabaseUrl.port, '54322');
+assert.equal(parsedDatabaseUrl.pathname, '/postgres');
+assert.equal(parsedDatabaseUrl.search, '');
+assert.equal(parsedDatabaseUrl.hash, '');
+const parsedApiUrl = new URL(apiUrl);
+assert.equal(parsedApiUrl.protocol, 'http:');
+assert.equal(parsedApiUrl.hostname, '127.0.0.1', 'issue #1811 PostgREST proxy must remain on loopback');
+assert.match(parsedApiUrl.port, /^\d{4,5}$/u);
+assert.equal(parsedApiUrl.pathname, '/');
+assert.equal(parsedApiUrl.search, '');
+assert.equal(parsedApiUrl.hash, '');
 
 let client;
+let webServer;
+let webServerLogs = '';
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function captureWebServerLog(chunk) {
+  webServerLogs = `${webServerLogs}${String(chunk)}`.slice(-200_000);
+}
+
+async function waitForWebLog(pattern, timeoutMs = 5_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (pattern.test(webServerLogs)) return;
+    await delay(100);
+  }
+  throw new Error(`issue #1811 expected web log was not observed: ${pattern}`);
+}
+
+async function startPublicRouteServer() {
+  const childEnv = {
+    ...process.env,
+    PORT: String(publicRoutePort),
+    NODE_ENV: 'development',
+    VERCEL_ENV: 'preview',
+    NEXT_PUBLIC_BASE_URL: publicRouteBase,
+    NEXT_PUBLIC_APP_URL: publicRouteBase,
+    SUPABASE_URL: apiUrl,
+    NEXT_PUBLIC_SUPABASE_URL: apiUrl,
+    SUPABASE_ANON_KEY: anonKey,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
+    SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
+    GUIDE_SESSION_SECRET: randomBytes(32).toString('hex'),
+    ADMIN_ACCESS_TOKEN: randomBytes(32).toString('hex'),
+    ADMIN_EMAIL_ALLOWLIST: 'admin@example.invalid',
+    ADMIN_EMAIL: 'admin@example.invalid',
+    NEXT_TELEMETRY_DISABLED: '1',
+    ...EXTERNAL_EFFECT_ENV_OVERRIDES,
+  };
+  for (const [key, value] of Object.entries(EXTERNAL_EFFECT_ENV_OVERRIDES)) {
+    assert.equal(childEnv[key], value, `issue #1811 child server must isolate external effect env ${key}`);
+  }
+  webServer = spawn(
+    path.join(repoRoot, 'node_modules/.bin/next'),
+    ['dev', '--hostname', '127.0.0.1', '--port', String(publicRoutePort)],
+    { cwd: path.join(repoRoot, 'apps/web'), env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] },
+  );
+  webServer.stdout.on('data', captureWebServerLog);
+  webServer.stderr.on('data', captureWebServerLog);
+
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    if (webServer.exitCode !== null) {
+      throw new Error(`issue #1811 Next server exited early (${webServer.exitCode}): ${webServerLogs.slice(-4_000)}`);
+    }
+    try {
+      const response = await fetch(`${publicRouteBase}/images/placeholder-avatar.svg`);
+      if (response.ok) return;
+    } catch {}
+    await delay(500);
+  }
+  throw new Error(`issue #1811 Next server readiness timeout: ${webServerLogs.slice(-4_000)}`);
+}
+
+async function stopPublicRouteServer() {
+  if (!webServer || webServer.exitCode !== null) return;
+  const exited = new Promise((resolve) => webServer.once('exit', resolve));
+  webServer.kill('SIGTERM');
+  await Promise.race([exited, delay(10_000)]);
+  if (webServer.exitCode === null) {
+    const killed = new Promise((resolve) => webServer.once('exit', resolve));
+    webServer.kill('SIGKILL');
+    await Promise.race([killed, delay(5_000)]);
+  }
+}
 
 function headersFor(key) {
   return {
@@ -97,6 +223,38 @@ async function callAtomicDraft(overrides = {}, key = serviceRoleKey) {
   });
 }
 
+function publicDraftPayload(overrides = {}) {
+  return {
+    activityId: ACTIVITY_ID,
+    planId: PLAN_ID,
+    scheduleId: SCHEDULE_ID,
+    startAt: START_AT,
+    timezone: 'Asia/Taipei',
+    participants: 2,
+    sourceChannel: 'web',
+    contactName: 'Issue 1811 Public Traveler',
+    contactPhone: '0900001811',
+    contactEmail: CONTACT_EMAIL,
+    customerNote: 'Issue 1811 public route transaction tracer',
+    totalAmount: 1,
+    totalTwd: 2,
+    amount: 3,
+    ...overrides,
+  };
+}
+
+async function callPublicDraft(overrides = {}) {
+  const response = await fetch(`${publicRouteBase}/api/v2/bookings/draft`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-correlation-id': 'issue1811-public-route' },
+    body: JSON.stringify(publicDraftPayload(overrides)),
+  });
+  const text = await response.text();
+  let payload;
+  try { payload = text ? JSON.parse(text) : null; } catch { payload = text; }
+  return { response, payload, text };
+}
+
 async function getRows(path) {
   const result = await postgrest(path);
   assert.equal(result.response.status, 200, result.text);
@@ -110,10 +268,10 @@ function inFilter(ids) {
 
 async function readMaterialization() {
   const bookings = await getRows(
-    `/rest/v1/bookings?select=id,booking_no,status,order_id,activity_id,activity_plan_id,guide_id,guide_approval_status,participants,timezone,start_at,end_at,customer_note&activity_plan_id=eq.${PLAN_ID}`,
+    `/rest/v1/bookings?select=id,booking_no,status,order_id,traveler_id,activity_id,activity_plan_id,guide_id,guide_approval_status,participants,timezone,start_at,end_at,customer_note&activity_plan_id=eq.${PLAN_ID}`,
   );
   const orders = await getRows(
-    `/rest/v1/orders?select=id,booking_id,status,payment_status,total_twd,people_count,contact_name,contact_phone,contact_email,activity_id,source_channel,payment_deadline_at&activity_id=eq.${ACTIVITY_ID}`,
+    `/rest/v1/orders?select=id,booking_id,user_id,status,payment_status,total_twd,people_count,contact_name,contact_phone,contact_email,activity_id,source_channel,payment_deadline_at&activity_id=eq.${ACTIVITY_ID}`,
   );
   const orderIds = orders.map(({ id }) => id);
   const bookingIds = bookings.map(({ id }) => id);
@@ -125,7 +283,7 @@ async function readMaterialization() {
   const statusLogs = bookingIds.length === 0
     ? []
     : await getRows(
-      `/rest/v1/booking_status_logs?select=id,booking_id,from_status,to_status,actor_role,reason,metadata&booking_id=${inFilter(bookingIds)}`,
+      `/rest/v1/booking_status_logs?select=id,booking_id,from_status,to_status,actor_user_id,actor_role,reason,metadata&booking_id=${inFilter(bookingIds)}`,
     );
   return { bookings, orders, items, statusLogs };
 }
@@ -139,28 +297,68 @@ function assertNoMaterialization(snapshot, label) {
 }
 
 async function dropFaultInjection() {
-  for (const table of ['order_items', 'booking_status_logs']) {
-    await client.query(`DROP TRIGGER IF EXISTS midao_issue1811_${table}_boom ON public.${table}`);
-    await client.query(`DROP FUNCTION IF EXISTS public.midao_issue1811_${table}_boom()`);
+  for (const fault of FAULT_CASES) {
+    const functionName = `midao_issue1811_${fault.name}_boom`;
+    await client.query(`DROP TRIGGER IF EXISTS ${functionName} ON public.${fault.table}`);
+    await client.query(`DROP FUNCTION IF EXISTS public.${functionName}()`);
   }
+  await client.query('DROP TRIGGER IF EXISTS midao_issue1811_cancel_block ON public.booking_status_logs');
+  await client.query('DROP FUNCTION IF EXISTS public.midao_issue1811_cancel_block()');
 }
 
-async function installFaultInjection(table, marker) {
-  const functionName = `midao_issue1811_${table}_boom`;
+async function installFaultInjection(fault) {
+  const functionName = `midao_issue1811_${fault.name}_boom`;
   await client.query(`
     CREATE FUNCTION public.${functionName}()
     RETURNS trigger
     LANGUAGE plpgsql
     AS $fault$
     BEGIN
-      RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = '${marker}';
+      RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = '${fault.marker}';
     END;
     $fault$;
 
     CREATE TRIGGER ${functionName}
-      BEFORE INSERT ON public.${table}
+      BEFORE ${fault.operation} ON public.${fault.table}
       FOR EACH ROW EXECUTE FUNCTION public.${functionName}();
   `);
+}
+
+async function installCancellationBlock() {
+  await client.query(`
+    CREATE FUNCTION public.midao_issue1811_cancel_block()
+    RETURNS trigger
+    LANGUAGE plpgsql
+    AS $block$
+    BEGIN
+      PERFORM pg_catalog.pg_advisory_xact_lock(${CANCEL_LOCK_CLASS}, ${CANCEL_LOCK_OBJECT});
+      RETURN NEW;
+    END;
+    $block$;
+
+    CREATE TRIGGER midao_issue1811_cancel_block
+      BEFORE INSERT ON public.booking_status_logs
+      FOR EACH ROW EXECUTE FUNCTION public.midao_issue1811_cancel_block();
+  `);
+}
+
+async function waitForBlockedAtomicBackend() {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const result = await client.query(`
+      SELECT activity.pid
+        FROM pg_catalog.pg_stat_activity AS activity
+        JOIN pg_catalog.pg_locks AS waiting_lock ON waiting_lock.pid = activity.pid
+       WHERE waiting_lock.locktype = 'advisory'
+         AND waiting_lock.granted = false
+         AND activity.pid <> pg_catalog.pg_backend_pid()
+         AND activity.query LIKE '%fn_create_booking_draft_atomic%'
+       ORDER BY activity.pid
+       LIMIT 1
+    `);
+    if (result.rows[0]?.pid) return Number(result.rows[0].pid);
+    await delay(50);
+  }
+  throw new Error('issue #1811 cancellation target did not reach the blocking transaction seam');
 }
 
 async function cleanupMaterialization() {
@@ -192,9 +390,12 @@ async function cleanupMaterialization() {
 async function cleanupFixtures() {
   await dropFaultInjection();
   await cleanupMaterialization();
+  await client.query('DELETE FROM public.activity_schedules WHERE id = $1', [SCHEDULE_ID]);
   await client.query('DELETE FROM public.activity_plans WHERE id = $1', [PLAN_ID]);
   await client.query('DELETE FROM public.activities WHERE id = $1', [ACTIVITY_ID]);
   await client.query('DELETE FROM public.guide_profiles WHERE id = $1', [GUIDE_ID]);
+  await client.query('DELETE FROM public.users WHERE id = $1', [TRAVELER_ID]);
+  await client.query('DELETE FROM auth.users WHERE id = $1', [TRAVELER_ID]);
 }
 
 before(async () => {
@@ -203,6 +404,15 @@ before(async () => {
   await cleanupFixtures();
   await client.query('BEGIN');
   try {
+    await client.query(`
+      INSERT INTO auth.users(id, aud, role, email, raw_app_meta_data, raw_user_meta_data)
+      VALUES (
+        $1, 'authenticated', 'authenticated', 'issue1811-traveler@example.invalid',
+        '{"provider":"email","providers":["email"]}'::jsonb,
+        '{"full_name":"Issue 1811 Traveler","role":"traveler"}'::jsonb
+      )
+    `, [TRAVELER_ID]);
+    await client.query("INSERT INTO public.users(id, role) VALUES ($1, 'traveler')", [TRAVELER_ID]);
     await client.query(`
       INSERT INTO public.guide_profiles(id, slug, display_name, verification_status)
       VALUES ($1, 'issue1811-atomic-guide', 'Issue 1811 Atomic Guide', 'approved')
@@ -217,14 +427,20 @@ before(async () => {
         min_participants, max_participants, booking_type, status, is_year_round
       ) VALUES (
         $1, $2, 'Issue 1811 Per-person Plan', 'issue1811-per-person', 120,
-        'per_person', 3700, 1, 8, 'instant', 'active', true
+        'per_person', 3700, 1, 8, 'scheduled', 'active', false
       )
     `, [PLAN_ID, ACTIVITY_ID]);
+    await client.query(`
+      INSERT INTO public.activity_schedules(
+        id, activity_id, plan_id, start_at, end_at, capacity, booked_count, status
+      ) VALUES ($1, $2, $3, $4, $5, 8, 0, 'open')
+    `, [SCHEDULE_ID, ACTIVITY_ID, PLAN_ID, START_AT, END_AT]);
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
   }
+  await startPublicRouteServer();
 });
 
 beforeEach(async () => {
@@ -234,7 +450,10 @@ beforeEach(async () => {
 
 after(async () => {
   if (!client) return;
-  try { await cleanupFixtures(); } finally { await client.end(); }
+  try {
+    await stopPublicRouteServer();
+    await cleanupFixtures();
+  } finally { await client.end(); }
 });
 
 test('runtime catalog exposes the exact authoritative-total RPC as a pinned SECURITY INVOKER function', async () => {
@@ -297,6 +516,74 @@ test('runtime ACL grants the RPC only to service_role and PostgREST rejects anon
   assertNoMaterialization(await readMaterialization(), 'anon invocation must leave no booking data');
 });
 
+test('public draft route fails closed on a required-write fault with no IDs, payable rows or success notification', async () => {
+  const contactEmail = 'issue1811-public-fault@example.invalid';
+  const logStart = webServerLogs.length;
+  const fault = FAULT_CASES.find(({ name }) => name === 'order_items_insert');
+  assert.ok(fault);
+  await installFaultInjection(fault);
+  let failed;
+  try {
+    failed = await callPublicDraft({ contactEmail });
+  } finally {
+    await dropFaultInjection();
+  }
+
+  assert.equal(failed.response.status, 500, failed.text);
+  assert.deepEqual(failed.payload, {
+    success: false,
+    error: { code: 'INTERNAL_ERROR', message: '伺服器發生錯誤，請稍後再試' },
+  });
+  assert.doesNotMatch(
+    failed.text,
+    /orderId|bookingId|checkoutUrl|paymentUrl/iu,
+    'failed public response must not expose an identifier or payment entry',
+  );
+  assertNoMaterialization(
+    await readMaterialization(),
+    'public route fault must leave no payable booking/order materialization',
+  );
+  await delay(500);
+  assert.doesNotMatch(
+    webServerLogs.slice(logStart),
+    new RegExp(contactEmail.replace('.', '\\.'), 'u'),
+    'failed public route must not reach the success email notification seam',
+  );
+});
+
+test('public draft route ignores request totals and returns the committed PostgREST read-back aggregate', async () => {
+  const contactEmail = 'issue1811-public-success@example.invalid';
+  const created = await callPublicDraft({ contactEmail });
+  assert.equal(created.response.status, 200, created.text);
+  assert.equal(created.payload?.success, true, created.text);
+  assert.equal(created.payload?.data?.amount, BASE_TOTAL_TWD, created.text);
+  assert.equal(created.payload?.data?.currency, 'TWD');
+  assert.equal(created.payload?.data?.bookingStatus, 'draft');
+  assert.equal(created.payload?.data?.orderStatus, 'pending_payment');
+  assert.equal(created.payload?.data?.bookingType, 'scheduled');
+  assert.match(created.payload?.data?.bookingId, /^[0-9a-f-]{36}$/iu);
+  assert.match(created.payload?.data?.orderId, /^[0-9a-f-]{36}$/iu);
+  assert.notEqual(created.payload?.data?.amount, 1);
+  assert.notEqual(created.payload?.data?.amount, 2);
+  assert.notEqual(created.payload?.data?.amount, 3);
+
+  const snapshot = await readMaterialization();
+  assert.equal(snapshot.bookings.length, 1);
+  assert.equal(snapshot.orders.length, 1);
+  assert.equal(snapshot.items.length, 1);
+  assert.equal(snapshot.statusLogs.length, 1);
+  assert.equal(snapshot.bookings[0].id, created.payload.data.bookingId);
+  assert.equal(snapshot.orders[0].id, created.payload.data.orderId);
+  assert.equal(snapshot.bookings[0].order_id, snapshot.orders[0].id);
+  assert.equal(snapshot.orders[0].booking_id, snapshot.bookings[0].id);
+  assert.equal(Number(snapshot.orders[0].total_twd), BASE_TOTAL_TWD);
+  assert.equal(
+    snapshot.items.reduce((sum, item) => sum + Number(item.subtotal_amount), 0),
+    Number(snapshot.orders[0].total_twd),
+  );
+  await waitForWebLog(new RegExp(contactEmail.replace('.', '\\.'), 'u'));
+});
+
 test('service-role RPC commits one reconciled base booking using the active plan price, then permits durable read-back', async () => {
   const created = await callAtomicDraft();
   assert.equal(created.response.status, 200, created.text);
@@ -338,6 +625,11 @@ test('service-role RPC commits one reconciled base booking using the active plan
   assert.equal(Number(item.unit_price), 3_700);
   assert.equal(Number(item.subtotal_amount), BASE_TOTAL_TWD);
   assert.equal(
+    Number(item.quantity) * Number(item.unit_price),
+    Number(item.subtotal_amount),
+    'base line subtotal must be independently reconcilable from quantity and the DB plan price',
+  );
+  assert.equal(
     snapshot.items.reduce((sum, row) => sum + Number(row.subtotal_amount), 0),
     Number(order.total_twd),
     'base order items must fully explain the payable total',
@@ -348,34 +640,96 @@ test('service-role RPC commits one reconciled base booking using the active plan
   assert.equal(statusLog.actor_role, 'system');
 });
 
-test('required late writes fail the public RPC and roll back booking, order, item and status log together', async () => {
-  const cases = [
-    { table: 'order_items', marker: 'ISSUE1811_ORDER_ITEMS_BOOM' },
-    { table: 'booking_status_logs', marker: 'ISSUE1811_STATUS_LOG_BOOM' },
-  ];
+test('authenticated traveler identity is copied consistently to booking, order and the initial audit log', async () => {
+  const created = await callAtomicDraft({
+    p_traveler_id: TRAVELER_ID,
+    p_contact_email: 'issue1811-authenticated@example.invalid',
+    p_correlation_id: 'issue1811-authenticated-runtime-contract',
+  });
+  assert.equal(created.response.status, 200, created.text);
 
-  for (const fault of cases) {
+  const snapshot = await readMaterialization();
+  assert.equal(snapshot.bookings.length, 1);
+  assert.equal(snapshot.orders.length, 1);
+  assert.equal(snapshot.statusLogs.length, 1);
+  assert.equal(snapshot.bookings[0].traveler_id, TRAVELER_ID);
+  assert.equal(snapshot.orders[0].user_id, TRAVELER_ID);
+  assert.equal(snapshot.statusLogs[0].actor_user_id, TRAVELER_ID);
+  assert.equal(snapshot.statusLogs[0].actor_role, 'traveler');
+});
+
+test('authoritative plan pricing rejects int4 overflow before any payable row is committed', async () => {
+  await client.query(
+    'UPDATE public.activity_plans SET base_price = 2147483647 WHERE id = $1',
+    [PLAN_ID],
+  );
+  let failed;
+  try {
+    failed = await callAtomicDraft({ p_correlation_id: 'issue1811-total-overflow' });
+  } finally {
+    await client.query('UPDATE public.activity_plans SET base_price = 3700 WHERE id = $1', [PLAN_ID]);
+  }
+
+  assert.equal(failed.response.ok, false, failed.text);
+  assert.match(failed.text, /ORDER_TOTAL_OUT_OF_RANGE|22003/iu);
+  assertNoMaterialization(
+    await readMaterialization(),
+    'overflow rejection must happen before an order can become payable',
+  );
+});
+
+test('every required write seam fails the public RPC and rolls back booking, order, item and status log together', async () => {
+  for (const fault of FAULT_CASES) {
     await cleanupMaterialization();
-    await installFaultInjection(fault.table, fault.marker);
+    await installFaultInjection(fault);
     let failed;
     try {
-      failed = await callAtomicDraft({ p_correlation_id: `issue1811-fault-${fault.table}` });
+      failed = await callAtomicDraft({ p_correlation_id: `issue1811-fault-${fault.name}` });
     } finally {
       await dropFaultInjection();
     }
 
-    assert.equal(failed.response.ok, false, `${fault.table}: ${failed.text}`);
+    assert.equal(failed.response.ok, false, `${fault.name}: ${failed.text}`);
     assert.match(failed.text, new RegExp(fault.marker, 'u'));
     assert.equal(
       failed.payload && typeof failed.payload === 'object'
         ? Object.prototype.hasOwnProperty.call(failed.payload, 'order_id')
         : false,
       false,
-      `${fault.table}: failed result must not expose an order id`,
+      `${fault.name}: failed result must not expose an order id`,
     );
     assertNoMaterialization(
       await readMaterialization(),
-      `${fault.table}: the statement transaction must roll every required write back`,
+      `${fault.name}: the statement transaction must roll every required write back`,
     );
   }
+});
+
+test('cancelling the in-flight transaction at the final write seam rolls the whole aggregate back', async () => {
+  await installCancellationBlock();
+  await client.query('SELECT pg_catalog.pg_advisory_lock($1, $2)', [CANCEL_LOCK_CLASS, CANCEL_LOCK_OBJECT]);
+  let pending;
+  try {
+    pending = callAtomicDraft({ p_correlation_id: 'issue1811-cancelled-transaction' });
+    const backendPid = await waitForBlockedAtomicBackend();
+    const cancellation = await client.query(
+      'SELECT pg_catalog.pg_cancel_backend($1) AS cancelled',
+      [backendPid],
+    );
+    assert.equal(cancellation.rows[0]?.cancelled, true);
+
+    const failed = await pending;
+    assert.equal(failed.response.ok, false, failed.text);
+    assert.match(failed.text, /canceling statement due to user request|57014/iu);
+    assert.doesNotMatch(failed.text, /"order_id"\s*:/iu);
+  } finally {
+    await client.query('SELECT pg_catalog.pg_advisory_unlock($1, $2)', [CANCEL_LOCK_CLASS, CANCEL_LOCK_OBJECT]);
+    if (pending) await pending.catch(() => {});
+    await dropFaultInjection();
+  }
+
+  assertNoMaterialization(
+    await readMaterialization(),
+    'query cancellation must abort the statement transaction and leave no partial aggregate',
+  );
 });
