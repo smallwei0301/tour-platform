@@ -52,10 +52,10 @@ on conflict (id) do update set
 -- querying schema" with no column name. The runner creates this user via
 -- GoTrue's own Admin API (POST /auth/v1/admin/users) instead, which is the
 -- officially supported path and guarantees every internal column GoTrue
--- expects is populated correctly.
-insert into public.users (id, role)
-values ('55555555-5555-4555-8555-555555555555', 'traveler')
-on conflict (id) do update set role = excluded.role;
+-- expects is populated correctly. The traveler's public.users row is also
+-- NOT seeded here: it has a FK (users_id_fkey) onto auth.users(id), so it
+-- must be inserted AFTER the Admin API creates the auth user. The runner
+-- performs that public.users insert once the Admin API call succeeds.
 
 insert into public.activities (
   id, guide_id, guide_slug, title, slug, price_twd, min_participants,

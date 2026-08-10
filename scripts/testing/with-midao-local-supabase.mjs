@@ -893,10 +893,8 @@ const SAFE_RUNNER_ERROR_PREFIX_CODES = Object.freeze([
 const SAFE_RUNNER_DIAGNOSTIC_PREFIX_CODES = Object.freeze([
   'STATUS_UNCLASSIFIED',
   'STATUS_PROJECT_ID_NOT_NORMALIZED',
-  'MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG',
-  'MIDAO_E2E_SEED_FAILED_TMPDEBUG',
-  'MIDAO_E2E_LOCAL_ENV_MISSING_TMPDEBUG',
-  'MIDAO_SEED_FAILED_TMPDEBUG',
+  'MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED',
+  'MIDAO_E2E_TRAVELER_PROFILE_FAILED',
 ]);
 
 export function formatMidaoRunnerFailure(error, secrets = []) {
@@ -1610,11 +1608,11 @@ async function createOrUpdateMidaoTravelerAuthUser({ supabaseUrl, serviceRoleKey
     }
     if (!response.ok) {
       const text = await response.text().catch(() => '');
-      throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG: HTTP_${response.status} ${text.slice(0, 2000)}`);
+      throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED: HTTP_${response.status} ${text.slice(0, 2000)}`);
     }
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith('MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG:')) throw error;
-    throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG: UNEXPECTED ${error && error.name} ${error && error.message}`);
+    if (error instanceof Error && error.message.startsWith('MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED:')) throw error;
+    throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED: UNEXPECTED ${error && error.name} ${error && error.message}`);
   }
 }
 
@@ -1701,15 +1699,24 @@ async function main() {
           const overlay = await runCommand('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', overlayPath], {
             cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
           });
-          if (overlay.exitCode !== 0 || overlay.signal !== null) throw new Error(`MIDAO_E2E_SEED_FAILED_TMPDEBUG: ${redactSupabaseOutput(overlay.stderr, []).slice(-4000).trim()}`);
+          if (overlay.exitCode !== 0 || overlay.signal !== null) throw new Error(`MIDAO_E2E_SEED_FAILED: ${redactSupabaseOutput(overlay.stderr).slice(-4000).trim()}`);
           for (const name of ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
-            if (typeof localEnv[name] !== 'string' || !localEnv[name]) throw new Error(`MIDAO_E2E_LOCAL_ENV_MISSING_TMPDEBUG:${name}`);
+            if (typeof localEnv[name] !== 'string' || !localEnv[name]) throw new Error(`MIDAO_E2E_LOCAL_ENV_MISSING:${name}`);
           }
           await createOrUpdateMidaoTravelerAuthUser({
             supabaseUrl: localEnv.SUPABASE_URL,
             serviceRoleKey: localEnv.SUPABASE_SERVICE_ROLE_KEY,
             signal: controller.signal,
           });
+          // public.users.id has a FK onto auth.users(id); insert it only after
+          // the Admin API has created the traveler auth user above.
+          const travelerProfile = await runCommand('/usr/bin/psql', [
+            '-X', '--set=ON_ERROR_STOP=1', '--quiet', '-c',
+            "insert into public.users (id, role) values ('55555555-5555-4555-8555-555555555555', 'traveler') on conflict (id) do update set role = excluded.role;",
+          ], {
+            cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
+          });
+          if (travelerProfile.exitCode !== 0 || travelerProfile.signal !== null) throw new Error(`MIDAO_E2E_TRAVELER_PROFILE_FAILED: ${redactSupabaseOutput(travelerProfile.stderr).slice(-4000).trim()}`);
           reportStage('real-auth-runtime-fixture-ready');
           const e2eEnv = {
             ...buildMidaoPlaywrightEnvironment({ localEnv }),
