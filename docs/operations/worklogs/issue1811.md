@@ -1,5 +1,5 @@
 # issue1811 — 以 transaction 與 orders.total_twd 固化訂單可付款金額
-> 最後更新：2026-08-10 12:14（Asia/Taipei）｜負責 session：Codex／2026-08-10
+> 最後更新：2026-08-10 12:26（Asia/Taipei）｜負責 session：Codex／2026-08-10
 
 ## 目標
 讓基本 Booking、Order、Order item 與 `orders.total_twd` 在單一資料庫 transaction 內全有或全無，成功後以 commit 後重新讀取的持久化總額回應，失敗時不產生可付款或成功通知結果。
@@ -32,10 +32,11 @@
 - 2026-08-10 pinned Node `22.23.1` 本機證據：新 gateway／協調器＋受影響 route contracts `pass 46 / fail 0`；workflow contract `pass 5 / fail 0`；完整 `npm run typecheck` PASS；完整 `npm run lint` PASS（僅既有 `RootDocument.tsx` `<head>` warning，0 error）。Node 24 曾被 repo guard 拒絕，後續證據一律改用 pinned Node 22，未繞過 guard。
 - 2026-08-10 production build：第一次在載入 bundle 前被 startup-env 正確擋下（缺本機 production-only guide/admin secrets）；改用 repo E2E 同型假值後，sandbox 在 build 的外部 network request 階段取消程序，未取得 bundle conclusion。未重複第三次，標記 `NOT_VERIFIED-local-build`；Node 22 typecheck/lint 與 hosted CI build 為最近替代證據。
 - 2026-08-10 baseline bootstrap 已 append 第 24 支 post-cutoff migration，fresh history 24→25、existing rehearsal 151→152。Node 22 source contracts `pass 30 / fail 1`；唯一預期 failure 是 committed expected-terminal manifest 尚缺新 migration。四個 terminal artifact 必須由 hosted PG17 兩次 byte-identical build 整組 promotion，未手改或偽造。
+- 2026-08-10 operator 明確回覆「授權推薦方案」：核准發布目前分支、建立 Draft PR 並同步 #1810／#1811 詳細里程碑，也核准原子 gateway 採 fail closed，RPC／必要環境不可用時不得退回非原子的 in-memory writer。授權不含 production migration apply、正式資料修改、部署、合併、真實付款或通知。
 
 ## 下一步
 - 以 Draft PR 跑 hosted PG17/PostgREST＋local Next runtime，取得 `fb486f3f` 後的 GREEN 證據與 expected-terminal 四件組 artifact；原樣 promotion 後重跑 CI。
-- 發布 Draft PR／詳細 issue 里程碑目前受 GitHub connector 的私有實作細節 disclosure guard 阻擋；未取得使用者明確外部發布授權前不繞過、不 push／開 PR。
+- 外部發布與安全例外已獲明確授權；依受控 GitHub App 路徑發布既有 commits，發布前後比對 commit/tree，保持 Draft 且不合併。
 - 新 migration 使 production verified ledger fail closed；production apply／ledger 更新不在本票授權內，維持 HOLD，絕不把 expected-terminal manifest 偽裝成 production apply 證據。
 
 ## 絕不重做（Do-NOT-redo）

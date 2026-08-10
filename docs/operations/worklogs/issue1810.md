@@ -1,5 +1,5 @@
 # issue1810 — 修復訂單建立至付款的唯一可付款金額一致性
-> 最後更新：2026-08-10 11:20（Asia/Taipei）｜負責 session：Codex／2026-08-10
+> 最後更新：2026-08-10 12:26（Asia/Taipei）｜負責 session：Codex／2026-08-10
 
 ## 目標
 依序完成 #1811–#1815，讓 `orders.total_twd` 成為建立訂單、Checkout、通知與付款共用的唯一可付款金額，並以可重跑的 transaction、fault-injection、concurrency 與 E2E 證據收尾本 Epic。
@@ -15,9 +15,10 @@
 ## 已完成（附證據）
 - 2026-08-10 live GitHub 查核確認 #1810 為 open／`status:in-progress`，#1811–#1815 已建立且依序 blocked；PR #1809 已合併至 main commit `a598ff06`。
 - 2026-08-10 使用者明確補充本輪範圍包含 #1810；決定以 #1810 作 tracking Epic、不另做空泛實作，先施工唯一無子票前置相依的 #1811。
+- 2026-08-10 operator 明確回覆「授權推薦方案」：核准把 #1811 既有本地分支發布為 Draft PR 以取得 hosted Node 22／PG17 證據，並核准 RPC／必要環境缺失時 fail closed、不提供非原子 in-memory writer fallback 的安全例外。授權不含 production migration apply、正式資料修改、部署、合併、真實付款或通知。
 
 ## 下一步
-- 完成 #1811 的規格／現況查核，將 #1811 由 operator 解鎖為 in-progress，建立 transaction 與 authoritative `orders.total_twd` 基線。
+- 發布 #1811 Draft PR，完成 hosted PG17 runtime 與 expected-terminal artifacts promotion／重跑驗證；在所有本票證據完成前維持 in-progress。
 - #1811 驗收與 PR 合併後才解鎖 #1812；不得跳過 blocked-by 鏈。
 
 ## 絕不重做（Do-NOT-redo）
