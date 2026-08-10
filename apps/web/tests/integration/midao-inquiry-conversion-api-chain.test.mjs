@@ -157,7 +157,13 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
     headers: commandHeaders(guide, `midao-api-chain-reply-${inquiryId}`),
     body: '{}',
   });
-  if (replied.status !== 200) console.error('MARK_REPLIED_DEBUG_STATUS', replied.status, 'BODY', JSON.stringify(replied.body), 'HOMEPROBE', homeProbe.status, JSON.stringify(homeProbe.body), 'COOKIE_FLAGS', [/(?:^|; )guide_token=/u.test(guide.jar.header()) ? 'TOKq' : 'TOKn', /(?:^|; )guide_id=/u.test(guide.jar.header()) ? 'GIDy' : 'GIDn', guide.csrf ? 'CSRy' : 'CSRn'].join('_'));
+  if (replied.status !== 200) {
+    const gidMatch = /(?:^|; )guide_id=([^;]+)/u.exec(guide.jar.header());
+    const gid = gidMatch ? decodeURIComponent(gidMatch[1]) : 'NONE';
+    const tokMatch = /(?:^|; )guide_token=([^;]+)/u.exec(guide.jar.header());
+    const tokParts = tokMatch ? decodeURIComponent(tokMatch[1]).split(':') : [];
+    console.error('MARK_REPLIED_DEBUG_STATUS', replied.status, 'BODY', JSON.stringify(replied.body), 'HOMEPROBE', homeProbe.status, 'GID_MATCHES_SEED', gid === '99999999-9999-4999-8999-999999999999' ? 'GIDmatch' : `GIDother_${gid.slice(0, 8)}`, 'TOK_PARTS', tokParts.length, 'TOK_GID_EQ', tokParts[0] === gid ? 'eq' : 'ne', 'TOK_VER', tokParts[1] ?? 'none', 'COOKIE_FLAGS', [/(?:^|; )guide_token=/u.test(guide.jar.header()) ? 'TOKq' : 'TOKn', /(?:^|; )guide_id=/u.test(guide.jar.header()) ? 'GIDy' : 'GIDn', guide.csrf ? 'CSRy' : 'CSRn'].join('_'));
+  }
   assert.equal(replied.status, 200);
   assert.equal(replied.body?.success, true);
 
