@@ -21,6 +21,7 @@ const CANCEL_LOCK_OBJECT = 18_110_001;
 const PUBLIC_RED_PROBE_ONLY = process.env.ISSUE1811_PUBLIC_RED_PROBE === '1';
 const PUBLIC_RED_MARKER = 'ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_RED';
 const PUBLIC_FAULT_REACHED_MARKER = 'ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_REACHED';
+const PUBLIC_FAULT_RESULT_MARKER = 'ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_RESULT';
 const FUNCTION_SIGNATURE = [
   'public.fn_create_booking_draft_atomic(',
   'uuid,uuid,timestamptz,timestamptz,text,integer,text,text,text,text,text,uuid,jsonb,text,timestamptz',
@@ -571,6 +572,8 @@ test('public draft route fails closed on a required-write fault with no IDs, pay
     status: failed.response.status,
     success: failed.payload?.success ?? null,
     errorCode: failed.payload?.error?.code ?? null,
+    hasBookingId: typeof failed.payload?.data?.bookingId === 'string',
+    hasOrderId: typeof failed.payload?.data?.orderId === 'string',
     counts: materializationCounts(snapshot),
   };
   assert.ok(
@@ -578,9 +581,22 @@ test('public draft route fails closed on a required-write fault with no IDs, pay
     `${PUBLIC_RED_MARKER}: required-write fault seam was not observed; ${JSON.stringify(diagnostic)}`,
   );
   console.log(`${PUBLIC_FAULT_REACHED_MARKER}:${fault.marker}:${faultEvidence}`);
+  console.log(`${PUBLIC_FAULT_RESULT_MARKER}:${JSON.stringify(diagnostic)}`);
   assertNoMaterialization(
     snapshot,
-    `${PUBLIC_RED_MARKER}: public route fault must leave no payable booking/order materialization`,
+    `${PUBLIC_RED_MARKER}: public route fault must leave no payable booking/order materialization; ${JSON.stringify(diagnostic)}`,
+  );
+  assert.deepEqual(
+    diagnostic,
+    {
+      status: 500,
+      success: false,
+      errorCode: 'INTERNAL_ERROR',
+      hasBookingId: false,
+      hasOrderId: false,
+      counts: { bookings: 0, orders: 0, items: 0, statusLogs: 0 },
+    },
+    `${PUBLIC_RED_MARKER}: current route must expose only the canonical fail-closed result`,
   );
   assert.equal(failed.response.status, 500, `${PUBLIC_RED_MARKER}: ${failed.text}`);
   assert.deepEqual(failed.payload, {

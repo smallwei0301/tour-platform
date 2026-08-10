@@ -143,7 +143,7 @@ jobs:
       # Keep the transaction contract ahead of the committed-artifact diff gate so
       # a migration PR records the behavioral RED/GREEN result even while its newly
       # generated expected-terminal artifact is still awaiting promotion.
-      - name: 'Prove #1811 public required-write fault was RED on the historical route'
+      - name: 'Prove #1811 public required-write fault was RED on the historical sequential writer (auth shim)'
         if: ${{ github.event.pull_request.number == 1818 && github.head_ref == 'agent/issue-1811-order-transaction' }}
         env:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -151,6 +151,8 @@ jobs:
         run: |
           set -euo pipefail
           red_commit='268f2356cf809548800ecbb2b197b7c12cd5f461'
+          historical_route_sha='434ca5e8bd8f3a983cfb8eff83f15dc517f46cb1ac9ef06510441259672c4818'
+          shimmed_route_sha='879836f27c4ab33621a7b3220a35291ceb3574b2cc0f43980778c845ae835746'
           route='apps/web/app/api/v2/bookings/draft/route.ts'
           backup="$(mktemp /tmp/issue1811-route.XXXXXX)"
           output="$(mktemp /tmp/issue1811-red-output.XXXXXX)"
@@ -165,6 +167,43 @@ jobs:
           git merge-base --is-ancestor "$red_commit" FETCH_HEAD
           git cat-file -e "$red_commit:$route"
           git show "$red_commit:$route" > "$route"
+          test "$(sha256sum "$route" | cut -d ' ' -f 1)" = "$historical_route_sha"
+
+          # The current baseline intentionally revokes direct bookings/orders DML
+          # from anon/authenticated. The historical route predates its service-role
+          # gateway, so use the ephemeral loopback service role only to reach and
+          # isolate the historical sequential-write behavior under test.
+          ROUTE_PATH="$route" node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+
+          const route = process.env.ROUTE_PATH;
+          if (!route) throw new Error('missing historical route path');
+          const source = readFileSync(route, 'utf8');
+          const legacyClient = '    const supabase = await createClient();';
+          const legacyWriteMarker = '    // 6. Create booking (draft status)';
+          const clientOccurrences = source.split(legacyClient).length - 1;
+          const writeMarkerOccurrences = source.split(legacyWriteMarker).length - 1;
+          if (clientOccurrences !== 1 || writeMarkerOccurrences !== 1) {
+            throw new Error(
+              `historical compatibility seams changed: client=${clientOccurrences}, write=${writeMarkerOccurrences}`,
+            );
+          }
+          const compatibilityWriteMarker = [
+            '    // Historical RED authorization compatibility shim (ephemeral loopback only).',
+            '    supabase = await getSupabase();',
+            '',
+            legacyWriteMarker,
+          ].join('\n');
+          writeFileSync(
+            route,
+            source
+              .replace(legacyClient, '    let supabase = await createClient();')
+              .replace(legacyWriteMarker, compatibilityWriteMarker),
+          );
+          NODE
+          test "$(sha256sum "$route" | cut -d ' ' -f 1)" = "$shimmed_route_sha"
+          printf '%s\n' \
+            'historical RED compatibility: current baseline grants reject legacy anon table writes; using only the ephemeral loopback service role'
 
           set +e
           ISSUE1811_PUBLIC_RED_PROBE=1 \
@@ -183,12 +222,15 @@ jobs:
             exit 1
           fi
           grep -F 'ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_REACHED' "$output"
+          grep -F \
+            'ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_RESULT:{"status":200,"success":true,"errorCode":null,"hasBookingId":true,"hasOrderId":true,"counts":{"bookings":1,"orders":1,"items":0,"statusLogs":1}}' \
+            "$output"
           grep -F -C 8 'ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_RED' "$output"
           cp -- "$backup" "$route"
           git diff --exit-code -- "$route"
           rm -f -- "$backup" "$output"
           trap - EXIT
-          printf 'historical public RED reproduced at the public HTTP seam (commit=%s, exit=%s)\n' \
+          printf 'historical sequential-writer mutation witness reproduced at the public HTTP seam with an authorization compatibility shim (commit=%s, exit=%s)\n' \
             "$red_commit" "$status"
 
       - name: 'Run #1811 booking-order transaction PostgreSQL and PostgREST runtime contract'
