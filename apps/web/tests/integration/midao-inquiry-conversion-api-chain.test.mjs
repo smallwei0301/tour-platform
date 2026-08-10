@@ -116,7 +116,11 @@ async function loginGuide(apiBaseUrl) {
   jar.add(login.response);
   assert.match(jar.header(), /(?:^|; )guide_token=/u);
   assert.match(jar.header(), /(?:^|; )guide_id=/u);
-  return { jar, csrf: csrfToken };
+  // Login rotates tp_csrf (the session route re-issues createCsrfCookie).
+  // The double-submit check compares the cookie with the x-csrf-token header,
+  // so later requests must send the freshest jar value, not the pre-login one.
+  const rotated = /(?:^|; )tp_csrf=([^;]+)/u.exec(jar.header());
+  return { jar, csrf: rotated ? decodeURIComponent(rotated[1]) : csrfToken };
 }
 
 function commandHeaders(session, idempotencyKey) {
