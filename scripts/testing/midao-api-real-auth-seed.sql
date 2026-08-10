@@ -53,8 +53,13 @@ on conflict (id) do update set
 -- filters "instance_id = uuid.Nil"; a NULL instance_id never matches, so the
 -- password-grant lookup would 400 invalid_credentials even with a correct
 -- password hash.
+-- confirmation_token/recovery_token/email_change/email_change_token_new must
+-- be '' not NULL: GoTrue's user row scanner errors with "500 Database error
+-- querying schema" (converting NULL to string is unsupported) if any of
+-- these four token columns are left NULL.
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  confirmation_token, recovery_token, email_change, email_change_token_new,
   raw_app_meta_data, raw_user_meta_data
 )
 values (
@@ -65,6 +70,7 @@ values (
   'midao-e2e-traveler@example.invalid',
   crypt('midao-e2e-traveler-local-only', gen_salt('bf', 10)),
   now(),
+  '', '', '', '',
   '{"provider":"email","providers":["email"]}'::jsonb,
   '{"full_name":"Midao E2E Traveler","role":"traveler"}'::jsonb
 )
@@ -72,6 +78,10 @@ on conflict (id) do update set
   instance_id = excluded.instance_id,
   encrypted_password = excluded.encrypted_password,
   email_confirmed_at = excluded.email_confirmed_at,
+  confirmation_token = excluded.confirmation_token,
+  recovery_token = excluded.recovery_token,
+  email_change = excluded.email_change,
+  email_change_token_new = excluded.email_change_token_new,
   raw_app_meta_data = excluded.raw_app_meta_data,
   raw_user_meta_data = excluded.raw_user_meta_data;
 
