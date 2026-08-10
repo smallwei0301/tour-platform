@@ -297,10 +297,14 @@ async function readMaterialization() {
 
 function assertNoMaterialization(snapshot, label) {
   assert.deepEqual(
-    Object.fromEntries(Object.entries(snapshot).map(([key, rows]) => [key, rows.length])),
+    materializationCounts(snapshot),
     { bookings: 0, orders: 0, items: 0, statusLogs: 0 },
     label,
   );
+}
+
+function materializationCounts(snapshot) {
+  return Object.fromEntries(Object.entries(snapshot).map(([key, rows]) => [key, rows.length]));
 }
 
 async function countDraftFaultIncidents(marker) {
@@ -562,10 +566,20 @@ test('public draft route fails closed on a required-write fault with no IDs, pay
   }
 
   const faultEvidence = await waitForPublicFaultEvidence(fault.marker, logStart, incidentCountBefore);
-  assert.ok(faultEvidence, `${PUBLIC_RED_MARKER}: required-write fault seam was not observed`);
+  const snapshot = await readMaterialization();
+  const diagnostic = {
+    status: failed.response.status,
+    success: failed.payload?.success ?? null,
+    errorCode: failed.payload?.error?.code ?? null,
+    counts: materializationCounts(snapshot),
+  };
+  assert.ok(
+    faultEvidence,
+    `${PUBLIC_RED_MARKER}: required-write fault seam was not observed; ${JSON.stringify(diagnostic)}`,
+  );
   console.log(`${PUBLIC_FAULT_REACHED_MARKER}:${fault.marker}:${faultEvidence}`);
   assertNoMaterialization(
-    await readMaterialization(),
+    snapshot,
     `${PUBLIC_RED_MARKER}: public route fault must leave no payable booking/order materialization`,
   );
   assert.equal(failed.response.status, 500, `${PUBLIC_RED_MARKER}: ${failed.text}`);
