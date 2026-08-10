@@ -120,11 +120,19 @@ export async function verifyCanonicalGuideSession(
     ? verifyImpersonationActorCookie(cookieHeader, { targetGuideId: session.guideId })
     : null;
 
-  return assertMidaoRuntimeAccess({
-    session,
-    runtime,
-    flags,
-    impersonation: { present: actorPresent, actor },
-    requireMode,
-  });
+  if (isMidaoE2ELocal()) {
+    console.error('CANON_DEBUG2 sessionKind', session.sessionKind, 'actorPresent', actorPresent, 'actorNull', actor === null, 'backendEnabled', flags.backendEnabled);
+  }
+  try {
+    return assertMidaoRuntimeAccess({
+      session,
+      runtime,
+      flags,
+      impersonation: { present: actorPresent, actor },
+      requireMode,
+    });
+  } catch (e) {
+    if (isMidaoE2ELocal()) console.error('CANON_DEBUG3 assert_denied', (e as { code?: string })?.code, (e as { status?: number })?.status);
+    throw e;
+  }
 }
