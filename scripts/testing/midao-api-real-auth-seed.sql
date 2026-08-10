@@ -45,8 +45,10 @@ on conflict (id) do update set
 
 -- Package 4 real-auth conversion fixture. This file executes only with full
 -- GoTrue services, so GoTrue-only columns are intentionally direct SQL.
+-- Note: this pinned GoTrue version's auth.users uses confirmed_at, not
+-- email_confirmed_at (that column belongs to a later GoTrue schema version).
 insert into auth.users (
-  id, aud, role, email, encrypted_password, email_confirmed_at,
+  id, aud, role, email, encrypted_password, confirmed_at,
   raw_app_meta_data, raw_user_meta_data
 )
 values (
@@ -61,7 +63,7 @@ values (
 )
 on conflict (id) do update set
   encrypted_password = excluded.encrypted_password,
-  email_confirmed_at = excluded.email_confirmed_at,
+  confirmed_at = excluded.confirmed_at,
   raw_app_meta_data = excluded.raw_app_meta_data,
   raw_user_meta_data = excluded.raw_user_meta_data;
 
