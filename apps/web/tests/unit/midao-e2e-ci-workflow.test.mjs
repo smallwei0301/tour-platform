@@ -59,3 +59,16 @@ test('CI runs the decision RPC runtime lane serially with redacted artifact meta
   assert.match(source, /midao-baseline-e2e-/u);
   assert.doesNotMatch(source, /DATABASE_URL\s*[:=]|SUPABASE_SERVICE_ROLE_KEY\s*[:=]/u);
 });
+
+test('CI records the #1811 transaction runtime result before expected-terminal artifact promotion', () => {
+  const source = workflowSource();
+  assert.match(
+    source,
+    /timeout --signal=TERM --kill-after=30s 1200s\s+node scripts\/testing\/with-midao-local-supabase\.mjs --postgrest\s+apps\/web\/tests\/integration\/midao-issue1811-order-transaction-postgrest\.test\.mjs/u,
+  );
+  assert.ok(
+    source.indexOf('Run #1811 booking-order transaction PostgreSQL and PostgREST runtime contract')
+      < source.indexOf('Verify deterministic expected-terminal artifacts are committed'),
+    '#1811 runtime contract must run before the intentionally stale artifact diff gate',
+  );
+});
