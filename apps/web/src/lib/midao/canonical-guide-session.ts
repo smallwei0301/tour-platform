@@ -1,4 +1,4 @@
-import { isMidaoBackendEnabled } from '../../config/feature-flags.mjs';
+import { isMidaoBackendEnabled, isMidaoE2ELocal } from '../../config/feature-flags.mjs';
 import { getGuideRuntimeAccessDb } from './db-runtime-access.mjs';
 import { verifyGuideSession } from '../guide-auth.ts';
 import {
@@ -103,14 +103,14 @@ export async function verifyCanonicalGuideSession(
 ) {
   const session = verifyGuideSession(request);
   if (!session) {
-    if (process.env.MIDAO_E2E_LOCAL === '1') console.error('CANON_DEBUG deny=SESSION_NULL');
+    if (isMidaoE2ELocal()) console.error('CANON_DEBUG deny=SESSION_NULL');
     deny('UNAUTHORIZED', 401);
   }
 
   const runtime = providedRuntime === undefined
     ? await getGuideRuntimeAccessDb({ guideId: session.guideId })
     : providedRuntime;
-  if (process.env.MIDAO_E2E_LOCAL === '1') {
+  if (isMidaoE2ELocal()) {
     console.error('CANON_DEBUG session_gid', session.guideId, 'runtime', runtime ? `mode=${runtime.backendMode}_ver=${runtime.guideSessionVersion}_status=${runtime.verificationStatus}_gidEq=${runtime.guideId === session.guideId ? 'y' : 'n'}` : 'NULL', 'sess_ver', session.sessionVersion, 'requireMode', requireMode);
   }
   const flags = providedFlags ?? { backendEnabled: isMidaoBackendEnabled() };
