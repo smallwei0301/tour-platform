@@ -1166,7 +1166,7 @@ export async function startMidaoApiServer({ repoRoot, nodeBin, environment, sign
       CHOKIDAR_INTERVAL: '1000',
     },
     detached: true,
-    stdio: ['ignore', 'ignore', 'ignore'],
+    stdio: ['ignore', 'ignore', 'inherit'],
   });
   let exited = false;
   const closed = new Promise((resolveClose) => {
