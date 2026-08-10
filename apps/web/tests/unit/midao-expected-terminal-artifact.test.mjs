@@ -22,7 +22,6 @@ const captureJournalPath = resolveRepositoryPublicationPaths().journalPath;
 const expectedJournalPath = resolveExpectedTerminalPublicationPaths().journalPath;
 const migrationsDir = path.join(root, 'supabase/migrations');
 const firstPostCutoffMigration = '20260723000000_midao_backend_mode.sql';
-const { historyVersions: expectedHistory } = JSON.parse(await readFile(path.join(baselineDir, 'manifest.json'), 'utf8'));
 
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable);
@@ -33,28 +32,60 @@ function canonical(value) { return Buffer.from(`${JSON.stringify(stable(value))}
 function sha256(bytes) { return createHash('sha256').update(bytes).digest('hex'); }
 
 test('published expected terminal covers every forward migration after the frozen cutoff', async () => {
-  const manifest = JSON.parse(await readFile(path.join(baselineDir, 'manifest.json'), 'utf8'));
-  const sourceNames = (await readdir(migrationsDir, { withFileTypes: true }))
-    .filter((entry) => entry.isFile()
-      && entry.name.endsWith('.sql')
-      && !entry.name.endsWith('.rollback.sql')
-      && entry.name >= firstPostCutoffMigration)
-    .map((entry) => entry.name)
-    .sort();
-  const sourceMigrations = await Promise.all(sourceNames.map(async (filename) => ({
-    filename,
-    sha256: sha256(await readFile(path.join(migrationsDir, filename))),
-  })));
+  let capture;
+  let expected;
+  try {
+    capture = await verifyCaptureTransaction({
+      baselineDir, ledgerPath: captureLedgerPath, journalPath: captureJournalPath,
+    });
+    expected = await verifyExpectedTerminalTransaction({
+      baselineDir,
+      ledgerPath: expectedLedgerPath,
+      captureLedgerPath,
+      journalPath: expectedJournalPath,
+    });
+    assert.equal(expected.ledger.captureTransactionId, capture.transactionId);
 
-  assert.deepEqual(
-    manifest.postCutoffMigrations,
-    sourceMigrations,
-    'expected-terminal manifest is stale; rebuild it before baseline-backed tests run',
-  );
-  assert.deepEqual(
-    manifest.historyVersions,
-    ['00000000000001', ...sourceNames.map((filename) => filename.slice(0, 14))],
-  );
+    const sourceNames = (await readdir(migrationsDir, { withFileTypes: true }))
+      .filter((entry) => entry.isFile()
+        && entry.name.endsWith('.sql')
+        && !entry.name.endsWith('.rollback.sql')
+        && entry.name >= firstPostCutoffMigration)
+      .map((entry) => entry.name)
+      .sort();
+    const sourceMigrations = await Promise.all(sourceNames.map(async (filename) => ({
+      filename,
+      sha256: sha256(await readFile(path.join(migrationsDir, filename))),
+    })));
+
+    assert.deepEqual(
+      expected.manifest.postCutoffMigrations,
+      sourceMigrations,
+      'expected-terminal manifest is stale; rebuild it before baseline-backed tests run',
+    );
+    assert.deepEqual(
+      expected.manifest.historyVersions,
+      ['00000000000001', ...sourceNames.map((filename) => filename.slice(0, 14))],
+    );
+
+    const catalog = JSON.parse(expected.payloads.get('catalog.expected-terminal.normalized.json'));
+    const inquiryEnabled = catalog.sections.columns.find((column) => (
+      column.schema === 'public'
+        && column.relation === 'activities'
+        && column.name === 'inquiry_enabled'
+    ));
+    assert.deepEqual(
+      inquiryEnabled && {
+        formattedType: inquiryEnabled.formattedType,
+        notNull: inquiryEnabled.notNull,
+        default: inquiryEnabled.default,
+      },
+      { formattedType: 'boolean', notNull: true, default: 'false' },
+    );
+  } finally {
+    expected?.dispose();
+    capture?.dispose();
+  }
 });
 
 test('published expected terminal verifies capture first and exposes exact PG17 terminal truth', async () => {
@@ -72,7 +103,9 @@ test('published expected terminal verifies capture first and exposes exact PG17 
       onPayloadOpen: (name) => opened.push(name),
     });
     assert.equal(expected.ledger.captureTransactionId, capture.transactionId);
-    assert.deepEqual(expected.manifest.historyVersions, expectedHistory);
+    assert.equal(expected.manifest.historyVersions.length, 24);
+    assert.equal(expected.manifest.historyVersions[0], '00000000000001');
+    assert.equal(expected.manifest.historyVersions.at(-1), '20260806120000');
     const terminal = expected.payloads.get('catalog.expected-terminal.normalized.json');
     try {
       const catalog = JSON.parse(terminal);
