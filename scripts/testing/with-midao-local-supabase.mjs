@@ -894,6 +894,9 @@ const SAFE_RUNNER_DIAGNOSTIC_PREFIX_CODES = Object.freeze([
   'STATUS_UNCLASSIFIED',
   'STATUS_PROJECT_ID_NOT_NORMALIZED',
   'MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG',
+  'MIDAO_E2E_SEED_FAILED_TMPDEBUG',
+  'MIDAO_E2E_LOCAL_ENV_MISSING_TMPDEBUG',
+  'MIDAO_SEED_FAILED_TMPDEBUG',
 ]);
 
 export function formatMidaoRunnerFailure(error, secrets = []) {
@@ -1698,9 +1701,9 @@ async function main() {
           const overlay = await runCommand('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', overlayPath], {
             cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
           });
-          if (overlay.exitCode !== 0 || overlay.signal !== null) throw new Error(`MIDAO_E2E_SEED_FAILED: ${redactSupabaseOutput(overlay.stderr).slice(-4000).trim()}`);
+          if (overlay.exitCode !== 0 || overlay.signal !== null) throw new Error(`MIDAO_E2E_SEED_FAILED_TMPDEBUG: ${redactSupabaseOutput(overlay.stderr, []).slice(-4000).trim()}`);
           for (const name of ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
-            if (typeof localEnv[name] !== 'string' || !localEnv[name]) throw new Error(`MIDAO_E2E_LOCAL_ENV_MISSING:${name}`);
+            if (typeof localEnv[name] !== 'string' || !localEnv[name]) throw new Error(`MIDAO_E2E_LOCAL_ENV_MISSING_TMPDEBUG:${name}`);
           }
           await createOrUpdateMidaoTravelerAuthUser({
             supabaseUrl: localEnv.SUPABASE_URL,
