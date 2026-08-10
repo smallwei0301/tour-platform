@@ -54,9 +54,9 @@ test('available-slots lists scheduled plan schedules via evaluateScheduledPlanSl
 test('draft rejects scheduled bookings without a resolved schedule (SCHEDULE_REQUIRED)', () => {
   assert.match(DRAFT_SRC, /booking_type === 'scheduled'/);
   assert.match(DRAFT_SRC, /SCHEDULE_REQUIRED/);
-  // The enforcement must run before the booking insert.
+  // The enforcement must run before the atomic materialization command.
   const enforceIdx = DRAFT_SRC.indexOf('SCHEDULE_REQUIRED');
-  const insertIdx = DRAFT_SRC.indexOf('const bookingInsertPayload');
+  const insertIdx = DRAFT_SRC.indexOf('materializeDraftBookingOrder({');
   assert.ok(enforceIdx > -1 && insertIdx > -1 && enforceIdx < insertIdx, 'enforcement precedes insert');
 });
 

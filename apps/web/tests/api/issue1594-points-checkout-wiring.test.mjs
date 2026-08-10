@@ -49,10 +49,13 @@ test('T1594wire.3 — 兩個完成 seam 都掛發點（auto-complete sweep＋gui
   assert.match(redeem, /select\([^)]*user_id[^)]*total_twd/);
 });
 
-test('T1594wire.4 — draft route 經 applyOrderExtras 收 redeemPoints；折抵在 checkout/order-extras', () => {
+test('T1594wire.4 — draft materializer 經 applyOrderExtras 收 redeemPoints；折抵在 checkout/order-extras', () => {
   const route = read('app/api/v2/bookings/draft/route.ts');
   assert.match(route, /redeemPoints/);
-  assert.match(route, /applyOrderExtras\(\{/);
+  assert.match(route, /materializeDraftBookingOrder\(\{/);
+  const orchestration = read('src/lib/checkout/booking-order-materialization.mjs');
+  assert.match(orchestration, /applyOrderExtras/);
+  assert.match(orchestration, /await applyExtras\(\{[\s\S]*redeemPoints: input\.redeemPoints/);
   const helper = read('src/lib/checkout/order-extras.mjs');
   assert.match(helper, /import\s*\{\s*redeemPointsForOrderDb\s*\}/);
   assert.match(helper, /redeemPointsForOrderDb\(\{/);

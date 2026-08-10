@@ -22,26 +22,27 @@ const SLOTS_SRC = readFileSync(
   ),
   'utf8',
 );
+const ATOMIC_MIGRATION_SRC = readFileSync(
+  join(
+    __dirname,
+    '../../../../supabase/migrations/20260810033421_issue1811_atomic_booking_order_materialization.sql',
+  ),
+  'utf8',
+);
 
 test('draft route imports booking-type-flow helpers', () => {
   assert.match(DRAFT_SRC, /from '.*booking-type-flow\.mjs'/);
-  assert.match(DRAFT_SRC, /initialApprovalStatusForBookingType/);
+  assert.match(DRAFT_SRC, /normalizeBookingType/);
   assert.match(DRAFT_SRC, /requiresGuideApproval/);
 });
 
-test('draft booking insert sets guide_approval_status from booking_type', () => {
-  // The payload literal must compute guide_approval_status from the plan.
+test('atomic draft RPC derives guide_approval_status from the DB plan booking_type', () => {
+  assert.match(ATOMIC_MIGRATION_SRC, /SELECT[\s\S]*plan\.booking_type[\s\S]*FROM public\.activity_plans/);
   assert.match(
-    DRAFT_SRC,
-    /guide_approval_status:\s*initialApprovalStatusForBookingType\(planData\.booking_type\)/,
+    ATOMIC_MIGRATION_SRC,
+    /CASE WHEN v_booking_type = 'request' THEN 'pending' ELSE 'not_required' END/,
   );
-
-  // And it must live inside the bookingInsertPayload object literal.
-  const payloadIdx = DRAFT_SRC.indexOf('const bookingInsertPayload');
-  assert.ok(payloadIdx > -1, 'bookingInsertPayload literal exists');
-  const payloadBlock = DRAFT_SRC.slice(payloadIdx, DRAFT_SRC.indexOf('};', payloadIdx));
-  assert.match(payloadBlock, /guide_approval_status:/);
-  assert.match(payloadBlock, /status:\s*'draft'/);
+  assert.match(ATOMIC_MIGRATION_SRC, /INSERT INTO public\.bookings/);
 });
 
 test('draft response exposes bookingType and requiresApproval', () => {

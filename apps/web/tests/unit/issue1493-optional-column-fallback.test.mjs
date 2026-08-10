@@ -55,8 +55,12 @@ test('select：非缺欄位錯誤 → 立即回傳，不再退版', async () => 
   assert.equal(calls, 1);
 });
 
-test('wiring：draft insert / 兩個訂單列表 / checkout 都接上 fallback', () => {
-  assert.match(read('app/api/v2/bookings/draft/route.ts'), /applyWithOptionalColumnFallback/);
+test('wiring：兩個訂單列表 / checkout 保留 fallback；atomic draft writer fail closed', () => {
+  const draft = read('app/api/v2/bookings/draft/route.ts');
+  const atomicGateway = read('src/lib/checkout/db-booking-order-materialization.mjs');
+  assert.match(draft, /materializeDraftBookingOrder/);
+  assert.doesNotMatch(draft, /applyWithOptionalColumnFallback/);
+  assert.match(atomicGateway, /BOOKING_DRAFT_RPC_NOT_DEPLOYED/);
   assert.match(read('src/lib/db.mjs'), /selectWithOptionalColumnFallback/);
   assert.match(read('app/api/v2/bookings/[bookingId]/checkout/route.ts'), /selectWithOptionalColumnFallback/);
 });

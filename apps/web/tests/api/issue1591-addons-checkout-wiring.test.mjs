@@ -19,10 +19,13 @@ test('T1591wire.1 — 加購清單 API 存在（GET，接 listActivityAddonsDb�
   assert.match(src, /listActivityAddonsDb/);
 });
 
-test('T1591wire.2 — draft route 經 applyOrderExtras 收 addonSelections；重算在 checkout/order-extras', () => {
+test('T1591wire.2 — draft materializer 經 applyOrderExtras 收 addonSelections；重算在 checkout/order-extras', () => {
   const route = read('app/api/v2/bookings/draft/route.ts');
   assert.match(route, /addonSelections/);
-  assert.match(route, /applyOrderExtras\(\{/);
+  assert.match(route, /materializeDraftBookingOrder\(\{/);
+  const orchestration = read('src/lib/checkout/booking-order-materialization.mjs');
+  assert.match(orchestration, /applyOrderExtras/);
+  assert.match(orchestration, /await applyExtras\(\{[\s\S]*addonSelections: input\.addonSelections/);
   // 重邏輯抽到 src/lib/checkout/order-extras.mjs（route 不再手刻）
   const helper = read('src/lib/checkout/order-extras.mjs');
   assert.match(helper, /import\s*\{\s*persistOrderAddonsDb\s*\}/);

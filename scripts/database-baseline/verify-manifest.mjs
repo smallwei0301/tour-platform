@@ -147,6 +147,7 @@ const EXPECTED_TERMINAL_HISTORY = Object.freeze([
   '20260723022000', '20260723023000', '20260729160000', '20260729170000',
   '20260729180000', '20260729190000', '20260730093000', '20260804103000',
   '20260804113000', '20260806090000', '20260806091000', '20260806120000',
+  '20260810033421',
 ]);
 const EXPECTED_TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: '20260723000000_midao_backend_mode.sql', sha256: 'fe108aa5ca68f135f49e22cbb5074941ce8ff5464a6d91a56f9f4cbdae437b17' }),
@@ -172,6 +173,7 @@ const EXPECTED_TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: '20260806090000_midao_inquiries.sql', sha256: '2d7a2467540991d0a5faf33243ab06ca19d205f233f959fb76a8a07073638a70' }),
   Object.freeze({ filename: '20260806091000_midao_booking_intake_pricing_and_confirmation.sql', sha256: 'bf8cd71196adcb6a915455d67679c2642eee8dde123c11bf6f4405b067e27e85' }),
   Object.freeze({ filename: '20260806120000_midao_atomic_inquiry_conversion.sql', sha256: '33e9d312bc8079c1414e4900b995dbb0f1ef02384394ed27b128c2c53b8356e3' }),
+  Object.freeze({ filename: '20260810033421_issue1811_atomic_booking_order_materialization.sql', sha256: '4fb09d6863a992c089be849198e13f85537a06f586797cb1ec159a8503372d5c' }),
 ]);
 
 export function validateExpectedTerminalManifest(manifest) {

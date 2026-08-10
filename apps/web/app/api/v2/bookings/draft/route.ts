@@ -41,20 +41,14 @@ import {
 } from '../../../../../src/lib/availability-v2/effective-booking-availability';
 import type { GuideSlotConflictOverride } from '../../../../../src/lib/availability-v2/conflict-override';
 import { evaluateOverrideDynamicSlots } from '../../../../../src/lib/availability-v2/override-dynamic-slots';
+import { loadConflictOverridesWithSchemaFallback } from '../../../../../src/lib/conflict-override-schema-compat.mjs';
 import {
-  applyBookingConflictOverrideColumnFallback,
-  loadConflictOverridesWithSchemaFallback,
-} from '../../../../../src/lib/conflict-override-schema-compat.mjs';
-import {
-  initialApprovalStatusForBookingType,
   normalizeBookingType,
   requiresGuideApproval,
 } from '../../../../../src/lib/booking-type-flow.mjs';
 import { initialPaymentDeadlineForBookingType } from '../../../../../src/lib/payment-deadline.mjs';
 import { dropExpiredUnpaidHolds } from '../../../../../src/lib/expired-hold-filter.mjs';
-import { applyWithOptionalColumnFallback } from '../../../../../src/lib/optional-column-fallback.mjs';
-import { applyOrderExtras } from '../../../../../src/lib/checkout/order-extras.mjs';
-import { fireDraftPostCreateNotifications } from '../../../../../src/lib/checkout/booking-draft-post-create-notify';
+import { materializeDraftBookingOrder } from '../../../../../src/lib/checkout/booking-order-materialization.mjs';
 import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
@@ -1026,172 +1020,46 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 5. Calculate total amount
-    let totalAmount: number;
-    if (planData.price_type === 'per_person') {
-      totalAmount = planData.base_price * data.participants;
-    } else {
-      // per_group
-      totalAmount = planData.base_price;
-    }
-
-    // 6. Create booking (draft status)
-    const bookingInsertPayload = {
-      traveler_id: travelerId,
-      guide_id: guideId,
-      activity_id: data.activityId,
-      activity_plan_id: resolvedPlanId,
-      source_channel: data.sourceChannel,
-      start_at: slotStartAt.toISOString(),
-      end_at: slotEndAt.toISOString(),
-      timezone: data.timezone,
-      participants: data.participants,
-      status: 'draft',
-      // request plan → 'pending'（先審核後付款）；instant/scheduled → 'not_required'.
-      guide_approval_status: initialApprovalStatusForBookingType(planData.booking_type),
-      customer_note: data.customerNote || null,
-      conflict_override_id: conflictOverrideId,
-      conflict_override_snapshot: conflictOverrideSnapshot,
-    };
-
-    const {
-      data: bookingInsert,
-      error: bookingError,
-      droppedColumns: droppedConflictOverrideColumns,
-    } = await applyBookingConflictOverrideColumnFallback(
-      async (payload: typeof bookingInsertPayload) =>
-        supabase
-          .from('bookings')
-          .insert(payload)
-          .select('id, booking_no, status')
-          .single(),
-      bookingInsertPayload,
-    );
-
-    if (droppedConflictOverrideColumns.length > 0) {
-      console.warn('Conflict override booking-column schema fallback during draft create', {
-        guideId,
-        activityId: data.activityId,
-        planId: resolvedPlanId,
-        droppedColumns: droppedConflictOverrideColumns,
-      });
-    }
-
-    if (bookingError || !bookingInsert) {
-      console.error('Error creating booking:', bookingError);
-      return Response.json(errorV2('INTERNAL_ERROR', 'Failed to create booking'), {
-        status: 500,
-      });
-    }
-
-    // 7. Create order (pending_payment status)
     // #1493 付款期限：instant/scheduled 自建立起算 24h；request 待審核 → null，
     // 審核通過時才於 approval gateway 起算。
     const paymentDeadlineAt = initialPaymentDeadlineForBookingType(
       planData.booking_type,
       new Date().toISOString(),
     );
-    // #1493 部署順序安全：payment_deadline_at 萬一還沒套到正式 DB，剝除該欄位仍能建單
-    // （退化為無期限，等同 legacy；不致整個下單流程 500）。
-    const { data: orderInsert, error: orderError } = await applyWithOptionalColumnFallback(
-      (p: any) => supabase.from('orders').insert(p).select('id, status').single(),
-      {
-        booking_id: bookingInsert.id,
-        activity_id: data.activityId,
-        user_id: travelerId,
-        people_count: data.participants,
-        contact_name: data.contactName,
-        contact_phone: data.contactPhone,
-        contact_email: data.contactEmail,
-        status: 'pending_payment',
-        payment_status: 'pending',
-        total_twd: totalAmount,
-        source_channel: data.sourceChannel,
-        discount_amount: 0,
-        payment_deadline_at: paymentDeadlineAt,
-      },
-      ['payment_deadline_at'],
-    );
-
-    if (orderError || !orderInsert) {
-      console.error('Error creating order:', orderError);
-      // Rollback booking
-      await supabase.from('bookings').delete().eq('id', bookingInsert.id);
-      return Response.json(errorV2('INTERNAL_ERROR', 'Failed to create order'), {
-        status: 500,
-      });
-    }
-
-    // 8. Update booking with order_id
-    await supabase.from('bookings').update({ order_id: orderInsert.id }).eq('id', bookingInsert.id);
-
-    // #1591 加購＋#1594 點數折抵：server 以 DB 快照重算、fail-soft 回寫金額（見 checkout/order-extras.mjs）。
-    ({ totalAmount } = await applyOrderExtras({
-      supabase, orderId: orderInsert.id, activityId: data.activityId, participants: data.participants,
-      travelerId, totalAmount,
-      addonSelections: (body as any)?.addonSelections, redeemPoints: (body as any)?.redeemPoints,
-    }));
-
-    // 9. Create order_item
     const activityTitle = activities?.title ?? '行程預訂';
-    const itemTitle = `${activityTitle} - ${planData.name}`;
-    const { error: itemError } = await supabase.from('order_items').insert({
-      order_id: orderInsert.id,
-      item_type: 'activity_booking',
-      ref_id: bookingInsert.id,
-      booking_id: bookingInsert.id,
-      title: itemTitle,
-      quantity: planData.price_type === 'per_person' ? data.participants : 1,
-      unit_price: planData.base_price,
-      subtotal_amount: totalAmount,
-      metadata: {
-        planId: resolvedPlanId,
-        activityId: data.activityId,
-        startAt: slotStartAt.toISOString(),
-        endAt: slotEndAt.toISOString(),
-        participants: data.participants,
-      },
-    });
-
-    if (itemError) {
-      console.error('Error creating order item:', itemError);
-      // Non-fatal, continue
-    }
-
-    // 10. Create booking_status_log
-    await supabase.from('booking_status_logs').insert({
-      booking_id: bookingInsert.id,
-      from_status: null,
-      to_status: 'draft',
-      actor_user_id: travelerId,
-      actor_role: travelerId ? 'traveler' : 'system',
-      reason: 'Booking draft created',
-      metadata: {
-        sourceChannel: data.sourceChannel,
-        correlationId,
-        contactEmail: data.contactEmail,
-        auditSignal: 'line_liff_draft_entry',
-        conflictOverride: conflictOverrideSnapshot,
-        overrideId: conflictOverrideId,
-      },
-    });
-
-    // #1493 付款期限信＋request 導遊審核入口通知（fire-and-forget，實作見 checkout/booking-draft-post-create-notify）。
-    fireDraftPostCreateNotifications({
-      orderId: orderInsert.id, activityId: data.activityId, activityTitle,
-      startAt: slotStartAt.toISOString(), peopleCount: data.participants, totalTwd: totalAmount,
-      paymentDeadlineAt, requiresApproval: requiresGuideApproval(planData.booking_type),
+    const materialized = await materializeDraftBookingOrder({
+      travelerId,
+      planId: resolvedPlanId,
+      activityId: data.activityId,
+      activityTitle,
+      startAt: slotStartAt.toISOString(),
+      endAt: slotEndAt.toISOString(),
+      timezone: data.timezone,
+      participants: data.participants,
+      sourceChannel: data.sourceChannel,
+      contactName: data.contactName,
+      contactPhone: data.contactPhone,
+      contactEmail: data.contactEmail,
+      customerNote: data.customerNote ?? null,
+      conflictOverrideId,
+      conflictOverrideSnapshot,
+      correlationId,
+      paymentDeadlineAt,
+      requiresApproval: requiresGuideApproval(planData.booking_type),
+      // #1812/#1813 會把這兩個 seam 收進同一 DB transaction；#1811 先保留既有行為。
+      addonSelections: (body as any)?.addonSelections,
+      redeemPoints: (body as any)?.redeemPoints,
     });
 
     // Return response per API spec
     return Response.json(
       successV2({
-        bookingId: bookingInsert.id,
-        bookingNo: bookingInsert.booking_no,
-        bookingStatus: 'draft',
-        orderId: orderInsert.id,
-        orderStatus: 'pending_payment',
-        amount: totalAmount,
+        bookingId: materialized.bookingId,
+        bookingNo: materialized.bookingNo,
+        bookingStatus: materialized.bookingStatus,
+        orderId: materialized.orderId,
+        orderStatus: materialized.orderStatus,
+        amount: materialized.amount,
         currency: 'TWD',
         // 三種預約模式：前端依此分流（request → 顯示「送出申請」、不進付款）。
         bookingType: normalizeBookingType(planData.booking_type),

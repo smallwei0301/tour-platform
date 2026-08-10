@@ -1,5 +1,5 @@
 # issue1811 — 以 transaction 與 orders.total_twd 固化訂單可付款金額
-> 最後更新：2026-08-10 11:39（Asia/Taipei）｜負責 session：Codex／2026-08-10
+> 最後更新：2026-08-10 12:14（Asia/Taipei）｜負責 session：Codex／2026-08-10
 
 ## 目標
 讓基本 Booking、Order、Order item 與 `orders.total_twd` 在單一資料庫 transaction 內全有或全無，成功後以 commit 後重新讀取的持久化總額回應，失敗時不產生可付款或成功通知結果。
@@ -24,10 +24,19 @@
 - 2026-08-10 RED（本機）：`node --test apps/web/tests/unit/issue1811-booking-order-materialization.test.mjs` → `pass 0 / fail 1`，`ERR_MODULE_NOT_FOUND`，證明 atomic → read-back → extras → final read-back → notify 協調器尚不存在；測試同時鎖任一 DB/read-back 失敗時 notify=0。
 - 2026-08-10 RED（本機 baseline freshness）：`node --test apps/web/tests/unit/midao-expected-terminal-artifact.test.mjs` → `pass 3 / fail 1`，明確指出 expected-terminal manifest 缺 `20260810033421...sql`。真 PG17/PostgREST 行為測試已通過 `node --check` 與 runner path parser，但本機無 Docker；workflow 已接到 artifact diff gate 前，待 Draft PR 留下 hosted RED。
 - 2026-08-10 workflow 接線 contract：`node --test apps/web/tests/unit/midao-e2e-ci-workflow.test.mjs` → `pass 5 / fail 0`。
+- 2026-08-10 公開入口 RED 另立 commit `fb486f3f`：同一 hosted runtime 檔會啟動 local Next，實際呼叫 `POST /api/v2/bookings/draft`；在該 commit tree 中 migration 仍為空、route 仍是 sequential writer，因此竄改 total、late-write fault、公開 response／通知抑制與 commit-after nested PostgREST read-back 都會真實失敗，不是 GREEN 後補 source assertion。
+- 2026-08-10 minimal GREEN 已完成：additive migration `20260810033421...sql` 新增 service-role-only `SECURITY INVOKER` RPC，在一個 statement transaction 內依序建立 order、booking、reciprocal link、base activity item、initial status log；server 由 active plan 取價，以 bigint 計算並拒絕 int4 overflow，RPC signature 完全沒有 client total。最終 migration SHA-256 為 `4fb09d6863a992c089be849198e13f85537a06f586797cb1ec159a8503372d5c`。
+- 2026-08-10 route 已改走新的 `db-booking-order-materialization.mjs` gateway 與協調器：RPC resolve 後另做真 PostgREST nested read-back，核對 booking/order reciprocal IDs、activity/plan continuity、狀態、base item 數學與 persisted `orders.total_twd`；只有 read-back 成功才允許現有 extras seam、第二次 read-back、成功通知及 API ID/amount。基本路徑第二次仍 strict；只有實際產生 add-on／points 金額才暫時放寬，留給 #1812/#1813 收斂。
+- 2026-08-10 runtime regression 已擴為五個 required DML seam（order insert、booking insert、order link update、item insert、status log insert）逐一 fault rollback，另以 advisory-lock blocking trigger＋`pg_cancel_backend` 驗證 transaction 中途取消；亦覆蓋 tampered request total、int4 overflow、guest／authenticated traveler FK/audit continuity，以及公開 HTTP fault 時 500 envelope 無 booking/order/payment ID、零持久化 aggregate、零成功 email seam log。所有 DDL/DML 均只允許 exact local `127.0.0.1:54322/postgres` runner。
+- 2026-08-10 isolated SQL 與 JS 雙軸預審查完成：SQL transaction／ACL 無 blocker；審查提出的公開 route tracer、真 nested PostgREST execution、transaction cancellation、base-only final strict read-back、persisted activity/plan continuity、overflow、authenticated traveler、loopback guard均已補上。新 gateway **刻意沒有 in-memory writer fallback**：RPC/env 不可用時 fail closed，這是「不得退回非原子 writer」的 safety exception；unit contract 鎖 `BOOKING_DRAFT_RPC_NOT_DEPLOYED`。
+- 2026-08-10 pinned Node `22.23.1` 本機證據：新 gateway／協調器＋受影響 route contracts `pass 46 / fail 0`；workflow contract `pass 5 / fail 0`；完整 `npm run typecheck` PASS；完整 `npm run lint` PASS（僅既有 `RootDocument.tsx` `<head>` warning，0 error）。Node 24 曾被 repo guard 拒絕，後續證據一律改用 pinned Node 22，未繞過 guard。
+- 2026-08-10 production build：第一次在載入 bundle 前被 startup-env 正確擋下（缺本機 production-only guide/admin secrets）；改用 repo E2E 同型假值後，sandbox 在 build 的外部 network request 階段取消程序，未取得 bundle conclusion。未重複第三次，標記 `NOT_VERIFIED-local-build`；Node 22 typecheck/lint 與 hosted CI build 為最近替代證據。
+- 2026-08-10 baseline bootstrap 已 append 第 24 支 post-cutoff migration，fresh history 24→25、existing rehearsal 151→152。Node 22 source contracts `pass 30 / fail 1`；唯一預期 failure 是 committed expected-terminal manifest 尚缺新 migration。四個 terminal artifact 必須由 hosted PG17 兩次 byte-identical build 整組 promotion，未手改或偽造。
 
 ## 下一步
-- 完成 behavior RED 測試並以 hosted PG17/PostgREST 留下函式尚不存在／late-write 未 rollback 的失敗證據。
-- 只做讓該 RED 轉綠的 additive RPC、service-role gateway、commit 後 read-back 與 route 最小接線；再刷新 expected-terminal artifacts。
+- 以 Draft PR 跑 hosted PG17/PostgREST＋local Next runtime，取得 `fb486f3f` 後的 GREEN 證據與 expected-terminal 四件組 artifact；原樣 promotion 後重跑 CI。
+- 發布 Draft PR／詳細 issue 里程碑目前受 GitHub connector 的私有實作細節 disclosure guard 阻擋；未取得使用者明確外部發布授權前不繞過、不 push／開 PR。
+- 新 migration 使 production verified ledger fail closed；production apply／ledger 更新不在本票授權內，維持 HOLD，絕不把 expected-terminal manifest 偽裝成 production apply 證據。
 
 ## 絕不重做（Do-NOT-redo）
 - 不修改凍結的 legacy `/api/orders`／`/api/payments`、既有 migration、middleware、Auth、payment callback 或受保護 E2E。
