@@ -175,6 +175,9 @@ jobs:
           status=$?
           set -e
 
+          grep -E \
+            'ISSUE1811_PUBLIC_|ISSUE1811_ORDER_ITEMS_BOOM|public draft route fails closed|AssertionError|failureType:|error:|bookings:|orders:|items:|statusLogs:|ERR_[A-Z_]+' \
+            "$output" || true
           if test "$status" -ne 1; then
             printf 'historical public RED probe exited %s; expected the test runner to exit 1\n' "$status"
             exit 1

@@ -82,6 +82,7 @@ test('CI records the #1811 transaction runtime result before expected-terminal a
   assert.match(source, /ISSUE1811_PUBLIC_RED_PROBE:\s*'0'/u);
   assert.match(source, /ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_RED/u);
   assert.match(source, /ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_REACHED/u);
+  assert.match(source, /ISSUE1811_ORDER_ITEMS_BOOM\|public draft route fails closed\|AssertionError/u);
   assert.match(source, /test "\$status" -ne 1/u);
   assert.match(source, /git diff --exit-code -- "\$route"/u);
   assert.equal(source.match(runtimeCommand)?.length, 2, 'the same public runtime file must run once RED and once GREEN');
