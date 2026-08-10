@@ -1,5 +1,5 @@
 # issue1811 — 以 transaction 與 orders.total_twd 固化訂單可付款金額
-> 最後更新：2026-08-10 12:48（Asia/Taipei）｜負責 session：Codex／2026-08-10
+> 最後更新：2026-08-10 12:53（Asia/Taipei）｜負責 session：Codex／2026-08-10
 
 ## 目標
 讓基本 Booking、Order、Order item 與 `orders.total_twd` 在單一資料庫 transaction 內全有或全無，成功後以 commit 後重新讀取的持久化總額回應，失敗時不產生可付款或成功通知結果。
@@ -36,10 +36,12 @@
 - 2026-08-10 發布前安全補強：GitHub App 拒絕重新發布 workflow 內既有的 plaintext CI session 假值，因此未繞過 guard，改為每次 hosted run 以 `randomBytes(32)` 產生、mask 並透過 `GITHUB_ENV` 傳遞 ephemeral secret；公開 route tracer 也改用 runtime random guide/admin secrets，且明確覆寫 Resend、Sentry、LINE、Telegram、ECPay 外部作用環境，避免 runner ambient env 造成真實通知／付款副作用。Workflow／gateway／協調器 focused tests `pass 9 / fail 0`、integration syntax、secret scan 與 `git diff --check` 均通過。
 - 2026-08-10 依 migration apply ledger SOP 補上同名 `.rollback.sql`：必須另行 owner 授權並先部署不呼叫 RPC 的 app，只撤銷／移除 #1811 function，不修改任何業務資料；governance contract 已納入上述 9 項 focused tests。本輪未執行 rollback、production apply 或 ledger 更新。
 - 2026-08-10 Draft PR #1818 初輪 hosted run：PG17 deterministic builder 2 runs 與 artifact upload 成功（transaction `4df58af5…`），anon RLS／secret scan 通過；#1811 runtime 在所有 product assertions 前由 fixture hook 失敗，log 為 `public.users_pkey` duplicate。根因是插入 `auth.users` 後 hosted baseline trigger 已建立同 ID 的 `public.users`，測試再直接 insert；已改為 `ON CONFLICT (id) DO UPDATE` 的 idempotent fixture，產品 RPC／route 未變。另將 workflow step name 的 `#1811` 加引號，避免 YAML 把後段當 comment。修正尚待下一輪 hosted runtime 證實；首輪 artifact 不先 promotion。
+- 2026-08-10 Draft PR #1818 第二輪 hosted PG17 證實 fixture 修正與產品 contract：head `ef99b78d`、workflow run `31356708867` 的 `Run #1811 booking-order transaction PostgreSQL and PostgREST runtime contract` 為 success。deterministic builder 兩次輸出相同 transaction `4df58af57813c6a20ee875c4003cac369b8fe29f734c666a8680dcaf455285e9`；只採用該 run 的 artifact `9050902925`，ZIP SHA-256 `2b5e56366f12b6f2ae1dc9de8ab3af233dadbf897a07f83abf42d8da9a346201` 與 GitHub metadata 相符。
+- 2026-08-10 expected-terminal 四件組已由 artifact 原樣 promotion，未手改 catalog／manifest／ledger。解壓前確認僅有四個普通檔案、無額外路徑／symlink；transaction verifier 確認 25 筆 history、末筆 `20260810033421`、manifest SHA-256 `e1bb3d427b5337bbee9834e54770f2c7f727b8ff5126f8175624851397044b7f`。promotion 後本機 `midao-expected-terminal-artifact.test.mjs` 為 `pass 4 / fail 0`，migration source contracts 為 `pass 34 / fail 0`，`check-migration-source-gate --mode source` 為 `verified`。尚待 promotion commit 的完整 hosted CI，不提前標 Ready。
 
 ## 下一步
-- 以 Draft PR 跑 hosted PG17/PostgREST＋local Next runtime，取得 `fb486f3f` 後的 GREEN 證據與 expected-terminal 四件組 artifact；原樣 promotion 後重跑 CI。
-- 外部發布與安全例外已獲明確授權；依受控 GitHub App 路徑發布既有 commits，發布前後比對 commit/tree，保持 Draft 且不合併。
+- 提交並發布已驗證的 expected-terminal 四件組與本段證據，重跑 hosted full CI／build／baseline browser gates；全部通過且 isolated review 無 blocker 後才可把 Draft 標為 Ready for review。
+- 外部發布與安全例外已獲明確授權；依受控 GitHub App 路徑發布 promotion commit，發布前後比對 commit/tree，不合併。
 - 新 migration 使 production verified ledger fail closed；production apply／ledger 更新不在本票授權內，維持 HOLD，絕不把 expected-terminal manifest 偽裝成 production apply 證據。
 
 ## 絕不重做（Do-NOT-redo）
