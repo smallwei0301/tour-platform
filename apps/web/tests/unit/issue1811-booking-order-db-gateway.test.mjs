@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import test from 'node:test';
 
 import {
@@ -9,6 +11,7 @@ import {
 
 const bookingId = '18110000-0000-4000-8000-000000000011';
 const orderId = '18110000-0000-4000-8000-000000000012';
+const repoRoot = resolve(import.meta.dirname, '../../../..');
 
 function validReadBack(totalTwd = 7400) {
   return {
@@ -157,4 +160,22 @@ test('#1811 commit-after read-back reconciles reciprocal IDs and base item math'
     ),
     /status read-back mismatch/,
   );
+});
+
+test('#1811 migration has an owner-gated function-only rollback companion', () => {
+  const rollback = readFileSync(
+    resolve(
+      repoRoot,
+      'supabase/migrations/20260810033421_issue1811_atomic_booking_order_materialization.rollback.sql',
+    ),
+    'utf8',
+  );
+
+  assert.match(rollback, /midao\.rollback_owner_authorized/u);
+  assert.match(rollback, /MIDAO_ROLLBACK_OWNER_AUTHORIZATION_REQUIRED/u);
+  assert.match(rollback, /REVOKE ALL ON FUNCTION public\.fn_create_booking_draft_atomic/u);
+  assert.match(rollback, /DROP FUNCTION IF EXISTS public\.fn_create_booking_draft_atomic/u);
+  assert.match(rollback, /BEGIN;/u);
+  assert.match(rollback, /COMMIT;/u);
+  assert.doesNotMatch(rollback, /\b(?:DELETE\s+FROM|TRUNCATE|DROP\s+TABLE|INSERT\s+INTO|UPDATE\s+\S+\s+SET)\b/iu);
 });

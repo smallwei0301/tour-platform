@@ -17,6 +17,12 @@ test('Midao baseline E2E workflow is PR-triggered, bounded, and uses Node 22', (
   assert.match(source, /node-version:\s*'22\.23\.1'/u);
   assert.match(source, /concurrency:/u);
   assert.match(source, /cancel-in-progress:\s*true/u);
+  assert.match(source, /Generate ephemeral guide session secret/u);
+  assert.match(source, /randomBytes\(32\)/u);
+  assert.match(source, /::add-mask::%s/u);
+  assert.match(source, /GUIDE_SESSION_SECRET=%s/u);
+  assert.match(source, /GITHUB_ENV/u);
+  assert.doesNotMatch(source, /GUIDE_SESSION_SECRET:\s*\S+/u);
 });
 
 test('CI provisions only the digest-bound Supabase CLI and required Docker images', () => {
