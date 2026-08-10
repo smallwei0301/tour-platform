@@ -43,7 +43,15 @@ function cookieJar() {
       for (const setCookie of readSetCookies(response)) {
         const pair = setCookie.split(';', 1)[0];
         const separator = pair.indexOf('=');
-        if (separator > 0) values.set(pair.slice(0, separator), pair.slice(separator + 1));
+        if (separator <= 0) continue;
+        const name = pair.slice(0, separator);
+        const value = pair.slice(separator + 1);
+        // Deletion directives (empty value or the literal '' used by
+        // guide-auth cookie clearing) must remove the cookie, not store it —
+        // otherwise the stale impersonation-actor clear cookie is replayed on
+        // every request and the canonical session boundary denies with 401.
+        if (!value || value === "''") values.delete(name);
+        else values.set(name, value);
       }
     },
     set(name, value) { values.set(name, value); },
