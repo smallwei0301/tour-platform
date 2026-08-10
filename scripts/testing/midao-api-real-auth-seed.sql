@@ -49,11 +49,16 @@ on conflict (id) do update set
 -- confirmed_at column from email_confirmed_at/phone_confirmed_at
 -- (GENERATED ALWAYS AS (LEAST(email_confirmed_at, phone_confirmed_at)) STORED);
 -- writes must target email_confirmed_at, never confirmed_at directly.
+-- instance_id must be the zero UUID: GoTrue's FindUserByEmailAndAudience
+-- filters "instance_id = uuid.Nil"; a NULL instance_id never matches, so the
+-- password-grant lookup would 400 invalid_credentials even with a correct
+-- password hash.
 insert into auth.users (
-  id, aud, role, email, encrypted_password, email_confirmed_at,
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data
 )
 values (
+  '00000000-0000-0000-0000-000000000000',
   '55555555-5555-4555-8555-555555555555',
   'authenticated',
   'authenticated',
@@ -64,6 +69,7 @@ values (
   '{"full_name":"Midao E2E Traveler","role":"traveler"}'::jsonb
 )
 on conflict (id) do update set
+  instance_id = excluded.instance_id,
   encrypted_password = excluded.encrypted_password,
   email_confirmed_at = excluded.email_confirmed_at,
   raw_app_meta_data = excluded.raw_app_meta_data,
