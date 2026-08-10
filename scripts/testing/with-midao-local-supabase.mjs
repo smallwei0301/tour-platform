@@ -893,6 +893,7 @@ const SAFE_RUNNER_ERROR_PREFIX_CODES = Object.freeze([
 const SAFE_RUNNER_DIAGNOSTIC_PREFIX_CODES = Object.freeze([
   'STATUS_UNCLASSIFIED',
   'STATUS_PROJECT_ID_NOT_NORMALIZED',
+  'MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG',
 ]);
 
 export function formatMidaoRunnerFailure(error, secrets = []) {
@@ -1591,19 +1592,30 @@ async function createOrUpdateMidaoTravelerAuthUser({ supabaseUrl, serviceRoleKey
     email_confirm: true,
     user_metadata: { full_name: 'Midao E2E Traveler', role: 'traveler' },
   });
-  let response = await fetch(endpoint, { method: 'PUT', headers, body, signal });
+  const timeoutSignal = AbortSignal.timeout(30_000);
+  const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+  let response;
+  try {
+    response = await fetch(endpoint, { method: 'PUT', headers, body, signal: combinedSignal });
+  } catch (error) {
+    throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG: PUT_FETCH_THREW ${endpoint} ${error && error.message}`);
+  }
   if (response.status === 404) {
     const createEndpoint = new URL('/auth/v1/admin/users', supabaseUrl);
-    response = await fetch(createEndpoint, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ id: MIDAO_E2E_TRAVELER_ID, ...JSON.parse(body) }),
-      signal,
-    });
+    try {
+      response = await fetch(createEndpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ id: MIDAO_E2E_TRAVELER_ID, ...JSON.parse(body) }),
+        signal: combinedSignal,
+      });
+    } catch (error) {
+      throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG: POST_FETCH_THREW ${createEndpoint} ${error && error.message}`);
+    }
   }
   if (!response.ok) {
     const text = await response.text().catch(() => '');
-    throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED: ${response.status} ${text.slice(0, 2000)}`);
+    throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED_DEBUG: ${response.status} ${text.slice(0, 2000)}`);
   }
 }
 
