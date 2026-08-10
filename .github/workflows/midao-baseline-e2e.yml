@@ -38,8 +38,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
@@ -147,6 +145,8 @@ jobs:
       # generated expected-terminal artifact is still awaiting promotion.
       - name: 'Prove #1811 public required-write fault was RED on the historical route'
         if: ${{ github.event.pull_request.number == 1818 && github.head_ref == 'agent/issue-1811-order-transaction' }}
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -160,7 +160,9 @@ jobs:
           }
           cp -- "$route" "$backup"
           trap cleanup EXIT
-          git merge-base --is-ancestor "$red_commit" HEAD
+          git fetch --no-tags --depth=20 origin "refs/heads/$GITHUB_HEAD_REF"
+          test "$(git rev-parse FETCH_HEAD)" = "$PR_HEAD_SHA"
+          git merge-base --is-ancestor "$red_commit" FETCH_HEAD
           git cat-file -e "$red_commit:$route"
           git show "$red_commit:$route" > "$route"
 

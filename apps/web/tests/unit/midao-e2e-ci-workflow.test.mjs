@@ -22,7 +22,7 @@ test('Midao baseline E2E workflow is PR-triggered, bounded, and uses Node 22', (
   assert.match(source, /::add-mask::%s/u);
   assert.match(source, /GUIDE_SESSION_SECRET=%s/u);
   assert.match(source, /GITHUB_ENV/u);
-  assert.match(source, /fetch-depth:\s*0/u);
+  assert.doesNotMatch(source, /fetch-depth:\s*0/u);
   assert.doesNotMatch(source, /GUIDE_SESSION_SECRET:\s*\S+/u);
 });
 
@@ -75,6 +75,9 @@ test('CI records the #1811 transaction runtime result before expected-terminal a
   assert.match(source, /268f2356cf809548800ecbb2b197b7c12cd5f461/u);
   assert.match(source, /github\.event\.pull_request\.number == 1818/u);
   assert.match(source, /github\.head_ref == 'agent\/issue-1811-order-transaction'/u);
+  assert.match(source, /git fetch --no-tags --depth=20 origin "refs\/heads\/\$GITHUB_HEAD_REF"/u);
+  assert.match(source, /test "\$\(git rev-parse FETCH_HEAD\)" = "\$PR_HEAD_SHA"/u);
+  assert.match(source, /git merge-base --is-ancestor "\$red_commit" FETCH_HEAD/u);
   assert.match(source, /ISSUE1811_PUBLIC_RED_PROBE=1/u);
   assert.match(source, /ISSUE1811_PUBLIC_RED_PROBE:\s*'0'/u);
   assert.match(source, /ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_RED/u);
