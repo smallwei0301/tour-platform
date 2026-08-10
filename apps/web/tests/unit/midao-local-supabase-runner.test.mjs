@@ -309,7 +309,7 @@ test('status classifier accepts only pinned exact two-line CRLF-aware missing fi
   assert.equal(classifySupabaseStatus({ exitCode: 0, stdout: '{"DB_URL":"postgres://local"}', stderr: '', expectedProjectId: projectId }), 'running');
 });
 
-test('CLI workdir notice accepts only the exact controlled path', () => {
+test('CLI workdir notice accepts only the exact controlled path', async () => {
   const expectedWorkdir = `/tmp/lock/${projectId}`;
   assert.throws(() => createActualAdapter({
     repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22', cliWorkdir: '/tmp/lock/foreign-project', commandRunner: async () => ({}),
@@ -319,6 +319,27 @@ test('CLI workdir notice accepts only the exact controlled path', () => {
   assert.doesNotThrow(() => validateCliWorkdirNotice(`Using workdir ${expectedWorkdir}\r\n`, expectedWorkdir));
   const stopped = `Stopped services: [${['kong', 'auth', 'inbucket', 'realtime', 'rest', 'storage', 'imgproxy', 'pg_meta', 'studio', 'edge_runtime', 'analytics', 'vector', 'pooler'].map((service) => `supabase_${service}_${projectId}`).join(' ')}]`;
   assert.doesNotThrow(() => validateCliWorkdirNotice(`Using workdir ${expectedWorkdir}\n${stopped}\n`, expectedWorkdir, projectId));
+  const fullServiceStopped = `Stopped services: [${['inbucket', 'realtime', 'storage', 'imgproxy', 'pg_meta', 'studio', 'edge_runtime', 'analytics', 'vector', 'pooler'].map((service) => `supabase_${service}_${projectId}`).join(' ')}]`;
+  assert.doesNotThrow(() => validateCliWorkdirNotice(
+    `Using workdir ${expectedWorkdir}\n${fullServiceStopped}\n`, expectedWorkdir, projectId, true,
+  ));
+  assert.throws(() => validateCliWorkdirNotice(
+    `Using workdir ${expectedWorkdir}\n${stopped}\n`, expectedWorkdir, projectId, true,
+  ), /CLI_UNEXPECTED_STDERR/u);
+  const fullServiceAdapter = createActualAdapter({
+    repoRoot: `/tmp/${projectId}`,
+    pin: '2.87.2',
+    nodeBin: '/node22',
+    cliWorkdir: expectedWorkdir,
+    fullServices: true,
+    enableFullServices: async () => {},
+    commandRunner: async () => ({
+      exitCode: 0,
+      stdout: JSON.stringify({ DB_URL: 'postgres://local' }),
+      stderr: `Using workdir ${expectedWorkdir}\n${fullServiceStopped}\n`,
+    }),
+  });
+  await assert.doesNotReject(fullServiceAdapter.statusJson());
   assert.throws(() => validateCliWorkdirNotice(`Using workdir ${expectedWorkdir}\n${stopped.replace('supabase_kong', 'supabase_wrong')}\n`, expectedWorkdir, projectId), /CLI_UNEXPECTED_STDERR/u);
   assert.throws(() => validateCliWorkdirNotice(`Using workdir /tmp/foreign/${projectId}\n`, expectedWorkdir), /CLI_UNEXPECTED_STDERR/u);
 });

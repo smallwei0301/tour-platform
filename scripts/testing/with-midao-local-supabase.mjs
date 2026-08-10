@@ -31,6 +31,9 @@ const STOPPED_SERVICE_NAMES = [
   'kong', 'auth', 'inbucket', 'realtime', 'rest', 'storage', 'imgproxy',
   'pg_meta', 'studio', 'edge_runtime', 'analytics', 'vector', 'pooler',
 ];
+// Full-service lanes start with MIDAO_E2E_EXCLUDED_SERVICES, which deliberately
+// retains the gateway, GoTrue, and PostgREST services needed for real auth.
+const FULL_SERVICE_RUNNING_SERVICE_NAMES = ['kong', 'auth', 'rest'];
 const MIDAO_E2E_EXCLUDED_SERVICES = [
   'realtime', 'storage-api', 'imgproxy', 'mailpit', 'postgres-meta',
   'studio', 'edge-runtime', 'logflare', 'vector', 'supavisor',
@@ -668,7 +671,7 @@ export function validateSupabaseLifecycleStderr(stderr, expectedWorkdirOrContrac
   if (normalized !== lf && normalized !== crlf) throw new Error(`CLI_UNEXPECTED_STDERR: ${redactSupabaseOutput(stderr).trim()}`);
 }
 
-export function validateCliWorkdirNotice(stderr, expectedWorkdir, expectedProjectId) {
+export function validateCliWorkdirNotice(stderr, expectedWorkdir, expectedProjectId, fullServices = false) {
   const value = stripPinnedUpdateNotice(stderr);
   if (!expectedWorkdir) {
     if (value !== '') throw new Error('CLI_UNEXPECTED_STDERR');
@@ -679,7 +682,10 @@ export function validateCliWorkdirNotice(stderr, expectedWorkdir, expectedProjec
     `Using workdir ${expectedWorkdir}\r\n`,
   ];
   if (expectedProjectId) {
-    const stopped = `Stopped services: [${STOPPED_SERVICE_NAMES.map((service) => `supabase_${service}_${expectedProjectId}`).join(' ')}]`;
+    const stoppedServiceNames = fullServices
+      ? STOPPED_SERVICE_NAMES.filter((service) => !FULL_SERVICE_RUNNING_SERVICE_NAMES.includes(service))
+      : STOPPED_SERVICE_NAMES;
+    const stopped = `Stopped services: [${stoppedServiceNames.map((service) => `supabase_${service}_${expectedProjectId}`).join(' ')}]`;
     accepted.push(
       `Using workdir ${expectedWorkdir}\n${stopped}\n`,
       `Using workdir ${expectedWorkdir}\r\n${stopped}\r\n`,
@@ -1478,7 +1484,7 @@ export function createActualAdapter({
     statusJson: async () => {
       const result = await cli(['status', '-o', 'json']);
       if (result.exitCode !== 0) throw new Error('SUPABASE_STATUS_JSON_FAILED');
-      validateCliWorkdirNotice(result.stderr, cliWorkdir, canonicalProjectId(repoRoot));
+      validateCliWorkdirNotice(result.stderr, cliWorkdir, canonicalProjectId(repoRoot), fullServices);
       return mapStatusEnvironment(result.stdout);
     },
     ready: async (env) => {

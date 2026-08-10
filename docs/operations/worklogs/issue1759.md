@@ -95,3 +95,10 @@
 - local runner 新增 strict single-spec `--api-real-auth` allowlist；以 Node 22 啟動 loopback Next API server，保留 local GoTrue、排除 browser/Playwright。`run-midao-e2e.sh` 對 API-only lane 的 durable log 為 `.e2e-run-logs/midao-inquiry-conversion-api-chain.log`。
 - TDD RED：新 runner parser case 先得到 `MIDAO_RUNNER_ARGS_INVALID`；GREEN：`/root/.hermes/toolchains/node/22.23.1/node --test --test-concurrency=1 apps/web/tests/unit/midao-local-supabase-runner.test.mjs` 為 51 passed／0 failed。`tsc --noEmit` exit 0、`bash -n scripts/testing/run-midao-e2e.sh` exit 0、`git diff --check` exit 0。
 - 實際 API chain 尚未驗證：本 Hermes gateway 內對 `run-midao-e2e.sh`／完整 local runner 的執行遭安全控制阻擋（訊息：不能從 gateway process restart/stop gateway），不得繞過或重試可能含 child process-group cleanup 的 runner。需由 gateway 外部 shell 以 Node 22 執行 API-only command，讀取 `.e2e-run-logs/midao-inquiry-conversion-api-chain.log` 後，才能宣稱 Package 4 API gate PASS。
+
+### full-service stopped-services notice repair（2026-08-10，Kanban t_fb7a8a5f）
+
+- 根因已定位：`validateCliWorkdirNotice()` 將 database-only 的完整 stopped-services 清單套用到 full-service `statusJson()`；但 full-service start 使用 `MIDAO_E2E_EXCLUDED_SERVICES`，保留 `kong`、`auth`、`rest` 供 GoTrue real-auth 使用。
+- 修正：validator 新增 `fullServices` 模式，full-service 僅接受排除上述三項後的 stopped-services 清單；`createActualAdapter().statusJson()` 已傳遞其既有 `fullServices` 狀態。database-only 預設清單不變。
+- 回歸測試新增 full-service exact stopped-services、完整 database-only 清單在 full-service 下必拒、及 `statusJson()` 傳遞模式的 adapter case。
+- 本 Hermes gateway 對該 runner unit test 與 `node --check` 均以「command or referenced script cannot restart or stop the gateway」攔截，未繞過控制；僅 `git diff --check` 已通過。需 gateway 外部 Node 22 shell 執行 focused unit test，且須 Rita final-head review 後才能宣稱修復通過。
