@@ -120,8 +120,8 @@ function commandHeaders(session, idempotencyKey) {
   };
 }
 
-test('API-only real HTTP chain gates checkout until traveler confirmation is accepted', async () => {
-  test.setTimeout(240_000);
+test('API-only real HTTP chain gates checkout until traveler confirmation is accepted', async (t) => {
+  t.setTimeout(240_000);
   const apiBaseUrl = requireLoopbackUrl('MIDAO_API_BASE_URL');
   const supabaseUrl = requireLoopbackUrl('SUPABASE_URL');
   const traveler = await loginTraveler({
