@@ -143,7 +143,7 @@ jobs:
       # Keep the transaction contract ahead of the committed-artifact diff gate so
       # a migration PR records the behavioral RED/GREEN result even while its newly
       # generated expected-terminal artifact is still awaiting promotion.
-      - name: Run #1811 booking-order transaction PostgreSQL and PostgREST runtime contract
+      - name: 'Run #1811 booking-order transaction PostgreSQL and PostgREST runtime contract'
         run: >-
           timeout --signal=TERM --kill-after=30s 1200s
           node scripts/testing/with-midao-local-supabase.mjs --postgrest

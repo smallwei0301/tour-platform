@@ -1,5 +1,5 @@
 # issue1811 — 以 transaction 與 orders.total_twd 固化訂單可付款金額
-> 最後更新：2026-08-10 12:36（Asia/Taipei）｜負責 session：Codex／2026-08-10
+> 最後更新：2026-08-10 12:48（Asia/Taipei）｜負責 session：Codex／2026-08-10
 
 ## 目標
 讓基本 Booking、Order、Order item 與 `orders.total_twd` 在單一資料庫 transaction 內全有或全無，成功後以 commit 後重新讀取的持久化總額回應，失敗時不產生可付款或成功通知結果。
@@ -35,6 +35,7 @@
 - 2026-08-10 operator 明確回覆「授權推薦方案」：核准發布目前分支、建立 Draft PR 並同步 #1810／#1811 詳細里程碑，也核准原子 gateway 採 fail closed，RPC／必要環境不可用時不得退回非原子的 in-memory writer。授權不含 production migration apply、正式資料修改、部署、合併、真實付款或通知。
 - 2026-08-10 發布前安全補強：GitHub App 拒絕重新發布 workflow 內既有的 plaintext CI session 假值，因此未繞過 guard，改為每次 hosted run 以 `randomBytes(32)` 產生、mask 並透過 `GITHUB_ENV` 傳遞 ephemeral secret；公開 route tracer 也改用 runtime random guide/admin secrets，且明確覆寫 Resend、Sentry、LINE、Telegram、ECPay 外部作用環境，避免 runner ambient env 造成真實通知／付款副作用。Workflow／gateway／協調器 focused tests `pass 9 / fail 0`、integration syntax、secret scan 與 `git diff --check` 均通過。
 - 2026-08-10 依 migration apply ledger SOP 補上同名 `.rollback.sql`：必須另行 owner 授權並先部署不呼叫 RPC 的 app，只撤銷／移除 #1811 function，不修改任何業務資料；governance contract 已納入上述 9 項 focused tests。本輪未執行 rollback、production apply 或 ledger 更新。
+- 2026-08-10 Draft PR #1818 初輪 hosted run：PG17 deterministic builder 2 runs 與 artifact upload 成功（transaction `4df58af5…`），anon RLS／secret scan 通過；#1811 runtime 在所有 product assertions 前由 fixture hook 失敗，log 為 `public.users_pkey` duplicate。根因是插入 `auth.users` 後 hosted baseline trigger 已建立同 ID 的 `public.users`，測試再直接 insert；已改為 `ON CONFLICT (id) DO UPDATE` 的 idempotent fixture，產品 RPC／route 未變。另將 workflow step name 的 `#1811` 加引號，避免 YAML 把後段當 comment。修正尚待下一輪 hosted runtime 證實；首輪 artifact 不先 promotion。
 
 ## 下一步
 - 以 Draft PR 跑 hosted PG17/PostgREST＋local Next runtime，取得 `fb486f3f` 後的 GREEN 證據與 expected-terminal 四件組 artifact；原樣 promotion 後重跑 CI。

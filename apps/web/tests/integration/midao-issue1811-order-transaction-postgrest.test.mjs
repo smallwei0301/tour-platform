@@ -412,7 +412,12 @@ before(async () => {
         '{"full_name":"Issue 1811 Traveler","role":"traveler"}'::jsonb
       )
     `, [TRAVELER_ID]);
-    await client.query("INSERT INTO public.users(id, role) VALUES ($1, 'traveler')", [TRAVELER_ID]);
+    // auth.users may already materialize public.users through the hosted baseline trigger.
+    await client.query(`
+      INSERT INTO public.users(id, role)
+      VALUES ($1, 'traveler')
+      ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role
+    `, [TRAVELER_ID]);
     await client.query(`
       INSERT INTO public.guide_profiles(id, slug, display_name, verification_status)
       VALUES ($1, 'issue1811-atomic-guide', 'Issue 1811 Atomic Guide', 'approved')
