@@ -56,10 +56,17 @@ on conflict (id) do update set
 -- confirmation_token/recovery_token/email_change/email_change_token_new must
 -- be '' not NULL: GoTrue's user row scanner errors with "500 Database error
 -- querying schema" (converting NULL to string is unsupported) if any of
--- these four token columns are left NULL.
+-- these token/change string columns are left NULL. This pinned GoTrue
+-- version's users table carries additional string columns beyond the four
+-- historically documented ones (email_change_token_current,
+-- reauthentication_token, phone_change, phone_change_token), so all known
+-- nullable text columns are set explicitly to avoid re-hitting the same
+-- opaque 500 on a different column.
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   confirmation_token, recovery_token, email_change, email_change_token_new,
+  email_change_token_current, reauthentication_token, phone, phone_change,
+  phone_change_token,
   raw_app_meta_data, raw_user_meta_data
 )
 values (
@@ -71,6 +78,8 @@ values (
   crypt('midao-e2e-traveler-local-only', gen_salt('bf', 10)),
   now(),
   '', '', '', '',
+  '', '', '', '',
+  '',
   '{"provider":"email","providers":["email"]}'::jsonb,
   '{"full_name":"Midao E2E Traveler","role":"traveler"}'::jsonb
 )
@@ -82,6 +91,11 @@ on conflict (id) do update set
   recovery_token = excluded.recovery_token,
   email_change = excluded.email_change,
   email_change_token_new = excluded.email_change_token_new,
+  email_change_token_current = excluded.email_change_token_current,
+  reauthentication_token = excluded.reauthentication_token,
+  phone = excluded.phone,
+  phone_change = excluded.phone_change,
+  phone_change_token = excluded.phone_change_token,
   raw_app_meta_data = excluded.raw_app_meta_data,
   raw_user_meta_data = excluded.raw_user_meta_data;
 
