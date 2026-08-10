@@ -22,6 +22,7 @@ test('Midao baseline E2E workflow is PR-triggered, bounded, and uses Node 22', (
   assert.match(source, /::add-mask::%s/u);
   assert.match(source, /GUIDE_SESSION_SECRET=%s/u);
   assert.match(source, /GITHUB_ENV/u);
+  assert.match(source, /fetch-depth:\s*0/u);
   assert.doesNotMatch(source, /GUIDE_SESSION_SECRET:\s*\S+/u);
 });
 
@@ -68,12 +69,25 @@ test('CI runs the decision RPC runtime lane serially with redacted artifact meta
 
 test('CI records the #1811 transaction runtime result before expected-terminal artifact promotion', () => {
   const source = workflowSource();
-  assert.match(
-    source,
-    /timeout --signal=TERM --kill-after=30s 1200s\s+node scripts\/testing\/with-midao-local-supabase\.mjs --postgrest\s+apps\/web\/tests\/integration\/midao-issue1811-order-transaction-postgrest\.test\.mjs/u,
+  const redStep = 'Prove #1811 public required-write fault was RED on the historical route';
+  const greenStep = 'Run #1811 booking-order transaction PostgreSQL and PostgREST runtime contract';
+  const runtimeCommand = /timeout --signal=TERM --kill-after=30s 1200s(?:\s*\\)?\s+node scripts\/testing\/with-midao-local-supabase\.mjs --postgrest(?:\s*\\)?\s+apps\/web\/tests\/integration\/midao-issue1811-order-transaction-postgrest\.test\.mjs/gu;
+  assert.match(source, /268f2356cf809548800ecbb2b197b7c12cd5f461/u);
+  assert.match(source, /github\.event\.pull_request\.number == 1818/u);
+  assert.match(source, /github\.head_ref == 'agent\/issue-1811-order-transaction'/u);
+  assert.match(source, /ISSUE1811_PUBLIC_RED_PROBE=1/u);
+  assert.match(source, /ISSUE1811_PUBLIC_RED_PROBE:\s*'0'/u);
+  assert.match(source, /ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_RED/u);
+  assert.match(source, /ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_REACHED/u);
+  assert.match(source, /test "\$status" -ne 1/u);
+  assert.match(source, /git diff --exit-code -- "\$route"/u);
+  assert.equal(source.match(runtimeCommand)?.length, 2, 'the same public runtime file must run once RED and once GREEN');
+  assert.ok(
+    source.indexOf(redStep) < source.indexOf(greenStep),
+    '#1811 historical public behavior must be proven RED before the current route runs GREEN',
   );
   assert.ok(
-    source.indexOf('Run #1811 booking-order transaction PostgreSQL and PostgREST runtime contract')
+    source.indexOf(greenStep)
       < source.indexOf('Verify deterministic expected-terminal artifacts are committed'),
     '#1811 runtime contract must run before the intentionally stale artifact diff gate',
   );

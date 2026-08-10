@@ -1,5 +1,5 @@
 # issue1811 — 以 transaction 與 orders.total_twd 固化訂單可付款金額
-> 最後更新：2026-08-10 12:53（Asia/Taipei）｜負責 session：Codex／2026-08-10
+> 最後更新：2026-08-10 14:19（Asia/Taipei）｜負責 session：Codex／2026-08-10
 
 ## 目標
 讓基本 Booking、Order、Order item 與 `orders.total_twd` 在單一資料庫 transaction 內全有或全無，成功後以 commit 後重新讀取的持久化總額回應，失敗時不產生可付款或成功通知結果。
@@ -38,10 +38,13 @@
 - 2026-08-10 Draft PR #1818 初輪 hosted run：PG17 deterministic builder 2 runs 與 artifact upload 成功（transaction `4df58af5…`），anon RLS／secret scan 通過；#1811 runtime 在所有 product assertions 前由 fixture hook 失敗，log 為 `public.users_pkey` duplicate。根因是插入 `auth.users` 後 hosted baseline trigger 已建立同 ID 的 `public.users`，測試再直接 insert；已改為 `ON CONFLICT (id) DO UPDATE` 的 idempotent fixture，產品 RPC／route 未變。另將 workflow step name 的 `#1811` 加引號，避免 YAML 把後段當 comment。修正尚待下一輪 hosted runtime 證實；首輪 artifact 不先 promotion。
 - 2026-08-10 Draft PR #1818 第二輪 hosted PG17 證實 fixture 修正與產品 contract：head `ef99b78d`、workflow run `31356708867` 的 `Run #1811 booking-order transaction PostgreSQL and PostgREST runtime contract` 為 success。deterministic builder 兩次輸出相同 transaction `4df58af57813c6a20ee875c4003cac369b8fe29f734c666a8680dcaf455285e9`；只採用該 run 的 artifact `9050902925`，ZIP SHA-256 `2b5e56366f12b6f2ae1dc9de8ab3af233dadbf897a07f83abf42d8da9a346201` 與 GitHub metadata 相符。
 - 2026-08-10 expected-terminal 四件組已由 artifact 原樣 promotion，未手改 catalog／manifest／ledger。解壓前確認僅有四個普通檔案、無額外路徑／symlink；transaction verifier 確認 25 筆 history、末筆 `20260810033421`、manifest SHA-256 `e1bb3d427b5337bbee9834e54770f2c7f727b8ff5126f8175624851397044b7f`。promotion 後本機 `midao-expected-terminal-artifact.test.mjs` 為 `pass 4 / fail 0`，migration source contracts 為 `pass 34 / fail 0`，`check-migration-source-gate --mode source` 為 `verified`。尚待 promotion commit 的完整 hosted CI，不提前標 Ready。
+- 2026-08-10 promotion commit 已發布為遠端 `5a6b010d`（tree 與本機 `8534ce92` 精確相同）。Hosted baseline run `31357151239` 全綠：PG17 兩次 deterministic rebuild、#1811 PostgreSQL/PostgREST＋公開 Next runtime、artifact committed diff、portable infrastructure、Task14、Task20B、Midao browser 與 legacy login 全部 success；migration source gate、secret scan、anon RLS 也通過。
+- 2026-08-10 同一 promotion head 的一般 CI run `31357151230` 在 lint、typecheck、migration source gate 通過後，由 7 個既有 regression contract 擋住 Web tests：五個仍以 route 內逐表 `.insert()` source-string 為真值、一個仍期待 production ledger 全 verified、一個仍鎖舊 expected-terminal transaction。產品 runtime 無失敗。測試已改為追蹤 route → atomic gateway → RPC migration，production ledger 精確斷言 #1811 未套用時 `HOLD`，final gate 鎖新 transaction／manifest；五個受影響檔合跑 `pass 52 / fail 0`。本機 Node 24 非 CI 環境初跑完整 suite 為 `5503/5511` 且只剩 5 個 env／TZ-sensitive failures；補齊 workflow 同值與 `TZ=UTC` 後先精準重跑該五項 `pass 12 / fail 0`，再完整重跑為 `pass 5508 / fail 0 / skipped 3`（共 5511）。最終相容性結論仍交由 hosted Node 22，不把本機 Node 24 結果冒充 hosted 綠燈。
+- 2026-08-10 isolated review 指出公開入口尚缺「同一行為測試先實際 RED、再 GREEN」的可稽核證據：初輪 hosted runtime 在 fixture setup 即失敗，不能算產品 RED。Workflow 已新增只限 PR #1818／目前 branch 的 fail-closed 歷史探針，固定遠端 RED commit `268f2356cf809548800ecbb2b197b7c12cd5f461`，僅暫換該版公開 route，沿用目前隔離外部作用的 PG17/PostgREST/Next harness，且只跑同一個 required-write fault HTTP case。測試先以舊 route 的 server log 或目前 route awaited local incident 證明 `ISSUE1811_ORDER_ITEMS_BOOM` trigger 實際到達，再輸出 `ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_REACHED`；workflow 只有同時取得該標記、`ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_RED` 行為斷言標記及 runner exit `1` 才接受，setup failure、未觸發 DB fault、timeout 或意外通過都會失敗。成功路徑還原 route 並以 `git diff` 驗證，隨後明確以 probe=0 的目前 route 跑同檔 GREEN；未來 PR 會略過一次性歷史探針。實際 hosted command/result 尚待下一輪，不提前宣稱 RED 已證實。
 
 ## 下一步
-- 提交並發布已驗證的 expected-terminal 四件組與本段證據，重跑 hosted full CI／build／baseline browser gates；全部通過且 isolated review 無 blocker 後才可把 Draft 標為 Ready for review。
-- 外部發布與安全例外已獲明確授權；依受控 GitHub App 路徑發布 promotion commit，發布前後比對 commit/tree，不合併。
+- 提交並發布 CI regression contract 修正與公開入口 RED 探針，取得歷史 route 同案例 RED、目前 route GREEN，再重跑 hosted Node 22 full CI／build；全部通過且 isolated review 無 blocker 後才可把 Draft 標為 Ready for review。
+- 外部發布與安全例外已獲明確授權；依受控 GitHub App 路徑非強制快轉，發布前後比對 commit/tree，不合併。
 - 新 migration 使 production verified ledger fail closed；production apply／ledger 更新不在本票授權內，維持 HOLD，絕不把 expected-terminal manifest 偽裝成 production apply 證據。
 
 ## 絕不重做（Do-NOT-redo）

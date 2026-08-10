@@ -18,6 +18,9 @@ const CONTACT_EMAIL = 'issue1811-atomic@example.invalid';
 const BASE_TOTAL_TWD = 7_400;
 const CANCEL_LOCK_CLASS = 1_811;
 const CANCEL_LOCK_OBJECT = 18_110_001;
+const PUBLIC_RED_PROBE_ONLY = process.env.ISSUE1811_PUBLIC_RED_PROBE === '1';
+const PUBLIC_RED_MARKER = 'ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_RED';
+const PUBLIC_FAULT_REACHED_MARKER = 'ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_REACHED';
 const FUNCTION_SIGNATURE = [
   'public.fn_create_booking_draft_atomic(',
   'uuid,uuid,timestamptz,timestamptz,text,integer,text,text,text,text,text,uuid,jsonb,text,timestamptz',
@@ -80,6 +83,10 @@ const anonKey = process.env.SUPABASE_ANON_KEY;
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
 const publicRoutePort = 43_128;
 const publicRouteBase = `http://127.0.0.1:${publicRoutePort}`;
+
+function fullRuntimeTest(name, fn) {
+  return PUBLIC_RED_PROBE_ONLY ? test.skip(name, fn) : test(name, fn);
+}
 
 assert.ok(databaseUrl, 'issue #1811 PostgREST runner must provide a local database URL');
 assert.ok(apiUrl && serviceRoleKey && anonKey, 'issue #1811 runner must provide local API credentials');
@@ -296,6 +303,25 @@ function assertNoMaterialization(snapshot, label) {
   );
 }
 
+async function countDraftFaultIncidents(marker) {
+  const result = await client.query(`
+    SELECT count(*)::integer AS count
+      FROM public.incidents
+     WHERE source = 'v2/bookings/draft'
+       AND message LIKE $1
+  `, [`%${marker}%`]);
+  return Number(result.rows[0]?.count ?? 0);
+}
+
+async function waitForPublicFaultEvidence(marker, logStart, incidentCountBefore) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (webServerLogs.slice(logStart).includes(marker)) return 'web-log';
+    if ((await countDraftFaultIncidents(marker)) > incidentCountBefore) return 'local-incident';
+    await delay(50);
+  }
+  return null;
+}
+
 async function dropFaultInjection() {
   for (const fault of FAULT_CASES) {
     const functionName = `midao_issue1811_${fault.name}_boom`;
@@ -461,7 +487,7 @@ after(async () => {
   } finally { await client.end(); }
 });
 
-test('runtime catalog exposes the exact authoritative-total RPC as a pinned SECURITY INVOKER function', async () => {
+fullRuntimeTest('runtime catalog exposes the exact authoritative-total RPC as a pinned SECURITY INVOKER function', async () => {
   const catalog = await client.query(`
     SELECT n.nspname AS namespace,
            pg_catalog.pg_get_function_identity_arguments(p.oid) AS identity_arguments,
@@ -487,7 +513,7 @@ test('runtime catalog exposes the exact authoritative-total RPC as a pinned SECU
   assert.doesNotMatch(catalog.rows[0].identity_arguments, /total/iu, 'client total must not enter the RPC');
 });
 
-test('runtime ACL grants the RPC only to service_role and PostgREST rejects anon', async () => {
+fullRuntimeTest('runtime ACL grants the RPC only to service_role and PostgREST rejects anon', async () => {
   const signature = await client.query(
     'SELECT pg_catalog.to_regprocedure($1)::oid AS oid',
     [FUNCTION_SIGNATURE],
@@ -526,6 +552,7 @@ test('public draft route fails closed on a required-write fault with no IDs, pay
   const logStart = webServerLogs.length;
   const fault = FAULT_CASES.find(({ name }) => name === 'order_items_insert');
   assert.ok(fault);
+  const incidentCountBefore = await countDraftFaultIncidents(fault.marker);
   await installFaultInjection(fault);
   let failed;
   try {
@@ -534,29 +561,32 @@ test('public draft route fails closed on a required-write fault with no IDs, pay
     await dropFaultInjection();
   }
 
-  assert.equal(failed.response.status, 500, failed.text);
+  const faultEvidence = await waitForPublicFaultEvidence(fault.marker, logStart, incidentCountBefore);
+  assert.ok(faultEvidence, `${PUBLIC_RED_MARKER}: required-write fault seam was not observed`);
+  console.log(`${PUBLIC_FAULT_REACHED_MARKER}:${fault.marker}:${faultEvidence}`);
+  assertNoMaterialization(
+    await readMaterialization(),
+    `${PUBLIC_RED_MARKER}: public route fault must leave no payable booking/order materialization`,
+  );
+  assert.equal(failed.response.status, 500, `${PUBLIC_RED_MARKER}: ${failed.text}`);
   assert.deepEqual(failed.payload, {
     success: false,
     error: { code: 'INTERNAL_ERROR', message: '伺服器發生錯誤，請稍後再試' },
-  });
+  }, `${PUBLIC_RED_MARKER}: fault response must remain fail-closed`);
   assert.doesNotMatch(
     failed.text,
     /orderId|bookingId|checkoutUrl|paymentUrl/iu,
-    'failed public response must not expose an identifier or payment entry',
-  );
-  assertNoMaterialization(
-    await readMaterialization(),
-    'public route fault must leave no payable booking/order materialization',
+    `${PUBLIC_RED_MARKER}: failed public response must not expose an identifier or payment entry`,
   );
   await delay(500);
   assert.doesNotMatch(
     webServerLogs.slice(logStart),
     new RegExp(contactEmail.replace('.', '\\.'), 'u'),
-    'failed public route must not reach the success email notification seam',
+    `${PUBLIC_RED_MARKER}: failed public route must not reach the success email notification seam`,
   );
 });
 
-test('public draft route ignores request totals and returns the committed PostgREST read-back aggregate', async () => {
+fullRuntimeTest('public draft route ignores request totals and returns the committed PostgREST read-back aggregate', async () => {
   const contactEmail = 'issue1811-public-success@example.invalid';
   const created = await callPublicDraft({ contactEmail });
   assert.equal(created.response.status, 200, created.text);
@@ -589,7 +619,7 @@ test('public draft route ignores request totals and returns the committed PostgR
   await waitForWebLog(new RegExp(contactEmail.replace('.', '\\.'), 'u'));
 });
 
-test('service-role RPC commits one reconciled base booking using the active plan price, then permits durable read-back', async () => {
+fullRuntimeTest('service-role RPC commits one reconciled base booking using the active plan price, then permits durable read-back', async () => {
   const created = await callAtomicDraft();
   assert.equal(created.response.status, 200, created.text);
   assert.ok(created.payload && typeof created.payload === 'object' && !Array.isArray(created.payload), created.text);
@@ -645,7 +675,7 @@ test('service-role RPC commits one reconciled base booking using the active plan
   assert.equal(statusLog.actor_role, 'system');
 });
 
-test('authenticated traveler identity is copied consistently to booking, order and the initial audit log', async () => {
+fullRuntimeTest('authenticated traveler identity is copied consistently to booking, order and the initial audit log', async () => {
   const created = await callAtomicDraft({
     p_traveler_id: TRAVELER_ID,
     p_contact_email: 'issue1811-authenticated@example.invalid',
@@ -663,7 +693,7 @@ test('authenticated traveler identity is copied consistently to booking, order a
   assert.equal(snapshot.statusLogs[0].actor_role, 'traveler');
 });
 
-test('authoritative plan pricing rejects int4 overflow before any payable row is committed', async () => {
+fullRuntimeTest('authoritative plan pricing rejects int4 overflow before any payable row is committed', async () => {
   await client.query(
     'UPDATE public.activity_plans SET base_price = 2147483647 WHERE id = $1',
     [PLAN_ID],
@@ -683,7 +713,7 @@ test('authoritative plan pricing rejects int4 overflow before any payable row is
   );
 });
 
-test('every required write seam fails the public RPC and rolls back booking, order, item and status log together', async () => {
+fullRuntimeTest('every required write seam fails the public RPC and rolls back booking, order, item and status log together', async () => {
   for (const fault of FAULT_CASES) {
     await cleanupMaterialization();
     await installFaultInjection(fault);
@@ -710,7 +740,7 @@ test('every required write seam fails the public RPC and rolls back booking, ord
   }
 });
 
-test('cancelling the in-flight transaction at the final write seam rolls the whole aggregate back', async () => {
+fullRuntimeTest('cancelling the in-flight transaction at the final write seam rolls the whole aggregate back', async () => {
   await installCancellationBlock();
   await client.query('SELECT pg_catalog.pg_advisory_lock($1, $2)', [CANCEL_LOCK_CLASS, CANCEL_LOCK_OBJECT]);
   let pending;
