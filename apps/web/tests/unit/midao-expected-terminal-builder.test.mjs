@@ -25,6 +25,20 @@ const exactMigrations = [
   ['20260723004000_midao_request_read_projection.sql', '639f430e666666c2ee9418f8dd2240d0d2c1b1038345378bee11436fc99aeabb'],
   ['20260723010000_midao_atomic_booking_approval.sql', 'a97d57a82bf2e70425325498b0ca96bdf64c1c3322cf81288135a71abaebc968'],
   ['20260723011000_midao_atomic_booking_decision_command.sql', 'c3abc1a6cc5984bcc5239c9728ebd8d46020c43fa577382f87d2775cfb5fdf8a'],
+  ['20260723020000_midao_service_drafts_and_questions.sql', '38e1cd3177d459f5bae1f77366878ef809f8b6e22f323b79a7e82ddf8a410042'],
+  ['20260723021000_midao_service_publication_versions.sql', '0d9d5b0acb56d657fbacc638622bc36faa35b682b7d2727db80aa63cb872bda6'],
+  ['20260723022000_midao_atomic_service_publication.sql', 'b7b06f0029052c2187401e2b7b160545ab757099fee8ba088bc98c9743e9029c'],
+  ['20260723023000_midao_atomic_publication_restore.sql', 'feb4e8db59acbb1703b56ee81417026bc077b0bed12669811c52ac98db832421'],
+  ['20260729160000_issue1777_atomic_settlement_and_payout_confirm.sql', 'e916be151520837e7d4e2c8fd3575dc11377ffcee88ed6bbd0f7149f18a3208c'],
+  ['20260729170000_issue1777_refund_adjustment_ledger.sql', 'af3e498e2acd6dd0410182fd8aef60d098315df79d4d39cfbf246256840849b6'],
+  ['20260729180000_issue1777_revoke_atomic_fns_from_anon.sql', 'a4294771928c98a5b071168db76c8f8301bd4db933e0fb214c1bae891476be24'],
+  ['20260729190000_issue1777_post_review_fixes.sql', '0819ea2d54f0759ed35a995e2e4d8488e072cf22c8d2857aa7604ec6acd3668a'],
+  ['20260730093000_issue1777_refund_delta_accumulation.sql', '7d96dc7146424de74354fbde2af3f768e0877513e83065b601adb9120578ddd0'],
+  ['20260804103000_issue1777_atomic_refund_reversal.sql', '4b77a1dae78b79a43a117fa727f891b152df370653dd31dce6deee8642ab74cc'],
+  ['20260804113000_issue1777_settlement_recompute_amounts.sql', 'a09d73cf64af5437db45a3bc2c62af07f02c76e5724f5dcf5d4cca32ebd32331'],
+  ['20260806090000_midao_inquiries.sql', '2d7a2467540991d0a5faf33243ab06ca19d205f233f959fb76a8a07073638a70'],
+  ['20260806091000_midao_booking_intake_pricing_and_confirmation.sql', 'bf8cd71196adcb6a915455d67679c2642eee8dde123c11bf6f4405b067e27e85'],
+  ['20260806120000_midao_atomic_inquiry_conversion.sql', '33e9d312bc8079c1414e4900b995dbb0f1ef02384394ed27b128c2c53b8356e3'],
 ];
 const historyVersions = ['00000000000001', ...exactMigrations.map(([name]) => name.slice(0, 14))];
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');

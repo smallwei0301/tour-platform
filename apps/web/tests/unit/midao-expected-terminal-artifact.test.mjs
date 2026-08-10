@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -20,6 +20,8 @@ const captureLedgerPath = path.join(root, 'docs/operations/baseline-ledger.json'
 const expectedLedgerPath = path.join(root, 'docs/operations/expected-terminal-ledger.json');
 const captureJournalPath = resolveRepositoryPublicationPaths().journalPath;
 const expectedJournalPath = resolveExpectedTerminalPublicationPaths().journalPath;
+const migrationsDir = path.join(root, 'supabase/migrations');
+const firstPostCutoffMigration = '20260723000000_midao_backend_mode.sql';
 const { historyVersions: expectedHistory } = JSON.parse(await readFile(path.join(baselineDir, 'manifest.json'), 'utf8'));
 
 function stable(value) {
@@ -29,6 +31,31 @@ function stable(value) {
 }
 function canonical(value) { return Buffer.from(`${JSON.stringify(stable(value))}\n`); }
 function sha256(bytes) { return createHash('sha256').update(bytes).digest('hex'); }
+
+test('published expected terminal covers every forward migration after the frozen cutoff', async () => {
+  const manifest = JSON.parse(await readFile(path.join(baselineDir, 'manifest.json'), 'utf8'));
+  const sourceNames = (await readdir(migrationsDir, { withFileTypes: true }))
+    .filter((entry) => entry.isFile()
+      && entry.name.endsWith('.sql')
+      && !entry.name.endsWith('.rollback.sql')
+      && entry.name >= firstPostCutoffMigration)
+    .map((entry) => entry.name)
+    .sort();
+  const sourceMigrations = await Promise.all(sourceNames.map(async (filename) => ({
+    filename,
+    sha256: sha256(await readFile(path.join(migrationsDir, filename))),
+  })));
+
+  assert.deepEqual(
+    manifest.postCutoffMigrations,
+    sourceMigrations,
+    'expected-terminal manifest is stale; rebuild it before baseline-backed tests run',
+  );
+  assert.deepEqual(
+    manifest.historyVersions,
+    ['00000000000001', ...sourceNames.map((filename) => filename.slice(0, 14))],
+  );
+});
 
 test('published expected terminal verifies capture first and exposes exact PG17 terminal truth', async () => {
   const opened = [];

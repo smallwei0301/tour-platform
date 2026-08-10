@@ -21,9 +21,7 @@ on:
       - 'scripts/testing/run-midao-*.sh'
       - 'scripts/testing/with-midao-local-supabase.mjs'
       - 'supabase/baselines/v1/**'
-      - 'supabase/migrations/2026072300*.sql'
-      - 'supabase/migrations/20260723010000_midao_atomic_booking_approval.sql'
-      - 'supabase/migrations/20260723011000_midao_atomic_booking_decision_command.sql'
+      - 'supabase/migrations/**'
       - 'supabase/seed.sql'
 
 permissions:

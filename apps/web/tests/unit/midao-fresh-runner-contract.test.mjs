@@ -4,18 +4,15 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { POST_CUTOFF_MIGRATIONS } from '../../../../scripts/database-baseline/materialize-fresh-workdir.mjs';
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../../../..');
 const subjectPath = path.join(root, 'scripts/database-baseline/run-fresh-install.mjs');
 const integrationPath = 'apps/web/tests/integration/midao-baseline-fresh-postgres.test.mjs';
 const expectedHistory = [
   '00000000000001',
-  '20260723000000',
-  '20260723001000',
-  '20260723002000',
-  '20260723002500',
-  '20260723003000',
-  '20260723003500',
+  ...POST_CUTOFF_MIGRATIONS.map(({ filename }) => filename.slice(0, 14)),
 ];
 
 async function subject() {
@@ -97,7 +94,7 @@ test('verified fresh lifecycle materializes single-marker history then exact-com
     materialize: async () => ({ history: ['00000000000001_baseline_v1.sql', ...expectedHistory.slice(1).map((version) => `${version}_migration.sql`)], cleanup: async () => calls.push('cleanup') }),
     runLocal: async ({ materialized, testPath }) => {
       calls.push(`run-local:${path.basename(testPath)}`);
-      assert.equal(materialized.history.length, 7);
+      assert.equal(materialized.history.length, expectedHistory.length);
       return { terminalBytes: Buffer.from('terminal'), historyVersions: expectedHistory };
     },
     compare: async ({ actualTerminalBytes, expectedTerminalBytes, actualHistory, expectedHistory: wanted }) => {
