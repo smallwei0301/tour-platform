@@ -45,7 +45,7 @@ test('builder command exists before manifest behavior can pass', async () => {
   await loadBuilder();
 });
 
-test('live cutoff collection is exact 128 and excludes rollback plus nine Midao post-cutoff files', async () => {
+test('live cutoff collection is exact 128 and excludes rollback plus all post-cutoff files', async () => {
   const { collectFrozenMigrations, renderFrozenManifest } = await loadBuilder();
   const entries = await collectFrozenMigrations({
     repoRoot,

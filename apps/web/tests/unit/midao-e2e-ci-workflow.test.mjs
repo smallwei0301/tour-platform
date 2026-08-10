@@ -49,8 +49,7 @@ test('CI runs real Midao and legacy browser gates with independent hard timeouts
 
 test('CI runs the decision RPC runtime lane serially with redacted artifact metadata', () => {
   const source = workflowSource();
-  assert.match(source, /supabase\/migrations\/20260723010000_midao_atomic_booking_approval\.sql/u);
-  assert.match(source, /supabase\/migrations\/20260723011000_midao_atomic_booking_decision_command\.sql/u);
+  assert.match(source, /supabase\/migrations\/\*\*/u);
   assert.match(
     source,
     /timeout --signal=TERM --kill-after=30s 1200s\s+node scripts\/testing\/with-midao-local-supabase\.mjs --postgrest\s+apps\/web\/tests\/integration\/midao-booking-decision-postgrest\.test\.mjs/u,

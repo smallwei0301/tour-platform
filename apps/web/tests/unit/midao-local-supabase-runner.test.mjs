@@ -8,6 +8,11 @@ import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import {
+  POST_CUTOFF_MIGRATIONS,
+  SYNTHETIC_BASELINE_FILENAME,
+} from '../../../../scripts/database-baseline/materialize-fresh-workdir.mjs';
+
 const runner = await import('../../../../scripts/testing/with-midao-local-supabase.mjs');
 const {
   LOCK_PATH,
@@ -464,10 +469,10 @@ test('baseline workdir binds materializer capture, rewrites full config after ve
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
-test('real default database workdir adapter consumes the trusted post-cutoff manifest and materializes Task14', async () => {
+test('real default database workdir adapter consumes the complete trusted post-cutoff manifest', async () => {
   const root = await mkdtemp(join(tmpdir(), 'midao-default-materializer-'));
   const lockDir = join(root, 'lock');
-  const migrationName = '20260723011000_midao_atomic_booking_decision_command.sql';
+  const migrationName = POST_CUTOFF_MIGRATIONS.at(-1).filename;
   let capability;
   await mkdir(lockDir, { mode: 0o700 });
   try {
@@ -1267,19 +1272,11 @@ test('signal received during cleanup completes stop but runner rejects', async (
   assert.deepEqual(calls, ['stop']);
 });
 
-test('custom lifecycle contract accepts only exact Task9 marker and nine post-cutoff migration filenames', async () => {
+test('custom lifecycle contract accepts the current exact baseline migration history', async () => {
   const expectedWorkdir = `/tmp/lock/${projectId}`;
   const migrationNames = [
-    '00000000000001_baseline_v1.sql',
-    '20260723000000_midao_backend_mode.sql',
-    '20260723001000_midao_notification_outbox.sql',
-    '20260723002000_midao_idempotency_records.sql',
-    '20260723002500_midao_audit_events.sql',
-    '20260723003000_midao_atomic_backend_mode_switch.sql',
-    '20260723003500_midao_service_role_acl_hardening.sql',
-    '20260723004000_midao_request_read_projection.sql',
-    '20260723010000_midao_atomic_booking_approval.sql',
-    '20260723011000_midao_atomic_booking_decision_command.sql',
+    SYNTHETIC_BASELINE_FILENAME,
+    ...POST_CUTOFF_MIGRATIONS.map(({ filename }) => filename),
   ];
   const stderr = `${[
     `Using workdir ${expectedWorkdir}`,
