@@ -69,6 +69,33 @@ on conflict (id) do update set
   raw_app_meta_data = excluded.raw_app_meta_data,
   raw_user_meta_data = excluded.raw_user_meta_data;
 
+-- Since GoTrue's 2022 account-linking change, password login requires a
+-- matching auth.identities row (provider='email'); auth.users alone is not
+-- sufficient. provider_id is the user's own id cast to text for the email
+-- provider, matching what supabase.auth.admin.createUser() writes.
+insert into auth.identities (
+  id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+)
+values (
+  '55555555-5555-4555-8555-555555555555',
+  '55555555-5555-4555-8555-555555555555',
+  '55555555-5555-4555-8555-555555555555',
+  jsonb_build_object(
+    'sub', '55555555-5555-4555-8555-555555555555',
+    'email', 'midao-e2e-traveler@example.invalid',
+    'email_verified', true,
+    'phone_verified', false
+  ),
+  'email',
+  now(),
+  now(),
+  now()
+)
+on conflict (provider_id, provider) do update set
+  identity_data = excluded.identity_data,
+  last_sign_in_at = excluded.last_sign_in_at,
+  updated_at = excluded.updated_at;
+
 insert into public.users (id, role)
 values ('55555555-5555-4555-8555-555555555555', 'traveler')
 on conflict (id) do update set role = excluded.role;
