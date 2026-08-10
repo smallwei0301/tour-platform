@@ -45,87 +45,14 @@ on conflict (id) do update set
 
 -- Package 4 real-auth conversion fixture. This file executes only with full
 -- GoTrue services, so GoTrue-only columns are intentionally direct SQL.
--- Note: pinned GoTrue v2.188.1's auth.users derives the read-only generated
--- confirmed_at column from email_confirmed_at/phone_confirmed_at
--- (GENERATED ALWAYS AS (LEAST(email_confirmed_at, phone_confirmed_at)) STORED);
--- writes must target email_confirmed_at, never confirmed_at directly.
--- instance_id must be the zero UUID: GoTrue's FindUserByEmailAndAudience
--- filters "instance_id = uuid.Nil"; a NULL instance_id never matches, so the
--- password-grant lookup would 400 invalid_credentials even with a correct
--- password hash.
--- confirmation_token/recovery_token/email_change/email_change_token_new must
--- be '' not NULL: GoTrue's user row scanner errors with "500 Database error
--- querying schema" (converting NULL to string is unsupported) if any of
--- these token/change string columns are left NULL. This pinned GoTrue
--- version's users table carries additional string columns beyond the four
--- historically documented ones (email_change_token_current,
--- reauthentication_token, phone_change, phone_change_token), so all known
--- nullable text columns are set explicitly to avoid re-hitting the same
--- opaque 500 on a different column.
-insert into auth.users (
-  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
-  confirmation_token, recovery_token, email_change, email_change_token_new,
-  email_change_token_current, reauthentication_token, phone, phone_change,
-  phone_change_token,
-  raw_app_meta_data, raw_user_meta_data
-)
-values (
-  '00000000-0000-0000-0000-000000000000',
-  '55555555-5555-4555-8555-555555555555',
-  'authenticated',
-  'authenticated',
-  'midao-e2e-traveler@example.invalid',
-  crypt('midao-e2e-traveler-local-only', gen_salt('bf', 10)),
-  now(),
-  '', '', '', '',
-  '', '', '', '',
-  '',
-  '{"provider":"email","providers":["email"]}'::jsonb,
-  '{"full_name":"Midao E2E Traveler","role":"traveler"}'::jsonb
-)
-on conflict (id) do update set
-  instance_id = excluded.instance_id,
-  encrypted_password = excluded.encrypted_password,
-  email_confirmed_at = excluded.email_confirmed_at,
-  confirmation_token = excluded.confirmation_token,
-  recovery_token = excluded.recovery_token,
-  email_change = excluded.email_change,
-  email_change_token_new = excluded.email_change_token_new,
-  email_change_token_current = excluded.email_change_token_current,
-  reauthentication_token = excluded.reauthentication_token,
-  phone = excluded.phone,
-  phone_change = excluded.phone_change,
-  phone_change_token = excluded.phone_change_token,
-  raw_app_meta_data = excluded.raw_app_meta_data,
-  raw_user_meta_data = excluded.raw_user_meta_data;
-
--- Since GoTrue's 2022 account-linking change, password login requires a
--- matching auth.identities row (provider='email'); auth.users alone is not
--- sufficient. provider_id is the user's own id cast to text for the email
--- provider, matching what supabase.auth.admin.createUser() writes.
-insert into auth.identities (
-  id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
-)
-values (
-  '55555555-5555-4555-8555-555555555555',
-  '55555555-5555-4555-8555-555555555555',
-  '55555555-5555-4555-8555-555555555555',
-  jsonb_build_object(
-    'sub', '55555555-5555-4555-8555-555555555555',
-    'email', 'midao-e2e-traveler@example.invalid',
-    'email_verified', true,
-    'phone_verified', false
-  ),
-  'email',
-  now(),
-  now(),
-  now()
-)
-on conflict (provider_id, provider) do update set
-  identity_data = excluded.identity_data,
-  last_sign_in_at = excluded.last_sign_in_at,
-  updated_at = excluded.updated_at;
-
+-- Note: the traveler's GoTrue auth.users/auth.identities rows are NOT seeded
+-- here via raw SQL. Direct inserts repeatedly hit undocumented NOT-NULL /
+-- generated-column / instance_id requirements specific to this pinned
+-- GoTrue version, each surfacing only as an opaque 500 "Database error
+-- querying schema" with no column name. The runner creates this user via
+-- GoTrue's own Admin API (POST /auth/v1/admin/users) instead, which is the
+-- officially supported path and guarantees every internal column GoTrue
+-- expects is populated correctly.
 insert into public.users (id, role)
 values ('55555555-5555-4555-8555-555555555555', 'traveler')
 on conflict (id) do update set role = excluded.role;

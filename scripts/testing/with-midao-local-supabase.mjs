@@ -1565,6 +1565,48 @@ export function parseMidaoRunnerInvocation(args) {
   return { mode, childArgs };
 }
 
+// Fixed deterministic id/credentials for the Package 4 API real-auth
+// traveler fixture. Created via GoTrue's own Admin API rather than raw SQL
+// against auth.users/auth.identities: this pinned GoTrue version enforces
+// several undocumented constraints (a generated confirmed_at column, a
+// zero-UUID instance_id requirement, and multiple NOT-NULL string columns
+// beyond the four historically documented ones) that only ever surface as an
+// opaque 500 "Database error querying schema" with no column name attached.
+// The Admin API is the officially supported user-creation path and
+// guarantees every internal column GoTrue expects is populated correctly.
+const MIDAO_E2E_TRAVELER_ID = '55555555-5555-4555-8555-555555555555';
+const MIDAO_E2E_TRAVELER_EMAIL = 'midao-e2e-traveler@example.invalid';
+const MIDAO_E2E_TRAVELER_PASSWORD = 'midao-e2e-traveler-local-only';
+
+async function createOrUpdateMidaoTravelerAuthUser({ supabaseUrl, serviceRoleKey, signal }) {
+  const endpoint = new URL(`/auth/v1/admin/users/${MIDAO_E2E_TRAVELER_ID}`, supabaseUrl);
+  const headers = {
+    apikey: serviceRoleKey,
+    authorization: `Bearer ${serviceRoleKey}`,
+    'content-type': 'application/json',
+  };
+  const body = JSON.stringify({
+    email: MIDAO_E2E_TRAVELER_EMAIL,
+    password: MIDAO_E2E_TRAVELER_PASSWORD,
+    email_confirm: true,
+    user_metadata: { full_name: 'Midao E2E Traveler', role: 'traveler' },
+  });
+  let response = await fetch(endpoint, { method: 'PUT', headers, body, signal });
+  if (response.status === 404) {
+    const createEndpoint = new URL('/auth/v1/admin/users', supabaseUrl);
+    response = await fetch(createEndpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ id: MIDAO_E2E_TRAVELER_ID, ...JSON.parse(body) }),
+      signal,
+    });
+  }
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED: ${response.status} ${text.slice(0, 2000)}`);
+  }
+}
+
 async function main() {
   const repoRoot = process.cwd();
   const projectId = canonicalProjectId(repoRoot);
@@ -1652,6 +1694,11 @@ async function main() {
           for (const name of ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
             if (typeof localEnv[name] !== 'string' || !localEnv[name]) throw new Error(`MIDAO_E2E_LOCAL_ENV_MISSING:${name}`);
           }
+          await createOrUpdateMidaoTravelerAuthUser({
+            supabaseUrl: localEnv.SUPABASE_URL,
+            serviceRoleKey: localEnv.SUPABASE_SERVICE_ROLE_KEY,
+            signal: controller.signal,
+          });
           reportStage('real-auth-runtime-fixture-ready');
           const e2eEnv = {
             ...buildMidaoPlaywrightEnvironment({ localEnv }),
