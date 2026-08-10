@@ -102,11 +102,17 @@ export async function verifyCanonicalGuideSession(
   } = {},
 ) {
   const session = verifyGuideSession(request);
-  if (!session) deny('UNAUTHORIZED', 401);
+  if (!session) {
+    if (process.env.MIDAO_E2E_LOCAL === '1') console.error('CANON_DEBUG deny=SESSION_NULL');
+    deny('UNAUTHORIZED', 401);
+  }
 
   const runtime = providedRuntime === undefined
     ? await getGuideRuntimeAccessDb({ guideId: session.guideId })
     : providedRuntime;
+  if (process.env.MIDAO_E2E_LOCAL === '1') {
+    console.error('CANON_DEBUG session_gid', session.guideId, 'runtime', runtime ? `mode=${runtime.backendMode}_ver=${runtime.guideSessionVersion}_status=${runtime.verificationStatus}_gidEq=${runtime.guideId === session.guideId ? 'y' : 'n'}` : 'NULL', 'sess_ver', session.sessionVersion, 'requireMode', requireMode);
+  }
   const flags = providedFlags ?? { backendEnabled: isMidaoBackendEnabled() };
   const cookieHeader = request.headers.get('cookie') || '';
   const actorPresent = hasCookie(cookieHeader, MIDAO_IMPERSONATION_ACTOR_COOKIE_NAME);
