@@ -7,6 +7,12 @@ import { checkPlanScheduleDurationMismatch } from '../../src/lib/availability-v2
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..', '..');
+const ISSUE1811_MIGRATION = join(
+  REPO_ROOT,
+  '..',
+  '..',
+  'supabase/migrations/20260810033421_issue1811_atomic_booking_order_materialization.sql',
+);
 
 const PLAN_7H = { id: 'plan-b', duration_minutes: 420 };
 const PLAN_5_75H = { id: 'plan-a', duration_minutes: 345 };
@@ -105,15 +111,15 @@ test('Source contract: draft route imports plan-schedule-mismatch helper', () =>
   assert.match(src, /checkPlanScheduleDurationMismatch/);
 });
 
-test('Source contract: draft route calls helper before .insert and rejects with 422', () => {
+test('Source contract: draft route calls helper before atomic materialization and rejects with 422', () => {
   const src = readFileSync(join(REPO_ROOT, 'app/api/v2/bookings/draft/route.ts'), 'utf8');
   const callIdx = src.indexOf('checkPlanScheduleDurationMismatch(');
-  const firstInsertIdx = src.indexOf('.insert(');
+  const materializeIdx = src.indexOf('materializeDraftBookingOrder({');
   assert.ok(callIdx >= 0, 'route should call checkPlanScheduleDurationMismatch');
-  assert.ok(firstInsertIdx >= 0, 'route should still perform .insert(...) after the guard');
+  assert.ok(materializeIdx >= 0, 'route should materialize the atomic booking/order after the guard');
   assert.ok(
-    callIdx < firstInsertIdx,
-    'checkPlanScheduleDurationMismatch must be called before the first .insert(',
+    callIdx < materializeIdx,
+    'checkPlanScheduleDurationMismatch must be called before atomic materialization',
   );
   const guardBlock = src.slice(callIdx, callIdx + 600);
   assert.match(guardBlock, /status:\s*422/, 'mismatch should return HTTP 422');
@@ -127,13 +133,12 @@ test('Source contract: helper emits PLAN_SCHEDULE_MISMATCH reasonCode literal', 
   assert.match(helperSrc, /reasonCode:\s*['"]PLAN_SCHEDULE_MISMATCH['"]/);
 });
 
-test('Source contract: existing order_items insert keeps booking_id wiring (Bug B out of scope)', () => {
+test('Source contract: atomic order_items insert keeps booking_id wiring (Bug B out of scope)', () => {
   // #1110 issue body lists order_items 0 rows as a separate bug. Subagent verified
   // migration 20260425093000 added the column, source already inserts it, and
   // v2-route-contract-smoke.test.mjs:40 locks the source. The "0 rows" symptom on
   // staging is an environment / migration apply problem, not a code bug. This
   // test guards the source contract so a future refactor doesn't silently regress.
-  const src = readFileSync(join(REPO_ROOT, 'app/api/v2/bookings/draft/route.ts'), 'utf8');
-  assert.match(src, /from\('order_items'\)\.insert\(/);
-  assert.match(src, /booking_id:\s*bookingInsert\.id/);
+  const migration = readFileSync(ISSUE1811_MIGRATION, 'utf8');
+  assert.match(migration, /INSERT INTO public\.order_items\s*\([\s\S]*?\bbooking_id\b[\s\S]*?\)\s*VALUES\s*\([\s\S]*?\bv_booking_id\b/);
 });

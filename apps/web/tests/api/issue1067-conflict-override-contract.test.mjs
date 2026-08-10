@@ -19,6 +19,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..', '..');
 const AVAILABLE_SLOTS_ROUTE = join(REPO_ROOT, 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
 const DRAFT_ROUTE = join(REPO_ROOT, 'app/api/v2/bookings/draft/route.ts');
+const ATOMIC_GATEWAY = join(REPO_ROOT, 'src/lib/checkout/db-booking-order-materialization.mjs');
+const ISSUE1811_MIGRATION = join(
+  REPO_ROOT,
+  '..',
+  '..',
+  'supabase/migrations/20260810033421_issue1811_atomic_booking_order_materialization.sql',
+);
 const MIGRATION_PATH = join(
   REPO_ROOT,
   '..',
@@ -321,26 +328,27 @@ test('Source contract: available-slots route reads complete conflict override me
   assert.match(src, /created_by_admin_email/);
 });
 
-test('Source contract: draft route uses schema fallback for override reads, carries complete metadata, and strips override-only booking columns on schema drift', () => {
-  const src = readFileSync(DRAFT_ROUTE, 'utf8');
-  assert.match(src, /loadConflictOverridesWithSchemaFallback/);
-  assert.match(src, /getSupabase/);
-  assert.match(src, /applyBookingConflictOverrideColumnFallback/);
-  assert.match(src, /conflict_override_id/);
-  assert.match(src, /conflict_override_snapshot/);
-  assert.match(src, /allowed_with_admin_override/);
-  assert.match(src, /guide_note/);
-  assert.match(src, /admin_note/);
-  assert.match(src, /created_by_admin_email/);
+test('Source contract: draft route reads override metadata with schema fallback and carries it through the atomic gateway', () => {
+  const route = readFileSync(DRAFT_ROUTE, 'utf8');
+  const gateway = readFileSync(ATOMIC_GATEWAY, 'utf8');
+  assert.match(route, /loadConflictOverridesWithSchemaFallback/);
+  assert.match(route, /getSupabase/);
+  assert.match(route, /materializeDraftBookingOrder/);
+  assert.match(route, /conflictOverrideId/);
+  assert.match(route, /conflictOverrideSnapshot/);
+  assert.match(route, /allowed_with_admin_override/);
+  assert.match(route, /guideNote/);
+  assert.match(route, /adminNote/);
+  assert.match(route, /createdByAdminEmail/);
+  assert.match(gateway, /p_conflict_override_id:\s*input\.conflictOverrideId/);
+  assert.match(gateway, /p_conflict_override_snapshot:\s*input\.conflictOverrideSnapshot/);
 });
 
-test('Source contract: draft route carries override metadata into booking status log audit trail', () => {
-  const src = readFileSync(DRAFT_ROUTE, 'utf8');
-  const statusLogIdx = src.indexOf("from('booking_status_logs').insert(");
-  assert.ok(statusLogIdx >= 0, 'expected booking_status_logs insert');
-  const tail = src.slice(statusLogIdx, statusLogIdx + 1200);
-  assert.match(tail, /conflictOverride/);
-  assert.match(tail, /overrideId|conflict_override_id/);
+test('Source contract: atomic migration carries override metadata into booking status log audit trail', () => {
+  const migration = readFileSync(ISSUE1811_MIGRATION, 'utf8');
+  assert.match(migration, /INSERT INTO public\.booking_status_logs/);
+  assert.match(migration, /'conflictOverride',\s*p_conflict_override_snapshot/);
+  assert.match(migration, /'overrideId',\s*p_conflict_override_id/);
 });
 
 test('GH-1067 RED: migration source contract formalizes override table, booking audit columns, and RLS guardrails', () => {

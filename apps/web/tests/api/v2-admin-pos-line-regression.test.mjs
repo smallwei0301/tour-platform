@@ -53,7 +53,7 @@ async function runDraftCheckoutFlow({ transport, sourceChannel }) {
 test('route contract keeps web/line/admin_pos channels (regression guard)', async () => {
   const src = await readDraftRoute();
   assert.match(src, /const VALID_CHANNELS = \['web', 'line', 'admin_pos'\]/);
-  assert.match(src, /source_channel:\s*data\.sourceChannel/);
+  assert.match(src, /sourceChannel:\s*data\.sourceChannel/);
 });
 
 test('Admin POS draft flow keeps create-order envelope shape', async () => {

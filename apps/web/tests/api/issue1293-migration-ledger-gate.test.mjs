@@ -242,12 +242,12 @@ it('verified gate rejects fake ledger identity and fabricated verified or baseli
 });
 
 describe('issue #1758 — repo現況verified release gate維持fail-closed', () => {
-  it('四支Midao migration 已逐筆verified，因此gate通過且ledger records精確綁定', () => {
+  it('四支Midao migration 維持verified，未套用的 #1811 migration 使gate精確HOLD', () => {
     const cli = runCli({ migrationsDir: path.join(REPO_ROOT, 'supabase', 'migrations'), ledgerPath: LEDGER_PATH });
-    assert.equal(cli.status, 0, `repo verified gate應通過\n${cli.stdout}\n${cli.stderr}`);
+    assert.equal(cli.status, 1, `repo verified gate應對未套用 migration fail closed\n${cli.stdout}\n${cli.stderr}`);
     const result = JSON.parse(cli.stdout);
-    assert.equal(result.status, 'verified');
-    assert.deepEqual(result.missing, []);
+    assert.equal(result.status, 'hold');
+    assert.deepEqual(result.missing, ['20260810033421_issue1811_atomic_booking_order_materialization.sql']);
     assert.deepEqual(result.unverified, []);
 
     const expectedFilenames = [
