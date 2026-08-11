@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { createHttpCookieJar } from './support/http-cookie-jar.mjs';
+
 const IDS = Object.freeze({
   activity: '66666666-6666-4666-8666-666666666666',
   plan: '88888888-8888-4888-8888-888888888888',
@@ -30,35 +32,6 @@ function requireEnv(name) {
   return value;
 }
 
-function readSetCookies(response) {
-  if (typeof response.headers.getSetCookie === 'function') return response.headers.getSetCookie();
-  const single = response.headers.get('set-cookie');
-  return single ? [single] : [];
-}
-
-function cookieJar() {
-  const values = new Map();
-  return {
-    add(response) {
-      for (const setCookie of readSetCookies(response)) {
-        const pair = setCookie.split(';', 1)[0];
-        const separator = pair.indexOf('=');
-        if (separator <= 0) continue;
-        const name = pair.slice(0, separator);
-        const value = pair.slice(separator + 1);
-        // Deletion directives (empty value or the literal '' used by
-        // guide-auth cookie clearing) must remove the cookie, not store it —
-        // otherwise the stale impersonation-actor clear cookie is replayed on
-        // every request and the canonical session boundary denies with 401.
-        if (!value || value === "''") values.delete(name);
-        else values.set(name, value);
-      }
-    },
-    set(name, value) { values.set(name, value); },
-    header() { return [...values].map(([name, value]) => `${name}=${value}`).join('; '); },
-  };
-}
-
 async function jsonRequest(url, options = {}) {
   const response = await fetch(url, { redirect: 'manual', ...options });
   const text = await response.text();
@@ -85,7 +58,7 @@ async function loginTraveler({ apiBaseUrl, supabaseUrl, anonKey }) {
   assert.equal(login.status, 200, 'traveler password login must use the local GoTrue endpoint');
   assert.equal(login.body?.user?.id, '55555555-5555-4555-8555-555555555555');
 
-  const jar = cookieJar();
+  const jar = createHttpCookieJar();
   const projectRef = supabaseUrl.hostname.split('.', 1)[0];
   jar.set(`sb-${projectRef}-auth-token`, encodeURIComponent(JSON.stringify(login.body)));
   jar.set('tp_csrf', 'midao-api-chain-csrf');
@@ -93,7 +66,7 @@ async function loginTraveler({ apiBaseUrl, supabaseUrl, anonKey }) {
 }
 
 async function loginGuide(apiBaseUrl) {
-  const jar = cookieJar();
+  const jar = createHttpCookieJar();
   const csrf = await jsonRequest(apiUrl(apiBaseUrl, '/api/guide/auth/csrf'));
   assert.equal(csrf.status, 200);
   assert.equal(csrf.body?.ok, true);
@@ -119,8 +92,8 @@ async function loginGuide(apiBaseUrl) {
   // Login rotates tp_csrf (the session route re-issues createCsrfCookie).
   // The double-submit check compares the cookie with the x-csrf-token header,
   // so later requests must send the freshest jar value, not the pre-login one.
-  const rotated = /(?:^|; )tp_csrf=([^;]+)/u.exec(jar.header());
-  return { jar, csrf: rotated ? decodeURIComponent(rotated[1]) : csrfToken };
+  const rotated = jar.get('tp_csrf');
+  return { jar, csrf: rotated ? decodeURIComponent(rotated) : csrfToken };
 }
 
 function commandHeaders(session, idempotencyKey) {
