@@ -24,14 +24,22 @@ mkdir -p "$TOOLCHAIN_PARENT"
 
 stage=$(mktemp -d "$TOOLCHAIN_PARENT/.node-v${VERSION}.staging.XXXXXX")
 backup=''
+backup_moved=0
 installed=0
 cleanup() {
   local status=$?
+  local failed=''
   if (( status != 0 && installed == 1 )); then
-    local failed="${TOOLCHAIN_ROOT}.failed.$(date -u +%Y%m%dT%H%M%SZ)"
+    failed="${TOOLCHAIN_ROOT}.failed.$(date -u +%Y%m%dT%H%M%SZ)"
     mv "$TOOLCHAIN_ROOT" "$failed" || true
+  fi
+  if (( status != 0 && backup_moved == 1 )) && [[ ! -e "$TOOLCHAIN_ROOT" && -e "$backup" ]]; then
     mv "$backup" "$TOOLCHAIN_ROOT" || true
-    echo "restored previous toolchain; failed artifact retained at $failed" >&2
+    if [[ -n "$failed" ]]; then
+      echo "restored previous toolchain; failed artifact retained at $failed" >&2
+    else
+      echo 'restored previous toolchain after replacement failure' >&2
+    fi
   fi
   rm -rf "$stage"
   exit "$status"
@@ -54,6 +62,7 @@ done
 [[ -e "$TOOLCHAIN_ROOT" ]] || fail "expected existing toolchain root is missing: $TOOLCHAIN_ROOT"
 backup="${TOOLCHAIN_ROOT}.backup.$(date -u +%Y%m%dT%H%M%SZ)"
 mv "$TOOLCHAIN_ROOT" "$backup"
+backup_moved=1
 mv "$prepared" "$TOOLCHAIN_ROOT"
 installed=1
 
@@ -66,5 +75,6 @@ PATH="$canonical_root/bin:$PATH"
 [[ "$($canonical_root/bin/node -p 'process.execPath')" == "$canonical_root/bin/node" ]] || fail 'node execPath self-check failed'
 
 installed=0
+backup_moved=0
 echo "Node $VERSION provisioned at $TOOLCHAIN_ROOT"
 echo "previous artifact retained at $backup"

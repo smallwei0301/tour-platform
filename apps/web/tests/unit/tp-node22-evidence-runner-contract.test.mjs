@@ -87,6 +87,23 @@ test('Node 22 evidence runner rejects runtime-replacement npm and npx forms befo
   }
 })
 
+test('Node 22 provision restores an already moved backup when the replacement rename fails', () => {
+  const provision = readSource('scripts/toolchain/provision-node22.23.1.sh')
+  const backupMove = 'mv "$TOOLCHAIN_ROOT" "$backup"'
+  const backupMoved = 'backup_moved=1'
+  const replacementMove = 'mv "$prepared" "$TOOLCHAIN_ROOT"'
+  const restoreMove = 'mv "$backup" "$TOOLCHAIN_ROOT" || true'
+
+  assert.ok(provision.includes('backup_moved=0'))
+  assert.ok(provision.indexOf(backupMove) < provision.indexOf(backupMoved))
+  assert.ok(provision.indexOf(backupMoved) < provision.indexOf(replacementMove))
+  assert.match(provision, /backup_moved == 1/)
+  assert.match(provision, /! -e "\$TOOLCHAIN_ROOT"/)
+  assert.match(provision, /-e "\$backup"/)
+  assert.ok(provision.indexOf('backup_moved == 1') < provision.indexOf(restoreMove))
+  assert.ok(provision.lastIndexOf('backup_moved=0') > provision.indexOf('node execPath self-check failed'))
+})
+
 test('formal check runner uses the Node 22 entry point and explicit TAP', () => {
   const checks = readSource('.claude/hooks/run-checks.sh')
 
