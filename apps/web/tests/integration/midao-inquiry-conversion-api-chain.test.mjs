@@ -169,13 +169,6 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
     headers: commandHeaders(guide, `midao-api-chain-reply-${inquiryId}`),
     body: '{}',
   });
-  if (replied.status !== 200) {
-    const gidMatch = /(?:^|; )guide_id=([^;]+)/u.exec(guide.jar.header());
-    const gid = gidMatch ? decodeURIComponent(gidMatch[1]) : 'NONE';
-    const tokMatch = /(?:^|; )guide_token=([^;]+)/u.exec(guide.jar.header());
-    const tokParts = tokMatch ? decodeURIComponent(tokMatch[1]).split(':') : [];
-    console.error('MARK_REPLIED_DEBUG_STATUS', replied.status, 'BODY', JSON.stringify(replied.body), 'HOMEPROBE', homeProbe.status, 'GID_MATCHES_SEED', gid === '99999999-9999-4999-8999-999999999999' ? 'GIDmatch' : `GIDother_${gid.slice(0, 8)}`, 'TOK_PARTS', tokParts.length, 'TOK_GID_EQ', tokParts[0] === gid ? 'eq' : 'ne', 'TOK_VER', tokParts[1] ?? 'none', 'COOKIE_FLAGS', [/(?:^|; )guide_token=/u.test(guide.jar.header()) ? 'TOKq' : 'TOKn', /(?:^|; )guide_id=/u.test(guide.jar.header()) ? 'GIDy' : 'GIDn', guide.csrf ? 'CSRy' : 'CSRn'].join('_'));
-  }
   assert.equal(replied.status, 200);
   assert.equal(replied.body?.success, true);
 
@@ -206,29 +199,6 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
     headers: commandHeaders(traveler, `midao-api-chain-checkout-before-${bookingId}`),
     body: JSON.stringify({ provider: 'transfer' }),
   });
-  if (beforeAcceptance.status !== 409) {
-    // Root-cause probe: is the booking actually absent, or is the checkout
-    // route's low-privilege read denied by post-#1678 grants? Query the same
-    // row two ways and report only counts/status (no secrets, no ids).
-    const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-    const anonKey = process.env.SUPABASE_ANON_KEY || '';
-    const restUrl = `${supabaseUrl.origin}/rest/v1/bookings?id=eq.${bookingId}&select=id,status,traveler_id,order_id`;
-    const countWord = (rows) => (Array.isArray(rows) ? (rows.length === 0 ? 'ZEROrows' : rows.length === 1 ? 'ONErow' : 'MANYrows') : 'NONarray');
-    const statusWord = (s) => (s === 200 ? 'OKq' : s === 401 ? 'AUTHq' : s === 403 ? 'FORBIDq' : s === 404 ? 'NFq' : `Sq${String(s).replace(/[0-9]/gu, (d) => 'abcdefghij'[Number(d)])}`);
-    let svcWord = 'SKIP';
-    let anonWord = 'SKIP';
-    if (svcKey) {
-      const r = await fetch(restUrl, { headers: { apikey: svcKey, authorization: `Bearer ${svcKey}` } });
-      const rows = await r.json().catch(() => null);
-      svcWord = `${statusWord(r.status)}_${countWord(rows)}`;
-    }
-    if (anonKey) {
-      const r = await fetch(restUrl, { headers: { apikey: anonKey, authorization: `Bearer ${anonKey}` } });
-      const rows = await r.json().catch(() => null);
-      anonWord = `${statusWord(r.status)}_${countWord(rows)}`;
-    }
-    console.error('CHECKOUT_BEFORE_DEBUG2', 'BODYCODE', beforeAcceptance.body?.error?.code, 'SVC', svcWord, 'ANON', anonWord);
-  }
   assert.equal(beforeAcceptance.status, 409);
   assert.equal(beforeAcceptance.body?.error?.code, 'TRAVELER_CONFIRMATION_REQUIRED');
 

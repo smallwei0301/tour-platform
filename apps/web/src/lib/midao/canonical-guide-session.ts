@@ -1,4 +1,4 @@
-import { isMidaoBackendEnabled, isMidaoE2ELocal } from '../../config/feature-flags.mjs';
+import { isMidaoBackendEnabled } from '../../config/feature-flags.mjs';
 import { getGuideRuntimeAccessDb } from './db-runtime-access.mjs';
 import { verifyGuideSession } from '../guide-auth.ts';
 import {
@@ -102,17 +102,11 @@ export async function verifyCanonicalGuideSession(
   } = {},
 ) {
   const session = verifyGuideSession(request);
-  if (!session) {
-    if (isMidaoE2ELocal()) process.stderr.write('CANON_DEBUG deny=SESSION_NULL\n');
-    deny('UNAUTHORIZED', 401);
-  }
+  if (!session) deny('UNAUTHORIZED', 401);
 
   const runtime = providedRuntime === undefined
     ? await getGuideRuntimeAccessDb({ guideId: session.guideId })
     : providedRuntime;
-  if (isMidaoE2ELocal()) {
-    process.stderr.write(`CANON_DEBUG session_gid ${session.guideId} runtime ${runtime ? `mode=${runtime.backendMode}_ver=${runtime.guideSessionVersion}_status=${runtime.verificationStatus}_gidEq=${runtime.guideId === session.guideId ? 'y' : 'n'}` : 'NULL'} sess_ver ${session.sessionVersion} requireMode ${requireMode}\n`);
-  }
   const flags = providedFlags ?? { backendEnabled: isMidaoBackendEnabled() };
   const cookieHeader = request.headers.get('cookie') || '';
   const actorPresent = hasCookie(cookieHeader, MIDAO_IMPERSONATION_ACTOR_COOKIE_NAME);
@@ -120,19 +114,11 @@ export async function verifyCanonicalGuideSession(
     ? verifyImpersonationActorCookie(cookieHeader, { targetGuideId: session.guideId })
     : null;
 
-  if (isMidaoE2ELocal()) {
-    process.stderr.write(`CANON_DEBUG2 sessionKind ${session.sessionKind} actorPresent ${actorPresent} actorNull ${actor === null} backendEnabled ${flags.backendEnabled}\n`);
-  }
-  try {
-    return assertMidaoRuntimeAccess({
-      session,
-      runtime,
-      flags,
-      impersonation: { present: actorPresent, actor },
-      requireMode,
-    });
-  } catch (e) {
-    if (isMidaoE2ELocal()) process.stderr.write(`CANON_DEBUG3 assert_denied ${(e as { code?: string })?.code} ${(e as { status?: number })?.status}\n`);
-    throw e;
-  }
+  return assertMidaoRuntimeAccess({
+    session,
+    runtime,
+    flags,
+    impersonation: { present: actorPresent, actor },
+    requireMode,
+  });
 }
