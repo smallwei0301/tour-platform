@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-08-10T05:30:02.749Z -->
+<!-- query_timestamp: 2026-08-11T05:23:51.539Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-10T05:30:02.749Z  
-**Commit SHA:** `a598ff06719766a0e457881e83c5ff19334074d0`
+**Query timestamp:** 2026-08-11T05:23:51.539Z  
+**Commit SHA:** `5339689c69034f8a9e187947bde23ce6800c6d3c`
 
 ---
 
@@ -14,7 +14,7 @@
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1818 | [fix(booking): 以單一交易固化基本訂單可付款金額 (#1811)](https://github.com/smallwei0301/tour-platform/pull/1818) _(draft)_ | `agent/issue-1811-order-transaction` |
+| #1818 | [fix(booking): 以單一交易固化基本訂單可付款金額 (#1811)](https://github.com/smallwei0301/tour-platform/pull/1818) | `agent/issue-1811-order-transaction` |
 | #1807 | [test(midao): #1759 Package 4 gate 全鏈路驗證（雲端 runner）](https://github.com/smallwei0301/tour-platform/pull/1807) | `plan/issue-1759-package4-e2e-gate-20260809` |
 | #1776 | [feat(shop): 完成導遊商店匯款 beta 文案與 SOP（#1607）](https://github.com/smallwei0301/tour-platform/pull/1776) _(draft)_ | `fix/issue-1607-guide-shop-beta` |
 | #1763 | [feat: midao2 導遊接案後台（接案 CRM）＋公開接案頁 /g/[slug]](https://github.com/smallwei0301/tour-platform/pull/1763) | `claude/superpowers-midao-backend-x90czx` |
