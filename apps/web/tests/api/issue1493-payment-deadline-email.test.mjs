@@ -67,9 +67,13 @@ test('wrapper 只在有 orderId/email 時寄信（best-effort）', () => {
 });
 
 test('draft route 建立 instant/scheduled 訂單後 fire 付款期限通知', () => {
-  // ratchet 拆檔後接線改經 checkout/booking-draft-post-create-notify（route 已達行數天花板）。
+  // #1811 再拆一層：route → atomic materializer → commit 後 read-back → 既有 fan-out。
   const src = read('app/api/v2/bookings/draft/route.ts');
-  assert.match(src, /fireDraftPostCreateNotifications/);
+  assert.match(src, /materializeDraftBookingOrder/);
+  const orchestration = read('src/lib/checkout/booking-order-materialization.mjs');
+  assert.match(orchestration, /const persistedFinal = await readBack/);
+  assert.match(orchestration, /defaultNotify/);
+  assert.match(orchestration, /paymentDeadlineAt: persistedFinal\.paymentDeadlineAt/);
   const fanout = read('src/lib/checkout/booking-draft-post-create-notify.ts');
   assert.match(fanout, /notifyPaymentDeadlineSet/);
 });

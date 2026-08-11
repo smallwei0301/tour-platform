@@ -39622,6 +39622,29 @@
         "volatility": "v"
       },
       {
+        "bodySha256": "4e4c434738140c83c475455ced8e49b083d4cee62c859aaee51444a61179280c",
+        "canonicalKey": [
+          "routine",
+          "public",
+          "fn_create_booking_draft_atomic",
+          "p_traveler_id uuid, p_activity_plan_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_timezone text, p_participants integer, p_source_channel text, p_contact_name text, p_contact_phone text, p_contact_email text, p_customer_note text, p_conflict_override_id uuid, p_conflict_override_snapshot jsonb, p_correlation_id text, p_payment_deadline_at timestamp with time zone"
+        ],
+        "configuration": [
+          "search_path=pg_catalog"
+        ],
+        "identityArguments": "p_traveler_id uuid, p_activity_plan_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_timezone text, p_participants integer, p_source_channel text, p_contact_name text, p_contact_phone text, p_contact_email text, p_customer_note text, p_conflict_override_id uuid, p_conflict_override_snapshot jsonb, p_correlation_id text, p_payment_deadline_at timestamp with time zone",
+        "kind": "f",
+        "language": "plpgsql",
+        "leakProof": false,
+        "name": "fn_create_booking_draft_atomic",
+        "parallel": "u",
+        "result": "jsonb",
+        "schema": "public",
+        "securityDefiner": false,
+        "strict": false,
+        "volatility": "v"
+      },
+      {
         "bodySha256": "8da9bb6e381267da21bc66c84ad7dfbf93933014e5588fbd0b88342d501570e3",
         "canonicalKey": [
           "routine",
@@ -107531,6 +107554,66 @@
           "acl",
           "routine",
           "public",
+          "fn_create_booking_draft_atomic(p_traveler_id uuid, p_activity_plan_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_timezone text, p_participants integer, p_source_channel text, p_contact_name text, p_contact_phone text, p_contact_email text, p_customer_note text, p_conflict_override_id uuid, p_conflict_override_snapshot jsonb, p_correlation_id text, p_payment_deadline_at timestamp with time zone)",
+          "supabase_admin",
+          "postgres",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "fn_create_booking_draft_atomic(p_traveler_id uuid, p_activity_plan_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_timezone text, p_participants integer, p_source_channel text, p_contact_name text, p_contact_phone text, p_contact_email text, p_customer_note text, p_conflict_override_id uuid, p_conflict_override_snapshot jsonb, p_correlation_id text, p_payment_deadline_at timestamp with time zone)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "fn_create_booking_draft_atomic(p_traveler_id uuid, p_activity_plan_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_timezone text, p_participants integer, p_source_channel text, p_contact_name text, p_contact_phone text, p_contact_email text, p_customer_note text, p_conflict_override_id uuid, p_conflict_override_snapshot jsonb, p_correlation_id text, p_payment_deadline_at timestamp with time zone)",
+          "supabase_admin",
+          "service_role",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "fn_create_booking_draft_atomic(p_traveler_id uuid, p_activity_plan_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_timezone text, p_participants integer, p_source_channel text, p_contact_name text, p_contact_phone text, p_contact_email text, p_customer_note text, p_conflict_override_id uuid, p_conflict_override_snapshot jsonb, p_correlation_id text, p_payment_deadline_at timestamp with time zone)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "fn_create_booking_draft_atomic(p_traveler_id uuid, p_activity_plan_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_timezone text, p_participants integer, p_source_channel text, p_contact_name text, p_contact_phone text, p_contact_email text, p_customer_note text, p_conflict_override_id uuid, p_conflict_override_snapshot jsonb, p_correlation_id text, p_payment_deadline_at timestamp with time zone)",
+          "supabase_admin",
+          "supabase_admin",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "fn_create_booking_draft_atomic(p_traveler_id uuid, p_activity_plan_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_timezone text, p_participants integer, p_source_channel text, p_contact_name text, p_contact_phone text, p_contact_email text, p_customer_note text, p_conflict_override_id uuid, p_conflict_override_snapshot jsonb, p_correlation_id text, p_payment_deadline_at timestamp with time zone)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
           "fn_create_external_hold(p_schedule_id uuid, p_count integer, p_guide_id uuid, p_activity_plan_id uuid, p_note text, p_actor_user_id uuid)",
           "postgres",
           "PUBLIC",
@@ -116859,6 +116942,19 @@
           "p_payout_id uuid, p_confirmed_by text, p_transfer_ref text"
         ],
         "object": "fn_confirm_payout_atomic(p_payout_id uuid, p_confirmed_by text, p_transfer_ref text)",
+        "objectType": "routine",
+        "owner": "supabase_admin",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "owner",
+          "routine",
+          "public",
+          "fn_create_booking_draft_atomic",
+          "p_traveler_id uuid, p_activity_plan_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_timezone text, p_participants integer, p_source_channel text, p_contact_name text, p_contact_phone text, p_contact_email text, p_customer_note text, p_conflict_override_id uuid, p_conflict_override_snapshot jsonb, p_correlation_id text, p_payment_deadline_at timestamp with time zone"
+        ],
+        "object": "fn_create_booking_draft_atomic(p_traveler_id uuid, p_activity_plan_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_timezone text, p_participants integer, p_source_channel text, p_contact_name text, p_contact_phone text, p_contact_email text, p_customer_note text, p_conflict_override_id uuid, p_conflict_override_snapshot jsonb, p_correlation_id text, p_payment_deadline_at timestamp with time zone)",
         "objectType": "routine",
         "owner": "supabase_admin",
         "schema": "public"

@@ -86,11 +86,16 @@ test('wrapper 契約：三通道（email + LINE + Telegram）、best-effort、or
   assert.match(src, /if \(!ctx\?\.guideEmail\) return/);
 });
 
-test('draft route 契約：request 建單後 fire 導遊通知（requiresGuideApproval 分流）', () => {
-  // route 已達 ratchet 行數天花板 → 接線經 checkout/booking-draft-post-create-notify 扇出。
+test('draft route 契約：request 建單 commit/read-back 後才 fire 導遊通知', () => {
+  // #1811：route 只把 requiresApproval 交給 materialization 協調器；協調器完成
+  // atomic commit 與最終 read-back 後，才接既有 fan-out。
   const src = read('app/api/v2/bookings/draft/route.ts');
-  assert.match(src, /fireDraftPostCreateNotifications/);
+  assert.match(src, /materializeDraftBookingOrder/);
   assert.match(src, /requiresApproval: requiresGuideApproval\(planData\.booking_type\)/);
+  const orchestration = read('src/lib/checkout/booking-order-materialization.mjs');
+  assert.match(orchestration, /const persistedFinal = await readBack/);
+  assert.match(orchestration, /await notify\(\{/);
+  assert.match(orchestration, /totalTwd: persistedFinal\.totalTwd/);
   const fanout = read('src/lib/checkout/booking-draft-post-create-notify.ts');
   assert.match(fanout, /if \(input\.requiresApproval\)[\s\S]*notifyBookingApprovalRequested/);
 });

@@ -17,6 +17,13 @@ test('Midao baseline E2E workflow is PR-triggered, bounded, and uses Node 22', (
   assert.match(source, /node-version:\s*'22\.23\.1'/u);
   assert.match(source, /concurrency:/u);
   assert.match(source, /cancel-in-progress:\s*true/u);
+  assert.match(source, /Generate ephemeral guide session secret/u);
+  assert.match(source, /randomBytes\(32\)/u);
+  assert.match(source, /::add-mask::%s/u);
+  assert.match(source, /GUIDE_SESSION_SECRET=%s/u);
+  assert.match(source, /GITHUB_ENV/u);
+  assert.doesNotMatch(source, /fetch-depth:\s*0/u);
+  assert.doesNotMatch(source, /GUIDE_SESSION_SECRET:\s*\S+/u);
 });
 
 test('CI provisions only the digest-bound Supabase CLI and required Docker images', () => {
@@ -58,4 +65,47 @@ test('CI runs the decision RPC runtime lane serially with redacted artifact meta
   assert.match(source, /if:\s+failure\(\)/u);
   assert.match(source, /midao-baseline-e2e-/u);
   assert.doesNotMatch(source, /DATABASE_URL\s*[:=]|SUPABASE_SERVICE_ROLE_KEY\s*[:=]/u);
+});
+
+test('CI records the #1811 transaction runtime result before expected-terminal artifact promotion', () => {
+  const source = workflowSource();
+  const redStep = 'Prove #1811 public required-write fault was RED on the historical sequential writer (auth shim)';
+  const greenStep = 'Run #1811 booking-order transaction PostgreSQL and PostgREST runtime contract';
+  const runtimeCommand = /timeout --signal=TERM --kill-after=30s 1200s(?:\s*\\)?\s+node scripts\/testing\/with-midao-local-supabase\.mjs --postgrest(?:\s*\\)?\s+apps\/web\/tests\/integration\/midao-issue1811-order-transaction-postgrest\.test\.mjs/gu;
+  assert.match(source, /268f2356cf809548800ecbb2b197b7c12cd5f461/u);
+  assert.match(source, /434ca5e8bd8f3a983cfb8eff83f15dc517f46cb1ac9ef06510441259672c4818/u);
+  assert.match(source, /879836f27c4ab33621a7b3220a35291ceb3574b2cc0f43980778c845ae835746/u);
+  assert.match(source, /github\.event\.pull_request\.number == 1818/u);
+  assert.match(source, /github\.head_ref == 'agent\/issue-1811-order-transaction'/u);
+  assert.match(source, /git fetch --no-tags --depth=20 origin "refs\/heads\/\$GITHUB_HEAD_REF"/u);
+  assert.match(source, /test "\$\(git rev-parse FETCH_HEAD\)" = "\$PR_HEAD_SHA"/u);
+  assert.match(source, /git merge-base --is-ancestor "\$red_commit" FETCH_HEAD/u);
+  assert.match(source, /historical RED compatibility: current baseline grants reject legacy anon table writes/u);
+  assert.match(source, /const legacyClient = '    const supabase = await createClient\(\);'/u);
+  assert.match(source, /const legacyWriteMarker = '    \/\/ 6\. Create booking \(draft status\)'/u);
+  assert.match(source, /clientOccurrences !== 1 \|\| writeMarkerOccurrences !== 1/u);
+  assert.match(source, /Historical RED authorization compatibility shim \(ephemeral loopback only\)/u);
+  assert.match(source, /supabase = await getSupabase\(\);/u);
+  assert.match(source, /historical sequential-writer mutation witness reproduced/u);
+  assert.match(source, /ISSUE1811_PUBLIC_RED_PROBE=1/u);
+  assert.match(source, /ISSUE1811_PUBLIC_RED_PROBE:\s*'0'/u);
+  assert.match(source, /ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_RED/u);
+  assert.match(source, /ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_REACHED/u);
+  assert.match(
+    source,
+    /ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_RESULT:\{"status":200,"success":true,"errorCode":null,"hasBookingId":true,"hasOrderId":true,"counts":\{"bookings":1,"orders":1,"items":0,"statusLogs":1\}\}/u,
+  );
+  assert.match(source, /ISSUE1811_ORDER_ITEMS_BOOM\|public draft route fails closed\|AssertionError/u);
+  assert.match(source, /test "\$status" -ne 1/u);
+  assert.match(source, /git diff --exit-code -- "\$route"/u);
+  assert.equal(source.match(runtimeCommand)?.length, 2, 'the same public runtime file must run once RED and once GREEN');
+  assert.ok(
+    source.indexOf(redStep) < source.indexOf(greenStep),
+    '#1811 historical public behavior must be proven RED before the current route runs GREEN',
+  );
+  assert.ok(
+    source.indexOf(greenStep)
+      < source.indexOf('Verify deterministic expected-terminal artifacts are committed'),
+    '#1811 runtime contract must run before the intentionally stale artifact diff gate',
+  );
 });

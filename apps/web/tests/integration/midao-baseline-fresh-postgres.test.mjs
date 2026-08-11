@@ -29,6 +29,7 @@ const expectedHistory = [
   '20260806090000',
   '20260806091000',
   '20260806120000',
+  '20260810033421',
 ];
 let client;
 before(async () => {
@@ -37,7 +38,7 @@ before(async () => {
 });
 after(async () => { await client?.end(); });
 
-test('fresh install records one synthetic baseline marker and all 23 post-cutoff migrations', async () => {
+test('fresh install records one synthetic baseline marker and all 24 post-cutoff migrations', async () => {
   const { rows } = await client.query('SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version');
   assert.deepEqual(rows.map(({ version }) => version), expectedHistory);
   assert.equal(rows[0].name, 'baseline_v1');

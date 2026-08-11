@@ -20,11 +20,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP = join(__dirname, '../..');
 const read = (rel) => readFileSync(join(APP, rel), 'utf8');
 
-test('draft route 以 initialPaymentDeadlineForBookingType 寫 payment_deadline_at', () => {
+test('draft route 以 initialPaymentDeadlineForBookingType 交給 atomic materializer 寫 payment_deadline_at', () => {
   const src = read('app/api/v2/bookings/draft/route.ts');
-  // 起算值由 initialPaymentDeadlineForBookingType 算出後寫入 order（#1493 之三 refactor 為具名變數）。
+  // 起算值由 initialPaymentDeadlineForBookingType 算出後交給 #1811 RPC gateway。
   assert.match(src, /const paymentDeadlineAt = initialPaymentDeadlineForBookingType/);
-  assert.match(src, /payment_deadline_at:\s*paymentDeadlineAt/);
+  assert.match(src, /materializeDraftBookingOrder\(\{[\s\S]*paymentDeadlineAt,/);
+  const gateway = read('src/lib/checkout/db-booking-order-materialization.mjs');
+  assert.match(gateway, /p_payment_deadline_at:\s*input\.paymentDeadlineAt/);
 });
 
 test('listMyOrdersDb / listAdminOrdersDb 序列化 paymentDeadlineAt 且 select 帶欄位', () => {

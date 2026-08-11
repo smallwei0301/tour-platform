@@ -34,6 +34,8 @@ test('available-slots route contract smoke: has validation + success/error envel
 
 test('booking draft route contract smoke: has validation + stateful errors + success envelope', async () => {
   const src = await readRoute('app/api/v2/bookings/draft/route.ts');
+  const materializer = await readRoute('src/lib/checkout/booking-order-materialization.mjs');
+  const gateway = await readRoute('src/lib/checkout/db-booking-order-materialization.mjs');
 
   assert.match(src, /export\s+async\s+function\s+POST\s*\(/);
   assert.match(src, /parseAndValidateBody\(/);
@@ -46,7 +48,11 @@ test('booking draft route contract smoke: has validation + stateful errors + suc
   assert.match(src, /successV2\(/);
   assert.match(src, /bookingId:/);
   assert.match(src, /orderId:/);
-  assert.match(src, /from\('order_items'\)\.insert\([\s\S]*booking_id:\s*bookingInsert\.id/);
+  assert.match(src, /materializeDraftBookingOrder\(/);
+  assert.match(materializer, /createBookingDraftAtomicDb/);
+  assert.match(materializer, /const persistedFinal = await readBack/);
+  assert.match(gateway, /client\.rpc\(RPC_NAME/);
+  assert.match(gateway, /items:order_items!order_items_order_id_fkey/);
 });
 
 test('checkout route contract smoke: has bookingId validation + provider flow + success envelope', async () => {

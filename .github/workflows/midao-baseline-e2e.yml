@@ -45,6 +45,14 @@ jobs:
           node-version: '22.23.1'
           cache: npm
 
+      - name: Generate ephemeral guide session secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          guide_session_secret="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))')"
+          printf '::add-mask::%s\n' "$guide_session_secret"
+          printf 'GUIDE_SESSION_SECRET=%s\n' "$guide_session_secret" >> "$GITHUB_ENV"
+
       - name: Install dependencies
         run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
 
@@ -132,6 +140,107 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      # Keep the transaction contract ahead of the committed-artifact diff gate so
+      # a migration PR records the behavioral RED/GREEN result even while its newly
+      # generated expected-terminal artifact is still awaiting promotion.
+      - name: 'Prove #1811 public required-write fault was RED on the historical sequential writer (auth shim)'
+        if: ${{ github.event.pull_request.number == 1818 && github.head_ref == 'agent/issue-1811-order-transaction' }}
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          red_commit='268f2356cf809548800ecbb2b197b7c12cd5f461'
+          historical_route_sha='434ca5e8bd8f3a983cfb8eff83f15dc517f46cb1ac9ef06510441259672c4818'
+          shimmed_route_sha='879836f27c4ab33621a7b3220a35291ceb3574b2cc0f43980778c845ae835746'
+          route='apps/web/app/api/v2/bookings/draft/route.ts'
+          backup="$(mktemp /tmp/issue1811-route.XXXXXX)"
+          output="$(mktemp /tmp/issue1811-red-output.XXXXXX)"
+          cleanup() {
+            cp -- "$backup" "$route"
+            rm -f -- "$backup" "$output"
+          }
+          cp -- "$route" "$backup"
+          trap cleanup EXIT
+          git fetch --no-tags --depth=20 origin "refs/heads/$GITHUB_HEAD_REF"
+          test "$(git rev-parse FETCH_HEAD)" = "$PR_HEAD_SHA"
+          git merge-base --is-ancestor "$red_commit" FETCH_HEAD
+          git cat-file -e "$red_commit:$route"
+          git show "$red_commit:$route" > "$route"
+          test "$(sha256sum "$route" | cut -d ' ' -f 1)" = "$historical_route_sha"
+
+          # The current baseline intentionally revokes direct bookings/orders DML
+          # from anon/authenticated. The historical route predates its service-role
+          # gateway, so use the ephemeral loopback service role only to reach and
+          # isolate the historical sequential-write behavior under test.
+          ROUTE_PATH="$route" node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+
+          const route = process.env.ROUTE_PATH;
+          if (!route) throw new Error('missing historical route path');
+          const source = readFileSync(route, 'utf8');
+          const legacyClient = '    const supabase = await createClient();';
+          const legacyWriteMarker = '    // 6. Create booking (draft status)';
+          const clientOccurrences = source.split(legacyClient).length - 1;
+          const writeMarkerOccurrences = source.split(legacyWriteMarker).length - 1;
+          if (clientOccurrences !== 1 || writeMarkerOccurrences !== 1) {
+            throw new Error(
+              `historical compatibility seams changed: client=${clientOccurrences}, write=${writeMarkerOccurrences}`,
+            );
+          }
+          const compatibilityWriteMarker = [
+            '    // Historical RED authorization compatibility shim (ephemeral loopback only).',
+            '    supabase = await getSupabase();',
+            '',
+            legacyWriteMarker,
+          ].join('\n');
+          writeFileSync(
+            route,
+            source
+              .replace(legacyClient, '    let supabase = await createClient();')
+              .replace(legacyWriteMarker, compatibilityWriteMarker),
+          );
+          NODE
+          test "$(sha256sum "$route" | cut -d ' ' -f 1)" = "$shimmed_route_sha"
+          printf '%s\n' \
+            'historical RED compatibility: current baseline grants reject legacy anon table writes; using only the ephemeral loopback service role'
+
+          set +e
+          ISSUE1811_PUBLIC_RED_PROBE=1 \
+            timeout --signal=TERM --kill-after=30s 1200s \
+            node scripts/testing/with-midao-local-supabase.mjs --postgrest \
+            apps/web/tests/integration/midao-issue1811-order-transaction-postgrest.test.mjs \
+            >"$output" 2>&1
+          status=$?
+          set -e
+
+          grep -E \
+            'ISSUE1811_PUBLIC_|ISSUE1811_ORDER_ITEMS_BOOM|public draft route fails closed|AssertionError|failureType:|error:|bookings:|orders:|items:|statusLogs:|ERR_[A-Z_]+' \
+            "$output" || true
+          if test "$status" -ne 1; then
+            printf 'historical public RED probe exited %s; expected the test runner to exit 1\n' "$status"
+            exit 1
+          fi
+          grep -F 'ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_REACHED' "$output"
+          grep -F \
+            'ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_RESULT:{"status":200,"success":true,"errorCode":null,"hasBookingId":true,"hasOrderId":true,"counts":{"bookings":1,"orders":1,"items":0,"statusLogs":1}}' \
+            "$output"
+          grep -F -C 8 'ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_RED' "$output"
+          cp -- "$backup" "$route"
+          git diff --exit-code -- "$route"
+          rm -f -- "$backup" "$output"
+          trap - EXIT
+          printf 'historical sequential-writer mutation witness reproduced at the public HTTP seam with an authorization compatibility shim (commit=%s, exit=%s)\n' \
+            "$red_commit" "$status"
+
+      - name: 'Run #1811 booking-order transaction PostgreSQL and PostgREST runtime contract'
+        env:
+          ISSUE1811_PUBLIC_RED_PROBE: '0'
+        run: >-
+          timeout --signal=TERM --kill-after=30s 1200s
+          node scripts/testing/with-midao-local-supabase.mjs --postgrest
+          apps/web/tests/integration/midao-issue1811-order-transaction-postgrest.test.mjs
+
       - name: Verify deterministic expected-terminal artifacts are committed
         shell: bash
         run: |
@@ -149,7 +258,6 @@ jobs:
       - name: Run Midao baseline infrastructure contracts
         env:
           NODE_ENV: test
-          GUIDE_SESSION_SECRET: ci-guide-session-secret-0123456789abcdef
         run: timeout --signal=TERM --kill-after=30s 600s node scripts/testing/run-ordinary-web-tests.mjs --portable-infrastructure
 
       - name: Run Task14 PostgreSQL and PostgREST request contracts
