@@ -206,6 +206,31 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
     headers: commandHeaders(traveler, `midao-api-chain-checkout-before-${bookingId}`),
     body: JSON.stringify({ provider: 'transfer' }),
   });
+  if (beforeAcceptance.status !== 409) {
+    // Root-cause probe: is the booking actually absent, or is the checkout
+    // route's low-privilege read denied by post-#1678 grants? Query the same
+    // row two ways and report only counts/status (no secrets, no ids).
+    const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const anonKey = process.env.SUPABASE_ANON_KEY || '';
+    const restUrl = `${supabaseUrl.origin}/rest/v1/bookings?id=eq.${bookingId}&select=id,status,traveler_id,order_id`;
+    let svcCount = 'skip';
+    let anonCount = 'skip';
+    let svcStatus = 'skip';
+    let anonStatus = 'skip';
+    if (svcKey) {
+      const r = await fetch(restUrl, { headers: { apikey: svcKey, authorization: `Bearer ${svcKey}` } });
+      svcStatus = String(r.status);
+      const rows = await r.json().catch(() => null);
+      svcCount = Array.isArray(rows) ? String(rows.length) : 'nonarray';
+    }
+    if (anonKey) {
+      const r = await fetch(restUrl, { headers: { apikey: anonKey, authorization: `Bearer ${anonKey}` } });
+      anonStatus = String(r.status);
+      const rows = await r.json().catch(() => null);
+      anonCount = Array.isArray(rows) ? String(rows.length) : 'nonarray';
+    }
+    console.error('CHECKOUT_BEFORE_DEBUG', beforeAcceptance.status, 'BODY', JSON.stringify(beforeAcceptance.body), 'SVC_QUERY', `status=${svcStatus}_rows=${svcCount}`, 'ANON_QUERY', `status=${anonStatus}_rows=${anonCount}`, 'TRAVELER_COOKIE_NAMES', traveler.jar.header().split('; ').map((p) => p.split('=')[0]).join(','));
+  }
   assert.equal(beforeAcceptance.status, 409);
   assert.equal(beforeAcceptance.body?.error?.code, 'TRAVELER_CONFIRMATION_REQUIRED');
 
