@@ -1,16 +1,16 @@
 # issue1811 — 以 transaction 與 orders.total_twd 固化訂單可付款金額
-> 最後更新：2026-08-10 14:19（Asia/Taipei）｜負責 session：Codex／2026-08-10
+> 最後更新：2026-08-11 08:34（Asia/Taipei）｜負責 session：Codex／2026-08-11
 
 ## 目標
 讓基本 Booking、Order、Order item 與 `orders.total_twd` 在單一資料庫 transaction 內全有或全無，成功後以 commit 後重新讀取的持久化總額回應，失敗時不產生可付款或成功通知結果。
 
 ## AC 清單
-- [ ] AC1 先以公開建立入口／runtime contract 建立真實 RED regression，再做 minimal GREEN；核心證據不是 source-string assertion。
-- [ ] AC2 基本合法建立時 Booking、Order、Order item 與 `orders.total_twd` 同時存在且可核對，API 金額等於 commit 後 read-back。
-- [ ] AC3 每個可測必要寫入失敗或 transaction 中斷均完整 rollback，不回 Order ID、付款連結或成功通知。
-- [ ] AC4 client 提供的總額無法覆寫伺服器計算與持久化總額，Order item 可核對總和等於 `orders.total_twd`。
-- [ ] AC5 留下可供 #1812–#1815 重用的 transaction／integration contract，且不提前實作其加購、點數或冪等責任。
-- [ ] AC6 targeted、typecheck、完整 suite、isolated review 與 CI 結果均記錄實際 command／SHA；無 production side effect。
+- [x] AC1 先以公開建立入口／runtime contract 建立真實 RED regression，再做 minimal GREEN；核心證據不是 source-string assertion。
+- [x] AC2 基本合法建立時 Booking、Order、Order item 與 `orders.total_twd` 同時存在且可核對，API 金額等於 commit 後 read-back。
+- [x] AC3 每個可測必要寫入失敗或 transaction 中斷均完整 rollback，不回 Order ID、付款連結或成功通知。
+- [x] AC4 client 提供的總額無法覆寫伺服器計算與持久化總額，Order item 可核對總和等於 `orders.total_twd`。
+- [x] AC5 留下可供 #1812–#1815 重用的 transaction／integration contract，且不提前實作其加購、點數或冪等責任。
+- [x] AC6 targeted、typecheck、完整 suite、isolated review 與 CI 結果均記錄實際 command／SHA；無 production side effect。
 
 ## 已完成（附證據）
 - 2026-08-10 使用者以 operator 指示開始處理包含 #1810 的後續 open issues；live issue 查核確認 #1811 是 P1、`owner:ai-agent`、`agent:next`，且唯一前置條件為 Epic／規格查核。
@@ -41,11 +41,15 @@
 - 2026-08-10 promotion commit 已發布為遠端 `5a6b010d`（tree 與本機 `8534ce92` 精確相同）。Hosted baseline run `31357151239` 全綠：PG17 兩次 deterministic rebuild、#1811 PostgreSQL/PostgREST＋公開 Next runtime、artifact committed diff、portable infrastructure、Task14、Task20B、Midao browser 與 legacy login 全部 success；migration source gate、secret scan、anon RLS 也通過。
 - 2026-08-10 同一 promotion head 的一般 CI run `31357151230` 在 lint、typecheck、migration source gate 通過後，由 7 個既有 regression contract 擋住 Web tests：五個仍以 route 內逐表 `.insert()` source-string 為真值、一個仍期待 production ledger 全 verified、一個仍鎖舊 expected-terminal transaction。產品 runtime 無失敗。測試已改為追蹤 route → atomic gateway → RPC migration，production ledger 精確斷言 #1811 未套用時 `HOLD`，final gate 鎖新 transaction／manifest；五個受影響檔合跑 `pass 52 / fail 0`。本機 Node 24 非 CI 環境初跑完整 suite 為 `5503/5511` 且只剩 5 個 env／TZ-sensitive failures；補齊 workflow 同值與 `TZ=UTC` 後先精準重跑該五項 `pass 12 / fail 0`，再完整重跑為 `pass 5508 / fail 0 / skipped 3`（共 5511）。最終相容性結論仍交由 hosted Node 22，不把本機 Node 24 結果冒充 hosted 綠燈。
 - 2026-08-10 isolated review 指出公開入口尚缺「同一行為測試先實際 RED、再 GREEN」的可稽核證據：初輪 hosted runtime 在 fixture setup 即失敗，不能算產品 RED。Workflow 已新增只限 PR #1818／目前 branch 的 fail-closed 歷史探針，固定遠端 RED commit `268f2356cf809548800ecbb2b197b7c12cd5f461`，僅暫換該版公開 route，沿用目前隔離外部作用的 PG17/PostgREST/Next harness，且只跑同一個 required-write fault HTTP case。測試先以舊 route 的 server log 或目前 route awaited local incident 證明 `ISSUE1811_ORDER_ITEMS_BOOM` trigger 實際到達，再輸出 `ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_REACHED`；workflow 只有同時取得該標記、`ISSUE1811_PUBLIC_REQUIRED_WRITE_FAULT_RED` 行為斷言標記及 runner exit `1` 才接受，setup failure、未觸發 DB fault、timeout 或意外通過都會失敗。成功路徑還原 route 並以 `git diff` 驗證，隨後明確以 probe=0 的目前 route 跑同檔 GREEN；未來 PR 會略過一次性歷史探針。實際 hosted command/result 尚待下一輪，不提前宣稱 RED 已證實。
+- 2026-08-11 最終 head `1f5e47b9cc1fd508bc7587c2ad0232d8868a8021` 的 hosted [midao-baseline-e2e run 31361097834](https://github.com/smallwei0301/tour-platform/actions/runs/31361097834) PASS：同一公開 HTTP required-write fault case 已在固定 historical sequential writer 上實際重現 `200 + partial aggregate` RED，並在目前 atomic writer 上取得 `500 + zero aggregate + zero success notification` GREEN；PG17/PostgREST、deterministic artifact、portable infrastructure、Task14、Task20B、Midao browser 與 legacy login 均 success。
+- 2026-08-11 同一 head 的 [CI run 31361097886](https://github.com/smallwei0301/tour-platform/actions/runs/31361097886) PASS：migration source gate、lint、typecheck、Web full suite、production build、ISR smoke 與 preflight 全部 success；[migration-drift-detect 31361097855](https://github.com/smallwei0301/tour-platform/actions/runs/31361097855)、[secret-scan 31361097884](https://github.com/smallwei0301/tour-platform/actions/runs/31361097884) 與 [anon-rls-probe 31361097885](https://github.com/smallwei0301/tour-platform/actions/runs/31361097885) 亦全部 success。Vercel Preview 狀態為 Ready。
+- 2026-08-11 本輪 read-back／focused 驗證：`NODE_OPTIONS='--test-reporter=tap' .claude/hooks/run-checks.sh apps/web/tests/unit/issue1811-booking-order-materialization.test.mjs apps/web/tests/unit/issue1811-booking-order-db-gateway.test.mjs apps/web/tests/unit/midao-e2e-ci-workflow.test.mjs apps/web/tests/api/v2-route-contract-smoke.test.mjs` → `pass 13 / fail 0`、wrapper exit 0；本機只有 Node 24，因此以 TAP reporter 相容 repo evidence parser，Node 22 的權威結論使用上述 hosted CI。
+- 2026-08-11 最終 Standards／Spec review 完成：逐項檢查 correctness、service-role-only ACL／RLS／secret／PII、#1814 前的 idempotency 邊界、測試誠實度與凍結區；沒有剩餘 P0／P1／P2 finding。`origin/main` 是 head ancestor、PR 無 review thread、`git diff --check` PASS，具備 Ready for review 條件。
 
 ## 下一步
-- 提交並發布 CI regression contract 修正與公開入口 RED 探針，取得歷史 route 同案例 RED、目前 route GREEN，再重跑 hosted Node 22 full CI／build；全部通過且 isolated review 無 blocker 後才可把 Draft 標為 Ready for review。
-- 外部發布與安全例外已獲明確授權；依受控 GitHub App 路徑非強制快轉，發布前後比對 commit/tree，不合併。
-- 新 migration 使 production verified ledger fail closed；production apply／ledger 更新不在本票授權內，維持 HOLD，絕不把 expected-terminal manifest 偽裝成 production apply 證據。
+- 將本 worklog 收尾 commit 發布到 PR #1818，更新 PR／issue 最終錨點並把 Draft 標為 Ready for review；本輪不合併。
+- PR #1818 維持「production migration 未套用」的 release HOLD；review／merge 與後續 production apply／ledger 更新分開決策，不把 expected-terminal manifest 當 production apply 證據。
+- PR #1818 合併後才解除 #1812 的 blocked-by；不提前施工下游票。
 
 ## 絕不重做（Do-NOT-redo）
 - 不修改凍結的 legacy `/api/orders`／`/api/payments`、既有 migration、middleware、Auth、payment callback 或受保護 E2E。
