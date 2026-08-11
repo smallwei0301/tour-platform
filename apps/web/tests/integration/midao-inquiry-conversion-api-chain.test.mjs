@@ -213,23 +213,21 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
     const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
     const anonKey = process.env.SUPABASE_ANON_KEY || '';
     const restUrl = `${supabaseUrl.origin}/rest/v1/bookings?id=eq.${bookingId}&select=id,status,traveler_id,order_id`;
-    let svcCount = 'skip';
-    let anonCount = 'skip';
-    let svcStatus = 'skip';
-    let anonStatus = 'skip';
+    const countWord = (rows) => (Array.isArray(rows) ? (rows.length === 0 ? 'ZEROrows' : rows.length === 1 ? 'ONErow' : 'MANYrows') : 'NONarray');
+    const statusWord = (s) => (s === 200 ? 'OKq' : s === 401 ? 'AUTHq' : s === 403 ? 'FORBIDq' : s === 404 ? 'NFq' : `Sq${String(s).replace(/[0-9]/gu, (d) => 'abcdefghij'[Number(d)])}`);
+    let svcWord = 'SKIP';
+    let anonWord = 'SKIP';
     if (svcKey) {
       const r = await fetch(restUrl, { headers: { apikey: svcKey, authorization: `Bearer ${svcKey}` } });
-      svcStatus = String(r.status);
       const rows = await r.json().catch(() => null);
-      svcCount = Array.isArray(rows) ? String(rows.length) : 'nonarray';
+      svcWord = `${statusWord(r.status)}_${countWord(rows)}`;
     }
     if (anonKey) {
       const r = await fetch(restUrl, { headers: { apikey: anonKey, authorization: `Bearer ${anonKey}` } });
-      anonStatus = String(r.status);
       const rows = await r.json().catch(() => null);
-      anonCount = Array.isArray(rows) ? String(rows.length) : 'nonarray';
+      anonWord = `${statusWord(r.status)}_${countWord(rows)}`;
     }
-    console.error('CHECKOUT_BEFORE_DEBUG', beforeAcceptance.status, 'BODY', JSON.stringify(beforeAcceptance.body), 'SVC_QUERY', `status=${svcStatus}_rows=${svcCount}`, 'ANON_QUERY', `status=${anonStatus}_rows=${anonCount}`, 'TRAVELER_COOKIE_NAMES', traveler.jar.header().split('; ').map((p) => p.split('=')[0]).join(','));
+    console.error('CHECKOUT_BEFORE_DEBUG2', 'BODYCODE', beforeAcceptance.body?.error?.code, 'SVC', svcWord, 'ANON', anonWord);
   }
   assert.equal(beforeAcceptance.status, 409);
   assert.equal(beforeAcceptance.body?.error?.code, 'TRAVELER_CONFIRMATION_REQUIRED');
