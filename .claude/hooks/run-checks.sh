@@ -9,6 +9,8 @@
 set -o pipefail
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 [[ -z "$root" ]] && { echo "找不到 repo root" >&2; exit 1; }
+runner="$root/scripts/toolchain/tp-node22.sh"
+"$runner" --check
 mkdir -p "$root/.claude/state"
 outfile="$root/.claude/state/last-checks.json"
 logfile="$root/.claude/state/last-checks.log"
@@ -34,8 +36,8 @@ cmd_desc=""
 : > "$logfile"
 
 if (( run_all )); then
-  cmd_desc="npm test"
-  (cd "$root" && npm test) 2>&1 | tee -a "$logfile" || status=$?
+  cmd_desc="scripts/toolchain/tp-node22.sh -- npm test"
+  (cd "$root" && "$runner" -- npm test) 2>&1 | tee -a "$logfile" || status=$?
 else
   # 展開 glob（呼叫方若用引號包住 pattern，這裡補展開）；零匹配 = 硬失敗，防假綠燈
   expanded=()
@@ -49,8 +51,8 @@ else
       exit 1
     fi
   done
-  cmd_desc="node --test ${expanded[*]}"
-  (cd "$root" && node --test "${expanded[@]}") 2>&1 | tee -a "$logfile" || status=$?
+  cmd_desc="scripts/toolchain/tp-node22.sh -- node --test --test-reporter=tap ${expanded[*]}"
+  (cd "$root" && "$runner" -- node --test --test-reporter=tap "${expanded[@]}") 2>&1 | tee -a "$logfile" || status=$?
   # node --test 對 0 個測試回 exit 0——0 個測試不是綠燈，是沒測
   ran=$(grep -oE '^# tests [0-9]+' "$logfile" | tail -1 | grep -oE '[0-9]+')
   if [[ "$status" == "0" && ( -z "$ran" || "$ran" == "0" ) ]]; then
@@ -60,8 +62,8 @@ else
 fi
 
 if (( do_type )) && (( status == 0 )); then
-  cmd_desc="$cmd_desc && npm run typecheck"
-  (cd "$root" && npm run typecheck) 2>&1 | tee -a "$logfile" || status=$?
+  cmd_desc="$cmd_desc && scripts/toolchain/tp-node22.sh -- npm run typecheck"
+  (cd "$root" && "$runner" -- npm run typecheck) 2>&1 | tee -a "$logfile" || status=$?
 fi
 
 # 摘要：頭尾各 15 行（偽造證據需連輸出都編，墊高造假成本；verifier 仍須重跑）

@@ -2,14 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(curl:*api.vercel.com*)",
-      "Bash(node --test:*)",
-      "Bash(npm test:*)",
-      "Bash(npm run typecheck:*)",
-      "Bash(npm run lint:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(.claude/hooks/run-checks.sh:*)",
+      "Bash(scripts/toolchain/tp-node22.sh:*)",
       "mcp__Supabase__execute_sql"
     ],
     "deny": [
