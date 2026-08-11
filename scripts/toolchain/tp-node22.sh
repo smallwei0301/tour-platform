@@ -36,10 +36,22 @@ case "${1:-}" in
     shift
     [[ $# -ge 1 ]] || fail 'missing command after --'
     case "$1" in
-      node|npm|npx) ;;
+      node)
+        exec "$@"
+        ;;
+      npm)
+        if [[ $# -eq 2 && ( "$2" == '--version' || "$2" == 'test' ) ]] ||
+          [[ $# -eq 3 && "$2" == 'run' && "$3" == 'typecheck' ]]; then
+          exec "$@"
+        fi
+        fail 'unsupported npm/npx command'
+        ;;
+      npx)
+        [[ $# -eq 2 && "$2" == '--version' ]] || fail 'unsupported npm/npx command'
+        exec "$@"
+        ;;
       *) fail "unsupported command: $1" ;;
     esac
-    exec "$@"
     ;;
   *)
     fail 'usage: tp-node22.sh --check | -- <node|npm|npx command...>'

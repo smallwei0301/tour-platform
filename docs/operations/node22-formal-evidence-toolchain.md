@@ -38,6 +38,8 @@ scripts/toolchain/tp-node22.sh -- npm --version
 scripts/toolchain/tp-node22.sh -- npx --version
 ```
 
+`npm` 與 `npx` 採完整命令 shape 的 fail-closed allowlist：僅允許 `npm --version`、`npm test`、`npm run typecheck` 與 `npx --version`，且不得追加其他參數。其餘 `npm`／`npx` 呼叫一律在 `exec` 前拒絕；這包括 `npx -y node@22 ...`、`npx --yes node@22 ...`、`npm exec --package=node@22 node ...` 與以分離 `--package node@22` 表示的等價形式。此限制防止 registry 套件下載或執行替代的 Node runtime。
+
 請勿直接以 host `node`、`npm` 或 `npx` 產生正式證據。`.claude/settings.json` 只允許這個固定入口與 `run-checks.sh` 作為 Agent 的正式測試通道。
 
 ## Rollback 與授權界線
