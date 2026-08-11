@@ -102,25 +102,36 @@ export async function POST(
   try {
     const supabase = await createClient();
 
+    // SSR client is intentionally limited to resolving the signed-in traveler.
+    // bookings/orders/booking_status_logs are service_role-only after #1678,
+    // so authorization is enforced below before any privileged data access.
+    const { data: { user: traveler } } = await supabase.auth.getUser().catch(() => ({
+      data: { user: null },
+    }));
+    if (!traveler) {
+      return Response.json(errorV2('NOT_FOUND', 'Booking not found'), { status: 404 });
+    }
+
     // Service-role client for privileged payment tables.
     // `payments` / `payment_events` had their anon/authenticated grants revoked
     // in issue #614 (migration 20260519120000) and are now service_role-only.
-    // The anon SSR `supabase` client above stays in charge of traveler-scoped
-    // authorization (RLS on bookings/orders); payment-table reads/writes must go
-    // through `paymentDb` or Postgres returns "permission denied for table payments".
+    // payment-table reads/writes must go through `paymentDb` or Postgres returns
+    // "permission denied for table payments".
     const { createClient: createServiceClient } = await import('@supabase/supabase-js');
     const paymentDb = createServiceClient(
       getSupabaseUrl()!,
       getSupabaseServiceRoleKey()!
     );
+    const privilegedDb = paymentDb;
 
     // 1. Fetch booking and verify status
-    const { data: booking, error: bookingError } = await supabase
+    const { data: booking, error: bookingError } = await privilegedDb
       .from('bookings')
       .select(
         `
         id,
         booking_no,
+        traveler_id,
         status,
         guide_approval_status,
         source_inquiry_id,
@@ -143,7 +154,7 @@ export async function POST(
       .eq('id', bookingId)
       .single();
 
-    if (bookingError || !booking) {
+    if (bookingError || !booking || !booking.traveler_id || booking.traveler_id !== traveler.id) {
       return Response.json(errorV2('NOT_FOUND', 'Booking not found'), { status: 404 });
     }
 
@@ -193,7 +204,7 @@ export async function POST(
     // #1493 部署順序安全：payment_deadline_at 萬一還沒套到正式 DB，退到不含該欄位的
     // select（缺欄位時視為無期限、不擋結帳），避免付款流程整個 500。
     const { data: order, error: orderError } = await selectWithOptionalColumnFallback(
-      (sel: string) => supabase.from('orders').select(sel).eq('id', booking.order_id as string).single(),
+      (sel: string) => privilegedDb.from('orders').select(sel).eq('id', booking.order_id as string).single(),
       [
         'id, status, payment_status, total_twd, contact_name, contact_email, payment_deadline_at',
         'id, status, payment_status, total_twd, contact_name, contact_email',
@@ -236,8 +247,7 @@ export async function POST(
       const svc = paymentDb;
       const controls = await getControls(svc);
       if (controls.new_booking_paused) {
-        const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
-        const userId = user?.id;
+        const userId = traveler.id;
         const allowed = controls.whitelist_enabled ? await isWhitelisted(svc, { userId, activityId: undefined, guideId: undefined }) : false;
         if (!allowed) {
           return Response.json(errorV2('BOOKING_PAUSED', '目前暫停接受新訂單，請稍後再試'), { status: 423 });
@@ -245,7 +255,7 @@ export async function POST(
       }
     }
 
-    const { data: draftAuditLog } = await supabase
+    const { data: draftAuditLog } = await privilegedDb
       .from('booking_status_logs')
       .select('metadata')
       .eq('booking_id', bookingId)
@@ -318,7 +328,7 @@ export async function POST(
         },
       });
 
-      await supabase.from('booking_status_logs').insert({
+      await privilegedDb.from('booking_status_logs').insert({
         booking_id: bookingId,
         from_status: 'draft',
         to_status: 'draft',
@@ -505,7 +515,7 @@ export async function POST(
     });
 
     // 11. Update booking status log
-    await supabase.from('booking_status_logs').insert({
+    await privilegedDb.from('booking_status_logs').insert({
       booking_id: bookingId,
       from_status: 'draft',
       to_status: 'draft', // Status doesn't change yet
