@@ -19,18 +19,15 @@ test('T1591wire.1 — 加購清單 API 存在（GET，接 listActivityAddonsDb�
   assert.match(src, /listActivityAddonsDb/);
 });
 
-test('T1591wire.2 — #1812 將 addonSelections 收進 atomic materializer；commit 後 extras 不再寫加購', () => {
+test('T1591wire.2 — #1812/#1813 將 addonSelections 與 points 收進同一 atomic materializer', () => {
   const route = read('app/api/v2/bookings/draft/route.ts');
   assert.match(route, /addonSelections/);
   assert.match(route, /materializeDraftBookingOrder\(\{/);
   const orchestration = read('src/lib/checkout/booking-order-materialization.mjs');
-  assert.match(orchestration, /applyOrderExtras/);
-  assert.doesNotMatch(orchestration, /addonSelections: input\.addonSelections/);
+  assert.doesNotMatch(orchestration, /applyOrderExtras/);
   const gateway = read('src/lib/checkout/db-booking-order-materialization.mjs');
   assert.match(gateway, /p_addon_selections: input\.addonSelections \?\? \[\]/);
-  // #1812 後只保留 points 的暫時 seam，避免加購快照在 commit 後寫入。
-  const helper = read('src/lib/checkout/order-extras.mjs');
-  assert.doesNotMatch(helper, /persistOrderAddonsDb/);
+  assert.match(gateway, /p_redeem_points: input\.redeemPoints \?\? 0/);
 });
 
 test('T1591wire.3 — 選購器讀 API＋回報選擇；金額前端只作顯示', () => {

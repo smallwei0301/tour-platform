@@ -10,7 +10,7 @@ import { getSupabase } from '../supabase-env.mjs';
 
 export const BOOKING_DRAFT_RPC_MISSING_CODE = 'BOOKING_DRAFT_RPC_NOT_DEPLOYED';
 
-const RPC_NAME = 'fn_create_booking_draft_with_addons_atomic';
+const RPC_NAME = 'fn_create_booking_draft_with_addons_and_points_atomic';
 const MATERIALIZATION_SELECT = `
   id,
   booking_id,
@@ -18,6 +18,7 @@ const MATERIALIZATION_SELECT = `
   status,
   payment_status,
   total_twd,
+  discount_amount,
   payment_deadline_at,
   booking:bookings!orders_booking_id_fkey(
     id,
@@ -45,6 +46,14 @@ const MATERIALIZATION_SELECT = `
     quantity,
     unit_price_twd,
     subtotal_twd
+  ),
+  point_ledger:user_points_ledger!user_points_ledger_order_id_fkey(
+    id,
+    user_id,
+    delta,
+    reason,
+    order_id,
+    expires_at
   )
 `;
 
@@ -73,6 +82,7 @@ function isMissingFunctionError(error) {
 }
 
 const ADDON_INPUT_ERROR_CODES = new Set(['ADDON_UNAVAILABLE', 'ADDON_SELECTIONS_INVALID']);
+const POINTS_INPUT_ERROR_CODES = new Set(['POINTS_UNAVAILABLE']);
 
 /** @param {any} error */
 function addonInputError(error) {
@@ -86,10 +96,21 @@ function addonInputError(error) {
   return wrapped;
 }
 
+/** @param {any} error */
+function pointsInputError(error) {
+  const code = String(error?.message ?? '').trim();
+  if (!POINTS_INPUT_ERROR_CODES.has(code)) return null;
+  const wrapped = /** @type {Error & {code?: string}} */ (new Error(code));
+  wrapped.code = code;
+  return wrapped;
+}
+
 /** @param {any} error @param {string} fallbackMessage @returns {Error & {code?: string}} */
 function databaseError(error, fallbackMessage) {
   const addonError = addonInputError(error);
   if (addonError) return addonError;
+  const pointsError = pointsInputError(error);
+  if (pointsError) return pointsError;
   if (isMissingFunctionError(error)) {
     const missing = /** @type {Error & {code?: string}} */ (new Error(
       `${BOOKING_DRAFT_RPC_MISSING_CODE}: 原子建單 RPC 尚未套用，已停止以避免非原子資料。`,
@@ -107,6 +128,13 @@ export function isAddonInputError(error) {
   return !!error
     && typeof error === 'object'
     && ADDON_INPUT_ERROR_CODES.has(String(/** @type {any} */ (error).code ?? ''));
+}
+
+/** @param {unknown} error */
+export function isPointsInputError(error) {
+  return !!error
+    && typeof error === 'object'
+    && POINTS_INPUT_ERROR_CODES.has(String(/** @type {any} */ (error).code ?? ''));
 }
 
 /**
@@ -140,6 +168,7 @@ function integer(value, label, { min = 0 } = {}) {
  * @param {string} input.correlationId
  * @param {string|null} input.paymentDeadlineAt
  * @param {unknown} input.addonSelections
+ * @param {number|undefined} input.redeemPoints
  * @param {any} [supabase]
  */
 export async function createBookingDraftAtomicDb(input, supabase) {
@@ -161,6 +190,7 @@ export async function createBookingDraftAtomicDb(input, supabase) {
     p_correlation_id: input.correlationId,
     p_payment_deadline_at: input.paymentDeadlineAt,
     p_addon_selections: input.addonSelections ?? [],
+    p_redeem_points: input.redeemPoints ?? 0,
   });
 
   if (error) throw databaseError(error, `${RPC_NAME} failed`);
@@ -204,8 +234,13 @@ export async function readBackBookingOrderMaterializationDb(
   const addonItems = items.filter((/** @type {any} */ item) => (
     item?.item_type === 'fee' && item?.metadata?.kind === 'addon'
   ));
+  const pointsItems = items.filter((/** @type {any} */ item) => (
+    item?.item_type === 'discount' && item?.metadata?.kind === 'points_redemption'
+  ));
   /** @type {any[]} */
   const addons = Array.isArray(order.addons) ? order.addons : [];
+  /** @type {any[]} */
+  const pointLedger = Array.isArray(order.point_ledger) ? order.point_ledger : [];
 
   if (booking.id !== bookingId || booking.order_id !== orderId || order.booking_id !== bookingId) {
     throw new Error('booking/order reciprocal read-back mismatch');
@@ -229,7 +264,7 @@ export async function readBackBookingOrderMaterializationDb(
   if (activityItems.length !== 1) {
     throw new Error('booking/order read-back must contain exactly one base activity item');
   }
-  if (items.length !== activityItems.length + addonItems.length) {
+  if (items.length !== activityItems.length + addonItems.length + pointsItems.length) {
     throw new Error('booking/order read-back contains an unexpected payable item');
   }
 
@@ -245,6 +280,7 @@ export async function readBackBookingOrderMaterializationDb(
   const unitPrice = integer(baseItem.unit_price, 'base item unit price');
   const baseSubtotal = integer(baseItem.subtotal_amount, 'base item subtotal');
   const totalTwd = integer(order.total_twd, 'order total');
+  const discountAmount = integer(order.discount_amount, 'order discount amount');
   if (quantity * unitPrice !== baseSubtotal) {
     throw new Error('base activity item subtotal is not reconciled');
   }
@@ -252,7 +288,7 @@ export async function readBackBookingOrderMaterializationDb(
     sum + integer(addon?.subtotal_twd, 'addon snapshot subtotal')
   ), 0);
   const itemSubtotal = items.reduce((/** @type {number} */ sum, /** @type {any} */ item) => (
-    sum + integer(item?.subtotal_amount, 'order item subtotal')
+    sum + integer(item?.subtotal_amount, 'order item subtotal', { min: -2147483648 })
   ), 0);
   if (addonItems.length !== addons.length) {
     throw new Error('add-on snapshot and payable item counts do not reconcile');
@@ -273,6 +309,30 @@ export async function readBackBookingOrderMaterializationDb(
     if (itemIndex < 0) throw new Error('add-on snapshot and payable item do not reconcile');
     unusedAddonItems.splice(itemIndex, 1);
   }
+  if (discountAmount === 0) {
+    if (pointsItems.length !== 0 || pointLedger.length !== 0) {
+      throw new Error('zero-discount order must not contain points redemption data');
+    }
+  } else {
+    if (pointsItems.length !== 1 || pointLedger.length !== 1) {
+      throw new Error('points redemption must contain exactly one ledger and discount item');
+    }
+    const pointsItem = pointsItems[0];
+    const ledger = pointLedger[0];
+    if (
+      pointsItem.order_id !== orderId
+      || integer(pointsItem.quantity, 'points item quantity', { min: 1 }) !== 1
+      || integer(pointsItem.unit_price, 'points item unit price', { min: -2147483648 }) !== -discountAmount
+      || integer(pointsItem.subtotal_amount, 'points item subtotal', { min: -2147483648 }) !== -discountAmount
+      || integer(pointsItem?.metadata?.requestedPoints, 'requested points', { min: 1 }) !== discountAmount
+      || integer(pointsItem?.metadata?.redeemedPoints, 'redeemed points', { min: 1 }) !== discountAmount
+      || ledger.order_id !== orderId
+      || ledger.reason !== 'redeem_order'
+      || integer(-Number(ledger.delta), 'redeemed ledger points', { min: 1 }) !== discountAmount
+    ) {
+      throw new Error('points ledger and discount item do not reconcile');
+    }
+  }
   if (requireTotalMatch && itemSubtotal !== totalTwd) {
     throw new Error('payable order items do not reconcile to persisted order total');
   }
@@ -288,6 +348,7 @@ export async function readBackBookingOrderMaterializationDb(
     totalTwd,
     baseSubtotal,
     addonSubtotal,
+    pointsRedeemed: discountAmount,
     paymentDeadlineAt: order.payment_deadline_at ?? null,
   };
 }

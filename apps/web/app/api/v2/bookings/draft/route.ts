@@ -49,7 +49,10 @@ import {
 import { initialPaymentDeadlineForBookingType } from '../../../../../src/lib/payment-deadline.mjs';
 import { dropExpiredUnpaidHolds } from '../../../../../src/lib/expired-hold-filter.mjs';
 import { materializeDraftBookingOrder } from '../../../../../src/lib/checkout/booking-order-materialization.mjs';
-import { isAddonInputError } from '../../../../../src/lib/checkout/db-booking-order-materialization.mjs';
+import {
+  isAddonInputError,
+  isPointsInputError,
+} from '../../../../../src/lib/checkout/db-booking-order-materialization.mjs';
 import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
@@ -397,6 +400,7 @@ interface DraftBookingRequest {
   contactPhone: string;
   contactEmail: string;
   customerNote?: string;
+  redeemPoints: number;
 }
 
 type ActivitySchedule = {
@@ -510,6 +514,19 @@ function parseAndValidateBody(
   const customerNote =
     b.customerNote && typeof b.customerNote === 'string' ? b.customerNote.trim() : undefined;
 
+  let redeemPoints = 0;
+  if (b.redeemPoints !== undefined) {
+    if (
+      typeof b.redeemPoints !== 'number'
+      || !Number.isSafeInteger(b.redeemPoints)
+      || b.redeemPoints < 0
+      || b.redeemPoints > 2_147_483_647
+    ) {
+      return { error: { code: 'VALIDATION_ERROR', message: 'redeemPoints must be a non-negative integer' } };
+    }
+    redeemPoints = b.redeemPoints;
+  }
+
   return {
     data: {
       activityId: b.activityId,
@@ -523,6 +540,7 @@ function parseAndValidateBody(
       contactPhone,
       contactEmail,
       customerNote,
+      redeemPoints,
     },
   };
 }
@@ -1047,9 +1065,9 @@ export async function POST(request: NextRequest) {
       correlationId,
       paymentDeadlineAt,
       requiresApproval: requiresGuideApproval(planData.booking_type),
-      // #1812/#1813 會把這兩個 seam 收進同一 DB transaction；#1811 先保留既有行為。
+      // #1812/#1813 都在同一 DB transaction；前端只提供選擇，不提供付款金額。
       addonSelections: (body as any)?.addonSelections,
-      redeemPoints: (body as any)?.redeemPoints,
+      redeemPoints: data.redeemPoints,
     });
 
     // Return response per API spec
@@ -1081,6 +1099,15 @@ export async function POST(request: NextRequest) {
             message: invalidShape ? '加購選擇格式不正確，請重新選擇' : '所選加購目前無法使用，請重新選擇',
             ...(addonId ? { details: { addonId } } : {}),
           },
+        },
+        { status: 400 },
+      );
+    }
+    if (isPointsInputError(err)) {
+      return Response.json(
+        {
+          success: false,
+          error: { code: 'POINTS_UNAVAILABLE', message: '點數目前無法使用，請重新確認後再試' },
         },
         { status: 400 },
       );
