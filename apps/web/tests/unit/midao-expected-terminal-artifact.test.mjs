@@ -103,9 +103,9 @@ test('published expected terminal verifies capture first and exposes exact PG17 
       onPayloadOpen: (name) => opened.push(name),
     });
     assert.equal(expected.ledger.captureTransactionId, capture.transactionId);
-    assert.equal(expected.manifest.historyVersions.length, 25);
+    assert.equal(expected.manifest.historyVersions.length, expected.manifest.postCutoffMigrations.length + 1);
     assert.equal(expected.manifest.historyVersions[0], '00000000000001');
-    assert.equal(expected.manifest.historyVersions.at(-1), '20260810033421');
+    assert.equal(expected.manifest.historyVersions.at(-1), expected.manifest.postCutoffMigrations.at(-1).filename.slice(0, 14));
     const terminal = expected.payloads.get('catalog.expected-terminal.normalized.json');
     try {
       const catalog = JSON.parse(terminal);
