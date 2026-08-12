@@ -105,7 +105,7 @@ test('terminal bytes are zeroed when validation or history extraction fails', as
   assert.equal(bytes.every((value) => value === 0), true);
 });
 
-test('existing terminal requires all 128 frozen migrations plus the exact 25-entry post-cutoff suffix', async () => {
+test('existing terminal requires all 128 frozen migrations plus the exact 26-entry post-cutoff suffix', async () => {
   const api = await subject();
   const frozen = Array.from({ length: 128 }, (_, index) => ({
     version: (10_000_000_000_000n + BigInt(index)).toString(),
@@ -120,6 +120,7 @@ test('existing terminal requires all 128 frozen migrations plus the exact 25-ent
     '20260806090000', '20260806091000', '20260806120000',
     '20260810033421',
     '20260812150000',
+    '20260812160000',
   ].map((version) => ({ version, name: `midao_${version}` }));
   const result = await api.__internal.extractExistingTerminal('postgresql://postgres:***@127.0.0.1:54322/postgres', {
     extractCatalogFn: async () => ({}),
@@ -127,7 +128,7 @@ test('existing terminal requires all 128 frozen migrations plus the exact 25-ent
     validateFn: () => {},
     useAdminFn: async () => [...frozen, ...postCutoff],
   });
-  assert.equal(result.history.length, 153);
+  assert.equal(result.history.length, 154);
   result.terminalBytes.fill(0);
 
   await assert.rejects(api.__internal.extractExistingTerminal('postgresql://postgres:***@127.0.0.1:54322/postgres', {

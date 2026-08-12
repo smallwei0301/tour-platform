@@ -1555,12 +1555,15 @@ export function parseMidaoRunnerInvocation(args) {
     ? /^apps\/web\/e2e\/[a-z0-9][a-z0-9-]*\.spec\.ts$/u
     : /^apps\/web\/tests\/integration\/midao-[a-z0-9][a-z0-9-]*\.test\.mjs$/u;
   const realAuthSpec = 'apps/web/e2e/midao-inquiry-conversion-chain.spec.ts';
-  const apiRealAuthTest = 'apps/web/tests/integration/midao-inquiry-conversion-api-chain.test.mjs';
+  const apiRealAuthTests = new Set([
+    'apps/web/tests/integration/midao-inquiry-conversion-api-chain.test.mjs',
+    'apps/web/tests/integration/midao-issue1813-points-atomicity-real-auth.test.mjs',
+  ]);
   if (
     (mode !== 'postgres' && childArgs.length === 0)
     || childArgs.some((entry) => !pattern.test(entry))
     || (mode === 'playwright-real-auth' && (childArgs.length !== 1 || childArgs[0] !== realAuthSpec))
-    || (mode === 'api-real-auth' && (childArgs.length !== 1 || childArgs[0] !== apiRealAuthTest))
+    || (mode === 'api-real-auth' && (childArgs.length !== 1 || !apiRealAuthTests.has(childArgs[0])))
   ) {
     throw new Error(`MIDAO_${mode.toUpperCase()}_ARGS_INVALID`);
   }

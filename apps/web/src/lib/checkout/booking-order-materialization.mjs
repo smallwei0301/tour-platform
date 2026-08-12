@@ -2,12 +2,9 @@
 /**
  * Issue #1811 — draft 建單協調器。
  *
- * 順序是 atomic commit（含 #1812 加購）→ 資料 read-back／對帳 → #1813 前暫留的
- * points seam → 最終 read-back → 通知。任何 read-back 失敗一律 fail closed，不發布
- * order ID 或成功通知。
+ * 順序是 atomic commit（含 #1812 加購與 #1813 點數）→ 資料 read-back／對帳 → 通知。
+ * 任何 atomic write 或 read-back 失敗一律 fail closed，不發布 order ID 或成功通知。
  */
-import { getSupabase } from '../supabase-env.mjs';
-import { applyOrderExtras } from './order-extras.mjs';
 import {
   createBookingDraftAtomicDb,
   readBackBookingOrderMaterializationDb,
@@ -26,46 +23,21 @@ async function defaultNotify(input) {
  * @param {{
  *   createAtomic?: (input: any) => Promise<any>,
  *   readBack?: (input: any) => Promise<any>,
- *   applyExtras?: (input: any) => Promise<any>,
  *   notify?: (input: any) => any,
  * }} [deps]
  */
 export async function materializeDraftBookingOrder(input, deps = {}) {
   const createAtomic = deps.createAtomic ?? ((payload) => createBookingDraftAtomicDb(payload));
   const readBack = deps.readBack ?? ((payload) => readBackBookingOrderMaterializationDb(payload));
-  const applyExtras = deps.applyExtras ?? (async (payload) => {
-    const supabase = await getSupabase();
-    return applyOrderExtras({ ...payload, supabase });
-  });
   const notify = deps.notify ?? defaultNotify;
 
   const created = await createAtomic(input);
-  const persistedBase = await readBack({
+  const persistedFinal = await readBack({
     bookingId: created.bookingId,
     orderId: created.orderId,
     expectedActivityId: input.activityId,
     expectedPlanId: input.planId,
     requireTotalMatch: true,
-  });
-
-  const extrasResult = await applyExtras({
-    orderId: persistedBase.orderId,
-    activityId: persistedBase.activityId,
-    participants: input.participants,
-    travelerId: input.travelerId ?? null,
-    totalAmount: persistedBase.totalTwd,
-    redeemPoints: input.redeemPoints,
-  });
-  const hasPointRedemption = Number(extrasResult?.redeemed) > 0;
-
-  const persistedFinal = await readBack({
-    bookingId: persistedBase.bookingId,
-    orderId: persistedBase.orderId,
-    expectedActivityId: persistedBase.activityId,
-    expectedPlanId: persistedBase.planId,
-    // #1812 的 add-on snapshot／fee item 已在 atomic RPC 內完整對帳；只有 #1813
-    // 尚未收進 transaction 的 points 折抵會暫時改變 payable total。
-    requireTotalMatch: !hasPointRedemption,
   });
 
   try {

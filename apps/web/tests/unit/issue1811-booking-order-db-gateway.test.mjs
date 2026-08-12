@@ -21,6 +21,7 @@ function validReadBack(totalTwd = 7400) {
     status: 'pending_payment',
     payment_status: 'pending',
     total_twd: totalTwd,
+    discount_amount: 0,
     payment_deadline_at: '2027-01-16T02:00:00.000Z',
     booking: {
       id: bookingId,
@@ -40,6 +41,8 @@ function validReadBack(totalTwd = 7400) {
       unit_price: 3700,
       subtotal_amount: 7400,
     }],
+    addons: [],
+    point_ledger: [],
   };
 }
 
@@ -74,7 +77,7 @@ test('#1811 atomic gateway never sends a client total and maps missing RPC fail-
     totalTwd: 2,
   }, client);
 
-  assert.equal(observedName, 'fn_create_booking_draft_with_addons_atomic');
+  assert.equal(observedName, 'fn_create_booking_draft_with_addons_and_points_atomic');
   assert.deepEqual(created, { bookingId, orderId });
   assert.equal(
     Object.keys(observedArgs).some((key) => /total|amount/iu.test(key)),
@@ -82,6 +85,7 @@ test('#1811 atomic gateway never sends a client total and maps missing RPC fail-
     'RPC parameters must not contain request-side pricing',
   );
   assert.deepEqual(observedArgs.p_addon_selections, []);
+  assert.equal(observedArgs.p_redeem_points, 0);
 
   await assert.rejects(
     () => createBookingDraftAtomicDb({ planId: 'plan-id' }, {
@@ -121,6 +125,7 @@ test('#1811 commit-after read-back reconciles reciprocal IDs and base item math'
   assert.match(selected, /bookings!orders_booking_id_fkey/);
   assert.match(selected, /order_items!order_items_order_id_fkey/);
   assert.match(selected, /order_addons!order_addons_order_id_fkey/);
+  assert.match(selected, /user_points_ledger!user_points_ledger_order_id_fkey/);
   assert.deepEqual(persisted, {
     bookingId,
     bookingNo: 'BK-1811',
@@ -132,6 +137,7 @@ test('#1811 commit-after read-back reconciles reciprocal IDs and base item math'
     totalTwd: 7400,
     baseSubtotal: 7400,
     addonSubtotal: 0,
+    pointsRedeemed: 0,
     paymentDeadlineAt: '2027-01-16T02:00:00.000Z',
   });
 

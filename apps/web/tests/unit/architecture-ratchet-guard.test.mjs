@@ -68,7 +68,7 @@ function canonicalRoutePath(relPath) {
 // admin/guide availability（1221→631／1218→623）四頁拆解完成、脫離白名單。
 const GOD_FILE_CEILINGS = new Map([
   // 1200→1206：#1591/#1594 加購/點數折抵接線。重邏輯（驗證＋DB 快照重算＋回寫金額，約 85 行）
-  // 已抽到 src/lib/checkout/order-extras.mjs，route 只留 1 import＋1 個 fail-soft helper 呼叫。
+  // #1813 將加購／點數都收進單一 RPC，route 僅保留 public input 與回應接線。
   ['app/api/v2/bookings/draft/route.ts', 1207],
   // 1080→1110：#1591/#1594 加購/點數折抵接線。互動狀態＋兩個選購器已抽到
   // src/components/activity/CheckoutExtrasSection.tsx，頁面殘留＝費用明細顯示行（加購/折抵）＋接線。

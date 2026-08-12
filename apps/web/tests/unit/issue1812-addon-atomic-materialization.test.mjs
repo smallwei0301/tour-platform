@@ -29,7 +29,7 @@ const persisted = {
   paymentDeadlineAt: null,
 };
 
-test('#1812 RED：加購選擇必須在原子 materialization 前傳入，不能交給 commit 後 extras seam', async () => {
+test('#1812：加購選擇必須在原子 materialization 前傳入，不能交給 commit 後 extras seam', async () => {
   const events = [];
   let observedAtomicInput;
 
@@ -44,24 +44,15 @@ test('#1812 RED：加購選擇必須在原子 materialization 前傳入，不能
       assert.equal(readBackInput.requireTotalMatch, true);
       return persisted;
     },
-    applyExtras: async (extrasInput) => {
-      events.push('apply-extras');
-      assert.equal(
-        extrasInput.addonSelections,
-        undefined,
-        '加購不可在 commit 後由 fail-soft extras seam 寫入',
-      );
-      return { totalAmount: persisted.totalTwd, redeemed: 0 };
-    },
     notify: async () => events.push('notify'),
   });
 
   assert.deepEqual(observedAtomicInput.addonSelections, input.addonSelections);
-  assert.deepEqual(events, ['atomic', 'read-back', 'apply-extras', 'read-back', 'notify']);
+  assert.deepEqual(events, ['atomic', 'read-back', 'notify']);
   assert.equal(result.amount, 7_800, '對外金額只能來自 commit 後 read-back');
 });
 
-test('#1812 RED：加購驗證或快照寫入失敗時，不得進入 extras、通知或對外成功結果', async () => {
+test('#1812：加購驗證或快照寫入失敗時，不得進入通知或對外成功結果', async () => {
   const events = [];
   await assert.rejects(
     () => materializeDraftBookingOrder(input, {
@@ -70,7 +61,6 @@ test('#1812 RED：加購驗證或快照寫入失敗時，不得進入 extras、�
         throw Object.assign(new Error('ADDON_UNAVAILABLE'), { code: 'ADDON_UNAVAILABLE' });
       },
       readBack: async () => events.push('read-back'),
-      applyExtras: async () => events.push('apply-extras'),
       notify: async () => events.push('notify'),
     }),
     (error) => error?.code === 'ADDON_UNAVAILABLE',
