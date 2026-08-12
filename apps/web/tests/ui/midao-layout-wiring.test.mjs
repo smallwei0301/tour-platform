@@ -30,12 +30,39 @@ test('four route skeletons stay presentation-only and use the canonical labels',
     ['page.tsx', '首頁'],
     ['requests/page.tsx', '需求'],
     ['calendar/page.tsx', '行事曆'],
-    ['me/page.tsx', '我的頁面'],
   ]);
   for (const [path, label] of routes) {
     const source = read(path);
     assert.ok(source.includes(label), `${path} missing ${label}`);
     assert.doesNotMatch(source, /supabase|getGuideRuntimeAccessDb|fetch\(/iu);
+  }
+});
+
+test('me route composes the C-only static capability-centre shell', () => {
+  const page = read('me/page.tsx');
+  const shell = readFileSync(resolve(root, 'src/features/midao/me/MidaoMeShell.tsx'), 'utf8');
+
+  assert.ok(page.includes("import { MidaoMeShell } from '../../../../src/features/midao/me/MidaoMeShell';"));
+  assert.match(page, /return <MidaoMeShell \/>;/u);
+  assert.equal((page.match(/MidaoMeShell/g) || []).length, 3);
+  assert.match(shell, /<section className="midao-me-screen" aria-labelledby="midao-me-title">/u);
+  assert.match(shell, />我的祕島</u);
+  assert.match(shell, /<h2 id="midao-me-title" className="midao-heading">我的頁面<\/h2>/u);
+  assert.match(shell, /<h3>能力中心<\/h3>/u);
+  assert.ok((shell.match(/<article/g) || []).length > 0, 'shell needs information cards');
+  assert.ok((shell.match(/<article/g) || []).length <= 3, 'shell may have at most three information cards');
+  assert.ok((shell.match(/即將推出/g) || []).length >= (shell.match(/<article/g) || []).length, 'every card must visibly say 即將推出');
+
+  for (const source of [page, shell]) {
+    for (const prohibited of [
+      'fetch(', '/api/', 'supabase', 'getGuideRuntimeAccessDb', 'resolveMidaoPageSession',
+      'useState', 'useEffect', 'useRouter', 'next/navigation', '/midao2', '/guide',
+      'window.', 'location', 'navigator', 'URL', 'share', 'preview', 'QR', 'href',
+      '<button', 'onClick', '<form', 'action=', 'actorId', 'guideName', 'token',
+    ]) {
+      assert.ok(!source.includes(prohibited), `${prohibited} must not appear in C-only source`);
+    }
+    assert.doesNotMatch(source, /<a(?:\s|>)/u);
   }
 });
 
