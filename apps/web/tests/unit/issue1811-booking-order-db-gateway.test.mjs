@@ -74,13 +74,14 @@ test('#1811 atomic gateway never sends a client total and maps missing RPC fail-
     totalTwd: 2,
   }, client);
 
-  assert.equal(observedName, 'fn_create_booking_draft_atomic');
+  assert.equal(observedName, 'fn_create_booking_draft_with_addons_atomic');
   assert.deepEqual(created, { bookingId, orderId });
   assert.equal(
     Object.keys(observedArgs).some((key) => /total|amount/iu.test(key)),
     false,
     'RPC parameters must not contain request-side pricing',
   );
+  assert.deepEqual(observedArgs.p_addon_selections, []);
 
   await assert.rejects(
     () => createBookingDraftAtomicDb({ planId: 'plan-id' }, {
@@ -119,6 +120,7 @@ test('#1811 commit-after read-back reconciles reciprocal IDs and base item math'
   );
   assert.match(selected, /bookings!orders_booking_id_fkey/);
   assert.match(selected, /order_items!order_items_order_id_fkey/);
+  assert.match(selected, /order_addons!order_addons_order_id_fkey/);
   assert.deepEqual(persisted, {
     bookingId,
     bookingNo: 'BK-1811',
@@ -129,6 +131,7 @@ test('#1811 commit-after read-back reconciles reciprocal IDs and base item math'
     orderStatus: 'pending_payment',
     totalTwd: 7400,
     baseSubtotal: 7400,
+    addonSubtotal: 0,
     paymentDeadlineAt: '2027-01-16T02:00:00.000Z',
   });
 
@@ -137,7 +140,7 @@ test('#1811 commit-after read-back reconciles reciprocal IDs and base item math'
       { bookingId, orderId, requireTotalMatch: true },
       clientFor(validReadBack(7401)),
     ),
-    /does not reconcile to persisted order total/,
+    /payable order items do not reconcile to persisted order total/,
   );
 
   await assert.rejects(

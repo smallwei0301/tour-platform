@@ -42,6 +42,7 @@ const exactPostCutoff = [
   ['20260806091000_midao_booking_intake_pricing_and_confirmation.sql', 'bf8cd71196adcb6a915455d67679c2642eee8dde123c11bf6f4405b067e27e85'],
   ['20260806120000_midao_atomic_inquiry_conversion.sql', '33e9d312bc8079c1414e4900b995dbb0f1ef02384394ed27b128c2c53b8356e3'],
   ['20260810033421_issue1811_atomic_booking_order_materialization.sql', '4fb09d6863a992c089be849198e13f85537a06f586797cb1ec159a8503372d5c'],
+  ['20260812150000_issue1812_addon_atomic_materialization.sql', '2e314f27514a2907e6af2661fedcf336cd8f12cd999e333860bf489b3aa06c54'],
 ];
 
 async function subject() {

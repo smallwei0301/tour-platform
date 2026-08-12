@@ -241,6 +241,12 @@ jobs:
           node scripts/testing/with-midao-local-supabase.mjs --postgrest
           apps/web/tests/integration/midao-issue1811-order-transaction-postgrest.test.mjs
 
+      - name: 'Run #1812 add-on atomicity PostgreSQL and public draft runtime contract'
+        run: >-
+          timeout --signal=TERM --kill-after=30s 1200s
+          node scripts/testing/with-midao-local-supabase.mjs --postgrest
+          apps/web/tests/integration/midao-issue1812-addon-atomicity-postgrest.test.mjs
+
       - name: Verify deterministic expected-terminal artifacts are committed
         shell: bash
         run: |

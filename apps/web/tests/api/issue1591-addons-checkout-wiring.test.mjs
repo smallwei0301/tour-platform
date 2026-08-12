@@ -19,20 +19,18 @@ test('T1591wire.1 — 加購清單 API 存在（GET，接 listActivityAddonsDb�
   assert.match(src, /listActivityAddonsDb/);
 });
 
-test('T1591wire.2 — draft materializer 經 applyOrderExtras 收 addonSelections；重算在 checkout/order-extras', () => {
+test('T1591wire.2 — #1812 將 addonSelections 收進 atomic materializer；commit 後 extras 不再寫加購', () => {
   const route = read('app/api/v2/bookings/draft/route.ts');
   assert.match(route, /addonSelections/);
   assert.match(route, /materializeDraftBookingOrder\(\{/);
   const orchestration = read('src/lib/checkout/booking-order-materialization.mjs');
   assert.match(orchestration, /applyOrderExtras/);
-  assert.match(orchestration, /await applyExtras\(\{[\s\S]*addonSelections: input\.addonSelections/);
-  // 重邏輯抽到 src/lib/checkout/order-extras.mjs（route 不再手刻）
+  assert.doesNotMatch(orchestration, /addonSelections: input\.addonSelections/);
+  const gateway = read('src/lib/checkout/db-booking-order-materialization.mjs');
+  assert.match(gateway, /p_addon_selections: input\.addonSelections \?\? \[\]/);
+  // #1812 後只保留 points 的暫時 seam，避免加購快照在 commit 後寫入。
   const helper = read('src/lib/checkout/order-extras.mjs');
-  assert.match(helper, /import\s*\{\s*persistOrderAddonsDb\s*\}/);
-  assert.match(helper, /persistOrderAddonsDb\(\{/);
-  // server 端把加購小計加進 total 並更新訂單總額
-  assert.match(helper, /total\s*\+=\s*addonTotal/);
-  assert.match(helper, /update\(\{\s*total_twd:\s*total\s*\}\)/);
+  assert.doesNotMatch(helper, /persistOrderAddonsDb/);
 });
 
 test('T1591wire.3 — 選購器讀 API＋回報選擇；金額前端只作顯示', () => {
