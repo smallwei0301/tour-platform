@@ -182,7 +182,8 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
   });
   assert.equal(accepted.status, 200);
   assert.equal(accepted.body?.success, true);
-  assert.equal(accepted.body?.data?.bookingStatus, 'confirmed');
+  assert.equal(accepted.body?.data?.bookingStatus, 'draft');
+  assert.equal(accepted.body?.data?.travelerConfirmationStatus, 'confirmed');
 
   const afterAcceptance = await jsonRequest(apiUrl(apiBaseUrl, `/api/v2/bookings/${bookingId}/checkout`), {
     method: 'POST',
