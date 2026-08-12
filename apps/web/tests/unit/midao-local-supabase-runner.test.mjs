@@ -23,6 +23,7 @@ const {
   validateCliWorkdirNotice,
   mapStatusEnvironment,
   buildMidaoPlaywrightEnvironment,
+  resolveMidaoDatabaseHealthTimeoutSeconds,
   confirmProjectContainers,
   assertOwnershipUnchanged,
   redactSupabaseOutput,
@@ -40,6 +41,7 @@ const {
   verifyMidaoE2ERuntimeFixtures,
   buildPinnedPostgrestRun,
   buildMidaoE2ELocalConfig,
+  buildMidaoRealAuthE2ELocalConfig,
   prepareDatabaseOnlyWorkdir,
   prepareBaselineWorkdirWithAdapters,
   parseMidaoRunnerInvocation,
@@ -175,6 +177,32 @@ test('runner failure formatter surfaces status diagnostics', () => {
   assert.match(guardFormatted, /STATUS_PROJECT_ID_NOT_NORMALIZED/u);
 });
 
+test('runner failure formatter retains redacted Supabase full-service startup diagnostics', () => {
+  const formatted = formatMidaoRunnerFailure(
+    new Error('SUPABASE_SERVICE_START_FAILED: failed to start service with service-secret'),
+    ['service-secret'],
+  );
+  assert.match(formatted, /^SUPABASE_SERVICE_START_FAILED: failed to start service with \[REDACTED\]$/u);
+  assert.doesNotMatch(formatted, /service-secret/u);
+});
+
+test('DB health timeout is configurable in positive whole seconds and defaults to the existing three minutes', () => {
+  assert.equal(resolveMidaoDatabaseHealthTimeoutSeconds(), 180);
+  assert.equal(resolveMidaoDatabaseHealthTimeoutSeconds('600'), 600);
+  for (const invalid of ['0', '-1', '60.5', 'abc', ' 600']) {
+    assert.throws(() => resolveMidaoDatabaseHealthTimeoutSeconds(invalid), /MIDAO_DB_HEALTH_TIMEOUT_SECONDS_INVALID/u);
+  }
+});
+
+test('real-auth chain runner captures diagnostics in a persistent ignored worktree log directory', async () => {
+  const source = await readFile(new URL('../../../../scripts/testing/run-midao-e2e.sh', import.meta.url), 'utf8');
+  assert.match(source, /LOG_DIR="\$\{MIDAO_E2E_LOG_DIR:-"\$ROOT\/\.e2e-run-logs"\}"/u);
+  assert.match(source, /mkdir -p "\$LOG_DIR"/u);
+  assert.match(source, /MIDAO_DB_HEALTH_TIMEOUT_SECONDS="\$\{MIDAO_DB_HEALTH_TIMEOUT_SECONDS:-600\}"/u);
+  assert.match(source, /LOG_NAME='midao-inquiry-conversion-chain\.log'/u);
+  assert.match(source, /tee "\$LOG_DIR\/\$LOG_NAME"/u);
+});
+
 test('runner invocation reserves an exact Node integration lane for the pinned PostgREST runtime', () => {
   const integration = 'apps/web/tests/integration/midao-requests-postgrest.test.mjs';
   const decisionIntegration = 'apps/web/tests/integration/midao-booking-decision-postgrest.test.mjs';
@@ -200,6 +228,59 @@ test('runner invocation reserves an exact Node integration lane for the pinned P
     ['--postgrest', '../escape.test.mjs'],
     ['--unknown', integration],
   ]) assert.throws(() => parseMidaoRunnerInvocation(hostile), /ARGS_INVALID/u);
+});
+
+test('real-auth Playwright lane is an explicit allowlist and retains GoTrue in its isolated local config', () => {
+  const chainSpec = 'apps/web/e2e/midao-inquiry-conversion-chain.spec.ts';
+  assert.deepEqual(parseMidaoRunnerInvocation(['--playwright-real-auth', chainSpec]), {
+    mode: 'playwright-real-auth',
+    childArgs: [chainSpec],
+  });
+  for (const rejected of [
+    ['--playwright-real-auth'],
+    ['--playwright-real-auth', 'apps/web/e2e/midao-navigation.spec.ts'],
+    ['--playwright-real-auth', '../escape.spec.ts'],
+  ]) assert.throws(() => parseMidaoRunnerInvocation(rejected), /ARGS_INVALID/u);
+
+  const canonical = '[api]\nenabled = true\n[storage]\nenabled = true\n[auth]\nenabled = true\n';
+  const rewritten = buildMidaoRealAuthE2ELocalConfig(canonical);
+  assert.match(rewritten, /\[auth\]\nenabled = true/u);
+  assert.match(rewritten, /\[storage\]\nenabled = false/u);
+  assert.match(rewritten, /\[realtime\]\nenabled = false\n$/u);
+  assert.doesNotMatch(rewritten, /\[auth\]\nenabled = false/u);
+});
+
+test('API real-auth lane is an explicit single-spec allowlist without a browser runtime', () => {
+  const chainTest = 'apps/web/tests/integration/midao-inquiry-conversion-api-chain.test.mjs';
+  assert.deepEqual(parseMidaoRunnerInvocation(['--api-real-auth', chainTest]), {
+    mode: 'api-real-auth',
+    childArgs: [chainTest],
+  });
+  for (const rejected of [
+    ['--api-real-auth'],
+    ['--api-real-auth', 'apps/web/tests/integration/midao-requests-postgrest.test.mjs'],
+    ['--api-real-auth', '../escape.test.mjs'],
+  ]) assert.throws(() => parseMidaoRunnerInvocation(rejected), /ARGS_INVALID/u);
+});
+
+test('real-auth lanes use an isolated full-service seed with direct GoTrue-only fixture columns', async () => {
+  const source = await readFile(new URL('../../../../scripts/testing/with-midao-local-supabase.mjs', import.meta.url), 'utf8');
+  const seed = await readFile(new URL('../../../../scripts/testing/midao-api-real-auth-seed.sql', import.meta.url), 'utf8');
+  assert.match(source, /if \(realAuthMode\) \{\s+const overlayPath = join\(repoRoot, 'scripts\/testing\/midao-api-real-auth-seed\.sql'\);/u);
+  assert.match(source, /else if \(playwrightMode \|\| postgrestMode\) \{\s+const overlayPath = join\(repoRoot, 'scripts\/testing\/midao-e2e-seed\.sql'\);/u);
+  assert.match(seed, /inquiry_enabled/u);
+  assert.doesNotMatch(seed, /information_schema|EXECUTE \$real_auth_fixture\$/u);
+  assert.doesNotMatch(seed, /encrypted_password/u, 'traveler auth user is created via GoTrue Admin API, not raw SQL');
+  assert.match(source, /async function createOrUpdateMidaoTravelerAuthUser/u);
+  assert.match(source, /\/auth\/v1\/admin\/users/u);
+});
+
+test('API real-auth runner keeps durable redacted output separate from the browser lane', async () => {
+  const source = await readFile(new URL('../../../../scripts/testing/run-midao-e2e.sh', import.meta.url), 'utf8');
+  assert.match(source, /apps\/web\/tests\/integration\/midao-inquiry-conversion-api-chain\.test\.mjs/u);
+  assert.match(source, /MODE='--api-real-auth'/u);
+  assert.match(source, /midao-inquiry-conversion-api-chain\.log/u);
+  assert.doesNotMatch(source, /playwright.*api-chain|api-chain.*playwright/iu);
 });
 
 test('status classifier accepts only pinned exact two-line CRLF-aware missing fixture', () => {
@@ -230,7 +311,7 @@ test('status classifier accepts only pinned exact two-line CRLF-aware missing fi
   assert.equal(classifySupabaseStatus({ exitCode: 0, stdout: '{"DB_URL":"postgres://local"}', stderr: '', expectedProjectId: projectId }), 'running');
 });
 
-test('CLI workdir notice accepts only the exact controlled path', () => {
+test('CLI workdir notice accepts only the exact controlled path', async () => {
   const expectedWorkdir = `/tmp/lock/${projectId}`;
   assert.throws(() => createActualAdapter({
     repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22', cliWorkdir: '/tmp/lock/foreign-project', commandRunner: async () => ({}),
@@ -240,6 +321,27 @@ test('CLI workdir notice accepts only the exact controlled path', () => {
   assert.doesNotThrow(() => validateCliWorkdirNotice(`Using workdir ${expectedWorkdir}\r\n`, expectedWorkdir));
   const stopped = `Stopped services: [${['kong', 'auth', 'inbucket', 'realtime', 'rest', 'storage', 'imgproxy', 'pg_meta', 'studio', 'edge_runtime', 'analytics', 'vector', 'pooler'].map((service) => `supabase_${service}_${projectId}`).join(' ')}]`;
   assert.doesNotThrow(() => validateCliWorkdirNotice(`Using workdir ${expectedWorkdir}\n${stopped}\n`, expectedWorkdir, projectId));
+  const fullServiceStopped = `Stopped services: [${['inbucket', 'realtime', 'storage', 'imgproxy', 'pg_meta', 'studio', 'edge_runtime', 'analytics', 'vector', 'pooler'].map((service) => `supabase_${service}_${projectId}`).join(' ')}]`;
+  assert.doesNotThrow(() => validateCliWorkdirNotice(
+    `Using workdir ${expectedWorkdir}\n${fullServiceStopped}\n`, expectedWorkdir, projectId, true,
+  ));
+  assert.throws(() => validateCliWorkdirNotice(
+    `Using workdir ${expectedWorkdir}\n${stopped}\n`, expectedWorkdir, projectId, true,
+  ), /CLI_UNEXPECTED_STDERR/u);
+  const fullServiceAdapter = createActualAdapter({
+    repoRoot: `/tmp/${projectId}`,
+    pin: '2.87.2',
+    nodeBin: '/node22',
+    cliWorkdir: expectedWorkdir,
+    fullServices: true,
+    enableFullServices: async () => {},
+    commandRunner: async () => ({
+      exitCode: 0,
+      stdout: JSON.stringify({ DB_URL: 'postgres://local' }),
+      stderr: `Using workdir ${expectedWorkdir}\n${fullServiceStopped}\n`,
+    }),
+  });
+  await assert.doesNotReject(fullServiceAdapter.statusJson());
   assert.throws(() => validateCliWorkdirNotice(`Using workdir ${expectedWorkdir}\n${stopped.replace('supabase_kong', 'supabase_wrong')}\n`, expectedWorkdir, projectId), /CLI_UNEXPECTED_STDERR/u);
   assert.throws(() => validateCliWorkdirNotice(`Using workdir /tmp/foreign/${projectId}\n`, expectedWorkdir), /CLI_UNEXPECTED_STDERR/u);
 });

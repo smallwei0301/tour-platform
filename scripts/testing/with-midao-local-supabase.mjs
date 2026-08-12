@@ -31,6 +31,9 @@ const STOPPED_SERVICE_NAMES = [
   'kong', 'auth', 'inbucket', 'realtime', 'rest', 'storage', 'imgproxy',
   'pg_meta', 'studio', 'edge_runtime', 'analytics', 'vector', 'pooler',
 ];
+// Full-service lanes start with MIDAO_E2E_EXCLUDED_SERVICES, which deliberately
+// retains the gateway, GoTrue, and PostgREST services needed for real auth.
+const FULL_SERVICE_RUNNING_SERVICE_NAMES = ['kong', 'auth', 'rest'];
 const MIDAO_E2E_EXCLUDED_SERVICES = [
   'realtime', 'storage-api', 'imgproxy', 'mailpit', 'postgres-meta',
   'studio', 'edge-runtime', 'logflare', 'vector', 'supavisor',
@@ -416,7 +419,7 @@ async function overwriteSafeFile(filePath, bytes) {
   } finally { await handle?.close(); }
 }
 
-export function buildMidaoE2ELocalConfig(canonical) {
+function buildMidaoE2ELocalConfigWithAuth(canonical, authEnabled) {
   if (typeof canonical !== 'string' || canonical.includes('\0')) {
     throw new Error('MIDAO_E2E_LOCAL_CONFIG_AMBIGUOUS');
   }
@@ -438,12 +441,20 @@ export function buildMidaoE2ELocalConfig(canonical) {
     if (enabled.length !== 1 || !/^\s*enabled\s*=\s*true\s*$/u.test(lines[enabled[0]])) {
       throw new Error('MIDAO_E2E_LOCAL_CONFIG_AMBIGUOUS');
     }
-    lines[enabled[0]] = 'enabled = false';
+    lines[enabled[0]] = `enabled = ${section === 'auth' ? String(authEnabled) : 'false'}`;
   }
   return `${lines.join('\n').trimEnd()}\n\n`
     + '# Task 14 local E2E only: disable unused one-shot jobs that CLI 2.87.2 cannot stream to EOF\n'
     + '# on Docker Engine API 1.43. App guide/admin auth, PostgREST, Kong, and PostgreSQL remain enabled.\n'
     + '[realtime]\nenabled = false\n';
+}
+
+export function buildMidaoE2ELocalConfig(canonical) {
+  return buildMidaoE2ELocalConfigWithAuth(canonical, false);
+}
+
+export function buildMidaoRealAuthE2ELocalConfig(canonical) {
+  return buildMidaoE2ELocalConfigWithAuth(canonical, true);
 }
 
 export async function prepareBaselineWorkdirWithAdapters({
@@ -537,7 +548,8 @@ export async function prepareBaselineWorkdirWithAdapters({
   } finally { expected?.dispose(); capture?.dispose(); }
 }
 
-export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir, fullServices = false }) {
+export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir, fullServices = false, realAuth = false }) {
+  if (realAuth && !fullServices) throw new Error('MIDAO_REAL_AUTH_REQUIRES_FULL_SERVICES');
   return prepareBaselineWorkdirWithAdapters({
     repoRoot, lockDir, fullServices,
     verifyCapture: () => verifyCaptureTransaction({
@@ -565,7 +577,7 @@ export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir, fullServic
     readFullConfig: () => readSafeSourceFile(join(repoRoot, 'supabase/config.toml')).then((text) => Buffer.from(text)),
     rewriteFullConfig: async (workdir, bytes) => {
       const canonical = bytes.toString('utf8');
-      const localOverlay = buildMidaoE2ELocalConfig(canonical);
+      const localOverlay = realAuth ? buildMidaoRealAuthE2ELocalConfig(canonical) : buildMidaoE2ELocalConfig(canonical);
       await overwriteSafeFile(join(workdir, 'supabase/config.toml'), Buffer.from(localOverlay));
     },
   });
@@ -659,7 +671,7 @@ export function validateSupabaseLifecycleStderr(stderr, expectedWorkdirOrContrac
   if (normalized !== lf && normalized !== crlf) throw new Error(`CLI_UNEXPECTED_STDERR: ${redactSupabaseOutput(stderr).trim()}`);
 }
 
-export function validateCliWorkdirNotice(stderr, expectedWorkdir, expectedProjectId) {
+export function validateCliWorkdirNotice(stderr, expectedWorkdir, expectedProjectId, fullServices = false) {
   const value = stripPinnedUpdateNotice(stderr);
   if (!expectedWorkdir) {
     if (value !== '') throw new Error('CLI_UNEXPECTED_STDERR');
@@ -670,7 +682,10 @@ export function validateCliWorkdirNotice(stderr, expectedWorkdir, expectedProjec
     `Using workdir ${expectedWorkdir}\r\n`,
   ];
   if (expectedProjectId) {
-    const stopped = `Stopped services: [${STOPPED_SERVICE_NAMES.map((service) => `supabase_${service}_${expectedProjectId}`).join(' ')}]`;
+    const stoppedServiceNames = fullServices
+      ? STOPPED_SERVICE_NAMES.filter((service) => !FULL_SERVICE_RUNNING_SERVICE_NAMES.includes(service))
+      : STOPPED_SERVICE_NAMES;
+    const stopped = `Stopped services: [${stoppedServiceNames.map((service) => `supabase_${service}_${expectedProjectId}`).join(' ')}]`;
     accepted.push(
       `Using workdir ${expectedWorkdir}\n${stopped}\n`,
       `Using workdir ${expectedWorkdir}\r\n${stopped}\r\n`,
@@ -840,6 +855,11 @@ export function redactSupabaseOutput(text, secrets = []) {
   return redacted;
 }
 
+function redactRunnerDiagnostic(text, secrets = []) {
+  return redactSupabaseOutput(text, secrets)
+    .replace(/postgres(?:ql)?:\/\/[^\s]+/giu, '[REDACTED_DATABASE_URL]');
+}
+
 const SAFE_RUNNER_AGGREGATE_MESSAGES = new Set([
   'baseline workdir cleanup failed',
   'baseline workdir setup failed and cleanup held',
@@ -869,11 +889,12 @@ const SAFE_RUNNER_ERROR_PREFIX_CODES = Object.freeze([
   'SUPABASE_SERVICE_START_FAILED',
 ]);
 // #1759 route (a): diagnostic-bearing codes surface their full redacted message instead of the bare code,
-// so an unclassifiable `supabase status` no longer collapses into an opaque `[REDACTED_ERROR]`.
-// Kept as a separate set on purpose: SAFE_RUNNER_ERROR_PREFIX_CODES semantics stay byte-identical.
+// while connection URLs remain hidden from durable runner output.
 const SAFE_RUNNER_DIAGNOSTIC_PREFIX_CODES = Object.freeze([
   'STATUS_UNCLASSIFIED',
   'STATUS_PROJECT_ID_NOT_NORMALIZED',
+  'MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED',
+  'MIDAO_E2E_TRAVELER_PROFILE_FAILED',
 ]);
 
 export function formatMidaoRunnerFailure(error, secrets = []) {
@@ -886,8 +907,10 @@ export function formatMidaoRunnerFailure(error, secrets = []) {
     const matchesCode = (code) => message === code || message.startsWith(`${code}:`);
     const safePrefix = SAFE_RUNNER_ERROR_PREFIX_CODES.find(matchesCode);
     const diagnosticPrefix = SAFE_RUNNER_DIAGNOSTIC_PREFIX_CODES.find(matchesCode);
-    const safe = SAFE_RUNNER_AGGREGATE_MESSAGES.has(message) || SAFE_RUNNER_ERROR_CODES.has(message) || diagnosticPrefix
+    const safe = SAFE_RUNNER_AGGREGATE_MESSAGES.has(message) || SAFE_RUNNER_ERROR_CODES.has(message)
       ? redactSupabaseOutput(message, secrets)
+      : diagnosticPrefix || safePrefix
+        ? redactRunnerDiagnostic(message, secrets)
       : safePrefix ?? '[REDACTED_ERROR]';
     lines.push(safe);
     if (entry instanceof AggregateError && Array.isArray(entry.errors)) {
@@ -1116,6 +1139,75 @@ export function runCommand(command, args, { cwd, env = process.env, signal } = {
   });
 }
 
+export async function startMidaoApiServer({ repoRoot, nodeBin, environment, signal, port = 43127 }) {
+  const numericPort = Number(port);
+  if (!isAbsolute(repoRoot) || !isAbsolute(nodeBin) || !environment || typeof environment !== 'object'
+    || !Number.isSafeInteger(numericPort) || numericPort < 1024 || numericPort > 65535) {
+    throw new Error('MIDAO_API_SERVER_CONTRACT_INVALID');
+  }
+  const nextBin = join(repoRoot, 'node_modules/next/dist/bin/next');
+  const [nodeStat, nextStat] = await Promise.all([fsPromises.lstat(nodeBin), fsPromises.lstat(nextBin)]);
+  if (!nodeStat.isFile() || nodeStat.isSymbolicLink() || (nodeStat.mode & 0o111) === 0
+    || !nextStat.isFile() || nextStat.isSymbolicLink()) {
+    throw new Error('MIDAO_API_SERVER_BINARY_INVALID');
+  }
+  const baseUrl = `http://127.0.0.1:${numericPort}`;
+  const child = spawn(nodeBin, [nextBin, 'dev', '--hostname', '127.0.0.1', '--port', String(numericPort)], {
+    cwd: join(repoRoot, 'apps/web'),
+    env: {
+      ...environment,
+      PORT: String(numericPort),
+      NODE_ENV: 'development',
+      VERCEL_ENV: 'preview',
+      MIDAO_E2E_LOCAL: '1',
+      NEXT_TELEMETRY_DISABLED: '1',
+      CHOKIDAR_USEPOLLING: '1',
+      WATCHPACK_POLLING: 'true',
+      CHOKIDAR_INTERVAL: '1000',
+    },
+    detached: true,
+    stdio: ['ignore', 'ignore', 'ignore'],
+  });
+  let exited = false;
+  const closed = new Promise((resolveClose) => {
+    child.once('close', () => { exited = true; resolveClose(); });
+    child.once('error', () => { exited = true; resolveClose(); });
+  });
+  const close = async () => {
+    if (!exited) {
+      try { process.kill(-child.pid, 'SIGTERM'); } catch (error) {
+        if (error?.code !== 'ESRCH') child.kill('SIGTERM');
+      }
+      await Promise.race([closed, new Promise((resolveDelay) => setTimeout(resolveDelay, 10_000))]);
+    }
+    if (!exited) {
+      try { process.kill(-child.pid, 'SIGKILL'); } catch (error) {
+        if (error?.code !== 'ESRCH') child.kill('SIGKILL');
+      }
+      await closed;
+    }
+  };
+  try {
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      if (signal?.aborted) throw new Error('RUNNER_SIGNALLED');
+      if (exited) throw new Error('MIDAO_API_SERVER_EXITED');
+      try {
+        const response = await fetch(`${baseUrl}/images/placeholder-avatar.svg`, {
+          signal: AbortSignal.timeout(2_000),
+        });
+        if (response.status === 200) return { baseUrl, close };
+      } catch (error) {
+        if (signal?.aborted) throw new Error('RUNNER_SIGNALLED');
+      }
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
+    }
+    throw new Error('MIDAO_API_SERVER_TIMEOUT');
+  } catch (error) {
+    await close();
+    throw error;
+  }
+}
+
 function parseContainerRows(stdout, expectedProjectId) {
   return nonemptyLines(stdout).map((line) => {
     const [id, name, label] = line.split('\t');
@@ -1170,11 +1262,22 @@ export function buildMidaoPlaywrightEnvironment({ parentEnv = process.env, local
   return environment;
 }
 
+export function resolveMidaoDatabaseHealthTimeoutSeconds(value = process.env.MIDAO_DB_HEALTH_TIMEOUT_SECONDS) {
+  if (value === undefined || value === '') return 180;
+  if (typeof value !== 'string' || !/^[1-9]\d*$/u.test(value)) {
+    throw new Error('MIDAO_DB_HEALTH_TIMEOUT_SECONDS_INVALID');
+  }
+  const seconds = Number(value);
+  if (!Number.isSafeInteger(seconds)) throw new Error('MIDAO_DB_HEALTH_TIMEOUT_SECONDS_INVALID');
+  return seconds;
+}
+
 export function createActualAdapter({
   repoRoot, pin, nodeBin, signal, cliWorkdir, lifecycleContract,
   fullServices = false, enableFullServices, commandRunner = runCommand,
 }) {
   const expectedProjectId = canonicalProjectId(repoRoot);
+  const databaseHealthTimeoutSeconds = resolveMidaoDatabaseHealthTimeoutSeconds(process.env.MIDAO_DB_HEALTH_TIMEOUT_SECONDS);
   if (cliWorkdir && basename(resolve(cliWorkdir)) !== expectedProjectId) throw new Error('CLI_WORKDIR_PROJECT_IDENTITY_MISMATCH');
   if (fullServices && typeof enableFullServices !== 'function') throw new Error('FULL_SERVICE_CONFIG_ADAPTER_INVALID');
   const cli = (args, { cleanup = false } = {}) => {
@@ -1284,7 +1387,7 @@ export function createActualAdapter({
     const expectedName = `supabase_db_${canonicalProjectId(repoRoot)}`;
     const database = owned.filter((container) => container.name === expectedName);
     if (database.length !== 1) throw new Error('DATABASE_CONTAINER_IDENTITY_INVALID');
-    for (let attempt = 0; attempt < 180; attempt += 1) {
+    for (let attempt = 0; attempt < databaseHealthTimeoutSeconds; attempt += 1) {
       if (signal?.aborted) throw new Error('RUNNER_SIGNALLED');
       const result = await commandRunner('docker', ['inspect', '--format', '{{.State.Health.Status}}', database[0].id], { cwd: repoRoot });
       if (result.exitCode !== 0 || result.stderr.trim()) throw new Error('DATABASE_HEALTH_INSPECT_FAILED');
@@ -1383,7 +1486,7 @@ export function createActualAdapter({
     statusJson: async () => {
       const result = await cli(['status', '-o', 'json']);
       if (result.exitCode !== 0) throw new Error('SUPABASE_STATUS_JSON_FAILED');
-      validateCliWorkdirNotice(result.stderr, cliWorkdir, canonicalProjectId(repoRoot));
+      validateCliWorkdirNotice(result.stderr, cliWorkdir, canonicalProjectId(repoRoot), fullServices);
       return mapStatusEnvironment(result.stdout);
     },
     ready: async (env) => {
@@ -1436,19 +1539,81 @@ export function parseMidaoRunnerInvocation(args) {
   if (childArgs[0] === '--playwright') {
     mode = 'playwright';
     childArgs = childArgs.slice(1);
+  } else if (childArgs[0] === '--playwright-real-auth') {
+    mode = 'playwright-real-auth';
+    childArgs = childArgs.slice(1);
+  } else if (childArgs[0] === '--api-real-auth') {
+    mode = 'api-real-auth';
+    childArgs = childArgs.slice(1);
   } else if (childArgs[0] === '--postgrest') {
     mode = 'postgrest';
     childArgs = childArgs.slice(1);
   } else if (childArgs[0]?.startsWith('--')) {
     throw new Error('MIDAO_RUNNER_ARGS_INVALID');
   }
-  const pattern = mode === 'playwright'
+  const pattern = mode === 'playwright' || mode === 'playwright-real-auth'
     ? /^apps\/web\/e2e\/[a-z0-9][a-z0-9-]*\.spec\.ts$/u
     : /^apps\/web\/tests\/integration\/midao-[a-z0-9][a-z0-9-]*\.test\.mjs$/u;
-  if ((mode !== 'postgres' && childArgs.length === 0) || childArgs.some((entry) => !pattern.test(entry))) {
+  const realAuthSpec = 'apps/web/e2e/midao-inquiry-conversion-chain.spec.ts';
+  const apiRealAuthTest = 'apps/web/tests/integration/midao-inquiry-conversion-api-chain.test.mjs';
+  if (
+    (mode !== 'postgres' && childArgs.length === 0)
+    || childArgs.some((entry) => !pattern.test(entry))
+    || (mode === 'playwright-real-auth' && (childArgs.length !== 1 || childArgs[0] !== realAuthSpec))
+    || (mode === 'api-real-auth' && (childArgs.length !== 1 || childArgs[0] !== apiRealAuthTest))
+  ) {
     throw new Error(`MIDAO_${mode.toUpperCase()}_ARGS_INVALID`);
   }
   return { mode, childArgs };
+}
+
+// Fixed deterministic id/credentials for the Package 4 API real-auth
+// traveler fixture. Created via GoTrue's own Admin API rather than raw SQL
+// against auth.users/auth.identities: this pinned GoTrue version enforces
+// several undocumented constraints (a generated confirmed_at column, a
+// zero-UUID instance_id requirement, and multiple NOT-NULL string columns
+// beyond the four historically documented ones) that only ever surface as an
+// opaque 500 "Database error querying schema" with no column name attached.
+// The Admin API is the officially supported user-creation path and
+// guarantees every internal column GoTrue expects is populated correctly.
+const MIDAO_E2E_TRAVELER_ID = '55555555-5555-4555-8555-555555555555';
+const MIDAO_E2E_TRAVELER_EMAIL = 'midao-e2e-traveler@example.invalid';
+const MIDAO_E2E_TRAVELER_PASSWORD = 'midao-e2e-traveler-local-only';
+
+async function createOrUpdateMidaoTravelerAuthUser({ supabaseUrl, serviceRoleKey, signal }) {
+  try {
+    const endpoint = new URL(`/auth/v1/admin/users/${MIDAO_E2E_TRAVELER_ID}`, supabaseUrl);
+    const headers = {
+      apikey: serviceRoleKey,
+      authorization: `Bearer ${serviceRoleKey}`,
+      'content-type': 'application/json',
+    };
+    const body = JSON.stringify({
+      email: MIDAO_E2E_TRAVELER_EMAIL,
+      password: MIDAO_E2E_TRAVELER_PASSWORD,
+      email_confirm: true,
+      user_metadata: { full_name: 'Midao E2E Traveler', role: 'traveler' },
+    });
+    const timeoutSignal = AbortSignal.timeout(30_000);
+    const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+    let response = await fetch(endpoint, { method: 'PUT', headers, body, signal: combinedSignal });
+    if (response.status === 404) {
+      const createEndpoint = new URL('/auth/v1/admin/users', supabaseUrl);
+      response = await fetch(createEndpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ id: MIDAO_E2E_TRAVELER_ID, ...JSON.parse(body) }),
+        signal: combinedSignal,
+      });
+    }
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED: HTTP_${response.status} ${text.slice(0, 2000)}`);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED:')) throw error;
+    throw new Error(`MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED: UNEXPECTED ${error && error.name} ${error && error.message}`);
+  }
 }
 
 async function main() {
@@ -1475,6 +1640,7 @@ async function main() {
   let databaseBridge;
   let apiBridge;
   let apiCompatProxy;
+  let apiServer;
   let databaseWorkdir;
   let replay;
   let primaryError;
@@ -1487,12 +1653,17 @@ async function main() {
     if (gateway) databaseBridge = await startLoopbackBridge({ listenPort: 54322, targetHost: gateway, targetPort: 54322 });
     const invocation = parseMidaoRunnerInvocation(process.argv.slice(2));
     const playwrightMode = invocation.mode === 'playwright';
+    const realAuthPlaywrightMode = invocation.mode === 'playwright-real-auth';
+    const apiRealAuthMode = invocation.mode === 'api-real-auth';
+    const realAuthMode = realAuthPlaywrightMode || apiRealAuthMode;
     const postgrestMode = invocation.mode === 'postgrest';
     const childArgs = invocation.childArgs;
-    if (gateway && (playwrightMode || postgrestMode)) {
+    if (gateway && (playwrightMode || realAuthMode || postgrestMode)) {
       apiBridge = await startLoopbackBridge({ listenPort: 54321, targetHost: gateway, targetPort: 54321 });
     }
-    databaseWorkdir = await prepareDatabaseOnlyWorkdir({ repoRoot, lockDir: LOCK_PATH });
+    databaseWorkdir = await prepareDatabaseOnlyWorkdir({
+      repoRoot, lockDir: LOCK_PATH, fullServices: realAuthMode, realAuth: realAuthMode,
+    });
     replay = await databaseWorkdir.stageCliReplay();
     if (!playwrightMode && childArgs.length === 0) childArgs.push(
       'apps/web/tests/integration/midao-foundation-schema-postgres.test.mjs',
@@ -1505,6 +1676,8 @@ async function main() {
       adapter: createActualAdapter({
         repoRoot, pin, nodeBin, signal: controller.signal, cliWorkdir: databaseWorkdir.workdir,
         lifecycleContract: { migrationNames: [replay.bootstrapName], noticesByMigration: {} },
+        fullServices: realAuthMode,
+        enableFullServices: realAuthMode ? () => databaseWorkdir.enableFullServices() : undefined,
       }),
       expectedProjectId: projectId,
       initialize: 'start-only',
@@ -1520,7 +1693,56 @@ async function main() {
         });
         if (seed.exitCode !== 0 || seed.signal !== null) throw new Error(`MIDAO_SEED_FAILED: ${redactSupabaseOutput(seed.stderr).slice(-4000).trim()}`);
         let child;
-        if (playwrightMode || postgrestMode) {
+        let childSecrets = Object.values(localEnv);
+        if (realAuthMode) {
+          const overlayPath = join(repoRoot, 'scripts/testing/midao-api-real-auth-seed.sql');
+          const overlay = await runCommand('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', overlayPath], {
+            cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
+          });
+          if (overlay.exitCode !== 0 || overlay.signal !== null) throw new Error(`MIDAO_E2E_SEED_FAILED: ${redactSupabaseOutput(overlay.stderr).slice(-4000).trim()}`);
+          for (const name of ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
+            if (typeof localEnv[name] !== 'string' || !localEnv[name]) throw new Error(`MIDAO_E2E_LOCAL_ENV_MISSING:${name}`);
+          }
+          await createOrUpdateMidaoTravelerAuthUser({
+            supabaseUrl: localEnv.SUPABASE_URL,
+            serviceRoleKey: localEnv.SUPABASE_SERVICE_ROLE_KEY,
+            signal: controller.signal,
+          });
+          // public.users.id has a FK onto auth.users(id); insert it only after
+          // the Admin API has created the traveler auth user above.
+          const travelerProfile = await runCommand('/usr/bin/psql', [
+            '-X', '--set=ON_ERROR_STOP=1', '--quiet', '-c',
+            "insert into public.users (id, role) values ('55555555-5555-4555-8555-555555555555', 'traveler') on conflict (id) do update set role = excluded.role;",
+          ], {
+            cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
+          });
+          if (travelerProfile.exitCode !== 0 || travelerProfile.signal !== null) throw new Error(`MIDAO_E2E_TRAVELER_PROFILE_FAILED: ${redactSupabaseOutput(travelerProfile.stderr).slice(-4000).trim()}`);
+          reportStage('real-auth-runtime-fixture-ready');
+          const e2eEnv = {
+            ...buildMidaoPlaywrightEnvironment({ localEnv }),
+            MIDAO_E2E_TRAVELER_EMAIL: 'midao-e2e-traveler@example.invalid',
+            MIDAO_E2E_TRAVELER_PASSWORD: 'midao-e2e-traveler-local-only',
+            NEXT_PUBLIC_TRANSFER_PAYMENT_ENABLED: '1',
+          };
+          childSecrets = Object.values(e2eEnv);
+          if (apiRealAuthMode) {
+            apiServer = await startMidaoApiServer({
+              repoRoot,
+              nodeBin,
+              environment: e2eEnv,
+              signal: controller.signal,
+            });
+            child = await runCommand(nodeBin, ['--test', '--test-concurrency=1', ...childArgs], {
+              cwd: repoRoot,
+              env: { ...e2eEnv, MIDAO_API_BASE_URL: apiServer.baseUrl },
+              signal: controller.signal,
+            });
+          } else {
+            child = await runCommand(join(repoRoot, 'node_modules/.bin/playwright'), [
+              'test', '--workers=1', ...childArgs.map((entry) => entry.slice('apps/web/'.length)),
+            ], { cwd: join(repoRoot, 'apps/web'), env: e2eEnv, signal: controller.signal });
+          }
+        } else if (playwrightMode || postgrestMode) {
           const overlayPath = join(repoRoot, 'scripts/testing/midao-e2e-seed.sql');
           const overlay = await runCommand('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', overlayPath], {
             cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
@@ -1577,8 +1799,8 @@ async function main() {
             cwd: repoRoot, env: { ...process.env, ...localEnv, NODE_OPTIONS: '--experimental-strip-types' }, signal: controller.signal,
           });
         }
-        if (child.stdout) process.stdout.write(redactSupabaseOutput(child.stdout, Object.values(localEnv)));
-        if (child.stderr) process.stderr.write(redactSupabaseOutput(child.stderr, Object.values(localEnv)));
+        if (child.stdout) process.stdout.write(redactSupabaseOutput(child.stdout, childSecrets));
+        if (child.stderr) process.stderr.write(redactSupabaseOutput(child.stderr, childSecrets));
         if (child.exitCode !== 0 || child.signal !== null) throw new Error(`CHILD_FAILED_${child.exitCode}`);
       },
       signal: controller.signal,
@@ -1604,6 +1826,10 @@ async function main() {
   if (apiCompatProxy) {
     try { await apiCompatProxy.close(); }
     catch (error) { cleanupErrors.push(new Error('API_COMPAT_PROXY_CLOSE_FAILED', { cause: error })); }
+  }
+  if (apiServer) {
+    try { await apiServer.close(); }
+    catch (error) { cleanupErrors.push(new Error('MIDAO_API_SERVER_CLOSE_FAILED', { cause: error })); }
   }
   if (apiBridge) {
     try { await apiBridge.close(); }

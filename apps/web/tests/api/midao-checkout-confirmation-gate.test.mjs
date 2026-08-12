@@ -189,3 +189,44 @@ test('T-S7: booking select must NOT use selectWithOptionalColumnFallback (D4)', 
   const bookingFetch = SRC.slice(startIdx, endIdx);
   assert.doesNotMatch(bookingFetch, /selectWithOptionalColumnFallback/);
 });
+
+test('T-S8: checkout binds a named privileged client for service-role-only booking data', () => {
+  assert.match(
+    SRC,
+    /const privilegedDb = paymentDb;/,
+    'checkout must make its service-role data-access client explicit',
+  );
+  assert.match(SRC, /privilegedDb\s*\n?\s*\.from\(\s*['"]bookings['"]\s*\)/);
+  assert.match(SRC, /privilegedDb\.from\('orders'\)/);
+  assert.match(SRC, /privilegedDb\s*\n?\s*\.from\(\s*['"]booking_status_logs['"]\s*\)/);
+  assert.doesNotMatch(
+    SRC,
+    /supabase\s*\n?\s*\.from\(\s*['"](?:bookings|orders|booking_status_logs)['"]\s*\)/,
+    'SSR client is only for auth; service-role-only tables must use privilegedDb',
+  );
+});
+
+test('T-S9: booking query selects traveler_id for application-layer ownership enforcement', () => {
+  const bookingSelect = SRC.slice(
+    SRC.indexOf(".from('bookings')"),
+    SRC.indexOf('if (bookingError'),
+  );
+  assert.match(bookingSelect, /traveler_id/);
+});
+
+test('T-S10: traveler owner check returns generic 404 before confirmation, order, and payment paths', () => {
+  const authIdx = SRC.indexOf('supabase.auth.getUser()');
+  const ownershipIdx = SRC.indexOf('booking.traveler_id !== traveler.id');
+  const confirmationIdx = SRC.indexOf('canCheckoutTravelerConfirmation(');
+  const orderFetchIdx = SRC.indexOf(".from('orders')");
+  const paymentIdx = SRC.indexOf(".from('payments')");
+
+  assert.ok(authIdx > -1, 'traveler authentication not found');
+  assert.ok(ownershipIdx > authIdx, 'ownership check must follow traveler authentication');
+  assert.ok(confirmationIdx > ownershipIdx, 'ownership check must precede confirmation gate');
+  assert.ok(orderFetchIdx > ownershipIdx, 'ownership check must precede order lookup');
+  assert.ok(paymentIdx > ownershipIdx, 'ownership check must precede payment access');
+  const ownershipSlice = SRC.slice(ownershipIdx - 180, ownershipIdx + 240);
+  assert.match(ownershipSlice, /NOT_FOUND/);
+  assert.match(ownershipSlice, /status:\s*404/);
+});
