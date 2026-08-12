@@ -244,19 +244,40 @@ test('#1812 public draft ignores client money and commits reconciled add-on snap
 });
 
 test('#1812 inactive and insufficient-stock selections are visible input errors with no materialization or success notification', async () => {
-  for (const [addonId, quantity] of [[INACTIVE_ADDON_ID, 1], [LOW_STOCK_ADDON_ID, 2]]) {
+  for (const [addonId, selections, code] of [
+    [INACTIVE_ADDON_ID, [{ addonId: INACTIVE_ADDON_ID, quantity: 1 }], 'ADDON_UNAVAILABLE'],
+    [LOW_STOCK_ADDON_ID, [{ addonId: LOW_STOCK_ADDON_ID, quantity: 2 }], 'ADDON_UNAVAILABLE'],
+    [LOW_STOCK_ADDON_ID, [{ addonId: LOW_STOCK_ADDON_ID, quantity: 1 }, { addonId: LOW_STOCK_ADDON_ID, quantity: 1 }], 'VALIDATION_ERROR'],
+  ]) {
     const logStart = webLogs.length;
-    const failed = await callPublic({ contactEmail: `issue1812-invalid-${quantity}@example.invalid`, addonSelections: [{ addonId, quantity }] });
+    const failed = await callPublic({ contactEmail: `issue1812-invalid-${selections.length}@example.invalid`, addonSelections: selections });
     assert.equal(failed.response.status, 400, failed.text);
     assert.deepEqual(failed.payload, {
       success: false,
-      error: { code: 'ADDON_UNAVAILABLE', message: '所選加購目前無法使用，請重新選擇', details: { addonId } },
+      error: {
+        code,
+        message: code === 'ADDON_UNAVAILABLE' ? '所選加購目前無法使用，請重新選擇' : '加購選擇格式不正確，請重新選擇',
+        details: { addonId },
+      },
     });
     assert.doesNotMatch(failed.text, /bookingId|orderId|checkoutUrl|paymentUrl/iu);
     assertEmpty(await readState(), 'unavailable add-on must not leave any booking/order data');
     await delay(200);
     assert.doesNotMatch(webLogs.slice(logStart), /booking-draft-post-create-notify/iu, 'invalid input must not reach notification');
   }
+});
+
+test('#1812 selection count above the legacy 20-item limit is rejected before any materialization', async () => {
+  const failed = await callPublic({
+    contactEmail: 'issue1812-selection-limit@example.invalid',
+    addonSelections: Array.from({ length: 21 }, () => ({ addonId: MEAL_ADDON_ID, quantity: 1 })),
+  });
+  assert.equal(failed.response.status, 400, failed.text);
+  assert.deepEqual(failed.payload, {
+    success: false,
+    error: { code: 'VALIDATION_ERROR', message: '加購選擇格式不正確，請重新選擇' },
+  });
+  assertEmpty(await readState(), 'too many selections must not materialize any booking/order data');
 });
 
 test('#1812 snapshot, add-on item and final total faults each roll back the whole public aggregate', async () => {

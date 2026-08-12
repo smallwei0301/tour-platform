@@ -13,24 +13,6 @@
 import { redeemPointsForOrderDb } from '../db-points.mjs';
 
 /**
- * 正規化前端傳入的加購選擇：只取形狀正確項，數量夾 1..99，最多 20 項。金額不在此算。
- * @param {unknown} raw
- * @returns {Array<{ addonId: string, quantity: number }>}
- */
-export function normalizeAddonSelections(raw) {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((s) => !!s && typeof s === 'object'
-      && typeof (/** @type {any} */ (s).addonId) === 'string'
-      && Number.isInteger(/** @type {any} */ (s).quantity))
-    .slice(0, 20)
-    .map((s) => ({
-      addonId: /** @type {any} */ (s).addonId,
-      quantity: Math.max(1, Math.min(99, /** @type {any} */ (s).quantity)),
-    }));
-}
-
-/**
  * #1812 後僅套用點數折抵，回傳更新後的訂單總額（已寫回 DB）。
  * @param {{
  *   supabase: any, orderId: string, activityId: string, participants: number,

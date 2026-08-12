@@ -47,11 +47,16 @@ DECLARE
   v_subtotal_bigint bigint;
   v_subtotal_twd integer;
   v_item_quantity integer;
+  v_seen_addon_ids uuid[] := ARRAY[]::uuid[];
 BEGIN
   IF p_addon_selections IS NULL THEN
     p_addon_selections := '[]'::jsonb;
   END IF;
   IF pg_catalog.jsonb_typeof(p_addon_selections) <> 'array' THEN
+    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'ADDON_SELECTIONS_INVALID';
+  END IF;
+  -- 保持既有 checkout 選擇上限；超量不可藉由新 RPC 改變計價或 materialization。
+  IF pg_catalog.jsonb_array_length(p_addon_selections) > 20 THEN
     RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'ADDON_SELECTIONS_INVALID';
   END IF;
 
@@ -95,6 +100,12 @@ BEGIN
       RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'ADDON_UNAVAILABLE', DETAIL = 'invalid-addon-id';
     END IF;
     v_addon_id := v_addon_id_text::uuid;
+    -- 同一加購只能有一個 selection。這也杜絕把有限庫存拆成多筆輸入的繞過；
+    -- 錯誤 detail 保留 UUID，公開入口可指出需修正的項目。
+    IF v_addon_id = ANY(v_seen_addon_ids) THEN
+      RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'ADDON_SELECTIONS_INVALID', DETAIL = v_addon_id_text;
+    END IF;
+    v_seen_addon_ids := pg_catalog.array_append(v_seen_addon_ids, v_addon_id);
     IF pg_catalog.jsonb_typeof(v_selection -> 'quantity') <> 'number'
        OR (v_selection ->> 'quantity') !~ '^(?:[1-9]|[1-9][0-9])$' THEN
       RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'ADDON_SELECTIONS_INVALID', DETAIL = v_addon_id_text;
