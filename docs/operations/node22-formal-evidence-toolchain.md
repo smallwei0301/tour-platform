@@ -42,6 +42,16 @@ scripts/toolchain/tp-node22.sh -- npx --version
 
 請勿直接以 host `node`、`npm` 或 `npx` 產生正式證據。`.claude/settings.json` 只允許這個固定入口與 `run-checks.sh` 作為 Agent 的正式測試通道。
 
+## Runtime contract 分區
+
+`apps/web/tests/unit/tp-node22-evidence-runner-runtime-contract.test.mjs` 會實際執行 canonical host toolchain，僅能在具備 canonical root 的本機／agent formal-evidence lane 執行：
+
+```bash
+.claude/hooks/run-checks.sh apps/web/tests/unit/tp-node22-evidence-runner-runtime-contract.test.mjs
+```
+
+它屬於 host-bound infrastructure test；ordinary CI 與 portable infrastructure lane 均不執行它。不得為 GitHub Actions 加入 fallback 或模擬 `/root/.hermes/toolchains/node/22.23.1`；ordinary CI 保留可攜的 source/settings contracts。
+
 ## Rollback 與授權界線
 
 Repo rollback 僅 revert 本工具鏈卡片的六個受管檔案。外部 artifact 僅在 provision self-check 失敗時，由 provision script 還原 timestamped backup。不得以 system Node、CI workflow 或 `/tmp` fallback 維持綠燈；任何這類替代方案、或重新 provision，均需要 Ava/Amy 的明確決定。

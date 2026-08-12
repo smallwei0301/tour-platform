@@ -52,6 +52,7 @@ test('Midao infrastructure coverage remains on bounded dedicated runners', () =>
 test('portable and exact-host infrastructure partitions are complete and disjoint', () => {
   const portable = new Set(runner.PORTABLE_INFRASTRUCTURE_TESTS);
   const exactHost = new Set(runner.HOST_BOUND_INFRASTRUCTURE_TESTS);
+  const runtimeContract = 'tests/unit/tp-node22-evidence-runner-runtime-contract.test.mjs';
   assert.equal([...portable].some((file) => exactHost.has(file)), false);
   assert.deepEqual([...portable, ...exactHost].sort(), [...runner.INFRASTRUCTURE_TESTS].sort());
   assert.deepEqual([...exactHost].sort(), [
@@ -60,5 +61,9 @@ test('portable and exact-host infrastructure partitions are complete and disjoin
     'tests/unit/midao-ci-command-runner.test.mjs',
     'tests/unit/midao-expected-terminal-publisher.test.mjs',
     'tests/unit/midao-production-catalog-capture.test.mjs',
+    runtimeContract,
   ]);
+  assert.equal(runner.listOrdinaryTests().includes(runtimeContract), false);
+  assert.equal(runner.buildInvocation('portable-infrastructure').includes(runtimeContract), false);
+  assert.equal(runner.buildInvocation('infrastructure').filter((file) => file === runtimeContract).length, 1);
 });
