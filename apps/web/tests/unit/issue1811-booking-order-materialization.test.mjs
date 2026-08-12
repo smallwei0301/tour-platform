@@ -58,7 +58,7 @@ test('#1811 建單只發布最後持久化快照，原子建立或任一讀回�
         orderId: atomicResult.orderId,
         expectedActivityId: input.activityId,
         expectedPlanId: input.planId,
-        requireTotalMatch: readBackCount === 1,
+        requireTotalMatch: true,
       });
       return readBackCount === 1 ? persistedBase : persistedFinal;
     },
@@ -67,9 +67,10 @@ test('#1811 建單只發布最後持久化快照，原子建立或任一讀回�
       assert.equal(
         extrasInput.totalAmount,
         persistedBase.totalTwd,
-        '加購只能以第一次 commit-after read-back 的基本金額為起點',
+        '點數 seam 只能以第一次 commit-after read-back 的持久化金額為起點',
       );
-      return { totalAmount: 99_999, addonTotal: 725, redeemed: 0 };
+      assert.equal(extrasInput.addonSelections, undefined, '加購不得交給 commit 後 extras seam');
+      return { totalAmount: persistedBase.totalTwd, addonTotal: 0, redeemed: 0 };
     },
     notify: async (notification) => {
       events.push('notify');
@@ -169,9 +170,5 @@ test('#1811 建單只發布最後持久化快照，原子建立或任一讀回�
     applyExtras: async () => ({ totalAmount: persistedBase.totalTwd, addonTotal: 0, redeemed: 0 }),
     notify: async () => {},
   });
-  assert.deepEqual(
-    baseOnlyReadBackModes,
-    [true, true],
-    '沒有實際加購或點數異動時，最終 payable total 仍須由 base item 完整對帳',
-  );
+  assert.deepEqual(baseOnlyReadBackModes, [true, true]);
 });

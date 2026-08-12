@@ -101,12 +101,25 @@ jobs:
           lock='supabase/baselines/v1/toolchain-lock.json'
           provision() {
             local role="$1"
-            local ref image_id repository tag observed_id observed_architecture
+            local ref image_id repository tag observed_id observed_architecture pull_log attempt
             ref="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .repoDigest' "$lock")"
             image_id="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .imageId' "$lock")"
             repository="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .repository' "$lock")"
             tag="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .tag' "$lock")"
-            docker pull "$ref"
+            pull_log="$(mktemp)"
+            for attempt in 1 2 3 4; do
+              if docker pull "$ref" >"$pull_log" 2>&1; then
+                cat "$pull_log"
+                break
+              fi
+              cat "$pull_log" >&2
+              if ! grep -Eqi 'toomanyrequests|rate exceeded' "$pull_log" || test "$attempt" = 4; then
+                rm -f -- "$pull_log"
+                return 1
+              fi
+              sleep "$((attempt * 15))"
+            done
+            rm -f -- "$pull_log"
             observed_id="$(docker image inspect --format '{{.Id}}' "$ref")"
             observed_architecture="$(docker image inspect --format '{{.Architecture}}' "$ref")"
             test "$observed_id" = "$image_id"
@@ -240,6 +253,12 @@ jobs:
           timeout --signal=TERM --kill-after=30s 1200s
           node scripts/testing/with-midao-local-supabase.mjs --postgrest
           apps/web/tests/integration/midao-issue1811-order-transaction-postgrest.test.mjs
+
+      - name: 'Run #1812 add-on atomicity PostgreSQL and public draft runtime contract'
+        run: >-
+          timeout --signal=TERM --kill-after=30s 1200s
+          node scripts/testing/with-midao-local-supabase.mjs --postgrest
+          apps/web/tests/integration/midao-issue1812-addon-atomicity-postgrest.test.mjs
 
       - name: Verify deterministic expected-terminal artifacts are committed
         shell: bash

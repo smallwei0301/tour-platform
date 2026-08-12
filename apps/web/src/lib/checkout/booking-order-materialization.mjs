@@ -2,9 +2,9 @@
 /**
  * Issue #1811 — draft 建單協調器。
  *
- * 順序是 atomic commit → 基本資料 read-back／對帳 → 現行 extras seam → 最終
- * read-back → 通知。#1812/#1813 會把 extras/points 收進同一 RPC；在此之前仍保留
- * 現有行為，但任何 read-back 失敗一律 fail closed，不發布 order ID 或成功通知。
+ * 順序是 atomic commit（含 #1812 加購）→ 資料 read-back／對帳 → #1813 前暫留的
+ * points seam → 最終 read-back → 通知。任何 read-back 失敗一律 fail closed，不發布
+ * order ID 或成功通知。
  */
 import { getSupabase } from '../supabase-env.mjs';
 import { applyOrderExtras } from './order-extras.mjs';
@@ -54,20 +54,18 @@ export async function materializeDraftBookingOrder(input, deps = {}) {
     participants: input.participants,
     travelerId: input.travelerId ?? null,
     totalAmount: persistedBase.totalTwd,
-    addonSelections: input.addonSelections,
     redeemPoints: input.redeemPoints,
   });
-  const hasExtendedPricing = Number(extrasResult?.addonTotal) > 0
-    || Number(extrasResult?.redeemed) > 0;
+  const hasPointRedemption = Number(extrasResult?.redeemed) > 0;
 
   const persistedFinal = await readBack({
     bookingId: persistedBase.bookingId,
     orderId: persistedBase.orderId,
     expectedActivityId: persistedBase.activityId,
     expectedPlanId: persistedBase.planId,
-    // 沒有實際延伸金額時仍須再次證明 base item = payable total。只有真的寫入
-    // order_addons／points 時才暫時放寬；兩者會在 #1812/#1813 納入完整對帳。
-    requireTotalMatch: !hasExtendedPricing,
+    // #1812 的 add-on snapshot／fee item 已在 atomic RPC 內完整對帳；只有 #1813
+    // 尚未收進 transaction 的 points 折抵會暫時改變 payable total。
+    requireTotalMatch: !hasPointRedemption,
   });
 
   try {

@@ -10,7 +10,7 @@ import { getSupabase } from '../supabase-env.mjs';
 
 export const BOOKING_DRAFT_RPC_MISSING_CODE = 'BOOKING_DRAFT_RPC_NOT_DEPLOYED';
 
-const RPC_NAME = 'fn_create_booking_draft_atomic';
+const RPC_NAME = 'fn_create_booking_draft_with_addons_atomic';
 const MATERIALIZATION_SELECT = `
   id,
   booking_id,
@@ -35,7 +35,16 @@ const MATERIALIZATION_SELECT = `
     ref_id,
     quantity,
     unit_price,
-    subtotal_amount
+    subtotal_amount,
+    metadata
+  ),
+  addons:order_addons!order_addons_order_id_fkey(
+    id,
+    order_id,
+    addon_id,
+    quantity,
+    unit_price_twd,
+    subtotal_twd
   )
 `;
 
@@ -63,8 +72,24 @@ function isMissingFunctionError(error) {
     && String(error.message ?? '').includes(RPC_NAME);
 }
 
+const ADDON_INPUT_ERROR_CODES = new Set(['ADDON_UNAVAILABLE', 'ADDON_SELECTIONS_INVALID']);
+
+/** @param {any} error */
+function addonInputError(error) {
+  const code = String(error?.message ?? '').trim();
+  if (!ADDON_INPUT_ERROR_CODES.has(code)) return null;
+  const wrapped = /** @type {Error & {code?: string, addonId?: string|null}} */ (new Error(code));
+  wrapped.code = code;
+  wrapped.addonId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(String(error?.details ?? ''))
+    ? String(error.details)
+    : null;
+  return wrapped;
+}
+
 /** @param {any} error @param {string} fallbackMessage @returns {Error & {code?: string}} */
 function databaseError(error, fallbackMessage) {
+  const addonError = addonInputError(error);
+  if (addonError) return addonError;
   if (isMissingFunctionError(error)) {
     const missing = /** @type {Error & {code?: string}} */ (new Error(
       `${BOOKING_DRAFT_RPC_MISSING_CODE}: 原子建單 RPC 尚未套用，已停止以避免非原子資料。`,
@@ -75,6 +100,13 @@ function databaseError(error, fallbackMessage) {
   const wrapped = /** @type {Error & {code?: string}} */ (new Error(error?.message ?? fallbackMessage));
   if (error?.code) wrapped.code = error.code;
   return wrapped;
+}
+
+/** @param {unknown} error */
+export function isAddonInputError(error) {
+  return !!error
+    && typeof error === 'object'
+    && ADDON_INPUT_ERROR_CODES.has(String(/** @type {any} */ (error).code ?? ''));
 }
 
 /**
@@ -107,6 +139,7 @@ function integer(value, label, { min = 0 } = {}) {
  * @param {unknown} input.conflictOverrideSnapshot
  * @param {string} input.correlationId
  * @param {string|null} input.paymentDeadlineAt
+ * @param {unknown} input.addonSelections
  * @param {any} [supabase]
  */
 export async function createBookingDraftAtomicDb(input, supabase) {
@@ -127,6 +160,7 @@ export async function createBookingDraftAtomicDb(input, supabase) {
     p_conflict_override_snapshot: input.conflictOverrideSnapshot ?? null,
     p_correlation_id: input.correlationId,
     p_payment_deadline_at: input.paymentDeadlineAt,
+    p_addon_selections: input.addonSelections ?? [],
   });
 
   if (error) throw databaseError(error, `${RPC_NAME} failed`);
@@ -167,6 +201,11 @@ export async function readBackBookingOrderMaterializationDb(
   const booking = oneRelated(order.booking, 'booking');
   const items = Array.isArray(order.items) ? order.items : [];
   const activityItems = items.filter((/** @type {any} */ item) => item?.item_type === 'activity_booking');
+  const addonItems = items.filter((/** @type {any} */ item) => (
+    item?.item_type === 'fee' && item?.metadata?.kind === 'addon'
+  ));
+  /** @type {any[]} */
+  const addons = Array.isArray(order.addons) ? order.addons : [];
 
   if (booking.id !== bookingId || booking.order_id !== orderId || order.booking_id !== bookingId) {
     throw new Error('booking/order reciprocal read-back mismatch');
@@ -190,6 +229,9 @@ export async function readBackBookingOrderMaterializationDb(
   if (activityItems.length !== 1) {
     throw new Error('booking/order read-back must contain exactly one base activity item');
   }
+  if (items.length !== activityItems.length + addonItems.length) {
+    throw new Error('booking/order read-back contains an unexpected payable item');
+  }
 
   const baseItem = activityItems[0];
   if (
@@ -206,8 +248,33 @@ export async function readBackBookingOrderMaterializationDb(
   if (quantity * unitPrice !== baseSubtotal) {
     throw new Error('base activity item subtotal is not reconciled');
   }
-  if (requireTotalMatch && baseSubtotal !== totalTwd) {
-    throw new Error('base activity item does not reconcile to persisted order total');
+  const addonSubtotal = addons.reduce((/** @type {number} */ sum, /** @type {any} */ addon) => (
+    sum + integer(addon?.subtotal_twd, 'addon snapshot subtotal')
+  ), 0);
+  const itemSubtotal = items.reduce((/** @type {number} */ sum, /** @type {any} */ item) => (
+    sum + integer(item?.subtotal_amount, 'order item subtotal')
+  ), 0);
+  if (addonItems.length !== addons.length) {
+    throw new Error('add-on snapshot and payable item counts do not reconcile');
+  }
+  const unusedAddonItems = [...addonItems];
+  for (const addon of addons) {
+    const snapshotQuantity = integer(addon?.quantity, 'addon snapshot quantity', { min: 1 });
+    const snapshotUnitPrice = integer(addon?.unit_price_twd, 'addon snapshot unit price');
+    const snapshotSubtotal = integer(addon?.subtotal_twd, 'addon snapshot subtotal');
+    const itemIndex = unusedAddonItems.findIndex((item) => (
+      item?.order_id === orderId
+      && item?.ref_id === addon?.addon_id
+      && integer(item?.unit_price, 'add-on item unit price') === snapshotUnitPrice
+      && integer(item?.subtotal_amount, 'add-on item subtotal') === snapshotSubtotal
+      && integer(item?.metadata?.selectedQuantity, 'add-on item selected quantity', { min: 1 }) === snapshotQuantity
+      && item?.metadata?.addonId === addon?.addon_id
+    ));
+    if (itemIndex < 0) throw new Error('add-on snapshot and payable item do not reconcile');
+    unusedAddonItems.splice(itemIndex, 1);
+  }
+  if (requireTotalMatch && itemSubtotal !== totalTwd) {
+    throw new Error('payable order items do not reconcile to persisted order total');
   }
 
   return {
@@ -220,6 +287,7 @@ export async function readBackBookingOrderMaterializationDb(
     orderStatus: order.status,
     totalTwd,
     baseSubtotal,
+    addonSubtotal,
     paymentDeadlineAt: order.payment_deadline_at ?? null,
   };
 }

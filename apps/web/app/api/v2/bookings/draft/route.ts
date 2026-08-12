@@ -49,6 +49,7 @@ import {
 import { initialPaymentDeadlineForBookingType } from '../../../../../src/lib/payment-deadline.mjs';
 import { dropExpiredUnpaidHolds } from '../../../../../src/lib/expired-hold-filter.mjs';
 import { materializeDraftBookingOrder } from '../../../../../src/lib/checkout/booking-order-materialization.mjs';
+import { isAddonInputError } from '../../../../../src/lib/checkout/db-booking-order-materialization.mjs';
 import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
@@ -1067,6 +1068,23 @@ export async function POST(request: NextRequest) {
       })
     );
   } catch (err) {
+    if (isAddonInputError(err)) {
+      const addonId = typeof (err as { addonId?: unknown })?.addonId === 'string'
+        ? (err as { addonId: string }).addonId
+        : null;
+      const invalidShape = (err as { code?: unknown })?.code === 'ADDON_SELECTIONS_INVALID';
+      return Response.json(
+        {
+          success: false,
+          error: {
+            code: invalidShape ? 'VALIDATION_ERROR' : 'ADDON_UNAVAILABLE',
+            message: invalidShape ? '加購選擇格式不正確，請重新選擇' : '所選加購目前無法使用，請重新選擇',
+            ...(addonId ? { details: { addonId } } : {}),
+          },
+        },
+        { status: 400 },
+      );
+    }
     return handleRouteError(err, { route: 'v2/bookings/draft' });
   }
 }
