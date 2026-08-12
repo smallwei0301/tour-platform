@@ -32,9 +32,11 @@ const DATABASE_URL = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
 const SUPABASE_URL = requiredUrl('SUPABASE_URL');
 const API_BASE_URL = requiredUrl('MIDAO_API_BASE_URL');
 const ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 assert.ok(DATABASE_URL, 'isolated PostgreSQL URL is required');
 assert.ok(ANON_KEY, 'isolated anon key is required');
+assert.ok(SERVICE_ROLE_KEY, 'isolated service-role key is required');
 
 let client;
 
@@ -83,6 +85,39 @@ async function loginTraveler() {
   const projectRef = SUPABASE_URL.hostname.split('.', 1)[0];
   jar.set(`sb-${projectRef}-auth-token`, encodeURIComponent(JSON.stringify(login.body)));
   return jar;
+}
+
+async function createOrUpdateOtherTravelerAuthUser() {
+  const headers = {
+    apikey: SERVICE_ROLE_KEY,
+    authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+    'content-type': 'application/json',
+  };
+  const body = {
+    email: 'issue1813-other@example.invalid',
+    password: 'issue1813-other-local-only',
+    email_confirm: true,
+    user_metadata: { full_name: 'Issue 1813 Other Traveler', role: 'traveler' },
+  };
+  const timeout = AbortSignal.timeout(30_000);
+  let response = await fetch(new URL(`/auth/v1/admin/users/${OTHER_TRAVELER_ID}`, SUPABASE_URL), {
+    method: 'PUT', headers, body: JSON.stringify(body), signal: timeout,
+  });
+  if (response.status === 404) {
+    response = await fetch(new URL('/auth/v1/admin/users', SUPABASE_URL), {
+      method: 'POST', headers, body: JSON.stringify({ id: OTHER_TRAVELER_ID, ...body }), signal: timeout,
+    });
+  }
+  assert.ok(response.ok, `other traveler GoTrue fixture failed: HTTP ${response.status}`);
+}
+
+async function deleteOtherTravelerAuthUser() {
+  const response = await fetch(new URL(`/auth/v1/admin/users/${OTHER_TRAVELER_ID}`, SUPABASE_URL), {
+    method: 'DELETE',
+    headers: { apikey: SERVICE_ROLE_KEY, authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+    signal: AbortSignal.timeout(30_000),
+  });
+  assert.ok(response.ok || response.status === 404, `other traveler GoTrue cleanup failed: HTTP ${response.status}`);
 }
 
 async function callPublic(jar, overrides = {}) {
@@ -146,6 +181,7 @@ async function installFault({ name, table, operation, when, marker }) {
 before(async () => {
   client = new pg.Client({ connectionString: DATABASE_URL });
   await client.connect();
+  await createOrUpdateOtherTravelerAuthUser();
   await client.query(`INSERT INTO public.users(id, role, email, name)
     VALUES ($1, 'traveler', 'issue1813-other@example.invalid', 'Issue 1813 Other Traveler')
     ON CONFLICT (id) DO NOTHING`, [OTHER_TRAVELER_ID]);
@@ -169,6 +205,7 @@ after(async () => {
     await client.query('DELETE FROM public.activities WHERE id = $1', [ACTIVITY_ID]);
     await client.query('DELETE FROM public.guide_profiles WHERE id = $1', [GUIDE_ID]);
     await client.query('DELETE FROM public.users WHERE id = $1', [OTHER_TRAVELER_ID]);
+    await deleteOtherTravelerAuthUser();
   } finally {
     await client.end();
   }
