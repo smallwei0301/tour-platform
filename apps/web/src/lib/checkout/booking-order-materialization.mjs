@@ -40,21 +40,23 @@ export async function materializeDraftBookingOrder(input, deps = {}) {
     requireTotalMatch: true,
   });
 
-  try {
-    await notify({
-      bookingId: persistedFinal.bookingId,
-      orderId: persistedFinal.orderId,
-      activityId: persistedFinal.activityId,
-      activityTitle: input.activityTitle,
-      startAt: input.startAt,
-      peopleCount: input.participants,
-      totalTwd: persistedFinal.totalTwd,
-      paymentDeadlineAt: persistedFinal.paymentDeadlineAt,
-      requiresApproval: input.requiresApproval === true,
-    });
-  } catch (error) {
-    // 通知維持既有 best-effort 契約；資料與 API 成功不能被外部通知可用性反轉。
-    console.error('[booking-draft-post-create-notify] orchestration failed:', error);
+  if (!created.replayed) {
+    try {
+      await notify({
+        bookingId: persistedFinal.bookingId,
+        orderId: persistedFinal.orderId,
+        activityId: persistedFinal.activityId,
+        activityTitle: input.activityTitle,
+        startAt: input.startAt,
+        peopleCount: input.participants,
+        totalTwd: persistedFinal.totalTwd,
+        paymentDeadlineAt: persistedFinal.paymentDeadlineAt,
+        requiresApproval: input.requiresApproval === true,
+      });
+    } catch (error) {
+      // 通知維持既有 best-effort 契約；資料與 API 成功不能被外部通知可用性反轉。
+      console.error('[booking-draft-post-create-notify] orchestration failed:', error);
+    }
   }
 
   return {
@@ -65,5 +67,6 @@ export async function materializeDraftBookingOrder(input, deps = {}) {
     orderStatus: persistedFinal.orderStatus,
     amount: persistedFinal.totalTwd,
     paymentDeadlineAt: persistedFinal.paymentDeadlineAt,
+    replayed: created.replayed === true,
   };
 }

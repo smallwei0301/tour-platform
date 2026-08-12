@@ -125,6 +125,7 @@ async function callPublic(jar, overrides = {}) {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
+      'idempotency-key': `issue1813-real-${overrides.contactEmail ?? 'public'}`,
       'x-correlation-id': 'issue1813-real-auth',
       cookie: jar.header(),
     },

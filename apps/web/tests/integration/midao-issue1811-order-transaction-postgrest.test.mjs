@@ -254,7 +254,11 @@ function publicDraftPayload(overrides = {}) {
 async function callPublicDraft(overrides = {}) {
   const response = await fetch(`${publicRouteBase}/api/v2/bookings/draft`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-correlation-id': 'issue1811-public-route' },
+    headers: {
+      'content-type': 'application/json',
+      'idempotency-key': `issue1811-${overrides.contactEmail ?? CONTACT_EMAIL}`,
+      'x-correlation-id': 'issue1811-public-route',
+    },
     body: JSON.stringify(publicDraftPayload(overrides)),
   });
   const text = await response.text();

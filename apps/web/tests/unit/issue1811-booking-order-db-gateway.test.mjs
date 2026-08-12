@@ -77,8 +77,8 @@ test('#1811 atomic gateway never sends a client total and maps missing RPC fail-
     totalTwd: 2,
   }, client);
 
-  assert.equal(observedName, 'fn_create_booking_draft_with_addons_and_points_atomic');
-  assert.deepEqual(created, { bookingId, orderId });
+  assert.equal(observedName, 'fn_create_booking_draft_with_addons_points_idempotent');
+  assert.deepEqual(created, { bookingId, orderId, replayed: false });
   assert.equal(
     Object.keys(observedArgs).some((key) => /total|amount/iu.test(key)),
     false,

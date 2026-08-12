@@ -89,7 +89,11 @@ function publicPayload(overrides = {}) {
 
 async function callPublic(overrides = {}) {
   const response = await fetch(`${publicBase}/api/v2/bookings/draft`, {
-    method: 'POST', headers: { 'content-type': 'application/json', 'x-correlation-id': 'issue1812-public' },
+    method: 'POST', headers: {
+      'content-type': 'application/json',
+      'idempotency-key': `issue1812-${overrides.contactEmail ?? 'public'}`,
+      'x-correlation-id': 'issue1812-public',
+    },
     body: JSON.stringify(publicPayload(overrides)),
   });
   const text = await response.text();

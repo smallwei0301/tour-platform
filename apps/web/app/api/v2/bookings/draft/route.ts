@@ -50,9 +50,13 @@ import { initialPaymentDeadlineForBookingType } from '../../../../../src/lib/pay
 import { dropExpiredUnpaidHolds } from '../../../../../src/lib/expired-hold-filter.mjs';
 import { materializeDraftBookingOrder } from '../../../../../src/lib/checkout/booking-order-materialization.mjs';
 import {
+  findBookingDraftIdempotencyReplayDb,
+  isCheckoutIdempotencyError,
   isAddonInputError,
   isPointsInputError,
+  readBackBookingOrderMaterializationDb,
 } from '../../../../../src/lib/checkout/db-booking-order-materialization.mjs';
+import { hashIdempotentRequest, parseIdempotencyKey } from '../../../../../src/lib/midao/idempotency';
 import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
@@ -120,6 +124,32 @@ function pickPlanActivityRelation(
 
 function isManualOrSystemSource(value: unknown): value is 'manual' | 'system' {
   return value === 'manual' || value === 'system';
+}
+
+function draftSuccessResponse(materialized: {
+  bookingId: string;
+  bookingNo: string;
+  bookingStatus: string;
+  orderId: string;
+  orderStatus: string;
+  amount?: number;
+  totalTwd?: number;
+}, bookingType: unknown) {
+  const amount = materialized.amount ?? materialized.totalTwd;
+  if (!Number.isSafeInteger(amount)) throw new Error('draft success response requires persisted total');
+  return Response.json(
+    successV2({
+      bookingId: materialized.bookingId,
+      bookingNo: materialized.bookingNo,
+      bookingStatus: materialized.bookingStatus,
+      orderId: materialized.orderId,
+      orderStatus: materialized.orderStatus,
+      amount,
+      currency: 'TWD',
+      bookingType: normalizeBookingType(bookingType),
+      requiresApproval: requiresGuideApproval(bookingType),
+    }),
+  );
 }
 
 async function isSlotInGeneratedV2Availability(
@@ -564,9 +594,58 @@ export async function POST(request: NextRequest) {
   }
 
   const { data } = validation;
+  let idempotencyKey: string;
+  try {
+    idempotencyKey = parseIdempotencyKey(request.headers.get('idempotency-key'));
+  } catch {
+    return Response.json(errorV2('INVALID_IDEMPOTENCY_KEY', 'Idempotency-Key is required'), { status: 422 });
+  }
+  const requestHash = hashIdempotentRequest({
+    activityId: data.activityId,
+    planId: data.planId,
+    scheduleId: data.scheduleId ?? null,
+    startAt: data.startAt,
+    timezone: data.timezone,
+    participants: data.participants,
+    sourceChannel: data.sourceChannel,
+    contactName: data.contactName,
+    contactPhone: data.contactPhone,
+    contactEmail: data.contactEmail,
+    customerNote: data.customerNote ?? null,
+    addonSelections: (body as { addonSelections?: unknown }).addonSelections ?? [],
+    redeemPoints: data.redeemPoints,
+  });
 
   try {
     const supabase = await createClient();
+    let travelerId: string | null = null;
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      travelerId = authData.user?.id ?? null;
+    } catch {
+      // Anonymous checkout uses a one-way contact fingerprint as its actor id.
+    }
+    const idempotencyActorType = travelerId ? 'traveler' : 'guest';
+    const idempotencyActorId = travelerId ?? hashIdempotentRequest({
+      contactEmail: data.contactEmail,
+      contactPhone: data.contactPhone,
+    });
+
+    const completedReplay = await findBookingDraftIdempotencyReplayDb({
+      idempotencyKey,
+      requestHash,
+      actorType: idempotencyActorType,
+      actorId: idempotencyActorId,
+    });
+    if (completedReplay) {
+      const persisted = await readBackBookingOrderMaterializationDb({
+        bookingId: completedReplay.bookingId,
+        orderId: completedReplay.orderId,
+        expectedActivityId: data.activityId,
+        requireTotalMatch: true,
+      });
+      return draftSuccessResponse(persisted, completedReplay.bookingType);
+    }
 
     const resolvedPlan = await resolveBookingPlan(supabase, {
       activityId: data.activityId,
@@ -1013,18 +1092,6 @@ export async function POST(request: NextRequest) {
         }
       : null;
 
-    // 4. Get or find traveler_id from auth (optional)
-    let travelerId: string | null = null;
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      travelerId = user?.id ?? null;
-    } catch {
-      // Not logged in, continue without traveler_id
-    }
-
     // Soft-launch guard
     {
       const { createClient: createServiceClient } = await import('@supabase/supabase-js');
@@ -1068,23 +1135,13 @@ export async function POST(request: NextRequest) {
       // #1812/#1813 都在同一 DB transaction；前端只提供選擇，不提供付款金額。
       addonSelections: (body as any)?.addonSelections,
       redeemPoints: data.redeemPoints,
+      idempotencyKey,
+      requestHash,
+      idempotencyActorType,
+      idempotencyActorId,
     });
 
-    // Return response per API spec
-    return Response.json(
-      successV2({
-        bookingId: materialized.bookingId,
-        bookingNo: materialized.bookingNo,
-        bookingStatus: materialized.bookingStatus,
-        orderId: materialized.orderId,
-        orderStatus: materialized.orderStatus,
-        amount: materialized.amount,
-        currency: 'TWD',
-        // 三種預約模式：前端依此分流（request → 顯示「送出申請」、不進付款）。
-        bookingType: normalizeBookingType(planData.booking_type),
-        requiresApproval: requiresGuideApproval(planData.booking_type),
-      })
-    );
+    return draftSuccessResponse(materialized, planData.booking_type);
   } catch (err) {
     if (isAddonInputError(err)) {
       const addonId = typeof (err as { addonId?: unknown })?.addonId === 'string'
@@ -1110,6 +1167,17 @@ export async function POST(request: NextRequest) {
           error: { code: 'POINTS_UNAVAILABLE', message: '點數目前無法使用，請重新確認後再試' },
         },
         { status: 400 },
+      );
+    }
+    if (isCheckoutIdempotencyError(err)) {
+      const code = (err as { code?: string }).code;
+      const inProgress = code === 'IDEMPOTENCY_IN_PROGRESS';
+      return Response.json(
+        errorV2(
+          code ?? 'IDEMPOTENCY_CONFLICT',
+          inProgress ? '訂單正在建立中，請稍候再查看結果' : '此重試識別碼已用於不同的訂單內容',
+        ),
+        { status: 409 },
       );
     }
     return handleRouteError(err, { route: 'v2/bookings/draft' });

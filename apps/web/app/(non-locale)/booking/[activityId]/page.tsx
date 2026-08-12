@@ -1,11 +1,9 @@
 'use client';
 import Image from 'next/image';
-
 import Link from 'next/link';
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { fetchActivityByIdOrSlug } from '../../../../src/lib/client-api';
-
 // Client component：用字面量 process.env.NEXT_PUBLIC_* 讓 Next build 內嵌（透過 env 參數
 // 間接讀取在 client bundle 不會被替換 → 永遠 undefined）。#1475 匯款付款選項旗標。
 const TRANSFER_PAYMENT_ENABLED =
@@ -17,9 +15,9 @@ import { derivePlanMetaFromActivityPlans } from '../../../../src/lib/booking-v2-
 import { track } from '../../../../src/lib/track';
 import { formatSlotRangeLabel } from '../../../../src/lib/slot-generator';
 import { CheckoutExtrasSection, type CheckoutExtrasValue } from '../../../../src/components/activity/CheckoutExtrasSection';
+import { useDraftIdempotencyKey } from '../../../../src/lib/checkout/draft-idempotency-key';
 import { useClientLocale } from '../../../../src/i18n/use-client-locale';
 import { getClientNamespace } from '../../../../src/i18n/client-nav-messages';
-
 // ── 型別 ──────────────────────────────────────────────────────
 interface Schedule {
   id: string;
@@ -266,6 +264,9 @@ function BookingInnerV2FlagShell() {
   const baseMinParticipants = Math.max(1, effectivePlanMeta?.minParticipants ?? activity?.minParticipants ?? 1);
   const baseMaxParticipants = effectivePlanMeta?.maxParticipants ?? activity?.maxParticipants ?? null;
   const effectiveMinParticipants = allowOnePersonAddOn ? 1 : baseMinParticipants;
+  const selectedSlot = slots.find((slot) => slot.startAt === selectedSlotStartAt) || slots[0] || null;
+  const draftScheduleId = selectedSlot?.scheduleId || activeScheduleId || undefined;
+  const getDraftIdempotencyKey = useDraftIdempotencyKey(JSON.stringify({ activityId: resolvedActivityId, planId: resolvedPlanId, scheduleId: draftScheduleId ?? null, startAt: selectedSlotStartAt, timezone, participants: Math.max(guests, effectiveMinParticipants), sourceChannel, contactName, contactPhone, contactEmail, customerNote: note || null, addonSelections: extras.addonSelections, redeemPoints: extras.redeemPoints }));
   const selectedPlanDisplayName = useMemo(() => {
     const fromApi = effectivePlanMeta?.name?.trim();
     if (fromApi) return fromApi;
@@ -436,15 +437,11 @@ function BookingInnerV2FlagShell() {
         page_path: `/booking/${activitySlug}`,
       });
 
-      // 排程預約（scheduled）：每個可選時段帶有自己的固定場次 scheduleId，
-      // 以選取的時段為準；其餘模式沿用 URL 帶入的 activeScheduleId。
-      const selectedSlot = slots.find((s) => s.startAt === selectedSlotStartAt);
-      const draftScheduleId = selectedSlot?.scheduleId || activeScheduleId || undefined;
-
       const draftRes = await fetch('/api/v2/bookings/draft', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'idempotency-key': getDraftIdempotencyKey(),
           ...(correlationId ? { 'x-correlation-id': correlationId } : {}),
         },
         body: JSON.stringify({
@@ -560,7 +557,6 @@ function BookingInnerV2FlagShell() {
   const canGoStep3 = Boolean(contactName && contactPhone && contactEmail && agreed && !loading);
   const canConfirmPayment = Boolean(createdBookingId && canSubmit);
   const recoveryHref = activity ? `/activities/${encodeURIComponent(activity.region)}/${encodeURIComponent(activity.slug)}#section-plan` : '/activities';
-  const selectedSlot = slots.find((slot) => slot.startAt === selectedSlotStartAt) || slots[0] || null;
   const selectedCapacityLeft = selectedSlot?.capacityLeft ?? 0;
   // 三種預約模式：request plan 走「先審核後付款」——step 2 改為送出申請、step 3 顯示審核中。
   const planBookingType = selectedPlanMeta?.bookingType ?? selectedSlot?.bookingType ?? 'instant';

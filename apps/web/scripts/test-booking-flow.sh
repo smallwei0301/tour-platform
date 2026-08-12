@@ -59,6 +59,7 @@ echo ""
 
 DRAFT_RESPONSE=$(curl -s -X POST "$BASE_URL/api/v2/bookings/draft" \
     -H "Content-Type: application/json" \
+    -H "Idempotency-Key: qa-booking-flow-shell-v1" \
     -d "{
         \"activityId\": \"$ACTIVITY_ID\",
         \"planId\": \"$PLAN_ID\",

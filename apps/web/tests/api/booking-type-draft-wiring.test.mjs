@@ -46,8 +46,9 @@ test('atomic draft RPC derives guide_approval_status from the DB plan booking_ty
 });
 
 test('draft response exposes bookingType and requiresApproval', () => {
-  assert.match(DRAFT_SRC, /bookingType:\s*normalizeBookingType\(planData\.booking_type\)/);
-  assert.match(DRAFT_SRC, /requiresApproval:\s*requiresGuideApproval\(planData\.booking_type\)/);
+  assert.match(DRAFT_SRC, /bookingType:\s*normalizeBookingType\(bookingType\)/);
+  assert.match(DRAFT_SRC, /requiresApproval:\s*requiresGuideApproval\(bookingType\)/);
+  assert.match(DRAFT_SRC, /draftSuccessResponse\(materialized, planData\.booking_type\)/);
 });
 
 test('available-slots selectedPlan exposes bookingType', () => {
