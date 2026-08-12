@@ -62,9 +62,10 @@ test('signed actor cookie round-trips normalized canonical actor and target', ()
 });
 
 test('cookie scope, security attributes, and expiry match the signed payload', () => {
-  const previous = process.env.NODE_ENV;
-  process.env.NODE_ENV = 'production';
+  const hadPreviousNodeEnv = Object.hasOwn(process.env, 'NODE_ENV');
+  const previousNodeEnv = process.env.NODE_ENV;
   try {
+    process.env.NODE_ENV = 'production';
     const cookie = createCookie();
     const { payload } = decodeValue(cookie);
     assert.match(cookie, /^midao_impersonation_actor=[^;]+;/);
@@ -77,12 +78,17 @@ test('cookie scope, security attributes, and expiry match the signed payload', (
     const expires = cookie.match(/; Expires=([^;]+)/)?.[1];
     assert.equal(Date.parse(expires), payload.expiresAt);
     assert.ok(payload.expiresAt <= guideSessionExpiresAt);
-  } finally {
-    process.env.NODE_ENV = previous;
-  }
 
-  const nonProduction = createCookie();
-  assert.doesNotMatch(nonProduction, /; Secure/);
+    process.env.NODE_ENV = 'test';
+    const nonProduction = createCookie();
+    assert.doesNotMatch(nonProduction, /; Secure/);
+  } finally {
+    if (hadPreviousNodeEnv) {
+      process.env.NODE_ENV = previousNodeEnv;
+    } else {
+      delete process.env.NODE_ENV;
+    }
+  }
 });
 
 test('target mismatch, payload tamper, signature tamper, and expiry are rejected', () => {
