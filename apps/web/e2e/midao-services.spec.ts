@@ -115,7 +115,7 @@ test.describe('Midao services wizard', () => {
     await expect(page.getByLabel('服務名稱')).toHaveValue('原有山徑服務');
     await expect(page.getByRole('status')).toContainText('只帶入既有服務文字');
     await expect(page.getByRole('status')).toContainText('圖片不會在這裡被替換或編輯');
-    await expect(page.getByRole('alert')).toContainText('原有待處理內容未安全套用');
+    await expect(page.locator('[role="alert"]', { hasText: '原有待處理內容未安全套用' })).toContainText('原有待處理內容未安全套用');
     await page.getByRole('button', { name: '下一步：設定問卷' }).click();
     await page.getByRole('button', { name: '下一步：預覽確認' }).click();
     await expect(page.getByRole('button', { name: '發布服務' })).toBeDisabled();
