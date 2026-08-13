@@ -37,7 +37,7 @@ test('#1814 browser: transport retry keeps a key, while a changed scheduled slot
   });
   await page.goto(`/booking/issue1814-fixture?plan=${PLAN_ID}&date=${DATE}`);
   await expect(page.getByTestId('traveler-slot-option')).toHaveCount(2);
-  await page.getByTestId('traveler-slot-option').click();
+  await page.getByTestId('traveler-slot-option').nth(0).click();
   await page.getByRole('button', { name: /下一步：填寫資訊/ }).click();
   await page.getByPlaceholder('請輸入真實姓名').fill('測試旅客');
   await page.getByPlaceholder('0912-345-678').fill('0912345678');
