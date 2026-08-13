@@ -22,3 +22,9 @@
 
 ## P0-OVERRIDE 使用紀錄（如有）
 - 無。
+
+## S2 里程碑（canonical-first list/API entry + publish-result mapping）
+- 2026-08-13：新增唯一 `midao_materialize_legacy_service_draft` RPC gateway；materialization flag 預設關閉，且 production 永遠關閉。
+- canonical service list 僅在 local/test flag 開啟時，針對呼叫導遊自己 `status='published'`、無 active draft、無 publication version 的活動先 ensure；後續仍使用原 canonical 組裝/filter。
+- draft GET 在同一所有權邊界下對相同 eligibility 做 ensure，RPC 失敗回明確 500，不會回傳 null/blank draft；publish gateway 將 `LEGACY_PLAN_LIFECYCLE_UNRESOLVED` 映射為非成功 409。
+- focused Node tests：95/95 passed；`run-checks.sh` targeted 64/64 + typecheck passed。

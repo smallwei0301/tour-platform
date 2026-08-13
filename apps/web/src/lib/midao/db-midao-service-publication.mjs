@@ -435,6 +435,15 @@ async function mapRpcData(supabase, activityId, data) {
     // getServiceDraft 或前端重讀）。draft 帶 null，currentRevision 帶 RPC 版本。
     return { ok: false, conflict: true, code: 'REVISION_CONFLICT', status: 409, currentRevision, draft: null };
   }
+  if (code === 'LEGACY_PLAN_LIFECYCLE_UNRESOLVED') {
+    return {
+      ok: false,
+      conflict: false,
+      code: 'LEGACY_PLAN_LIFECYCLE_UNRESOLVED',
+      status: 409,
+      draft: null,
+    };
+  }
   if (code === 'OWNERSHIP_MISMATCH') return ownershipMismatchResult();
   if (code === 'DRAFT_NOT_FOUND') return draftNotFoundResult();
 

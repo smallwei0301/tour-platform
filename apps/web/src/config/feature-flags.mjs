@@ -111,6 +111,14 @@ export function isMidaoBackendModeSwitchEnabled(env = process.env) {
   return isTruthy(env.MIDAO_BACKEND_MODE_SWITCH_ENABLED);
 }
 
+/**
+ * Controlled legacy activity draft materialization. Default OFF; production is
+ * hard-disabled even if an operator accidentally supplies the environment key.
+ */
+export function isMidaoLegacyDraftMaterializationEnabled(env = process.env) {
+  return env.NODE_ENV !== 'production' && env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED === '1';
+}
+
 /** Local-only Midao E2E diagnostics gate. Default OFF. */
 export function isMidaoE2ELocal(env = process.env) {
   return isTruthy(env.MIDAO_E2E_LOCAL);

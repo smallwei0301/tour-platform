@@ -10,7 +10,10 @@
  * CSRF 與 mutations flag。行為與其他 guide command route 一致（session → CSRF → mutations → body）。
  */
 import { validateCsrf } from '../../../../../src/lib/csrf.mjs';
-import { isMidaoBackendMutationsEnabled } from '../../../../../src/config/feature-flags.mjs';
+import {
+  isMidaoBackendMutationsEnabled,
+  isMidaoLegacyDraftMaterializationEnabled,
+} from '../../../../../src/config/feature-flags.mjs';
 import { assertActivityBelongsToGuide } from '../../../../../src/lib/assert-activity-belongs-to-guide.ts';
 import { getSupabase, hasSupabaseEnv } from '../../../../../src/lib/supabase-env.mjs';
 import {
@@ -18,6 +21,7 @@ import {
   MidaoRuntimeAccessError,
 } from '../../../../../src/lib/midao/canonical-guide-session.ts';
 import { getServiceDraft, upsertServiceDraft } from '../../../../../src/lib/midao/db-midao-service-drafts.mjs';
+import { ensureLegacyServiceDraftMaterialized } from '../../../../../src/lib/midao/db-legacy-service-draft-materialization.mjs';
 import { jsonOk, jsonError, jsonErrorWithExtras } from '../../../../../src/lib/api-response.ts';
 import { reportRouteError } from '../../../../../src/lib/route-error.ts';
 
@@ -99,6 +103,17 @@ function gatewayResponse(result: {
   return jsonError(result.code ?? 'INVALID_REQUEST', '請求參數不正確', result.status || 422);
 }
 
+async function shouldMaterializeLegacyDraft(activityId: string): Promise<boolean> {
+  if (!isMidaoLegacyDraftMaterializationEnabled() || !hasSupabaseEnv()) return false;
+  const supabase = await getSupabase();
+  const [{ data: activity, error: activityError }, { data: version, error: versionError }] = await Promise.all([
+    supabase.from('activities').select('status').eq('id', activityId).maybeSingle(),
+    supabase.from('service_publication_versions').select('activity_id').eq('activity_id', activityId).maybeSingle(),
+  ]);
+  if (activityError || versionError) throw new Error('Midao legacy draft eligibility lookup failed');
+  return activity?.status === 'published' && !version;
+}
+
 export async function GET(request: Request) {
   let guideId: string;
   try {
@@ -115,7 +130,18 @@ export async function GET(request: Request) {
   if (deny) return deny;
 
   try {
-    const result = await getServiceDraft((activityId as string).trim());
+    const normalizedActivityId = (activityId as string).trim();
+    let result = await getServiceDraft(normalizedActivityId);
+    if (result.ok && result.draft === null && await shouldMaterializeLegacyDraft(normalizedActivityId)) {
+      const ensured = await ensureLegacyServiceDraftMaterialized(normalizedActivityId, guideId);
+      if (!ensured.ok) {
+        return jsonError(ensured.code ?? 'MATERIALIZATION_FAILED', '無法建立 legacy 服務草稿', ensured.status || 422);
+      }
+      result = await getServiceDraft(normalizedActivityId);
+      if (result.ok && result.draft === null) {
+        throw new Error('Midao legacy draft materialization did not return an active draft');
+      }
+    }
     return gatewayResponse(result);
   } catch (error) {
     await reportRouteError(error, { route: `${ROUTE}:get` });
