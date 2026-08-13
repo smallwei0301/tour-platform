@@ -50,6 +50,8 @@ export interface ServiceDraft {
   status: 'active' | 'discarded' | 'published';
   payload: Partial<ServiceDraftPayload>;
   updatedAt: string | null;
+  materializationOrigin: string;
+  materializationReviewState: string | null;
 }
 
 export interface ServiceListData {

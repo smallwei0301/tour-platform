@@ -53,7 +53,10 @@ const originalEnv = {
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
 };
 
-const DRAFT_SELECT_KEYS = ['id', 'activity_id', 'guide_id', 'revision', 'status', 'payload', 'updated_at'];
+const DRAFT_SELECT_KEYS = [
+  'id', 'activity_id', 'guide_id', 'revision', 'status', 'payload', 'updated_at',
+  'materialization_origin', 'materialization_review_state',
+];
 
 function projectDraft(row) {
   const out = {};
@@ -81,7 +84,7 @@ function createSupabaseFake({
     let op = 'select';
     let payload = null;
     const builder = {
-      select() { return builder; },
+      select(columns) { calls.push({ type: 'draft-select', columns }); return builder; },
       insert(row) { op = 'insert'; payload = row; return builder; },
       update(patch) { op = 'update'; payload = patch; return builder; },
       eq(field, value) { filters.push([field, value]); return builder; },
@@ -305,6 +308,29 @@ test('GET returns the active draft for the owning guide', async () => {
   assert.equal(body.data.draft.status, 'active');
   assert.equal(body.data.draft.activityId, ACTIVITY_ID);
   assert.equal(body.data.draft.payload.name, '祕島夜潛');
+});
+
+test('GET projects legacy provenance and defaults absent provenance to native', async () => {
+  const legacyFake = createSupabaseFake({
+    drafts: [seedActiveDraft({
+      materialization_origin: 'legacy_activity',
+      materialization_review_state: 'needs_review',
+    })],
+  });
+  installEnv(legacyFake);
+  const legacy = await payload(await callGet(getRequest()));
+  assert.equal(legacy.status, 200);
+  assert.equal(legacy.body.data.draft.materializationOrigin, 'legacy_activity');
+  assert.equal(legacy.body.data.draft.materializationReviewState, 'needs_review');
+  assert.ok(legacyFake.calls.some((call) => call.type === 'draft-select'
+    && call.columns.includes('materialization_origin, materialization_review_state')));
+
+  const nativeFake = createSupabaseFake({ drafts: [seedActiveDraft()] });
+  installEnv(nativeFake);
+  const native = await payload(await callGet(getRequest()));
+  assert.equal(native.status, 200);
+  assert.equal(native.body.data.draft.materializationOrigin, 'native');
+  assert.equal(native.body.data.draft.materializationReviewState, null);
 });
 
 test('GET with no active draft returns draft:null', async () => {

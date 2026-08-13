@@ -28,3 +28,8 @@
 - canonical service list 僅在 local/test flag 開啟時，針對呼叫導遊自己 `status='published'`、無 active draft、無 publication version 的活動先 ensure；後續仍使用原 canonical 組裝/filter。
 - draft GET 在同一所有權邊界下對相同 eligibility 做 ensure，RPC 失敗回明確 500，不會回傳 null/blank draft；publish gateway 將 `LEGACY_PLAN_LIFECYCLE_UNRESOLVED` 映射為非成功 409。
 - focused Node tests：95/95 passed；`run-checks.sh` targeted 64/64 + typecheck passed。
+
+## S2b 里程碑（draft GET provenance 投影）
+- 2026-08-13：`guide_service_drafts` 的既有 `materialization_origin`／`materialization_review_state` 已沿 GET 讀取鏈（select → Supabase row mapping → draft view → 原有 route envelope）投影為 `materializationOrigin`／`materializationReviewState`。
+- 無 provenance 的既有 in-memory／測試資料維持向後相容：回傳 `materializationOrigin: 'native'` 與 `materializationReviewState: null`；未變更任何 materializer、publish、CAS 或 route envelope 寫入邏輯。
+- TDD 證據：新增 GET legacy/native provenance 測試先於實作確認 RED（legacy origin 實際為 `undefined`），實作後目標測試 GREEN，待固定焦點套件與 commit gate 完成後交 Rita 獨立審查。
