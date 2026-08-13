@@ -112,8 +112,8 @@ async function cleanup() {
 }
 
 async function removeFault() {
-  await client.query('DROP TRIGGER IF EXISTS issue1814_completion_fault ON public.midao_idempotency_records');
-  await client.query('DROP FUNCTION IF EXISTS public.issue1814_completion_fault()');
+  await client.query('DROP TRIGGER IF EXISTS issue1814_materialization_fault ON public.orders');
+  await client.query('DROP FUNCTION IF EXISTS public.issue1814_materialization_fault()');
 }
 
 async function removeConcurrencyBarrier() {
@@ -147,7 +147,6 @@ async function waitForConcurrentDatabaseBarrier() {
       FROM pg_catalog.pg_stat_activity
       WHERE datname = pg_catalog.current_database()
         AND wait_event_type = 'Lock'
-        AND query LIKE '%fn_create_booking_draft_with_addons_points_idempotent%'
       ORDER BY pid`);
     observed = waiting.rows;
     if (waiting.rowCount >= 2) return;
@@ -233,13 +232,13 @@ test('#1814 RED: concurrent same-key HTTP calls have one materialization and one
   assert.equal(after.claims[0].state, 'completed');
 });
 
-test('#1814 RED: conflict and failed completion do not expose a payable order, while rollback permits same-key retry', async () => {
+test('#1814 RED: conflict and failed atomic materialization do not expose a payable order, while rollback permits same-key retry', async () => {
   const traveler = await loginTraveler();
   const key = 'issue1814-fault-retry';
-  await client.query(`CREATE FUNCTION public.issue1814_completion_fault() RETURNS trigger LANGUAGE plpgsql AS $f$
+  await client.query(`CREATE FUNCTION public.issue1814_materialization_fault() RETURNS trigger LANGUAGE plpgsql AS $f$
     BEGIN RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'ISSUE1814_COMPLETION_BOOM'; END; $f$;
-    CREATE TRIGGER issue1814_completion_fault BEFORE UPDATE ON public.midao_idempotency_records
-      FOR EACH ROW WHEN (NEW.state = 'completed') EXECUTE FUNCTION public.issue1814_completion_fault();`);
+    CREATE TRIGGER issue1814_materialization_fault BEFORE INSERT ON public.orders
+      FOR EACH ROW EXECUTE FUNCTION public.issue1814_materialization_fault();`);
   const failed = await callPublic(traveler, key);
   assert.equal(failed.status, 500, failed.text);
   assert.doesNotMatch(failed.text, /bookingId|orderId|checkoutUrl|paymentUrl/iu);
