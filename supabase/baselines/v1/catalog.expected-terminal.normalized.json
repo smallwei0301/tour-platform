@@ -15211,6 +15211,102 @@
           "column",
           "public",
           "guide_service_drafts",
+          "materialization_origin"
+        ],
+        "collationName": "default",
+        "collationSchema": "pg_catalog",
+        "compression": "",
+        "default": "'native'::text",
+        "formattedType": "text",
+        "generated": "",
+        "identity": "",
+        "name": "materialization_origin",
+        "notNull": true,
+        "position": 9,
+        "relation": "guide_service_drafts",
+        "schema": "public",
+        "storage": "x",
+        "typeName": "text",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "guide_service_drafts",
+          "materialization_review_state"
+        ],
+        "collationName": "default",
+        "collationSchema": "pg_catalog",
+        "compression": "",
+        "default": null,
+        "formattedType": "text",
+        "generated": "",
+        "identity": "",
+        "name": "materialization_review_state",
+        "notNull": false,
+        "position": 10,
+        "relation": "guide_service_drafts",
+        "schema": "public",
+        "storage": "x",
+        "typeName": "text",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "guide_service_drafts",
+          "materialized_at"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "timestamp with time zone",
+        "generated": "",
+        "identity": "",
+        "name": "materialized_at",
+        "notNull": false,
+        "position": 11,
+        "relation": "guide_service_drafts",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "timestamptz",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "guide_service_drafts",
+          "materialized_revision"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "integer",
+        "generated": "",
+        "identity": "",
+        "name": "materialized_revision",
+        "notNull": false,
+        "position": 12,
+        "relation": "guide_service_drafts",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "int4",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "guide_service_drafts",
           "payload"
         ],
         "collationName": null,
@@ -30238,6 +30334,60 @@
           "relation",
           "public",
           "guide_service_drafts",
+          "midao_guide_service_drafts_materialization_origin_check"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (materialization_origin = ANY (ARRAY['native'::text, 'legacy_activity'::text]))",
+        "name": "midao_guide_service_drafts_materialization_origin_check",
+        "relation": "guide_service_drafts",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "guide_service_drafts",
+          "midao_guide_service_drafts_materialization_review_state_check"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (materialization_review_state IS NULL OR materialization_review_state = 'needs_review'::text)",
+        "name": "midao_guide_service_drafts_materialization_review_state_check",
+        "relation": "guide_service_drafts",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "guide_service_drafts",
+          "midao_guide_service_drafts_materialized_revision_check"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (materialized_revision IS NULL OR materialized_revision > 0)",
+        "name": "midao_guide_service_drafts_materialized_revision_check",
+        "relation": "guide_service_drafts",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "guide_service_drafts",
           "midao_guide_service_drafts_revision_check"
         ],
         "deferrable": false,
@@ -40151,7 +40301,30 @@
         "volatility": "s"
       },
       {
-        "bodySha256": "5a0d4e1e8a62866f64f6ad16a32ed58f8a62adb45fb2dbed289474ec3a898b90",
+        "bodySha256": "0efdb32eaedd42084c8ec03ac02d612ddb992be82a7df6641cd3eb875170b091",
+        "canonicalKey": [
+          "routine",
+          "public",
+          "midao_materialize_legacy_service_draft",
+          "p_activity_id uuid, p_guide_id uuid"
+        ],
+        "configuration": [
+          "search_path=pg_catalog"
+        ],
+        "identityArguments": "p_activity_id uuid, p_guide_id uuid",
+        "kind": "f",
+        "language": "plpgsql",
+        "leakProof": false,
+        "name": "midao_materialize_legacy_service_draft",
+        "parallel": "u",
+        "result": "jsonb",
+        "schema": "public",
+        "securityDefiner": true,
+        "strict": false,
+        "volatility": "v"
+      },
+      {
+        "bodySha256": "82bdc80bb5d4b8463f242a799a47adf6a547440a211d07e2d19b9f90ead8dcc8",
         "canonicalKey": [
           "routine",
           "public",
@@ -109383,6 +109556,66 @@
           "acl",
           "routine",
           "public",
+          "midao_materialize_legacy_service_draft(p_activity_id uuid, p_guide_id uuid)",
+          "supabase_admin",
+          "postgres",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_materialize_legacy_service_draft(p_activity_id uuid, p_guide_id uuid)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "midao_materialize_legacy_service_draft(p_activity_id uuid, p_guide_id uuid)",
+          "supabase_admin",
+          "service_role",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_materialize_legacy_service_draft(p_activity_id uuid, p_guide_id uuid)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "midao_materialize_legacy_service_draft(p_activity_id uuid, p_guide_id uuid)",
+          "supabase_admin",
+          "supabase_admin",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_materialize_legacy_service_draft(p_activity_id uuid, p_guide_id uuid)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
           "midao_publish_service_draft(p_activity_id uuid, p_expected_revision integer, p_guide_id uuid)",
           "supabase_admin",
           "postgres",
@@ -117490,6 +117723,19 @@
           "p_guide_id uuid, p_bucket text, p_sort text, p_cursor_rank integer, p_cursor_at timestamp with time zone, p_cursor_id uuid, p_limit integer"
         ],
         "object": "midao_list_booking_requests(p_guide_id uuid, p_bucket text, p_sort text, p_cursor_rank integer, p_cursor_at timestamp with time zone, p_cursor_id uuid, p_limit integer)",
+        "objectType": "routine",
+        "owner": "supabase_admin",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "owner",
+          "routine",
+          "public",
+          "midao_materialize_legacy_service_draft",
+          "p_activity_id uuid, p_guide_id uuid"
+        ],
+        "object": "midao_materialize_legacy_service_draft(p_activity_id uuid, p_guide_id uuid)",
         "objectType": "routine",
         "owner": "supabase_admin",
         "schema": "public"

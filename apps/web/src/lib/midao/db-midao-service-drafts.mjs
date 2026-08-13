@@ -132,6 +132,8 @@ function seedRow(input = {}) {
     status,
     payload: clone(payload),
     updatedAt,
+    materialization_origin: input.materializationOrigin ?? input.materialization_origin,
+    materialization_review_state: input.materializationReviewState ?? input.materialization_review_state,
   };
 }
 
@@ -144,6 +146,8 @@ function toDraftView(row) {
     status: row.status,
     payload: clone(row.payload),
     updatedAt: row.updatedAt,
+    materializationOrigin: row.materialization_origin ?? 'native',
+    materializationReviewState: row.materialization_review_state ?? null,
   };
 }
 
@@ -352,7 +356,7 @@ function discardInMemory(activityId, expected) {
 // ---------------------------------------------------------------------------
 // Supabase parity 路徑（走既有 gateway pattern；CAS 以 .eq('revision', expected) 表達）。
 // ---------------------------------------------------------------------------
-const DRAFT_SELECT = 'id, activity_id, guide_id, revision, status, payload, updated_at';
+const DRAFT_SELECT = 'id, activity_id, guide_id, revision, status, payload, updated_at, materialization_origin, materialization_review_state';
 
 function mapSupabaseRow(row) {
   if (!row || typeof row !== 'object') return null;
@@ -372,6 +376,8 @@ function mapSupabaseRow(row) {
     status: row.status,
     payload: clone(payload),
     updatedAt: typeof row.updated_at === 'string' ? row.updated_at : nowIso(),
+    materialization_origin: row.materialization_origin,
+    materialization_review_state: row.materialization_review_state,
   };
 }
 

@@ -148,6 +148,7 @@ const EXPECTED_TERMINAL_HISTORY = Object.freeze([
   '20260729180000', '20260729190000', '20260730093000', '20260804103000',
   '20260804113000', '20260806090000', '20260806091000', '20260806120000',
   '20260810033421', '20260812150000', '20260812160000', '20260812213000',
+  '20260813085910',
 ]);
 const EXPECTED_TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: '20260723000000_midao_backend_mode.sql', sha256: 'fe108aa5ca68f135f49e22cbb5074941ce8ff5464a6d91a56f9f4cbdae437b17' }),
@@ -177,6 +178,7 @@ const EXPECTED_TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: '20260812150000_issue1812_addon_atomic_materialization.sql', sha256: '4f46c444e3b5bfda3e459c90d658538ffd5058d2d6d016daeaeb299a5a106d24' }),
   Object.freeze({ filename: '20260812160000_issue1813_points_atomic_materialization.sql', sha256: 'c104e62a04fb4ecc04962515f82e0ccc6006aa2f116082141231d27eec0acfa5' }),
   Object.freeze({ filename: '20260812213000_issue1814_checkout_idempotency_atomic.sql', sha256: 'd410646ca1064a52a5b2b5809045d4220283b33f441dbfc904da246c49692a83' }),
+  Object.freeze({ filename: '20260813085910_issue1825_legacy_midao_draft_materialization.sql', sha256: '4ea5094f497e953076d41b3e8f878b331398f66f6694f5e2145dc1a845612ff9' }),
 ]);
 
 export function validateExpectedTerminalManifest(manifest) {

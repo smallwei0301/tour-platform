@@ -252,6 +252,7 @@ describe('issue #1758 — repo現況verified release gate維持fail-closed', () 
       '20260812150000_issue1812_addon_atomic_materialization.sql',
       '20260812160000_issue1813_points_atomic_materialization.sql',
       '20260812213000_issue1814_checkout_idempotency_atomic.sql',
+      '20260813085910_issue1825_legacy_midao_draft_materialization.sql',
     ]);
     assert.deepEqual(result.unverified, []);
 

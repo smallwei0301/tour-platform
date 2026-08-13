@@ -48,11 +48,15 @@ try {
 const originalEnv = {
   MIDAO_BACKEND_ENABLED: process.env.MIDAO_BACKEND_ENABLED,
   MIDAO_BACKEND_MUTATIONS_ENABLED: process.env.MIDAO_BACKEND_MUTATIONS_ENABLED,
+  MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED: process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED,
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
 };
 
-const DRAFT_SELECT_KEYS = ['id', 'activity_id', 'guide_id', 'revision', 'status', 'payload', 'updated_at'];
+const DRAFT_SELECT_KEYS = [
+  'id', 'activity_id', 'guide_id', 'revision', 'status', 'payload', 'updated_at',
+  'materialization_origin', 'materialization_review_state',
+];
 
 function projectDraft(row) {
   const out = {};
@@ -66,7 +70,10 @@ function projectDraft(row) {
 function createSupabaseFake({
   drafts = [],
   activityGuideId = GUIDE_ID,
+  activityStatus = 'published',
+  versions = [],
   runtimeGuideId = GUIDE_ID,
+  materialize = null,
   runtimeBackendMode = 'midao',
 } = {}) {
   const state = { drafts: drafts.map((d) => structuredClone(d)) };
@@ -77,7 +84,7 @@ function createSupabaseFake({
     let op = 'select';
     let payload = null;
     const builder = {
-      select() { return builder; },
+      select(columns) { calls.push({ type: 'draft-select', columns }); return builder; },
       insert(row) { op = 'insert'; payload = row; return builder; },
       update(patch) { op = 'update'; payload = patch; return builder; },
       eq(field, value) { filters.push([field, value]); return builder; },
@@ -152,7 +159,23 @@ function createSupabaseFake({
           eq(field, value) { if (field === 'id') query._id = value; return query; },
           async single() {
             if (query._id !== ACTIVITY_ID) return { data: null, error: { message: 'not found' } };
-            return { data: { id: ACTIVITY_ID, guide_id: activityGuideId }, error: null };
+            return { data: { id: ACTIVITY_ID, guide_id: activityGuideId, status: activityStatus }, error: null };
+          },
+          async maybeSingle() {
+            if (query._id !== ACTIVITY_ID) return { data: null, error: null };
+            return { data: { id: ACTIVITY_ID, guide_id: activityGuideId, status: activityStatus }, error: null };
+          },
+        };
+        return query;
+      }
+      if (table === 'service_publication_versions') {
+        const query = {
+          _activityId: null,
+          select() { return query; },
+          eq(field, value) { if (field === 'activity_id') query._activityId = value; return query; },
+          async maybeSingle() {
+            const version = versions.find((row) => row.activity_id === query._activityId) ?? null;
+            return { data: version ? structuredClone(version) : null, error: null };
           },
         };
         return query;
@@ -161,6 +184,22 @@ function createSupabaseFake({
         return draftBuilder();
       }
       throw new Error(`unexpected table: ${table}`);
+    },
+    rpc(name, args) {
+      calls.push({ type: 'rpc', name, args });
+      const response = materialize?.(args) ?? { data: null, error: { code: '42501', message: 'materialization unavailable' } };
+      if ((response?.data?.code === 'CREATED' || response?.data?.code === 'REUSED') && !state.drafts.some((row) => row.activity_id === args.p_activity_id && row.status === 'active')) {
+        state.drafts.push({
+          id: response.data.draftId,
+          activity_id: args.p_activity_id,
+          guide_id: args.p_guide_id,
+          revision: response.data.revision,
+          status: 'active',
+          payload: { name: 'legacy materialized' },
+          updated_at: FIXED_NOW,
+        });
+      }
+      return Promise.resolve(response);
     },
   };
   return { client, calls, state };
@@ -271,12 +310,77 @@ test('GET returns the active draft for the owning guide', async () => {
   assert.equal(body.data.draft.payload.name, '祕島夜潛');
 });
 
+test('GET projects legacy provenance and defaults absent provenance to native', async () => {
+  const legacyFake = createSupabaseFake({
+    drafts: [seedActiveDraft({
+      materialization_origin: 'legacy_activity',
+      materialization_review_state: 'needs_review',
+    })],
+  });
+  installEnv(legacyFake);
+  const legacy = await payload(await callGet(getRequest()));
+  assert.equal(legacy.status, 200);
+  assert.equal(legacy.body.data.draft.materializationOrigin, 'legacy_activity');
+  assert.equal(legacy.body.data.draft.materializationReviewState, 'needs_review');
+  assert.ok(legacyFake.calls.some((call) => call.type === 'draft-select'
+    && call.columns.includes('materialization_origin, materialization_review_state')));
+
+  const nativeFake = createSupabaseFake({ drafts: [seedActiveDraft()] });
+  installEnv(nativeFake);
+  const native = await payload(await callGet(getRequest()));
+  assert.equal(native.status, 200);
+  assert.equal(native.body.data.draft.materializationOrigin, 'native');
+  assert.equal(native.body.data.draft.materializationReviewState, null);
+});
+
 test('GET with no active draft returns draft:null', async () => {
   const fake = createSupabaseFake({ drafts: [] });
   installEnv(fake);
   const { status, body } = await payload(await callGet(getRequest()));
   assert.equal(status, 200);
   assert.equal(body.data.draft, null);
+});
+
+test('GET materializes an owned published activity and returns the materialized active draft', async () => {
+  const fake = createSupabaseFake({
+    drafts: [],
+    materialize: () => ({
+      data: {
+        code: 'CREATED',
+        activityId: ACTIVITY_ID,
+        draftId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        revision: 1,
+      },
+      error: null,
+    }),
+  });
+  installEnv(fake);
+  process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED = '1';
+  process.env.NODE_ENV = 'test';
+  const { status, body } = await payload(await callGet(getRequest()));
+  assert.equal(status, 200);
+  assert.equal(body.data.draft.revision, 1);
+  assert.equal(body.data.draft.payload.name, 'legacy materialized');
+  assert.deepEqual(fake.calls.filter((call) => call.type === 'rpc'), [{
+    type: 'rpc',
+    name: 'midao_materialize_legacy_service_draft',
+    args: { p_activity_id: ACTIVITY_ID, p_guide_id: GUIDE_ID },
+  }]);
+});
+
+test('GET materializes an owned published activity without a draft and returns explicit failure when the RPC rejects', async () => {
+  const fake = createSupabaseFake({ drafts: [] });
+  installEnv(fake);
+  process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED = '1';
+  process.env.NODE_ENV = 'test';
+  const { status, body } = await payload(await callGet(getRequest()));
+  assert.equal(status, 500);
+  assert.equal(body.error.code, 'INTERNAL_ERROR');
+  assert.deepEqual(fake.calls.filter((call) => call.type === 'rpc'), [{
+    type: 'rpc',
+    name: 'midao_materialize_legacy_service_draft',
+    args: { p_activity_id: ACTIVITY_ID, p_guide_id: GUIDE_ID },
+  }]);
 });
 
 test('GET missing auth returns 401', async () => {
