@@ -6,6 +6,7 @@ on:
       - '.github/workflows/midao-baseline-e2e.yml'
       - 'apps/web/e2e/helpers.ts'
       - 'apps/web/e2e/midao-*.spec.ts'
+      - 'apps/web/e2e/issue1814-checkout-idempotency.spec.ts'
       - 'apps/web/e2e/t1-login.spec.ts'
       - 'apps/web/playwright.config.ts'
       - 'apps/web/src/lib/guide-auth.ts'
@@ -266,6 +267,12 @@ jobs:
           node scripts/testing/with-midao-local-supabase.mjs --api-real-auth
           apps/web/tests/integration/midao-issue1813-points-atomicity-real-auth.test.mjs
 
+      - name: 'Run #1814 checkout idempotency PostgreSQL and authenticated concurrent public draft runtime contract'
+        run: >-
+          timeout --signal=TERM --kill-after=30s 1200s
+          node scripts/testing/with-midao-local-supabase.mjs --api-real-auth
+          apps/web/tests/integration/midao-issue1814-checkout-idempotency-real-auth.test.mjs
+
       - name: 'Run #1813 anonymous points rejection PostgreSQL and public draft runtime contract'
         run: >-
           timeout --signal=TERM --kill-after=30s 1200s
@@ -312,6 +319,7 @@ jobs:
           apps/web/e2e/midao-requests.spec.ts
           apps/web/e2e/midao-services.spec.ts
           apps/web/e2e/midao-inquiry-conversion.spec.ts
+          apps/web/e2e/issue1814-checkout-idempotency.spec.ts
 
       - name: Run Package 4 real-HTTP API chain gate (public inquiry to checkout, no mocks)
         run: >-

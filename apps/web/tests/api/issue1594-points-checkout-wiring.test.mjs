@@ -57,7 +57,7 @@ test('T1594wire.4 — #1813 將 redeemPoints 交給 single atomic RPC；不保�
   const orchestration = read('src/lib/checkout/booking-order-materialization.mjs');
   assert.doesNotMatch(orchestration, /applyOrderExtras|redeemPointsForOrderDb/);
   const gateway = read('src/lib/checkout/db-booking-order-materialization.mjs');
-  assert.match(gateway, /fn_create_booking_draft_with_addons_and_points_atomic/);
+  assert.match(gateway, /fn_create_booking_draft_with_addons_points_idempotent/);
   assert.match(gateway, /p_redeem_points: input\.redeemPoints \?\? 0/);
 });
 

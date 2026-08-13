@@ -42,6 +42,7 @@ export const POST_CUTOFF_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: '20260810033421_issue1811_atomic_booking_order_materialization.sql', sha256: '4fb09d6863a992c089be849198e13f85537a06f586797cb1ec159a8503372d5c' }),
   Object.freeze({ filename: '20260812150000_issue1812_addon_atomic_materialization.sql', sha256: '4f46c444e3b5bfda3e459c90d658538ffd5058d2d6d016daeaeb299a5a106d24' }),
   Object.freeze({ filename: '20260812160000_issue1813_points_atomic_materialization.sql', sha256: 'c104e62a04fb4ecc04962515f82e0ccc6006aa2f116082141231d27eec0acfa5' }),
+  Object.freeze({ filename: '20260812213000_issue1814_checkout_idempotency_atomic.sql', sha256: 'd410646ca1064a52a5b2b5809045d4220283b33f441dbfc904da246c49692a83' }),
 ]);
 
 export const CONFIG_SHA256 = '5289984d402959cd0d4596b056df9a3d27590b3abefa4d7551151ad54ae084ee';

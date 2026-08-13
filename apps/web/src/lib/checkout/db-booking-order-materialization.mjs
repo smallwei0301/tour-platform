@@ -6,11 +6,11 @@
  * 之後以獨立的 orders projection 讀回 booking、base item 與 persisted total，呼叫端
  * 不得把 request 或 RPC 暫存金額直接發布給付款／通知。
  */
-import { getSupabase } from '../supabase-env.mjs';
+import { getSupabase, hasSupabaseEnv } from '../supabase-env.mjs';
 
 export const BOOKING_DRAFT_RPC_MISSING_CODE = 'BOOKING_DRAFT_RPC_NOT_DEPLOYED';
 
-const RPC_NAME = 'fn_create_booking_draft_with_addons_and_points_atomic';
+const RPC_NAME = 'fn_create_booking_draft_with_addons_points_idempotent';
 const MATERIALIZATION_SELECT = `
   id,
   booking_id,
@@ -83,6 +83,25 @@ function isMissingFunctionError(error) {
 
 const ADDON_INPUT_ERROR_CODES = new Set(['ADDON_UNAVAILABLE', 'ADDON_SELECTIONS_INVALID']);
 const POINTS_INPUT_ERROR_CODES = new Set(['POINTS_UNAVAILABLE']);
+const IDEMPOTENCY_INPUT_ERROR_CODES = new Set(['IDEMPOTENCY_CONFLICT', 'IDEMPOTENCY_IN_PROGRESS']);
+
+// 單程序 fallback：僅供無 Supabase 的 route/unit 契約；真正的 claim 仍只能由原子 RPC 建立。
+// key 與 DB unique scope 相同，避免 fallback 測試把不同 command 的資料混在一起。
+const checkoutIdempotencyReplayStore = new Map();
+
+/** @param {{idempotencyKey:string}} input */
+function replayStoreKey(input) {
+  return `checkout:create_booking_draft:${input.idempotencyKey}`;
+}
+
+/** @param {{idempotencyKey:string}} input @param {any} row */
+export function __seedBookingDraftIdempotencyReplayForTest(input, row) {
+  checkoutIdempotencyReplayStore.set(replayStoreKey(input), structuredClone(row));
+}
+
+export function __resetBookingDraftIdempotencyReplayStoreForTest() {
+  checkoutIdempotencyReplayStore.clear();
+}
 
 /** @param {any} error */
 function addonInputError(error) {
@@ -105,12 +124,23 @@ function pointsInputError(error) {
   return wrapped;
 }
 
+/** @param {any} error */
+function idempotencyInputError(error) {
+  const code = String(error?.message ?? '').trim();
+  if (!IDEMPOTENCY_INPUT_ERROR_CODES.has(code)) return null;
+  const wrapped = /** @type {Error & {code?: string}} */ (new Error(code));
+  wrapped.code = code;
+  return wrapped;
+}
+
 /** @param {any} error @param {string} fallbackMessage @returns {Error & {code?: string}} */
 function databaseError(error, fallbackMessage) {
   const addonError = addonInputError(error);
   if (addonError) return addonError;
   const pointsError = pointsInputError(error);
   if (pointsError) return pointsError;
+  const idempotencyError = idempotencyInputError(error);
+  if (idempotencyError) return idempotencyError;
   if (isMissingFunctionError(error)) {
     const missing = /** @type {Error & {code?: string}} */ (new Error(
       `${BOOKING_DRAFT_RPC_MISSING_CODE}: 原子建單 RPC 尚未套用，已停止以避免非原子資料。`,
@@ -135,6 +165,13 @@ export function isPointsInputError(error) {
   return !!error
     && typeof error === 'object'
     && POINTS_INPUT_ERROR_CODES.has(String(/** @type {any} */ (error).code ?? ''));
+}
+
+/** @param {unknown} error */
+export function isCheckoutIdempotencyError(error) {
+  return !!error
+    && typeof error === 'object'
+    && IDEMPOTENCY_INPUT_ERROR_CODES.has(String(/** @type {any} */ (error).code ?? ''));
 }
 
 /**
@@ -169,6 +206,10 @@ function integer(value, label, { min = 0 } = {}) {
  * @param {string|null} input.paymentDeadlineAt
  * @param {unknown} input.addonSelections
  * @param {number|undefined} input.redeemPoints
+ * @param {string} input.idempotencyKey
+ * @param {string} input.requestHash
+ * @param {'traveler'|'guest'} input.idempotencyActorType
+ * @param {string} input.idempotencyActorId
  * @param {any} [supabase]
  */
 export async function createBookingDraftAtomicDb(input, supabase) {
@@ -191,6 +232,10 @@ export async function createBookingDraftAtomicDb(input, supabase) {
     p_payment_deadline_at: input.paymentDeadlineAt,
     p_addon_selections: input.addonSelections ?? [],
     p_redeem_points: input.redeemPoints ?? 0,
+    p_idempotency_key: input.idempotencyKey,
+    p_request_hash: input.requestHash,
+    p_idempotency_actor_type: input.idempotencyActorType,
+    p_idempotency_actor_id: input.idempotencyActorId,
   });
 
   if (error) throw databaseError(error, `${RPC_NAME} failed`);
@@ -201,6 +246,74 @@ export async function createBookingDraftAtomicDb(input, supabase) {
   return {
     bookingId: row.booking_id,
     orderId: row.order_id,
+    replayed: row.replayed === true,
+  };
+}
+
+/**
+ * 只讀已完成 snapshot，讓順序重送能在可用性檢查前回到同一筆已持久化結果。
+ * 初次請求仍必須由原子 RPC claim，避免讀後寫競態。
+ *
+ * @param {{idempotencyKey:string, requestHash:string, actorType:'traveler'|'guest', actorId:string}} input
+ * @param {any} [supabase]
+ */
+export async function findBookingDraftIdempotencyReplayDb(input, supabase) {
+  if (!supabase && !hasSupabaseEnv()) {
+    return projectBookingDraftIdempotencyReplay(
+      input,
+      checkoutIdempotencyReplayStore.get(replayStoreKey(input)) ?? null,
+    );
+  }
+  const client = supabase ?? await getSupabase();
+  const { data, error } = await client
+    .from('midao_idempotency_records')
+    .select('actor_type, actor_id, request_hash, state, response_body')
+    .eq('scope_type', 'checkout')
+    .eq('scope_id', '18140000-0000-4000-8000-000000000000')
+    .eq('command_name', 'create_booking_draft')
+    .eq('idempotency_key', input.idempotencyKey)
+    .maybeSingle();
+
+  if (error) throw databaseError(error, 'checkout idempotency replay lookup failed');
+  return projectBookingDraftIdempotencyReplay(input, data);
+}
+
+/**
+ * DB 與 in-memory fallback 共用同一個 completed/processing/conflict 投影。
+ * @param {{requestHash:string, actorType:'traveler'|'guest', actorId:string}} input
+ * @param {any} data
+ */
+export function projectBookingDraftIdempotencyReplay(input, data) {
+  if (!data) return null;
+  if (
+    data.actor_type !== input.actorType
+    || data.actor_id !== input.actorId
+    || data.request_hash !== input.requestHash
+  ) {
+    const conflict = /** @type {Error & {code?: string}} */ (new Error('IDEMPOTENCY_CONFLICT'));
+    conflict.code = 'IDEMPOTENCY_CONFLICT';
+    throw conflict;
+  }
+  if (data.state === 'processing') {
+    const processing = /** @type {Error & {code?: string}} */ (new Error('IDEMPOTENCY_IN_PROGRESS'));
+    processing.code = 'IDEMPOTENCY_IN_PROGRESS';
+    throw processing;
+  }
+  const body = data.response_body;
+  if (
+    data.state !== 'completed'
+    || !body
+    || typeof body.booking_id !== 'string'
+    || typeof body.order_id !== 'string'
+    || !['scheduled', 'request', 'instant'].includes(body.booking_type)
+  ) {
+    throw new Error('checkout idempotency replay snapshot is invalid');
+  }
+  return {
+    bookingId: body.booking_id,
+    orderId: body.order_id,
+    bookingType: body.booking_type,
+    replayed: true,
   };
 }
 

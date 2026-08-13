@@ -42,6 +42,7 @@ const exactMigrations = [
   ['20260810033421_issue1811_atomic_booking_order_materialization.sql', '4fb09d6863a992c089be849198e13f85537a06f586797cb1ec159a8503372d5c'],
   ['20260812150000_issue1812_addon_atomic_materialization.sql', '4f46c444e3b5bfda3e459c90d658538ffd5058d2d6d016daeaeb299a5a106d24'],
   ['20260812160000_issue1813_points_atomic_materialization.sql', 'c104e62a04fb4ecc04962515f82e0ccc6006aa2f116082141231d27eec0acfa5'],
+  ['20260812213000_issue1814_checkout_idempotency_atomic.sql', 'd410646ca1064a52a5b2b5809045d4220283b33f441dbfc904da246c49692a83'],
 ];
 const historyVersions = ['00000000000001', ...exactMigrations.map(([name]) => name.slice(0, 14))];
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');

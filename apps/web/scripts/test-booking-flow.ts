@@ -107,7 +107,7 @@ async function testDraftBooking(
 
   const response = await fetch(`${BASE_URL}/api/v2/bookings/draft`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'qa-booking-flow-ts-v1' },
     body: JSON.stringify(requestBody),
   });
 

@@ -87,7 +87,7 @@ test('#1813 gateway forwards only a requested point count, never a client total'
     },
   });
 
-  assert.equal(observedName, 'fn_create_booking_draft_with_addons_and_points_atomic');
+  assert.equal(observedName, 'fn_create_booking_draft_with_addons_points_idempotent');
   assert.equal(observedArgs.p_redeem_points, 500);
   assert.equal(Object.keys(observedArgs).some((key) => /total|amount/i.test(key)), false);
 });

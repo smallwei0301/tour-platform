@@ -1558,6 +1558,7 @@ export function parseMidaoRunnerInvocation(args) {
   const apiRealAuthTests = new Set([
     'apps/web/tests/integration/midao-inquiry-conversion-api-chain.test.mjs',
     'apps/web/tests/integration/midao-issue1813-points-atomicity-real-auth.test.mjs',
+    'apps/web/tests/integration/midao-issue1814-checkout-idempotency-real-auth.test.mjs',
   ]);
   if (
     (mode !== 'postgres' && childArgs.length === 0)

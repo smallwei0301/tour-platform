@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '../../../../../../src/lib/supabase/client';
+import { useDraftIdempotencyKey } from '../../../../../../src/lib/checkout/draft-idempotency-key';
 import { track } from '../../../../../../src/lib/track';
 import {
   ArrowRight, MountainCircleLogo, PersonIcon,
@@ -148,6 +149,11 @@ export default function GuideShopBookingPage() {
   }>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const getDraftIdempotencyKey = useDraftIdempotencyKey(JSON.stringify({
+    activityId: selectedActivityId, planId: selectedPlanId, scheduleId: null, startAt: selectedSlotStartAt,
+    timezone: TZ, participants: guests, sourceChannel: 'web', contactName, contactPhone, contactEmail,
+    customerNote: null, addonSelections: [], redeemPoints: 0,
+  }));
 
   // ── 登入狀態（延後登入：匿名可瀏覽 step 1–2，建立訂單前才要求登入）──
   useEffect(() => {
@@ -380,7 +386,10 @@ export default function GuideShopBookingPage() {
       setBusy(true); setError('');
       const r = await fetch('/api/v2/bookings/draft', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'idempotency-key': getDraftIdempotencyKey(),
+        },
         body: JSON.stringify({
           activityId: selectedActivity.id,
           planId: selectedPlan.id,
