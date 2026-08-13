@@ -84,6 +84,14 @@ async function callPublic(jar, key, overrides = {}) {
   });
 }
 
+async function callPayment(orderId) {
+  return jsonRequest(new URL('/api/v2/payments/ecpay/create', API_BASE_URL), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ orderId }),
+  });
+}
+
 async function state(key = null) {
   const orders = await client.query('SELECT id, total_twd FROM public.orders WHERE activity_id = $1 ORDER BY created_at', [ACTIVITY_ID]);
   const orderIds = orders.rows.map((row) => row.id);
@@ -277,4 +285,35 @@ test('#1814 RED: an existing matching processing claim is a non-payable conflict
   assert.equal(after.addons.length, 0);
   assert.equal(after.ledger.length, 0);
   assert.deepEqual(after.claims.map((row) => row.state), ['processing']);
+});
+
+test('#1815 release gate: persisted draft amount reconciles before payment, while a broken aggregate is rejected before payment side effects', async () => {
+  const traveler = await loginTraveler();
+  const created = await callPublic(traveler, 'issue1815-payment-guard');
+  assert.equal(created.status, 200, created.text);
+  const afterCreate = await state('issue1815-payment-guard');
+  assert.equal(afterCreate.orders.length, 1);
+  const [order] = afterCreate.orders;
+  const payableItems = await client.query('SELECT subtotal_amount FROM public.order_items WHERE order_id = $1', [order.id]);
+  assert.equal(
+    payableItems.rows.reduce((sum, row) => sum + Number(row.subtotal_amount), 0),
+    Number(order.total_twd),
+    'release gate must use the committed order total reconciled from order items',
+  );
+  assert.equal(created.body?.data?.amount, Number(order.total_twd), 'draft response must use the committed order total');
+
+  const payment = await callPayment(order.id);
+  assert.equal(payment.status, 200, payment.text);
+  assert.equal(Number(payment.body?.data?.params?.TotalAmount), Number(order.total_twd));
+  const createdAttempt = await client.query('SELECT amount_twd FROM public.payments WHERE order_id = $1', [order.id]);
+  assert.equal(createdAttempt.rowCount, 1);
+  assert.equal(Number(createdAttempt.rows[0].amount_twd), Number(order.total_twd));
+
+  await client.query('DELETE FROM public.order_items WHERE order_id = $1', [order.id]);
+  const rejected = await callPayment(order.id);
+  assert.equal(rejected.status, 409, rejected.text);
+  assert.equal(rejected.body?.error?.code, 'ORDER_NOT_MATERIALIZED');
+  assert.doesNotMatch(rejected.text, /MerchantTradeNo|CheckMacValue|paymentUrl|checkoutUrl/iu);
+  const paymentAttempts = await client.query('SELECT id FROM public.payments WHERE order_id = $1', [order.id]);
+  assert.equal(paymentAttempts.rowCount, 1, 'rejected aggregate must not create another payment attempt');
 });
