@@ -25,6 +25,7 @@
     "taxonomy:check": "node scripts/taxonomy/check-labels.mjs",
     "audit:public-booking": "node scripts/audit-public-booking-v2.mjs",
     "qa:admin-evidence-sweep": "node scripts/qa/admin-evidence-sweep.mjs",
+    "prepare:database-test-deps": "node scripts/testing/prepare-database-test-deps.mjs",
     "repair:booking-plans:dry-run": "node --env-file=.env scripts/admin/audit-or-repair-booking-plans.mjs"
   },
   "devDependencies": {
