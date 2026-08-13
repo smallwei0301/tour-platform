@@ -12,14 +12,15 @@ const postVersions = [
   '20260729180000', '20260729190000', '20260730093000', '20260804103000',
   '20260804113000', '20260806090000', '20260806091000', '20260806120000',
   '20260810033421',
+  '20260812150000', '20260812160000', '20260812213000',
 ];
 let client;
 before(async () => { client = new pg.Client({ connectionString: databaseUrl }); await client.connect(); });
 after(async () => { await client?.end(); });
 
-test('existing rehearsal keeps 128 occupied cutoff records and applies all 24 post-cutoff versions', async () => {
+test('existing rehearsal keeps 128 occupied cutoff records and applies all 27 post-cutoff versions', async () => {
   const { rows } = await client.query('SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version');
-  assert.equal(rows.length, 152);
+  assert.equal(rows.length, 155);
   assert.equal(rows.filter(({ name }) => name?.startsWith('fixture_cutoff:')).length, 128);
   assert.deepEqual(rows.slice(-postVersions.length).map(({ version }) => version), postVersions);
   assert.equal(rows.some(({ version, name }) => version === '00000000000001' || name === 'baseline_v1'), false);
