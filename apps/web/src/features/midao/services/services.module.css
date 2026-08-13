@@ -31,6 +31,8 @@
 .empty strong { display: block; margin-bottom: 7px; color: var(--midao-color-ink); font-family: var(--midao-font-heading); font-size: 21px; }
 .pagination { display: flex; align-items: center; justify-content: center; gap: 12px; }
 .alert { padding: 13px 16px; border-radius: 12px; background: color-mix(in srgb, var(--midao-color-alert) 12%, var(--midao-color-white)); color: #8e351f; font-size: 14px; line-height: 1.6; }
+.legacyNotice { padding: 16px; border: 1px solid color-mix(in srgb, var(--midao-color-ink) 26%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--midao-color-success) 10%, var(--midao-color-white)); color: var(--midao-color-ink); font-size: 14px; line-height: 1.65; }
+.legacyNotice p { margin: 7px 0 0; }
 .success { padding: 13px 16px; border-radius: 12px; background: color-mix(in srgb, var(--midao-color-success) 18%, var(--midao-color-white)); color: #355b2c; font-size: 14px; line-height: 1.6; }
 .formCard { display: grid; gap: 22px; padding: 22px; border: 1px solid var(--midao-color-border); border-radius: var(--midao-radius-card); background: var(--midao-color-white); box-shadow: var(--midao-shadow-card); }
 .field { display: grid; gap: 7px; }

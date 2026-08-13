@@ -38,25 +38,43 @@ export function ServiceWizard({ initialActivityId }: ServiceWizardProps) {
   const [conflictMessage, setConflictMessage] = useState('');
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [materializationOrigin, setMaterializationOrigin] = useState('native');
+  const [materializationReviewState, setMaterializationReviewState] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const hydratedRef = useRef(false);
   const revisionRef = useRef(0);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
 
-  const applyDraft = useCallback((draft: ServiceDraft | null, advisory?: unknown) => {
-    const nextRevision = draft?.revision ?? 0;
+  const applyDraft = useCallback((draft: ServiceDraft, advisory?: unknown) => {
+    const nextRevision = draft.revision;
     revisionRef.current = nextRevision;
     setRevision(nextRevision);
-    setForm(mergeServiceDraft(draft?.payload));
+    setForm(mergeServiceDraft(draft.payload));
     setPublicationPreview(normalizePublicationPreview(advisory));
+    setMaterializationOrigin(draft.materializationOrigin);
+    setMaterializationReviewState(draft.materializationReviewState);
     setDirty(false);
     setSaveState('saved');
     hydratedRef.current = true;
   }, []);
 
-  const loadDraft = useCallback(async (id: string) => {
+  const loadDraft = useCallback(async (id: string, requireDraft: boolean) => {
     const response = await fetchServiceDraft(id);
-    applyDraft(response.draft, response.publicationPreview);
+    if (!response.draft && requireDraft) throw new Error('草稿尚未準備完成，請重新載入後再編輯。');
+    if (response.draft) {
+      applyDraft(response.draft, response.publicationPreview);
+      return;
+    }
+    revisionRef.current = 0;
+    setRevision(0);
+    setForm(emptyServiceDraft());
+    setPublicationPreview(normalizePublicationPreview(response.publicationPreview));
+    setMaterializationOrigin('native');
+    setMaterializationReviewState(null);
+    setDirty(false);
+    setSaveState('saved');
+    hydratedRef.current = true;
   }, [applyDraft]);
 
   useEffect(() => {
@@ -71,7 +89,7 @@ export function ServiceWizard({ initialActivityId }: ServiceWizardProps) {
           setActivityId(id);
           setCreating(false);
         }
-        await loadDraft(id);
+        await loadDraft(id, Boolean(initialActivityId));
       } catch (loadError) {
         if (mountedRef.current) setError(getErrorDetails(loadError).message || '載入服務失敗');
       } finally {
@@ -85,7 +103,7 @@ export function ServiceWizard({ initialActivityId }: ServiceWizardProps) {
       mountedRef.current = false;
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [initialActivityId, loadDraft]);
+  }, [initialActivityId, loadAttempt, loadDraft]);
 
   const save = useCallback(async (nextForm: ServiceDraftPayload) => {
     if (!activityId || !hydratedRef.current) return;
@@ -137,7 +155,7 @@ export function ServiceWizard({ initialActivityId }: ServiceWizardProps) {
     setConflictMessage('');
     setSaveState('saving');
     try {
-      await loadDraft(activityId);
+      await loadDraft(activityId, Boolean(initialActivityId));
     } catch (reloadError) {
       setSaveState('error');
       setError(getErrorDetails(reloadError).message || '重新載入失敗');
@@ -152,11 +170,12 @@ export function ServiceWizard({ initialActivityId }: ServiceWizardProps) {
   }
 
   if (error && !hydratedRef.current) {
-    return <section className={styles.screen} aria-labelledby="service-wizard-error"><h2 id="service-wizard-error" className="midao-heading">服務編輯器</h2><div className={styles.alert} role="alert">{error}</div><button className={styles.secondaryButton} type="button" onClick={() => window.location.reload()}>重新載入</button></section>;
+    return <section className={styles.screen} aria-labelledby="service-wizard-error"><h2 id="service-wizard-error" className="midao-heading">服務編輯器</h2><div className={styles.alert} role="alert">{error}</div><div className={styles.footerActions}><button className={styles.secondaryButton} type="button" onClick={() => { setError(''); setLoading(true); setLoadAttempt((current) => current + 1); }}>重新載入</button><a className={styles.secondaryButton} href="/midao/services">返回服務列表</a></div></section>;
   }
 
   const publicationErrors = getServicePublicationErrors(form, publicationPreview);
   const canPublish = publicationErrors.length === 0 && saveState !== 'saving' && !dirty && !publishedUrl;
+  const isLegacyMaterialized = materializationOrigin === 'legacy_activity';
   return (
     <section className={styles.screen} aria-labelledby="service-wizard-title">
       <div className={styles.wizardHeader}>
@@ -174,6 +193,8 @@ export function ServiceWizard({ initialActivityId }: ServiceWizardProps) {
 
       {conflictMessage ? <div className={styles.alert} role="alert"><strong>{conflictMessage}</strong><div className={styles.footerActions}><button className={styles.secondaryButton} type="button" onClick={() => void reloadLatest()}>載入最新版本</button></div></div> : null}
       {error ? <div className={styles.alert} role="alert">{error}</div> : null}
+      {isLegacyMaterialized ? <div className={styles.legacyNotice} role="status"><strong>這份草稿由既有活動建立</strong><p>只帶入既有服務文字；圖片不會在這裡被替換或編輯，既有方案與檔期維持不變。</p><p>方案與檔期的後續決策完成前，無法發布。這是介面提醒；伺服器端仍會阻擋發布。</p></div> : null}
+      {isLegacyMaterialized && materializationReviewState === 'needs_review' ? <div className={styles.alert} role="alert"><strong>原有待處理內容未安全套用</strong><br />請先確認文字是否正確，再決定後續處理方式。</div> : null}
       {publishedUrl ? <div className={styles.success} role="status"><strong>已發布</strong> · 你的服務已經可以被旅人看見。<br /><a className={styles.publishedUrl} href={publishedUrl} target="_blank" rel="noreferrer">查看公開頁面 →</a></div> : null}
 
       {step === 0 ? <ServiceBasicsStep form={form} onChange={updateForm} /> : null}
@@ -187,7 +208,7 @@ export function ServiceWizard({ initialActivityId }: ServiceWizardProps) {
         <div className={styles.footerActions}>
           {step > 0 ? <button className={styles.secondaryButton} type="button" onClick={previousStep}>← 上一步</button> : null}
           {step < 2 ? <button className={styles.primaryButton} type="button" onClick={nextStep}>{step === 0 ? '下一步：設定問卷' : '下一步：預覽確認'} →</button> : null}
-          {step === 2 && activityId ? <ServicePublishAction activityId={activityId} expectedRevision={revision} disabled={!canPublish} onConflict={() => { setConflictMessage('草稿版本已更新，請先重新載入最新版本再發布。'); setSaveState('conflict'); }} onPublished={(result) => setPublishedUrl(result.publicUrl)} /> : null}
+          {step === 2 && activityId ? <ServicePublishAction activityId={activityId} expectedRevision={revision} disabled={!canPublish || isLegacyMaterialized} onConflict={() => { setConflictMessage('草稿版本已更新，請先重新載入最新版本再發布。'); setSaveState('conflict'); }} onPublished={(result) => setPublishedUrl(result.publicUrl)} /> : null}
         </div>
       </div>
     </section>

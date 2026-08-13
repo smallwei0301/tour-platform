@@ -13,6 +13,35 @@ function isEnvelope(value: unknown): value is { success: boolean; data?: unknown
   return isRecord(value) && typeof value.success === 'boolean';
 }
 
+function normalizeServiceDraft(value: unknown): ServiceDraft | null {
+  if (!isRecord(value)) return null;
+  if (
+    typeof value.activityId !== 'string'
+    || typeof value.guideId !== 'string'
+    || typeof value.revision !== 'number'
+    || (value.status !== 'active' && value.status !== 'discarded' && value.status !== 'published')
+    || !isRecord(value.payload)
+  ) return null;
+  return {
+    activityId: value.activityId,
+    guideId: value.guideId,
+    revision: value.revision,
+    status: value.status,
+    payload: value.payload as ServiceDraft['payload'],
+    updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : null,
+    materializationOrigin: typeof value.materializationOrigin === 'string' ? value.materializationOrigin : 'native',
+    materializationReviewState: typeof value.materializationReviewState === 'string' ? value.materializationReviewState : null,
+  };
+}
+
+function normalizeDraftResponseData(value: unknown): DraftResponseData {
+  if (!isRecord(value)) throw new Error('草稿格式不正確');
+  return {
+    draft: normalizeServiceDraft(value.draft),
+    publicationPreview: normalizePublicationPreview(value.publicationPreview) ?? undefined,
+  };
+}
+
 async function readEnvelope(response: Response): Promise<{ data?: unknown; error?: { code?: string; message?: string } }> {
   const payload: unknown = await response.json().catch(() => null);
   if (!isEnvelope(payload)) throw new Error('服務 API 回應格式不正確');
@@ -36,8 +65,7 @@ export async function fetchServiceList(page: number, pageSize = 8, status = 'all
 export async function fetchServiceDraft(activityId: string): Promise<DraftResponseData> {
   const response = await fetch(`/api/v2/guide/service-drafts?activityId=${encodeURIComponent(activityId)}`, { cache: 'no-store' });
   const envelope = await readEnvelope(response);
-  if (!isRecord(envelope.data)) throw new Error('草稿格式不正確');
-  return envelope.data as unknown as DraftResponseData;
+  return normalizeDraftResponseData(envelope.data);
 }
 
 export async function saveServiceDraft(activityId: string, expectedRevision: number, patch: ServiceDraftPayload): Promise<DraftResponseData> {
@@ -48,8 +76,11 @@ export async function saveServiceDraft(activityId: string, expectedRevision: num
     body: JSON.stringify({ activityId, expectedRevision, patch }),
   });
   const envelope = await readEnvelope(response);
-  if (!isRecord(envelope.data)) throw new Error('儲存草稿回應格式不正確');
-  return envelope.data as unknown as DraftResponseData;
+  try {
+    return normalizeDraftResponseData(envelope.data);
+  } catch {
+    throw new Error('儲存草稿回應格式不正確');
+  }
 }
 
 export async function publishServiceDraft(activityId: string, expectedRevision: number): Promise<{ publicUrl: string | null; version: number | null }> {

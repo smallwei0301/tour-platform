@@ -33,3 +33,9 @@
 - 2026-08-13：`guide_service_drafts` 的既有 `materialization_origin`／`materialization_review_state` 已沿 GET 讀取鏈（select → Supabase row mapping → draft view → 原有 route envelope）投影為 `materializationOrigin`／`materializationReviewState`。
 - 無 provenance 的既有 in-memory／測試資料維持向後相容：回傳 `materializationOrigin: 'native'` 與 `materializationReviewState: null`；未變更任何 materializer、publish、CAS 或 route envelope 寫入邏輯。
 - TDD 證據：新增 GET legacy/native provenance 測試先於實作確認 RED（legacy origin 實際為 `undefined`），實作後目標測試 GREEN，待固定焦點套件與 commit gate 完成後交 Rita 獨立審查。
+
+## S3 里程碑（editor disclosure/type contract）
+- 2026-08-13：前端 draft client 以既有 `materializationOrigin`／`materializationReviewState` 型別化回應，未解析或信任任何 raw legacy overlay；legacy literal 已依 S1 migration 確認為 `legacy_activity`。
+- 編輯既有活動時，GET 未回傳有效 draft 會進入阻擋錯誤畫面，提供重試與返回服務列表，不會將 `null` 合併成可編輯的空白表單或觸發 autosave；新服務與既有 native draft 維持原流程。
+- legacy 草稿明示只帶入既有文字、圖片不在此替換或編輯、既有方案／檔期不變，且在 lifecycle 決策前停用發布；`needs_review` 另顯示未安全套用的通知。server-side 409 gate 仍是唯一權威。
+- TDD 證據：新的 focused UI contract test 已先 RED（4/4 failed）、實作後 GREEN（4/4 passed）。窄 Playwright 已啟動受控 local server，但 guide auth fixture lookup 回 `401 INVALID_CREDENTIALS`，未將其宣稱為 browser pass；E2E spec 仍採既有 canonical guide login helper，待 prepared fixture 環境驗證。

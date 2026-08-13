@@ -28,6 +28,25 @@ function draftResponse(payload: Record<string, unknown>, revision = 1, publicati
   };
 }
 
+function legacyDraftResponse(reviewState: string | null = null) {
+  return {
+    success: true,
+    data: {
+      draft: {
+        activityId,
+        guideId: guide.guideId,
+        revision: 1,
+        status: 'active',
+        payload: { name: '原有山徑服務', description: '只帶入的既有文字', plans: [], questions: [] },
+        updatedAt: '2026-08-01T12:00:00.000Z',
+        materializationOrigin: 'legacy_activity',
+        materializationReviewState: reviewState,
+      },
+      publicationPreview: { valid: true, errors: [] },
+    },
+  };
+}
+
 async function installWizardRoutes(page: Page, options: { conflict?: boolean } = {}) {
   let revision = 0;
   let conflictTriggered = false;
@@ -84,6 +103,24 @@ async function login(page: Page) {
 }
 
 test.describe('Midao services wizard', () => {
+  test('legacy materialized draft is prefilled, discloses preserved data, and keeps publish disabled', async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.route('**/api/v2/guide/service-drafts**', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(legacyDraftResponse('needs_review')) });
+    });
+    await login(page);
+    await page.goto(`/midao/services/${activityId}/edit`, { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByLabel('服務名稱')).toHaveValue('原有山徑服務');
+    await expect(page.getByRole('status')).toContainText('只帶入既有服務文字');
+    await expect(page.getByRole('status')).toContainText('圖片不會在這裡被替換或編輯');
+    await expect(page.getByRole('alert')).toContainText('原有待處理內容未安全套用');
+    await page.getByRole('button', { name: '下一步：設定問卷' }).click();
+    await page.getByRole('button', { name: '下一步：預覽確認' }).click();
+    await expect(page.getByRole('button', { name: '發布服務' })).toBeDisabled();
+  });
+
   test('新增服務 → auto-save → 問卷 → 預覽 → 發布成功', async ({ page }, testInfo) => {
     test.setTimeout(180_000);
     await installWizardRoutes(page);
