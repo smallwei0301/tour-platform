@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-08-13T05:31:56.223Z -->
+<!-- query_timestamp: 2026-08-14T05:30:57.903Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-13T05:31:56.223Z  
-**Commit SHA:** `802e389931acc2b41782dfd31269a8b5955932da`
+**Query timestamp:** 2026-08-14T05:30:57.903Z  
+**Commit SHA:** `e507a0a148ca3f5981833669611b142dcf790f3d`
 
 ---
 
@@ -14,7 +14,7 @@
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1830 | [fix(checkout): #1814 原子冪等建單](https://github.com/smallwei0301/tour-platform/pull/1830) _(draft)_ | `agent/issue-1814-checkout-idempotency` |
+| #1832 | [fix(payment): #1815 付款僅接受已持久化訂單](https://github.com/smallwei0301/tour-platform/pull/1832) _(draft)_ | `agent/issue-1815-payment-release-gate` |
 | #1776 | [feat(shop): 完成導遊商店匯款 beta 文案與 SOP（#1607）](https://github.com/smallwei0301/tour-platform/pull/1776) _(draft)_ | `fix/issue-1607-guide-shop-beta` |
 | #1763 | [feat: midao2 導遊接案後台（接案 CRM）＋公開接案頁 /g/[slug]](https://github.com/smallwei0301/tour-platform/pull/1763) | `claude/superpowers-midao-backend-x90czx` |
 | #1690 | [docs(security): 建立「已接受安全風險」定案清單](https://github.com/smallwei0301/tour-platform/pull/1690) | `claude/code-workflow-architecture-mmm4ba` |
@@ -27,7 +27,7 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (62 total)
+## Open Issues (60 total)
 
 ### P0 (1)
 
@@ -35,13 +35,12 @@
 |---|-------|--------|
 | #1777 | [[Payments][P0] 修正結算／部分退款／出款非原子鏈，避免漏帳、重扣與錯誤撥款](https://github.com/smallwei0301/tour-platform/issues/1777) | triaged, type:bug, priority:P0, agent:backlog, owner:ai-agent, status:ready, payments, orders, database |
 
-### P1 (34)
+### P1 (33)
 
 | # | Title | Labels |
 |---|-------|--------|
 | #1827 | [[Midao Backend] 收斂為新 UI、既有核心系統：功能遷移與 PR #1763 UI 吸收路線圖](https://github.com/smallwei0301/tour-platform/issues/1827) | triaged, type:investigation, priority:P1, guide-dashboard, agent:queued, owner:ai-agent, status:ready, database |
 | #1815 | [[QA] 以持久化訂單總額放行付款、通知與 Checkout E2E](https://github.com/smallwei0301/tour-platform/issues/1815) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:blocked, type:qa, traveler-booking, payments, orders, database |
-| #1814 | [[Checkout] 以冪等鍵與併發控制避免重複建單與扣點](https://github.com/smallwei0301/tour-platform/issues/1814) | triaged, type:bug, priority:P1, agent:queued, owner:ai-agent, status:blocked, traveler-booking, orders, database |
 | #1810 | [[Checkout] 修復訂單建立至付款的唯一可付款金額一致性](https://github.com/smallwei0301/tour-platform/issues/1810) | triaged, type:bug, priority:P1, agent:backlog, owner:ai-agent, status:in-progress, traveler-booking, payments, orders, database |
 | #1773 | [[QA] Daily test checklist for recent merged PRs 2026-07-29](https://github.com/smallwei0301/tour-platform/issues/1773) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, docs, post-merge |
 | #1770 | [[QA] Daily test checklist for recent merged PRs 2026-07-28](https://github.com/smallwei0301/tour-platform/issues/1770) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, admin, post-merge |
@@ -100,11 +99,10 @@
 |---|-------|--------|
 | #1647 | [[Payments] Decide and verify post-#1637 historical paid-order / payout reconciliation](https://github.com/smallwei0301/tour-platform/issues/1647) | triaged, priority:P1, owner:human-decision, status:needs-decision, type:decision, payments, orders |
 
-### Other (11)
+### Other (10)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1825 | [[Midao Backend] 導遊切換至新後台模式（midao mode）後，舊服務資料未遷移至新服務管理表，「服務」頁面空白](https://github.com/smallwei0301/tour-platform/issues/1825) | — |
 | #1819 | [[Docs] 建立正式測試分層規範（unit / integration real-HTTP / mock E2E / real-data E2E + CI enforcement）](https://github.com/smallwei0301/tour-platform/issues/1819) | — |
 | #1796 | [fn_expire_unpaid_order_atomic 有 42702 ambiguous column 缺陷（OUT 參數 booking_id 遮蔽表欄位）](https://github.com/smallwei0301/tour-platform/issues/1796) | bug |
 | #1795 | [旅客自助下單（POST /api/v2/bookings/draft）非原子交易，存在超賣競態風險](https://github.com/smallwei0301/tour-platform/issues/1795) | bug |
@@ -122,16 +120,16 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1835 | [feat(midao): #1827 connect me capability center safely](https://github.com/smallwei0301/tour-platform/pull/1835) | 2026-08-14 |
+| #1833 | [feat(midao): #1825 legacy service draft migration (S1-S3)](https://github.com/smallwei0301/tour-platform/pull/1833) | 2026-08-13 |
+| #1831 | [fix(test): 補上database-test依賴安裝入口](https://github.com/smallwei0301/tour-platform/pull/1831) | 2026-08-13 |
+| #1830 | [fix(checkout): #1814 原子冪等建單](https://github.com/smallwei0301/tour-platform/pull/1830) | 2026-08-13 |
 | #1829 | [【#1827】/midao/me 原生能力中心靜態視覺外殼（C-only）](https://github.com/smallwei0301/tour-platform/pull/1829) | 2026-08-12 |
 | #1828 | [fix(checkout): #1813 點數折抵原子化](https://github.com/smallwei0301/tour-platform/pull/1828) | 2026-08-12 |
 | #1826 | [fix(checkout): #1812 加購快照與訂單總額原子化](https://github.com/smallwei0301/tour-platform/pull/1826) | 2026-08-12 |
 | #1824 | [test(fix): 修正 midao-impersonation-actor NODE_ENV ambient 洩漏測試缺陷](https://github.com/smallwei0301/tour-platform/pull/1824) | 2026-08-12 |
 | #1822 | [chore(toolchain): 固定 Node 22 正式證據工具鏈標準化（含安全修復＋rollback 修復）](https://github.com/smallwei0301/tour-platform/pull/1822) | 2026-08-12 |
 | #1818 | [fix(booking): 以單一交易固化基本訂單可付款金額 (#1811)](https://github.com/smallwei0301/tour-platform/pull/1818) | 2026-08-11 |
-| #1809 | [fix(midao): refresh baseline expected terminal (#1808)](https://github.com/smallwei0301/tour-platform/pull/1809) | 2026-08-10 |
-| #1807 | [test(midao): #1759 Package 4 gate 全鏈路驗證（雲端 runner）](https://github.com/smallwei0301/tour-platform/pull/1807) | 2026-08-12 |
-| #1806 | [fix(midao): #1759 旅客確認連結改指向前端確認頁](https://github.com/smallwei0301/tour-platform/pull/1806) | 2026-08-09 |
-| #1805 | [fix(payments): #1802 /order/pay 付款路徑補上旅客確認閘門](https://github.com/smallwei0301/tour-platform/pull/1805) | 2026-08-09 |
 
 ---
 
