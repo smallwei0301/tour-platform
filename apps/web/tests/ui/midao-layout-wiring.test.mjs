@@ -38,9 +38,10 @@ test('four route skeletons stay presentation-only and use the canonical labels',
   }
 });
 
-test('me route composes the C-only static capability-centre shell', () => {
+test('me route composes the real capability centre with only the approved read boundaries', () => {
   const page = read('me/page.tsx');
   const shell = readFileSync(resolve(root, 'src/features/midao/me/MidaoMeShell.tsx'), 'utf8');
+  const centre = readFileSync(resolve(root, 'src/features/midao/me/MidaoMeCapabilityCenter.tsx'), 'utf8');
 
   assert.ok(page.includes("import { MidaoMeShell } from '../../../../src/features/midao/me/MidaoMeShell';"));
   assert.match(page, /return <MidaoMeShell \/>;/u);
@@ -48,22 +49,22 @@ test('me route composes the C-only static capability-centre shell', () => {
   assert.match(shell, /<section className="midao-me-screen" aria-labelledby="midao-me-title">/u);
   assert.match(shell, />我的祕島</u);
   assert.match(shell, /<h2 id="midao-me-title" className="midao-heading">我的頁面<\/h2>/u);
-  assert.match(shell, /<h3>能力中心<\/h3>/u);
-  assert.ok((shell.match(/<article/g) || []).length > 0, 'shell needs information cards');
-  assert.ok((shell.match(/<article/g) || []).length <= 3, 'shell may have at most three information cards');
-  assert.ok((shell.match(/即將推出/g) || []).length >= (shell.match(/<article/g) || []).length, 'every card must visibly say 即將推出');
+  assert.match(shell, /MidaoMeCapabilityCenter/u);
+  assert.doesNotMatch(shell, /即將推出/u);
 
-  for (const source of [page, shell]) {
-    for (const prohibited of [
-      'fetch(', '/api/', 'supabase', 'getGuideRuntimeAccessDb', 'resolveMidaoPageSession',
-      'useState', 'useEffect', 'useRouter', 'next/navigation', '/midao2', '/guide',
-      'window.', 'location', 'navigator', 'URL', 'share', 'preview', 'QR', 'href',
-      '<button', 'onClick', '<form', 'action=', 'actorId', 'guideName', 'token',
-    ]) {
-      assert.ok(!source.includes(prohibited), `${prohibited} must not appear in C-only source`);
-    }
-    assert.doesNotMatch(source, /<a(?:\s|>)/u);
-  }
+  assert.match(centre, /'use client'/u);
+  assert.match(centre, /LoadingSkeleton/u);
+  assert.match(centre, /InlineError/u);
+  assert.match(centre, /服務管理/u);
+  assert.match(centre, /預約與需求/u);
+  assert.match(centre, /公開頁面與通知/u);
+  assert.match(centre, /href="\/midao\/services"/u);
+  assert.match(centre, /href="\/midao\/requests"/u);
+  assert.match(centre, /href="\/midao\/legacy\/public-profile\?returnTo=%2Fmidao%2Fme"/u);
+  assert.match(centre, /fetch\('\/api\/v2\/guide\/home'/u);
+  assert.match(centre, /fetch\('\/api\/v2\/guide\/services\?page=1&pageSize=1&status=all'/u);
+  assert.equal((centre.match(/fetch\(/g) || []).length, 2, 'only the two approved GET reads are allowed');
+  assert.doesNotMatch(centre, /midao2|supabase|\/api\/guide\/profile|method:\s*['"](?:POST|PATCH|PUT|DELETE)/iu);
 });
 
 test('services route stays a thin composition boundary for ServiceListScreen', () => {

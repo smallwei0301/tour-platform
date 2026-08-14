@@ -865,7 +865,7 @@
   box-shadow: var(--midao-shadow-card);
 }
 
-.midao-me-card__status {
+.midao-me-card__eyebrow {
   width: fit-content;
   max-width: 100%;
   margin: 0;
@@ -875,6 +875,28 @@
   color: var(--midao-color-ink);
   font-size: 12px;
   font-weight: 700;
+}
+
+.midao-me-card--action {
+  color: var(--midao-color-ink);
+  text-decoration: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.midao-me-card--action:hover {
+  border-color: var(--midao-color-success);
+  box-shadow: var(--midao-shadow-card);
+  transform: translateY(-1px);
+}
+
+.midao-me-card--action:focus-visible {
+  outline: 3px solid var(--midao-color-alert);
+  outline-offset: 3px;
+}
+
+.midao-me-card__summary {
+  overflow-wrap: anywhere;
+  font-size: 16px;
 }
 
 .midao-me-card p:not(.midao-me-card__status) {

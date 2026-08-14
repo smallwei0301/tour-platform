@@ -318,6 +318,7 @@ jobs:
           apps/web/e2e/midao-home.spec.ts
           apps/web/e2e/midao-requests.spec.ts
           apps/web/e2e/midao-services.spec.ts
+          apps/web/e2e/midao-me-capabilities.spec.ts
           apps/web/e2e/midao-inquiry-conversion.spec.ts
           apps/web/e2e/issue1814-checkout-idempotency.spec.ts
 

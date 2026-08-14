@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import {
   MidaoRuntimeAccessError,
   verifyCanonicalGuideSession,
@@ -34,6 +35,33 @@ export type MidaoPageSessionResult =
 export async function resolveMidaoPageSession(
   request: Request,
   options: PageSessionOptions = {},
+): Promise<MidaoPageSessionResult> {
+  // #1827: production call sites (the shared /midao layout and each leaf
+  // page's own redirect boundary, e.g. the legacy-entry route) never pass
+  // `options` and rebuild their own Request with the same incoming cookie
+  // header, so the two calls are safe to dedupe within one render pass.
+  // Tests intentionally pass explicit `runtime`/`flags` overrides on the same
+  // cookie to exercise different branches — those calls must bypass the
+  // cache entirely so they don't observe a stale memoized result.
+  if (options.runtime !== undefined || options.flags !== undefined) {
+    return resolveMidaoPageSessionUncached(request, options);
+  }
+  const cookieHeader = request.headers.get('cookie') || '';
+  return resolveMidaoPageSessionByCookie(cookieHeader);
+}
+
+const resolveMidaoPageSessionByCookie = cache(async (
+  cookieHeader: string,
+): Promise<MidaoPageSessionResult> => {
+  const request = new Request('http://midao.local/midao', {
+    headers: { cookie: cookieHeader },
+  });
+  return resolveMidaoPageSessionUncached(request, {});
+});
+
+async function resolveMidaoPageSessionUncached(
+  request: Request,
+  options: PageSessionOptions,
 ): Promise<MidaoPageSessionResult> {
   try {
     const session = await verifyCanonicalGuideSession(request, {
