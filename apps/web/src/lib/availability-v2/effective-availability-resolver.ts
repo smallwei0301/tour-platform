@@ -23,7 +23,62 @@ export interface ActivityPlanSeason {
   is_active: boolean;
 }
 
+export type AvailabilityPolicy = 'inherit' | 'restrict' | 'closed';
+
+export interface GuideAvailabilityDayRevision {
+  guide_id: string;
+  local_date: string;
+  timezone: string;
+  revision: number;
+  is_closed: boolean;
+}
+
+export interface CanonicalAvailabilityRuleContext {
+  guideId: string;
+  planId: string;
+  policy: AvailabilityPolicy;
+  rules: AvailabilityRule[];
+  dayRevisions: GuideAvailabilityDayRevision[];
+  timezone: string;
+}
+
 const NON_BLOCKING_BOOKING_STATUSES = new Set(['cancelled', 'failed', 'expired']);
+
+export function createCanonicalAvailabilityRuleSelector(
+  context: CanonicalAvailabilityRuleContext,
+): (localDate: string) => AvailabilityRule[] {
+  return (localDate) => {
+    if (context.policy === 'closed') return [];
+
+    const activeRules = context.rules.filter(
+      (rule) => rule.is_active && rule.guide_id === context.guideId,
+    );
+    const matchingDayRevision = context.dayRevisions.find(
+      (revision) =>
+        revision.guide_id === context.guideId &&
+        revision.local_date === localDate &&
+        revision.timezone === context.timezone,
+    );
+
+    if (matchingDayRevision) {
+      if (matchingDayRevision.is_closed) return [];
+      return activeRules.filter(
+        (rule) =>
+          rule.activity_plan_id === null &&
+          rule.effective_from === localDate &&
+          rule.effective_to === localDate,
+      );
+    }
+
+    if (context.policy === 'restrict') {
+      return activeRules.filter((rule) => rule.activity_plan_id === context.planId);
+    }
+
+    return activeRules.filter(
+      (rule) => rule.activity_plan_id === null || rule.activity_plan_id === context.planId,
+    );
+  };
+}
 
 function monthDayToNumber(month: number, day: number): number {
   return month * 100 + day;
@@ -112,6 +167,7 @@ export function resolveCanonicalAvailabilityState(params: {
   slotUnavailableReason?: string;
   capacityAvailable: boolean;
   conflictOverrides?: GuideSlotConflictOverride[];
+  ruleContext?: CanonicalAvailabilityRuleContext;
 }): { state: CanonicalAvailabilityState; metadata?: Record<string, string> } {
   const normalizedPlanStatus = String(params.planStatus || '').trim().toLowerCase();
   if (normalizedPlanStatus && normalizedPlanStatus !== 'active') {
@@ -137,7 +193,12 @@ export function resolveCanonicalAvailabilityState(params: {
     }
   }
 
-  if (params.rules.length === 0) {
+  const effectiveRules = params.ruleContext
+    ? createCanonicalAvailabilityRuleSelector(params.ruleContext)(
+        getDateStringInTimezone(new Date(params.requestedStartAt), params.timezone),
+      )
+    : params.rules;
+  if (effectiveRules.length === 0) {
     return { state: 'outside_rule' };
   }
 

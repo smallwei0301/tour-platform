@@ -656,6 +656,7 @@ export interface SlotGeneratorDeps {
   bookings: ExistingBooking[];
   plan: ActivityPlan;
   reemitAnchorBookings?: ExistingBooking[];
+  ruleSelector?: (localDate: string) => AvailabilityRule[];
 }
 
 /**
@@ -668,7 +669,7 @@ export function generateAvailableSlots(
   deps: SlotGeneratorDeps
 ): SlotGeneratorResult {
   const { guideId, activityPlanId, dateFrom, dateTo, timezone, participants = 1 } = input;
-  const { rules, blackouts, bookings, plan, reemitAnchorBookings } = deps;
+  const { rules, blackouts, bookings, plan, reemitAnchorBookings, ruleSelector } = deps;
 
   // Filter rules for this guide and plan
   const applicableRules = getAvailabilityRules(rules, guideId, activityPlanId);
@@ -699,7 +700,9 @@ export function generateAvailableSlots(
     const weekday = getWeekdayInTimezone(dateInTz, timezone);
 
     // Find rules that apply to this weekday
-    const rulesForDay = applicableRules.filter((r) => r.weekday === weekday);
+    const rulesForDay = (ruleSelector ? ruleSelector(dateStr) : applicableRules).filter(
+      (rule) => rule.weekday === weekday,
+    );
 
     for (const rule of rulesForDay) {
       const candidates = buildCandidateSlotsForRule(rule, anchorBookings, plan.duration_minutes, dateStr);
