@@ -970,6 +970,27 @@
         "canonicalKey": [
           "relation",
           "public",
+          "guide_availability_day_revisions"
+        ],
+        "foreignOptions": [],
+        "foreignServer": null,
+        "isPartition": false,
+        "kind": "r",
+        "name": "guide_availability_day_revisions",
+        "options": [],
+        "owner": "supabase_admin",
+        "partitionBound": null,
+        "partitionKey": null,
+        "persistence": "p",
+        "replicaIdentity": "d",
+        "schema": "public",
+        "viewDefinition": null
+      },
+      {
+        "accessMethod": "heap",
+        "canonicalKey": [
+          "relation",
+          "public",
           "guide_availability_rules"
         ],
         "foreignOptions": [],
@@ -7891,6 +7912,30 @@
           "column",
           "public",
           "activity_plans",
+          "availability_policy"
+        ],
+        "collationName": "default",
+        "collationSchema": "pg_catalog",
+        "compression": "",
+        "default": "'inherit'::text",
+        "formattedType": "text",
+        "generated": "",
+        "identity": "",
+        "name": "availability_policy",
+        "notNull": true,
+        "position": 41,
+        "relation": "activity_plans",
+        "schema": "public",
+        "storage": "x",
+        "typeName": "text",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "activity_plans",
           "base_price"
         ],
         "collationName": null,
@@ -12834,6 +12879,174 @@
         "canonicalKey": [
           "column",
           "public",
+          "guide_availability_day_revisions",
+          "created_at"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": "now()",
+        "formattedType": "timestamp with time zone",
+        "generated": "",
+        "identity": "",
+        "name": "created_at",
+        "notNull": true,
+        "position": 6,
+        "relation": "guide_availability_day_revisions",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "timestamptz",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "guide_availability_day_revisions",
+          "guide_id"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "uuid",
+        "generated": "",
+        "identity": "",
+        "name": "guide_id",
+        "notNull": true,
+        "position": 1,
+        "relation": "guide_availability_day_revisions",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "uuid",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "guide_availability_day_revisions",
+          "is_closed"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": "false",
+        "formattedType": "boolean",
+        "generated": "",
+        "identity": "",
+        "name": "is_closed",
+        "notNull": true,
+        "position": 5,
+        "relation": "guide_availability_day_revisions",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "bool",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "guide_availability_day_revisions",
+          "local_date"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "date",
+        "generated": "",
+        "identity": "",
+        "name": "local_date",
+        "notNull": true,
+        "position": 2,
+        "relation": "guide_availability_day_revisions",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "date",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "guide_availability_day_revisions",
+          "revision"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": "0",
+        "formattedType": "bigint",
+        "generated": "",
+        "identity": "",
+        "name": "revision",
+        "notNull": true,
+        "position": 4,
+        "relation": "guide_availability_day_revisions",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "int8",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "guide_availability_day_revisions",
+          "timezone"
+        ],
+        "collationName": "default",
+        "collationSchema": "pg_catalog",
+        "compression": "",
+        "default": null,
+        "formattedType": "text",
+        "generated": "",
+        "identity": "",
+        "name": "timezone",
+        "notNull": true,
+        "position": 3,
+        "relation": "guide_availability_day_revisions",
+        "schema": "public",
+        "storage": "x",
+        "typeName": "text",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "guide_availability_day_revisions",
+          "updated_at"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": "now()",
+        "formattedType": "timestamp with time zone",
+        "generated": "",
+        "identity": "",
+        "name": "updated_at",
+        "notNull": true,
+        "position": 7,
+        "relation": "guide_availability_day_revisions",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "timestamptz",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
           "guide_availability_rules",
           "activity_plan_id"
         ],
@@ -13067,6 +13280,54 @@
         "schema": "public",
         "storage": "p",
         "typeName": "bool",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "guide_availability_rules",
+          "revision"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": "1",
+        "formattedType": "bigint",
+        "generated": "",
+        "identity": "",
+        "name": "revision",
+        "notNull": true,
+        "position": 18,
+        "relation": "guide_availability_rules",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "int8",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "guide_availability_rules",
+          "scope_type"
+        ],
+        "collationName": "default",
+        "collationSchema": "pg_catalog",
+        "compression": "",
+        "default": null,
+        "formattedType": "text",
+        "generated": "",
+        "identity": "",
+        "name": "scope_type",
+        "notNull": true,
+        "position": 17,
+        "relation": "guide_availability_rules",
+        "schema": "public",
+        "storage": "x",
+        "typeName": "text",
         "typeSchema": "pg_catalog"
       },
       {
@@ -28300,6 +28561,24 @@
           "relation",
           "public",
           "activity_plans",
+          "activity_plans_availability_policy_check"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (availability_policy = ANY (ARRAY['inherit'::text, 'restrict'::text, 'closed'::text]))",
+        "name": "activity_plans_availability_policy_check",
+        "relation": "activity_plans",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "activity_plans",
           "activity_plans_base_price_check"
         ],
         "deferrable": false,
@@ -29577,6 +29856,60 @@
           "constraint",
           "relation",
           "public",
+          "guide_availability_day_revisions",
+          "guide_availability_day_revisions_guide_id_fkey"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "FOREIGN KEY (guide_id) REFERENCES public.guide_profiles(id) ON DELETE CASCADE",
+        "name": "guide_availability_day_revisions_guide_id_fkey",
+        "relation": "guide_availability_day_revisions",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "f",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "guide_availability_day_revisions_pkey"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "PRIMARY KEY (guide_id, local_date)",
+        "name": "guide_availability_day_revisions_pkey",
+        "relation": "guide_availability_day_revisions",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "p",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "guide_availability_day_revisions_revision_nonnegative_check"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (revision >= 0)",
+        "name": "guide_availability_day_revisions_revision_nonnegative_check",
+        "relation": "guide_availability_day_revisions",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
           "guide_availability_rules",
           "guide_availability_rules_activity_plan_id_fkey"
         ],
@@ -29696,6 +30029,42 @@
         "schema": "public",
         "targetKind": "relation",
         "type": "p",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "guide_availability_rules",
+          "guide_availability_rules_revision_positive_check"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (revision > 0)",
+        "name": "guide_availability_rules_revision_positive_check",
+        "relation": "guide_availability_rules",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "guide_availability_rules",
+          "guide_availability_rules_scope_type_check"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (scope_type = 'global'::text AND activity_plan_id IS NULL OR scope_type = 'plan'::text AND activity_plan_id IS NOT NULL)",
+        "name": "guide_availability_rules_scope_type_check",
+        "relation": "guide_availability_rules",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "c",
         "validated": true
       },
       {
@@ -34489,6 +34858,21 @@
         "canonicalKey": [
           "index",
           "public",
+          "guide_availability_day_revisions_pkey"
+        ],
+        "definition": "CREATE UNIQUE INDEX guide_availability_day_revisions_pkey ON public.guide_availability_day_revisions USING btree (guide_id, local_date)",
+        "name": "guide_availability_day_revisions_pkey",
+        "primary": true,
+        "relation": "guide_availability_day_revisions",
+        "replicaIdentity": false,
+        "schema": "public",
+        "unique": true,
+        "valid": true
+      },
+      {
+        "canonicalKey": [
+          "index",
+          "public",
           "guide_availability_rules_pkey"
         ],
         "definition": "CREATE UNIQUE INDEX guide_availability_rules_pkey ON public.guide_availability_rules USING btree (id)",
@@ -35288,6 +35672,21 @@
         ],
         "definition": "CREATE INDEX idx_guide_availability_rules_active ON public.guide_availability_rules USING btree (is_active)",
         "name": "idx_guide_availability_rules_active",
+        "primary": false,
+        "relation": "guide_availability_rules",
+        "replicaIdentity": false,
+        "schema": "public",
+        "unique": false,
+        "valid": true
+      },
+      {
+        "canonicalKey": [
+          "index",
+          "public",
+          "idx_guide_availability_rules_active_global_lookup"
+        ],
+        "definition": "CREATE INDEX idx_guide_availability_rules_active_global_lookup ON public.guide_availability_rules USING btree (guide_id, effective_from, effective_to, weekday) WHERE (is_active AND (scope_type = 'global'::text))",
+        "name": "idx_guide_availability_rules_active_global_lookup",
         "primary": false,
         "relation": "guide_availability_rules",
         "replicaIdentity": false,
@@ -40140,6 +40539,29 @@
         "volatility": "v"
       },
       {
+        "bodySha256": "ebf34193c453f2042b93defbe0d8fc626b65b1be8f5f14db4d5671d4030204f4",
+        "canonicalKey": [
+          "routine",
+          "public",
+          "guide_availability_rules_scope_revision_trigger",
+          ""
+        ],
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
+        "identityArguments": "",
+        "kind": "f",
+        "language": "plpgsql",
+        "leakProof": false,
+        "name": "guide_availability_rules_scope_revision_trigger",
+        "parallel": "u",
+        "result": "trigger",
+        "schema": "public",
+        "securityDefiner": false,
+        "strict": false,
+        "volatility": "v"
+      },
+      {
         "bodySha256": "a19fe0c906167427599a71c345ce44f99ad602ca79fef6264a23c903c4f6c6b3",
         "canonicalKey": [
           "routine",
@@ -40339,6 +40761,29 @@
         "language": "plpgsql",
         "leakProof": false,
         "name": "midao_publish_service_draft",
+        "parallel": "u",
+        "result": "jsonb",
+        "schema": "public",
+        "securityDefiner": true,
+        "strict": false,
+        "volatility": "v"
+      },
+      {
+        "bodySha256": "8ff9c554e706b39a2844196c3754d043e2efa299668bd36daa12a25a9cfd604c",
+        "canonicalKey": [
+          "routine",
+          "public",
+          "midao_replace_global_day_availability",
+          "p_guide_id uuid, p_local_date date, p_timezone text, p_expected_revision bigint, p_ranges jsonb, p_idempotency_key text, p_request_hash text"
+        ],
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
+        "identityArguments": "p_guide_id uuid, p_local_date date, p_timezone text, p_expected_revision bigint, p_ranges jsonb, p_idempotency_key text, p_request_hash text",
+        "kind": "f",
+        "language": "plpgsql",
+        "leakProof": false,
+        "name": "midao_replace_global_day_availability",
         "parallel": "u",
         "result": "jsonb",
         "schema": "public",
@@ -40855,6 +41300,19 @@
           "trigger",
           "public",
           "guide_availability_rules",
+          "guide_availability_rules_scope_revision_trigger"
+        ],
+        "definition": "CREATE TRIGGER guide_availability_rules_scope_revision_trigger BEFORE INSERT OR UPDATE ON public.guide_availability_rules FOR EACH ROW EXECUTE FUNCTION public.guide_availability_rules_scope_revision_trigger()",
+        "enabled": "O",
+        "name": "guide_availability_rules_scope_revision_trigger",
+        "relation": "guide_availability_rules",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "trigger",
+          "public",
+          "guide_availability_rules",
           "guide_availability_rules_updated_at"
         ],
         "definition": "CREATE TRIGGER guide_availability_rules_updated_at BEFORE UPDATE ON public.guide_availability_rules FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column()",
@@ -41241,6 +41699,17 @@
         "enabled": true,
         "forced": false,
         "relation": "guide_applications",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "rls",
+          "public",
+          "guide_availability_day_revisions"
+        ],
+        "enabled": true,
+        "forced": true,
+        "relation": "guide_availability_day_revisions",
         "schema": "public"
       },
       {
@@ -62776,6 +63245,486 @@
           "acl",
           "relation",
           "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "postgres",
+          "DELETE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "DELETE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "postgres",
+          "INSERT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "INSERT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "postgres",
+          "MAINTAIN",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "MAINTAIN",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "postgres",
+          "REFERENCES",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "REFERENCES",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "postgres",
+          "SELECT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "SELECT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "postgres",
+          "TRIGGER",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "TRIGGER",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "postgres",
+          "TRUNCATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "TRUNCATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "postgres",
+          "UPDATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "UPDATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "service_role",
+          "DELETE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "DELETE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "service_role",
+          "INSERT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "INSERT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "service_role",
+          "MAINTAIN",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "MAINTAIN",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "service_role",
+          "REFERENCES",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "REFERENCES",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "service_role",
+          "SELECT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "SELECT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "service_role",
+          "TRIGGER",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "TRIGGER",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "service_role",
+          "TRUNCATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "TRUNCATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "service_role",
+          "UPDATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "UPDATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "supabase_admin",
+          "DELETE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "DELETE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "supabase_admin",
+          "INSERT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "INSERT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "supabase_admin",
+          "MAINTAIN",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "MAINTAIN",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "supabase_admin",
+          "REFERENCES",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "REFERENCES",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "supabase_admin",
+          "SELECT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "SELECT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "supabase_admin",
+          "TRIGGER",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "TRIGGER",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "supabase_admin",
+          "TRUNCATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "TRUNCATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "guide_availability_day_revisions",
+          "supabase_admin",
+          "supabase_admin",
+          "UPDATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "privilege": "UPDATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
           "guide_availability_rules",
           "postgres",
           "anon",
@@ -109136,6 +110085,86 @@
           "acl",
           "routine",
           "public",
+          "guide_availability_rules_scope_revision_trigger()",
+          "supabase_admin",
+          "PUBLIC",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "PUBLIC",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_rules_scope_revision_trigger()",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "guide_availability_rules_scope_revision_trigger()",
+          "supabase_admin",
+          "postgres",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_rules_scope_revision_trigger()",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "guide_availability_rules_scope_revision_trigger()",
+          "supabase_admin",
+          "service_role",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_rules_scope_revision_trigger()",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "guide_availability_rules_scope_revision_trigger()",
+          "supabase_admin",
+          "supabase_admin",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "guide_availability_rules_scope_revision_trigger()",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
           "handle_auth_user_sync()",
           "postgres",
           "anon",
@@ -109666,6 +110695,66 @@
         "grantee": "supabase_admin",
         "grantor": "supabase_admin",
         "object": "midao_publish_service_draft(p_activity_id uuid, p_expected_revision integer, p_guide_id uuid)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "midao_replace_global_day_availability(p_guide_id uuid, p_local_date date, p_timezone text, p_expected_revision bigint, p_ranges jsonb, p_idempotency_key text, p_request_hash text)",
+          "supabase_admin",
+          "postgres",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_replace_global_day_availability(p_guide_id uuid, p_local_date date, p_timezone text, p_expected_revision bigint, p_ranges jsonb, p_idempotency_key text, p_request_hash text)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "midao_replace_global_day_availability(p_guide_id uuid, p_local_date date, p_timezone text, p_expected_revision bigint, p_ranges jsonb, p_idempotency_key text, p_request_hash text)",
+          "supabase_admin",
+          "service_role",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_replace_global_day_availability(p_guide_id uuid, p_local_date date, p_timezone text, p_expected_revision bigint, p_ranges jsonb, p_idempotency_key text, p_request_hash text)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "midao_replace_global_day_availability(p_guide_id uuid, p_local_date date, p_timezone text, p_expected_revision bigint, p_ranges jsonb, p_idempotency_key text, p_request_hash text)",
+          "supabase_admin",
+          "supabase_admin",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_replace_global_day_availability(p_guide_id uuid, p_local_date date, p_timezone text, p_expected_revision bigint, p_ranges jsonb, p_idempotency_key text, p_request_hash text)",
         "objectType": "routine",
         "privilege": "EXECUTE",
         "schema": "public",
@@ -115538,6 +116627,18 @@
           "owner",
           "relation",
           "public",
+          "guide_availability_day_revisions"
+        ],
+        "object": "guide_availability_day_revisions",
+        "objectType": "relation",
+        "owner": "supabase_admin",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "owner",
+          "relation",
+          "public",
           "guide_availability_rules"
         ],
         "object": "guide_availability_rules",
@@ -117641,6 +118742,19 @@
           "owner",
           "routine",
           "public",
+          "guide_availability_rules_scope_revision_trigger",
+          ""
+        ],
+        "object": "guide_availability_rules_scope_revision_trigger()",
+        "objectType": "routine",
+        "owner": "supabase_admin",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "owner",
+          "routine",
+          "public",
           "handle_auth_user_sync",
           ""
         ],
@@ -117749,6 +118863,19 @@
           "p_activity_id uuid, p_expected_revision integer, p_guide_id uuid"
         ],
         "object": "midao_publish_service_draft(p_activity_id uuid, p_expected_revision integer, p_guide_id uuid)",
+        "objectType": "routine",
+        "owner": "supabase_admin",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "owner",
+          "routine",
+          "public",
+          "midao_replace_global_day_availability",
+          "p_guide_id uuid, p_local_date date, p_timezone text, p_expected_revision bigint, p_ranges jsonb, p_idempotency_key text, p_request_hash text"
+        ],
+        "object": "midao_replace_global_day_availability(p_guide_id uuid, p_local_date date, p_timezone text, p_expected_revision bigint, p_ranges jsonb, p_idempotency_key text, p_request_hash text)",
         "objectType": "routine",
         "owner": "supabase_admin",
         "schema": "public"
