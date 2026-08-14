@@ -8,6 +8,7 @@ import { listAllDivisions, normalizeRegionToDbValue } from '../../../../src/lib/
 import { GUIDE_PAYMENT_OPTIONS } from '../../../../src/lib/guide-payment-options.mjs';
 import { compressImage } from '../../../../src/lib/client-image-compress';
 import NotificationBindingButton from '../../../../src/components/NotificationBindingButton';
+import MidaoReturnLink from '../../../../src/components/guide/MidaoReturnLink';
 
 // 熟悉區域：顯示短名（displayName）、儲存全名（dbValue），與行程地區格式一致。
 const REGION_OPTIONS = listAllDivisions();
@@ -202,13 +203,13 @@ export default function GuideProfileEditPage() {
           </p>
         </div>
       )}
-
       {/* Top bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>編輯公開嚮導頁面</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>設定旅客在你的公開頁上會看到的內容</p>
         </div>
+        <MidaoReturnLink />
         {profile.slug && (
           <Link
             href={`/guides/${profile.slug}`}
@@ -987,5 +988,4 @@ function GalleryEditor({ urls, onChange }: { urls: string[]; onChange: (next: st
   );
 }
 
-// client-side center-crop + WebP compress 已抽到 src/lib/client-image-compress.ts
-// （申請表單與嚮導後台共用，避免重複實作）。
+// client-side center-crop + WebP compress 已抽到 src/lib/client-image-compress.ts（申請表單與嚮導後台共用，避免重複實作）。
