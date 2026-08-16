@@ -12,8 +12,10 @@ import {
   type SlotGeneratorInput,
 } from '../slot-generator.ts';
 import {
+  createCanonicalAvailabilityRuleSelector,
   resolveCanonicalAvailabilityState,
   type ActivityPlanSeason,
+  type CanonicalAvailabilityRuleContext,
   type CanonicalAvailabilityState,
 } from './effective-availability-resolver.ts';
 import {
@@ -57,6 +59,7 @@ export interface BookingAvailabilityEvaluatorInput {
   plan: ActivityPlan;
   selectedSchedule?: EvaluatorSchedule | null;
   selectedScheduleAuthority?: Exclude<SelectedScheduleAuthority, 'generated' | 'none'>;
+  ruleContext?: CanonicalAvailabilityRuleContext;
   seasons?: ActivityPlanSeason[];
   planStatus?: string;
   conflictOverrides?: GuideSlotConflictOverride[];
@@ -112,12 +115,17 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
     timezone: input.timezone,
   });
 
+  const canonicalRuleSelector = input.ruleContext
+    ? createCanonicalAvailabilityRuleSelector(input.ruleContext)
+    : undefined;
+
   const deps: SlotGeneratorDeps = {
     rules: input.rules,
     blackouts: input.blackouts,
     bookings: nonGroupConflictBookings,
     plan: input.plan,
     reemitAnchorBookings: input.bookings,
+    ruleSelector: canonicalRuleSelector,
   };
 
   const generated = generateAvailableSlots(slotInput, deps);
@@ -193,7 +201,7 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
       (slot) => new Date(slot.startAt).getTime() === selectedScheduleStartAtMs,
     );
 
-    const shouldEnforceGeneratedSlotPresence = input.rules.length > 0;
+    const shouldEnforceGeneratedSlotPresence = Boolean(canonicalRuleSelector) || input.rules.length > 0;
     const selectedScheduleMissingFromGeneratedSlots =
       shouldEnforceGeneratedSlotPresence && !schedulePresentInGeneratedSlots;
     const selectedScheduleBaseValidation = validateSlotAvailability(
@@ -270,7 +278,7 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
       requestedStartAt: selectedSchedule.start_at,
       requestedEndAt: selectedSchedule.end_at,
       timezone: input.timezone,
-      rules: input.rules,
+      rules: canonicalRuleSelector ? canonicalRuleSelector(localDate) : input.rules,
       blackouts: input.blackouts,
       bookings: input.bookings,
       seasons: input.seasons ?? [],

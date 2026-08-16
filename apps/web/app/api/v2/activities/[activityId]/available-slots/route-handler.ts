@@ -33,6 +33,7 @@ import type { GuideSlotConflictOverride } from '../../../../../../src/lib/availa
 import { serializeConflictOverrideForPublic } from '../../../../../../src/lib/availability-v2/conflict-override.ts';
 import { loadConflictOverridesWithSchemaFallback } from '../../../../../../src/lib/conflict-override-schema-compat.mjs';
 import type { ActivityPlanSeason } from '../../../../../../src/lib/availability-v2/effective-availability-resolver.ts';
+import { buildDynamicAvailabilityRuleContext, loadDynamicAvailabilityContextSeed } from '../../../../../../src/lib/availability-v2/dynamic-availability-rule-context.ts';
 import { buildDateAvailabilitySummary } from '../../../../../../src/lib/availability-v2/date-availability-summary.ts';
 import { loadActivityPlanWithMissingIsYearRoundFallback } from '../../../../../../src/lib/activity-plan-is-year-round-fallback.mjs';
 import {
@@ -40,7 +41,6 @@ import {
   normalizeBookingParticipants,
 } from '../../../../../../src/lib/availability-v2/group-booking-rule.ts';
 import { dropExpiredUnpaidHolds } from '../../../../../../src/lib/expired-hold-filter.mjs';
-
 // Validation helpers
 function isUuidLike(str: string): boolean {
   const uuidLikeRegex =
@@ -362,6 +362,7 @@ export async function getAvailableSlots(
             max_participants,
             booking_type,
             ${includeIsYearRound ? 'is_year_round,' : ''}
+            availability_policy,
             status,
             name,
             price_type,
@@ -408,6 +409,10 @@ export async function getAvailableSlots(
     }
 
     const protectedReadSupabase = await resolveProtectedReadClient(supabase, routeDeps);
+
+    const dynamicAvailabilityContext = await loadDynamicAvailabilityContextSeed({ supabase: protectedReadSupabase, bookingType: planData.booking_type,
+      availabilityPolicy: planData.availability_policy, activityId: params.activityId, planId: params.planId, guideId, dateFrom: params.dateFrom, dateTo: params.dateTo });
+    if (!dynamicAvailabilityContext.ok) return dynamicAvailabilityContext.response;
 
     // Fetch availability rules for this guide (and optionally this plan)
     const { data: rulesData, error: rulesError } = await protectedReadSupabase
@@ -520,6 +525,8 @@ export async function getAvailableSlots(
       // emit post-buffer re-start candidates when the flag is true.
       use_dynamic_reemit: row.use_dynamic_reemit ?? false,
     }));
+
+    const ruleContext = buildDynamicAvailabilityRuleContext(dynamicAvailabilityContext.seed, { guideId, planId: params.planId, rules, timezone: params.timezone });
 
     const blackouts: BlackoutWindow[] = (blackoutsData || []).map((row: any) => ({
       id: row.id,
@@ -672,6 +679,7 @@ export async function getAvailableSlots(
         blackouts,
         bookings,
         plan,
+        ruleContext,
         seasons,
         conflictOverrides,
         planStatus: planData.status,

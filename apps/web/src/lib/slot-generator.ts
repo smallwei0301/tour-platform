@@ -11,6 +11,8 @@
  * - Buffers are respected for conflict detection
  */
 
+import { appendSelectorCandidateProvenance, filterSelectorCandidatesByRuleBuffers, type SelectorCandidateProvenance } from './availability-v2/slot-generator-selector-candidates.ts';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -694,6 +696,7 @@ export function generateAvailableSlots(
 
   // Build all candidate slots
   const allCandidates: TimeSlot[] = [];
+  const candidateProvenance: SelectorCandidateProvenance[] = [];
   for (const dateStr of dates) {
     // Get the weekday for this date in the target timezone
     const dateInTz = createDateInTimezone(dateStr, '12:00', timezone);
@@ -707,21 +710,34 @@ export function generateAvailableSlots(
     for (const rule of rulesForDay) {
       const candidates = buildCandidateSlotsForRule(rule, anchorBookings, plan.duration_minutes, dateStr);
       allCandidates.push(...candidates);
+      if (ruleSelector) appendSelectorCandidateProvenance(candidateProvenance, candidates, rule);
     }
   }
 
-  // Get buffer values from the first applicable rule (or default to 0)
-  const bufferBefore = applicableRules[0]?.buffer_before_minutes ?? 0;
-  const bufferAfter = applicableRules[0]?.buffer_after_minutes ?? 0;
+  let availableSlots: TimeSlot[];
+  if (ruleSelector) {
+    // Canonical selector candidates retain their originating rule so each slot
+    // is checked with the selected rule's buffers, never applicableRules[0].
+    availableSlots = filterSelectorCandidatesByRuleBuffers(
+      candidateProvenance,
+      (slot) => slotConflictsWithBlackout(slot, relevantBlackouts),
+      (slot, bufferBefore, bufferAfter) =>
+        slotConflictsWithBooking(slot, relevantBookings, bufferBefore, bufferAfter),
+    );
+  } else {
+    // Legacy no-selector behavior intentionally keeps one shared buffer pair
+    // from the first applicable rule.
+    const bufferBefore = applicableRules[0]?.buffer_before_minutes ?? 0;
+    const bufferAfter = applicableRules[0]?.buffer_after_minutes ?? 0;
 
-  // Filter out conflicts
-  const availableSlots = filterConflicts(
-    allCandidates,
-    relevantBlackouts,
-    relevantBookings,
-    bufferBefore,
-    bufferAfter
-  );
+    availableSlots = filterConflicts(
+      allCandidates,
+      relevantBlackouts,
+      relevantBookings,
+      bufferBefore,
+      bufferAfter,
+    );
+  }
 
   // Sort slots by start time
   availableSlots.sort((a, b) => a.startAt.getTime() - b.startAt.getTime());

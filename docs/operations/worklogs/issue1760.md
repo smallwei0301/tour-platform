@@ -61,3 +61,39 @@
 ## Handoff
 - Status：focused test gate 31/31 通過；typecheck 的 3 項既有缺件已記錄，不是本 slice 變更造成。
 - Next role：tp-builder-api 提交 allowlist-only immutable commit；其後由 Ava 建立 tp-reviewer/Rita 的獨立 review card。
+
+## Slice 2b — traveler dynamic canonical selector（續作）
+> 最後更新：2026-08-16 18:40:35 CST（Asia/Taipei）｜接手 worker：一次性本機續作
+
+### 接手與 RED 證據
+- Base／接手時 HEAD：`cb3958f48a61b651399d86c085408c2780813cb5`。
+- Branch：`feat/issue-1760-p5-slice2b-traveler-dynamic-selector`。
+- 前 worker 已先建立 focused 測試，透過既有 `node_modules` symlink 實際載入並得到有效 RED（測試本身成功收集，部分通過、部分失敗）；其後才修改 production code。前 worker timeout 前未留下改檔後 GREEN 證據，本節不沿用其未完成結論。
+
+### 本次修復
+- `booking-availability-evaluator.ts`：optional `ruleContext` 建立 canonical selector，並把 selector 傳入 slot generator；selected schedule 也以 selector 的當日結果驗證，不讓 raw rules 或 selected schedule 繞過 closed/tombstone。
+- `slot-generator.ts`：selector 啟用時保留每個候選 slot 的來源 rule，以該 rule 的 buffer 做衝突判定；未提供 selector 的 legacy 路徑維持原 shared-buffer 行為。
+- `route-handler.ts`：dynamic `instant`／`request` 讀取並驗證 `availability_policy`，以 guide/dateFrom/dateTo bounded query 讀取 day revisions，建立 context 傳入 evaluator；缺失或非法 policy fail closed；`scheduled` 不查 day revisions 且維持 fixed-schedule path。
+- focused fixture：將 buffer-after 情境調整為 booking 結束後的候選時段，保留 global/plan inverse provenance 的 false-block／false-allow 覆蓋，對齊既有 `slotConflictsWithBooking` buffer contract。
+
+### 實跑證據（均為本次接手後、同一 dirty tree）
+```bash
+./.claude/hooks/run-checks.sh apps/web/tests/api/issue1760-traveler-dynamic-selector-parity.test.mjs
+```
+結果：exit `0`；`9` tests、`9` passed、`0` failed、`0` skipped。
+
+```bash
+./.claude/hooks/run-checks.sh apps/web/tests/api/issue1760-traveler-dynamic-selector-parity.test.mjs apps/web/tests/api/issue1760-effective-availability-policy-resolver.test.mjs apps/web/tests/api/v2-available-slots.test.mjs apps/web/tests/api/issue1665-available-slots-rls-regression.test.mjs
+```
+結果：exit `0`；`45` tests、`45` passed、`0` failed、`0` skipped。
+
+```bash
+./.claude/hooks/run-checks.sh --typecheck apps/web/tests/api/issue1760-traveler-dynamic-selector-parity.test.mjs apps/web/tests/api/issue1760-effective-availability-policy-resolver.test.mjs apps/web/tests/api/v2-available-slots.test.mjs apps/web/tests/api/issue1665-available-slots-rls-regression.test.mjs
+```
+結果：exit `0`；先執行的 `45` tests 為 `45` passed、`0` failed，後續 `npm run typecheck`／`tsc --noEmit` exit `0`。
+
+### Scope／副作用封存
+- 允許檔最終僅五檔：上述三個 production 檔、`apps/web/tests/api/issue1760-traveler-dynamic-selector-parity.test.mjs`、本 worklog。
+- 未修改 lockfile、migration、harness、#1825、P6、pilot、scheduled route、guide preview、calendar、payments/checkout 或 feature flag；既有依賴 symlink 僅供本機測試，未安裝或改寫依賴。
+- 無 Kanban mutation、無 GitHub remote mutation、無 push／PR／merge／deploy、無 production DDL/DML、無 credential 操作。
+- commit 前 final HEAD 將由本機 Git read-back；禁止推送，並以本節實跑證據作為 commit gate。
