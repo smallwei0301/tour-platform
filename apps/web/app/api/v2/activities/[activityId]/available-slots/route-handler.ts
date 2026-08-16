@@ -32,12 +32,8 @@ import { getCanonicalReasonCopy } from '../../../../../../src/lib/availability-v
 import type { GuideSlotConflictOverride } from '../../../../../../src/lib/availability-v2/conflict-override.ts';
 import { serializeConflictOverrideForPublic } from '../../../../../../src/lib/availability-v2/conflict-override.ts';
 import { loadConflictOverridesWithSchemaFallback } from '../../../../../../src/lib/conflict-override-schema-compat.mjs';
-import type {
-  ActivityPlanSeason,
-  AvailabilityPolicy,
-  CanonicalAvailabilityRuleContext,
-  GuideAvailabilityDayRevision,
-} from '../../../../../../src/lib/availability-v2/effective-availability-resolver.ts';
+import type { ActivityPlanSeason } from '../../../../../../src/lib/availability-v2/effective-availability-resolver.ts';
+import { buildDynamicAvailabilityRuleContext, loadDynamicAvailabilityContextSeed } from '../../../../../../src/lib/availability-v2/dynamic-availability-rule-context.ts';
 import { buildDateAvailabilitySummary } from '../../../../../../src/lib/availability-v2/date-availability-summary.ts';
 import { loadActivityPlanWithMissingIsYearRoundFallback } from '../../../../../../src/lib/activity-plan-is-year-round-fallback.mjs';
 import {
@@ -45,7 +41,6 @@ import {
   normalizeBookingParticipants,
 } from '../../../../../../src/lib/availability-v2/group-booking-rule.ts';
 import { dropExpiredUnpaidHolds } from '../../../../../../src/lib/expired-hold-filter.mjs';
-
 // Validation helpers
 function isUuidLike(str: string): boolean {
   const uuidLikeRegex =
@@ -104,10 +99,6 @@ function pickActivityRelation(
 
 function isManualOrSystemSource(value: unknown): value is 'manual' | 'system' {
   return value === 'manual' || value === 'system';
-}
-
-function isAvailabilityPolicy(value: unknown): value is AvailabilityPolicy {
-  return value === 'inherit' || value === 'restrict' || value === 'closed';
 }
 
 interface QueryParams {
@@ -419,45 +410,9 @@ export async function getAvailableSlots(
 
     const protectedReadSupabase = await resolveProtectedReadClient(supabase, routeDeps);
 
-    const usesDynamicAvailability = planData.booking_type === 'instant' || planData.booking_type === 'request';
-    let availabilityPolicy: AvailabilityPolicy | undefined;
-    let dayRevisions: GuideAvailabilityDayRevision[] = [];
-
-    if (usesDynamicAvailability) {
-      if (!isAvailabilityPolicy(planData.availability_policy)) {
-        console.error('Invalid availability policy for dynamic plan', {
-          activityId: params.activityId,
-          planId: params.planId,
-          availabilityPolicy: planData.availability_policy,
-        });
-        return Response.json(errorV2('INTERNAL_ERROR', 'Invalid availability policy'), {
-          status: 500,
-        });
-      }
-
-      availabilityPolicy = planData.availability_policy;
-      const { data: dayRevisionsData, error: dayRevisionsError } = await protectedReadSupabase
-        .from('guide_availability_day_revisions')
-        .select('guide_id, local_date, timezone, revision, is_closed')
-        .eq('guide_id', guideId)
-        .gte('local_date', params.dateFrom)
-        .lte('local_date', params.dateTo);
-
-      if (dayRevisionsError) {
-        console.error('Error fetching availability day revisions:', dayRevisionsError);
-        return Response.json(errorV2('INTERNAL_ERROR', 'Failed to fetch availability day revisions'), {
-          status: 500,
-        });
-      }
-
-      dayRevisions = (dayRevisionsData || []).map((row: any) => ({
-        guide_id: row.guide_id,
-        local_date: row.local_date,
-        timezone: row.timezone,
-        revision: Number(row.revision),
-        is_closed: Boolean(row.is_closed),
-      }));
-    }
+    const dynamicAvailabilityContext = await loadDynamicAvailabilityContextSeed({ supabase: protectedReadSupabase, bookingType: planData.booking_type,
+      availabilityPolicy: planData.availability_policy, activityId: params.activityId, planId: params.planId, guideId, dateFrom: params.dateFrom, dateTo: params.dateTo });
+    if (!dynamicAvailabilityContext.ok) return dynamicAvailabilityContext.response;
 
     // Fetch availability rules for this guide (and optionally this plan)
     const { data: rulesData, error: rulesError } = await protectedReadSupabase
@@ -571,16 +526,7 @@ export async function getAvailableSlots(
       use_dynamic_reemit: row.use_dynamic_reemit ?? false,
     }));
 
-    const ruleContext: CanonicalAvailabilityRuleContext | undefined = availabilityPolicy
-      ? {
-          guideId,
-          planId: params.planId,
-          policy: availabilityPolicy,
-          rules,
-          dayRevisions,
-          timezone: params.timezone,
-        }
-      : undefined;
+    const ruleContext = buildDynamicAvailabilityRuleContext(dynamicAvailabilityContext.seed, { guideId, planId: params.planId, rules, timezone: params.timezone });
 
     const blackouts: BlackoutWindow[] = (blackoutsData || []).map((row: any) => ({
       id: row.id,

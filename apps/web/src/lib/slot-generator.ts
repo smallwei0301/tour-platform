@@ -11,6 +11,8 @@
  * - Buffers are respected for conflict detection
  */
 
+import { appendSelectorCandidateProvenance, filterSelectorCandidatesByRuleBuffers, type SelectorCandidateProvenance } from './availability-v2/slot-generator-selector-candidates.ts';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -694,7 +696,7 @@ export function generateAvailableSlots(
 
   // Build all candidate slots
   const allCandidates: TimeSlot[] = [];
-  const candidateProvenance: Array<{ slot: TimeSlot; rule: AvailabilityRule }> = [];
+  const candidateProvenance: SelectorCandidateProvenance[] = [];
   for (const dateStr of dates) {
     // Get the weekday for this date in the target timezone
     const dateInTz = createDateInTimezone(dateStr, '12:00', timezone);
@@ -708,11 +710,7 @@ export function generateAvailableSlots(
     for (const rule of rulesForDay) {
       const candidates = buildCandidateSlotsForRule(rule, anchorBookings, plan.duration_minutes, dateStr);
       allCandidates.push(...candidates);
-      if (ruleSelector) {
-        for (const slot of candidates) {
-          candidateProvenance.push({ slot, rule });
-        }
-      }
+      if (ruleSelector) appendSelectorCandidateProvenance(candidateProvenance, candidates, rule);
     }
   }
 
@@ -720,17 +718,12 @@ export function generateAvailableSlots(
   if (ruleSelector) {
     // Canonical selector candidates retain their originating rule so each slot
     // is checked with the selected rule's buffers, never applicableRules[0].
-    availableSlots = candidateProvenance
-      .filter(({ slot, rule }) =>
-        !slotConflictsWithBlackout(slot, relevantBlackouts) &&
-        !slotConflictsWithBooking(
-          slot,
-          relevantBookings,
-          rule.buffer_before_minutes,
-          rule.buffer_after_minutes,
-        )
-      )
-      .map(({ slot }) => slot);
+    availableSlots = filterSelectorCandidatesByRuleBuffers(
+      candidateProvenance,
+      (slot) => slotConflictsWithBlackout(slot, relevantBlackouts),
+      (slot, bufferBefore, bufferAfter) =>
+        slotConflictsWithBooking(slot, relevantBookings, bufferBefore, bufferAfter),
+    );
   } else {
     // Legacy no-selector behavior intentionally keeps one shared buffer pair
     // from the first applicable rule.
