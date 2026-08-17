@@ -86,11 +86,13 @@ test('#1815 browser: selected add-on and points are sent together, and a rejecte
   });
 
   await page.goto(`/booking/issue1814-fixture?plan=${PLAN_ID}&date=${DATE}`);
-  await page.getByTestId('traveler-slot-option').first().click();
-  await page.getByRole('button', { name: /下一步：填寫資訊/ }).click();
+  // Extras live on step 1 alongside slot/participant selection; select them
+  // before advancing to the contact form on step 2.
   await expect(page.getByTestId('checkout-addons')).toBeVisible();
   await page.getByRole('button', { name: '增加 測試午餐' }).click();
   await page.getByTestId('points-redeem-toggle').check();
+  await page.getByTestId('traveler-slot-option').first().click();
+  await page.getByRole('button', { name: /下一步：填寫資訊/ }).click();
   await page.getByPlaceholder('請輸入真實姓名').fill('測試旅客');
   await page.getByPlaceholder('0912-345-678').fill('0912345678');
   await page.getByPlaceholder('you@example.com').fill('issue1815@example.com');
@@ -103,8 +105,8 @@ test('#1815 browser: selected add-on and points are sent together, and a rejecte
     redeemPoints: 330,
   });
   await expect(page.getByText('所選加購目前無法使用，請重新選擇')).toBeVisible();
-  await expect(page.getByTestId('checkout-addons')).toBeVisible();
-  await expect(page.getByTestId('points-redeem-toggle')).toBeChecked();
+  await expect(page.getByRole('button', { name: /建立訂單並前往付款/ })).toBeEnabled();
+  await expect(page.getByPlaceholder('請輸入真實姓名')).toHaveValue('測試旅客');
 });
 
 test('#1815 browser: payment page shows the persisted amount and exposes a materialization guard error', async ({ page }) => {
