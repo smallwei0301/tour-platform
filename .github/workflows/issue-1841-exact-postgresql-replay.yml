@@ -18,7 +18,7 @@ env:
   EXACT_MIGRATION_SHA256: 4ea5094f497e953076d41b3e8f878b331398f66f6694f5e2145dc1a845612ff9
   EXACT_TEST: apps/web/tests/integration/midao-legacy-draft-materialization-postgres.test.mjs
   SUPABASE_PROJECT_ID: tour-platform
-  EVIDENCE_PATH: ${{ runner.temp }}/issue-1841-exact-replay-evidence.txt
+  EVIDENCE_PATH: /tmp/issue-1841-exact-replay-evidence.txt
 
 jobs:
   exact-postgresql-replay:
