@@ -294,7 +294,7 @@ test('#1814 RED: conflict and failed atomic materialization do not expose a paya
   const rolledBack = await state(key);
   assert.deepEqual(
     Object.fromEntries(Object.entries(rolledBack).map(([name, rows]) => [name, rows.length])),
-    { orders: 0, bookings: 0, addons: 0, ledger: 0, claims: 0 },
+    { orders: 0, bookings: 0, addons: 0, items: 0, ledger: 0, claims: 0 },
   );
   await removeFault();
   const retried = await callPublic(traveler, key);
