@@ -1,0 +1,210 @@
+name: issue-1841-exact-postgresql-replay
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/issue-1841-exact-postgresql-replay.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue-1841-exact-postgresql-replay-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  IMMUTABLE_SHA: fbc0f65628d3df4e1caf5c2bca15c1744081d320
+  EXACT_MIGRATION: supabase/migrations/20260813085910_issue1825_legacy_midao_draft_materialization.sql
+  EXACT_MIGRATION_SHA256: 4ea5094f497e953076d41b3e8f878b331398f66f6694f5e2145dc1a845612ff9
+  EXACT_TEST: apps/web/tests/integration/midao-legacy-draft-materialization-postgres.test.mjs
+  SUPABASE_PROJECT_ID: tour-platform
+  EVIDENCE_PATH: ${{ runner.temp }}/issue-1841-exact-replay-evidence.txt
+
+jobs:
+  exact-postgresql-replay:
+    name: Exact PostgreSQL replay (4/4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout immutable base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.IMMUTABLE_SHA }}
+          fetch-depth: 1
+
+      - name: Record immutable base and runner environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            printf 'issue=1841\n'
+            printf 'repository=%s\n' "$GITHUB_REPOSITORY"
+            printf 'workflow_source_sha=%s\n' "${{ github.event.pull_request.head.sha }}"
+            printf 'immutable_checkout_sha=%s\n' "$(git rev-parse HEAD)"
+            printf 'runner_os=%s\n' "$RUNNER_OS"
+            printf 'runner_arch=%s\n' "$RUNNER_ARCH"
+            uname -a
+            printf '\nCPU:\n'
+            lscpu
+            printf '\nMEMORY:\n'
+            free -h
+            printf '\nDOCKER:\n'
+            docker version
+            printf '\nBEFORE docker ps -a:\n'
+            docker ps -a --no-trunc
+            printf '\nBEFORE docker network ls:\n'
+            docker network ls --no-trunc
+            printf '\nBEFORE project volumes:\n'
+            docker volume ls --filter "label=com.supabase.cli.project=$SUPABASE_PROJECT_ID"
+          } | tee "$EVIDENCE_PATH"
+          test "$(git rev-parse HEAD)" = "$IMMUTABLE_SHA"
+          printf '%s  %s\n' "$EXACT_MIGRATION_SHA256" "$EXACT_MIGRATION" |
+            sha256sum --check --strict | tee -a "$EVIDENCE_PATH"
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.1'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
+
+      - name: Install PostgreSQL client when absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! test -x /usr/bin/psql; then
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends postgresql-client
+          fi
+          test -x /usr/bin/psql
+          {
+            /usr/bin/psql --version
+            /usr/bin/pg_dump --version
+            /usr/bin/pg_restore --version
+          } | tee -a "$EVIDENCE_PATH"
+
+      - name: Install digest-verified Supabase CLI 2.87.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive_sha='57aedd36f41297d27cc642c9d7582e89994916e2d86be3c4aca87ab079980767'
+          binary_sha='e325dd50b274e88fd1416f93b9e063902827ae326d356ab7f9dc604c3eba5c59'
+          tmp="$(mktemp -d)"
+          trap 'rm -rf -- "$tmp"' EXIT
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            --output "$tmp/supabase.tar.gz" \
+            'https://github.com/supabase/cli/releases/download/v2.87.2/supabase_linux_amd64.tar.gz'
+          printf '%s  %s\n' "$archive_sha" "$tmp/supabase.tar.gz" | sha256sum --check --strict
+          tar --extract --gzip --file "$tmp/supabase.tar.gz" --directory "$tmp" supabase
+          printf '%s  %s\n' "$binary_sha" "$tmp/supabase" | sha256sum --check --strict
+          sudo install --directory --owner=root --group=root --mode=0755 /root/.hermes/toolchains/supabase/2.87.2
+          sudo install --owner=root --group=root --mode=0755 "$tmp/supabase" /root/.hermes/toolchains/supabase/2.87.2/supabase
+          if ! command -v setfacl >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends acl
+          fi
+          runner_user="$(id -un)"
+          sudo setfacl -m "u:$runner_user:--x" /root
+          sudo setfacl -m "u:$runner_user:r-x" /root/.hermes /root/.hermes/toolchains /root/.hermes/toolchains/supabase /root/.hermes/toolchains/supabase/2.87.2
+          sudo setfacl -m "u:$runner_user:r-x" /root/.hermes/toolchains/supabase/2.87.2/supabase
+          printf '%s  %s\n' "$binary_sha" /root/.hermes/toolchains/supabase/2.87.2/supabase | sha256sum --check --strict
+          test "$(/root/.hermes/toolchains/supabase/2.87.2/supabase --version)" = '2.87.2'
+          printf 'supabase_cli_version=%s\n' "$(/root/.hermes/toolchains/supabase/2.87.2/supabase --version)" |
+            tee -a "$EVIDENCE_PATH"
+
+      - name: Provision digest-bound PostgreSQL image
+        shell: bash
+        run: |
+          set -euo pipefail
+          lock='supabase/baselines/v1/toolchain-lock.json'
+          ref="$(jq -er '.images[] | select(.role == "db") | .repoDigest' "$lock")"
+          image_id="$(jq -er '.images[] | select(.role == "db") | .imageId' "$lock")"
+          repository="$(jq -er '.images[] | select(.role == "db") | .repository' "$lock")"
+          tag="$(jq -er '.images[] | select(.role == "db") | .tag' "$lock")"
+          pull_log="$(mktemp)"
+          trap 'rm -f -- "$pull_log"' EXIT
+          for attempt in 1 2 3 4; do
+            if docker pull "$ref" >"$pull_log" 2>&1; then
+              cat "$pull_log"
+              break
+            fi
+            cat "$pull_log" >&2
+            if ! grep -Eqi 'toomanyrequests|rate exceeded' "$pull_log" || test "$attempt" = 4; then
+              exit 1
+            fi
+            sleep "$((attempt * 15))"
+          done
+          observed_id="$(docker image inspect --format '{{.Id}}' "$ref")"
+          observed_architecture="$(docker image inspect --format '{{.Architecture}}' "$ref")"
+          test "$observed_id" = "$image_id"
+          test "$observed_architecture" = 'amd64'
+          docker image inspect --format '{{json .RepoDigests}}' "$ref" |
+            jq -e --arg ref "$ref" 'index($ref) != null'
+          docker tag "$ref" "$repository:$tag"
+          test "$(docker image inspect --format '{{.Id}}' "$repository:$tag")" = "$image_id"
+          {
+            printf 'postgres_repo_digest=%s\n' "$ref"
+            printf 'postgres_image_id=%s\n' "$observed_id"
+            printf 'postgres_architecture=%s\n' "$observed_architecture"
+          } | tee -a "$EVIDENCE_PATH"
+
+      - name: Prepare database test dependencies
+        run: npm run prepare:database-test-deps
+
+      - name: Run exact PostgreSQL replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'test_command=node scripts/testing/with-midao-local-supabase.mjs %s\n' "$EXACT_TEST" |
+            tee -a "$EVIDENCE_PATH"
+          set +e
+          timeout --signal=TERM --kill-after=30s 1200s \
+            node scripts/testing/with-midao-local-supabase.mjs "$EXACT_TEST" \
+            2>&1 | tee -a "$EVIDENCE_PATH"
+          status=${PIPESTATUS[0]}
+          set -e
+          printf 'test_exit_code=%s\n' "$status" | tee -a "$EVIDENCE_PATH"
+          exit "$status"
+
+      - name: Verify cleanup and record after state
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          residual=0
+          containers="$(docker ps -aq --filter "label=com.supabase.cli.project=$SUPABASE_PROJECT_ID")"
+          networks="$(docker network ls -q --filter "label=com.supabase.cli.project=$SUPABASE_PROJECT_ID")"
+          volumes="$(docker volume ls -q --filter "label=com.supabase.cli.project=$SUPABASE_PROJECT_ID")"
+          if test -n "$containers" || test -n "$networks" || test -n "$volumes" || test -e /tmp/tour-platform-local-supabase.lock; then
+            residual=1
+          fi
+          {
+            printf '\nAFTER docker ps -a:\n'
+            docker ps -a --no-trunc
+            printf '\nAFTER docker network ls:\n'
+            docker network ls --no-trunc
+            printf '\nAFTER project volumes:\n'
+            docker volume ls --filter "label=com.supabase.cli.project=$SUPABASE_PROJECT_ID"
+            printf '\nresidual_project_containers=%s\n' "${containers:-none}"
+            printf 'residual_project_networks=%s\n' "${networks:-none}"
+            printf 'residual_project_volumes=%s\n' "${volumes:-none}"
+            printf 'runner_lock_present=%s\n' "$(test -e /tmp/tour-platform-local-supabase.lock && echo yes || echo no)"
+            printf 'cleanup_exit_code=%s\n' "$residual"
+          } | tee -a "$EVIDENCE_PATH"
+          if test "$residual" -ne 0; then
+            test -z "$containers" || docker rm --force -- $containers
+            test -z "$networks" || docker network rm $networks
+            test -z "$volumes" || docker volume rm $volumes
+            exit 1
+          fi
+
+      - name: Upload exact replay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-1841-exact-postgresql-replay-${{ github.run_id }}
+          path: ${{ env.EVIDENCE_PATH }}
+          if-no-files-found: error
+          retention-days: 30
