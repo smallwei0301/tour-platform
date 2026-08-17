@@ -119,14 +119,14 @@ jobs:
         run: |
           set -euo pipefail
           lock='supabase/baselines/v1/toolchain-lock.json'
-          ref="$(jq -er '.images[] | select(.role == "db") | .repoDigest' "$lock")"
+          db_image_ref="$(jq -er '.images[] | select(.role == "db") | .repoDigest' "$lock")"
           image_id="$(jq -er '.images[] | select(.role == "db") | .imageId' "$lock")"
           repository="$(jq -er '.images[] | select(.role == "db") | .repository' "$lock")"
           tag="$(jq -er '.images[] | select(.role == "db") | .tag' "$lock")"
           pull_log="$(mktemp)"
           trap 'rm -f -- "$pull_log"' EXIT
           for attempt in 1 2 3 4; do
-            if docker pull "$ref" >"$pull_log" 2>&1; then
+            if docker pull "$db_image_ref" >"$pull_log" 2>&1; then
               cat "$pull_log"
               break
             fi
@@ -136,16 +136,19 @@ jobs:
             fi
             sleep "$((attempt * 15))"
           done
-          observed_id="$(docker image inspect --format '{{.Id}}' "$ref")"
-          observed_architecture="$(docker image inspect --format '{{.Architecture}}' "$ref")"
+          observed_id="$(docker image inspect --format '{{.Id}}' "$db_image_ref")"
+          observed_architecture="$(docker image inspect --format '{{.Architecture}}' "$db_image_ref")"
           test "$observed_id" = "$image_id"
           test "$observed_architecture" = 'amd64'
-          docker image inspect --format '{{json .RepoDigests}}' "$ref" |
-            jq -e --arg ref "$ref" 'index($ref) != null'
-          docker tag "$ref" "$repository:$tag"
+          docker image inspect --format '{{json .RepoDigests}}' "$db_image_ref" |
+            jq -e --arg ref "$db_image_ref" 'index($ref) != null'
+          docker tag "$db_image_ref" "$repository:$tag"
           test "$(docker image inspect --format '{{.Id}}' "$repository:$tag")" = "$image_id"
+          postgres_server_version="$(docker run --rm --entrypoint postgres "$db_image_ref" --version)"
+          grep -Eq 'PostgreSQL\) 17\.6([ .]|$)' <<<"$postgres_server_version"
           {
-            printf 'postgres_repo_digest=%s\n' "$ref"
+            printf 'postgres_server_version=%s\n' "$postgres_server_version"
+            printf 'postgres_repo_digest=%s\n' "$db_image_ref"
             printf 'postgres_image_id=%s\n' "$observed_id"
             printf 'postgres_architecture=%s\n' "$observed_architecture"
           } | tee -a "$EVIDENCE_PATH"
