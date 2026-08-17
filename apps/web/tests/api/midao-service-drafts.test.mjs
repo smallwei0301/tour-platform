@@ -49,6 +49,8 @@ const originalEnv = {
   MIDAO_BACKEND_ENABLED: process.env.MIDAO_BACKEND_ENABLED,
   MIDAO_BACKEND_MUTATIONS_ENABLED: process.env.MIDAO_BACKEND_MUTATIONS_ENABLED,
   MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED: process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED,
+  MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST: process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST,
+  NODE_ENV: process.env.NODE_ENV,
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
 };
@@ -356,7 +358,8 @@ test('GET materializes an owned published activity and returns the materialized 
   });
   installEnv(fake);
   process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED = '1';
-  process.env.NODE_ENV = 'test';
+  process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST = GUIDE_ID;
+  process.env.NODE_ENV = 'production';
   const { status, body } = await payload(await callGet(getRequest()));
   assert.equal(status, 200);
   assert.equal(body.data.draft.revision, 1);
@@ -368,11 +371,47 @@ test('GET materializes an owned published activity and returns the materialized 
   }]);
 });
 
+test('GET keeps draft:null and makes zero RPC calls for missing, malformed, or nonmatching production allowlists', async () => {
+  const allowlists = [undefined, `${GUIDE_ID},not-a-uuid`, OTHER_GUIDE_ID];
+  for (const allowlist of allowlists) {
+    const fake = createSupabaseFake({
+      drafts: [],
+      materialize: () => ({ data: { code: 'CREATED', activityId: ACTIVITY_ID, draftId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', revision: 1 }, error: null }),
+    });
+    installEnv(fake);
+    process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED = '1';
+    process.env.NODE_ENV = 'production';
+    if (allowlist === undefined) delete process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST;
+    else process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST = allowlist;
+
+    const { status, body } = await payload(await callGet(getRequest()));
+    assert.equal(status, 200);
+    assert.equal(body.data.draft, null);
+    assert.deepEqual(fake.calls.filter((call) => call.type === 'rpc'), []);
+  }
+});
+
+test('GET leaves an existing legacy-origin draft intact after the master gate is disabled', async () => {
+  const fake = createSupabaseFake({
+    drafts: [seedActiveDraft({ materialization_origin: 'legacy_activity' })],
+  });
+  installEnv(fake);
+  process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED = '0';
+  process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST = GUIDE_ID;
+
+  const { status, body } = await payload(await callGet(getRequest()));
+  assert.equal(status, 200);
+  assert.equal(body.data.draft.materializationOrigin, 'legacy_activity');
+  assert.equal(fake.state.drafts.length, 1);
+  assert.deepEqual(fake.calls.filter((call) => call.type === 'rpc'), []);
+});
+
 test('GET materializes an owned published activity without a draft and returns explicit failure when the RPC rejects', async () => {
   const fake = createSupabaseFake({ drafts: [] });
   installEnv(fake);
   process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED = '1';
-  process.env.NODE_ENV = 'test';
+  process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST = GUIDE_ID;
+  process.env.NODE_ENV = 'production';
   const { status, body } = await payload(await callGet(getRequest()));
   assert.equal(status, 500);
   assert.equal(body.error.code, 'INTERNAL_ERROR');

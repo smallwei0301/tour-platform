@@ -4,6 +4,8 @@ function isTruthy(value) {
   return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
 // Booking V2 flags（isBookingV2Enabled / isBookingV2ShellEnabled）已於 #1407 階段三退場：
 // legacy booking 已退役，V2 為唯一路徑，不再有 flag 可回滾（退役紀錄見
 // docs/operations/booking-v2-rollback-runbook.md）。
@@ -111,12 +113,26 @@ export function isMidaoBackendModeSwitchEnabled(env = process.env) {
   return isTruthy(env.MIDAO_BACKEND_MODE_SWITCH_ENABLED);
 }
 
-/**
- * Controlled legacy activity draft materialization. Default OFF; production is
- * hard-disabled even if an operator accidentally supplies the environment key.
- */
+/** Controlled legacy activity draft materialization master gate. Default OFF. */
 export function isMidaoLegacyDraftMaterializationEnabled(env = process.env) {
-  return env.NODE_ENV !== 'production' && env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED === '1';
+  return isTruthy(env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED);
+}
+
+/**
+ * Controlled legacy activity draft materialization scoped to an explicitly
+ * allowlisted guide. Any malformed or empty allowlist fails closed.
+ */
+export function isMidaoLegacyDraftMaterializationEnabledForGuide(guideId, env = process.env) {
+  if (!isMidaoLegacyDraftMaterializationEnabled(env)) return false;
+  if (typeof guideId !== 'string' || !UUID_PATTERN.test(guideId.trim())) return false;
+
+  const rawAllowlist = env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST;
+  if (typeof rawAllowlist !== 'string' || rawAllowlist.trim() === '') return false;
+
+  const guideIds = rawAllowlist.split(',').map((token) => token.trim());
+  if (guideIds.some((id) => !UUID_PATTERN.test(id))) return false;
+
+  return new Set(guideIds.map((id) => id.toLowerCase())).has(guideId.trim().toLowerCase());
 }
 
 /** Local-only Midao E2E diagnostics gate. Default OFF. */

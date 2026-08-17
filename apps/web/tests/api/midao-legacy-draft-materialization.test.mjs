@@ -5,7 +5,10 @@ const ACTIVITY_ID = '77777777-7777-4777-8777-777777777777';
 const GUIDE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OTHER_GUIDE_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
-const { isMidaoLegacyDraftMaterializationEnabled } = await import('../../src/config/feature-flags.mjs');
+const {
+  isMidaoLegacyDraftMaterializationEnabled,
+  isMidaoLegacyDraftMaterializationEnabledForGuide,
+} = await import('../../src/config/feature-flags.mjs');
 const { ensureLegacyServiceDraftMaterialized } = await import('../../src/lib/midao/db-legacy-service-draft-materialization.mjs');
 const { resolveGuideServiceList } = await import('../../src/lib/midao/service-list-resolver.ts');
 const { publishServiceDraft } = await import('../../src/lib/midao/db-midao-service-publication.mjs');
@@ -13,7 +16,9 @@ const { __setSupabaseClientForTest } = await import('../../src/lib/supabase-env.
 
 const originalEnv = Object.fromEntries([
   'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY',
-  'MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED', 'NODE_ENV',
+  'MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED',
+  'MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST',
+  'NODE_ENV',
 ].map((key) => [key, process.env[key]]));
 
 test.afterEach(() => {
@@ -56,10 +61,20 @@ function listFake({ activities = [], drafts = [], versions = [], materialize } =
   };
 }
 
-test('materialization flag is default-off and production remains disabled even when enabled', () => {
+test('materialization master flag is server-only and guide scope fails closed unless the entire allowlist is valid', () => {
   assert.equal(isMidaoLegacyDraftMaterializationEnabled({}), false);
   assert.equal(isMidaoLegacyDraftMaterializationEnabled({ MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED: '1', NODE_ENV: 'test' }), true);
-  assert.equal(isMidaoLegacyDraftMaterializationEnabled({ MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED: '1', NODE_ENV: 'production' }), false);
+  assert.equal(isMidaoLegacyDraftMaterializationEnabled({ MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED: '1', NODE_ENV: 'production' }), true);
+  assert.equal(isMidaoLegacyDraftMaterializationEnabledForGuide(GUIDE_ID, {
+    MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED: '1',
+    MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST: GUIDE_ID,
+  }), true);
+  for (const allowlist of [undefined, '', `${GUIDE_ID},`, `${GUIDE_ID},not-a-uuid`, OTHER_GUIDE_ID]) {
+    assert.equal(isMidaoLegacyDraftMaterializationEnabledForGuide(GUIDE_ID, {
+      MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED: '1',
+      MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST: allowlist,
+    }), false);
+  }
 });
 
 test('gateway is the only RPC entry and retry reuses the same materialized draft', async () => {
@@ -84,17 +99,28 @@ test('gateway is the only RPC entry and retry reuses the same materialized draft
   ]);
 });
 
-test('resolver flag-off makes zero RPC writes and preserves the existing no-service-item result', async () => {
-  const fake = listFake({ activities: [{ id: ACTIVITY_ID, guide_id: GUIDE_ID, title: 'legacy', slug: 'legacy', status: 'published', updated_at: null }] });
-  useSupabase(fake);
-  const result = await resolveGuideServiceList(GUIDE_ID, {});
-  assert.equal(result.total, 0);
-  assert.deepEqual(fake.calls, []);
+test('resolver makes zero RPC writes for master-off, missing, malformed, or mismatched guide allowlists', async () => {
+  const environments = [
+    {},
+    { MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED: '1', NODE_ENV: 'production' },
+    { MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED: '1', NODE_ENV: 'production', MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST: `${GUIDE_ID},not-a-uuid` },
+    { MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED: '1', NODE_ENV: 'production', MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST: OTHER_GUIDE_ID },
+  ];
+  for (const environment of environments) {
+    const fake = listFake({ activities: [{ id: ACTIVITY_ID, guide_id: GUIDE_ID, title: 'legacy', slug: 'legacy', status: 'published', updated_at: null }] });
+    useSupabase(fake);
+    Object.assign(process.env, environment);
+    const result = await resolveGuideServiceList(GUIDE_ID, {});
+    assert.equal(result.total, 0);
+    assert.deepEqual(fake.calls, []);
+    for (const key of Object.keys(environment)) delete process.env[key];
+  }
 });
 
 test('resolver flag-on materializes only the calling guide published activity without draft or version', async () => {
   process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED = '1';
-  process.env.NODE_ENV = 'test';
+  process.env.NODE_ENV = 'production';
+  process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST = GUIDE_ID;
   const fake = listFake({
     activities: [
       { id: ACTIVITY_ID, guide_id: GUIDE_ID, title: 'legacy', slug: 'legacy', status: 'published', updated_at: null },

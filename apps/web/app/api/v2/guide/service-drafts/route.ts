@@ -12,7 +12,7 @@
 import { validateCsrf } from '../../../../../src/lib/csrf.mjs';
 import {
   isMidaoBackendMutationsEnabled,
-  isMidaoLegacyDraftMaterializationEnabled,
+  isMidaoLegacyDraftMaterializationEnabledForGuide,
 } from '../../../../../src/config/feature-flags.mjs';
 import { assertActivityBelongsToGuide } from '../../../../../src/lib/assert-activity-belongs-to-guide.ts';
 import { getSupabase, hasSupabaseEnv } from '../../../../../src/lib/supabase-env.mjs';
@@ -103,8 +103,8 @@ function gatewayResponse(result: {
   return jsonError(result.code ?? 'INVALID_REQUEST', '請求參數不正確', result.status || 422);
 }
 
-async function shouldMaterializeLegacyDraft(activityId: string): Promise<boolean> {
-  if (!isMidaoLegacyDraftMaterializationEnabled() || !hasSupabaseEnv()) return false;
+async function shouldMaterializeLegacyDraft(activityId: string, guideId: string): Promise<boolean> {
+  if (!isMidaoLegacyDraftMaterializationEnabledForGuide(guideId) || !hasSupabaseEnv()) return false;
   const supabase = await getSupabase();
   const [{ data: activity, error: activityError }, { data: version, error: versionError }] = await Promise.all([
     supabase.from('activities').select('status').eq('id', activityId).maybeSingle(),
@@ -132,7 +132,7 @@ export async function GET(request: Request) {
   try {
     const normalizedActivityId = (activityId as string).trim();
     let result = await getServiceDraft(normalizedActivityId);
-    if (result.ok && result.draft === null && await shouldMaterializeLegacyDraft(normalizedActivityId)) {
+    if (result.ok && result.draft === null && await shouldMaterializeLegacyDraft(normalizedActivityId, guideId)) {
       const ensured = await ensureLegacyServiceDraftMaterialized(normalizedActivityId, guideId);
       if (!ensured.ok) {
         return jsonError(ensured.code ?? 'MATERIALIZATION_FAILED', '無法建立 legacy 服務草稿', ensured.status || 422);
