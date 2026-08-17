@@ -39,3 +39,9 @@
 - 編輯既有活動時，GET 未回傳有效 draft 會進入阻擋錯誤畫面，提供重試與返回服務列表，不會將 `null` 合併成可編輯的空白表單或觸發 autosave；新服務與既有 native draft 維持原流程。
 - legacy 草稿明示只帶入既有文字、圖片不在此替換或編輯、既有方案／檔期不變，且在 lifecycle 決策前停用發布；`needs_review` 另顯示未安全套用的通知。server-side 409 gate 仍是唯一權威。
 - TDD 證據：新的 focused UI contract test 已先 RED（4/4 failed）、實作後 GREEN（4/4 passed）。窄 Playwright 已啟動受控 local server，但 guide auth fixture lookup 回 `401 INVALID_CREDENTIALS`，未將其宣稱為 browser pass；E2E spec 仍採既有 canonical guide login helper，待 prepared fixture 環境驗證。
+
+## 2026-08-17 — production materialization feature flag（方案 B）
+- 將 legacy draft materialization 由 production hard-disabled 改為 server-only master gate + strict UUID guide allowlist；缺失、空白、含 malformed token 或未包含 caller 的 allowlist 一律 fail-closed，且不會發出 materialization RPC。
+- resolver 以已 normalize 的 guideId 計算 production default，保留顯式 `materializationEnabled` DI override；GET route 以 canonical session guideId 在 eligibility query 前做同一 scoped gate。關閉 master gate 時只停止新的 materialization，既有 legacy-origin draft 維持原有讀取結果。
+- TDD：resolver/feature-flag RED（7 tests 內 2 failed）→ GREEN 7/7；GET route RED（21 tests 內 1 failed）→ GREEN 21/21。正式 gate：`NODE_OPTIONS='--max-old-space-size=1024' .claude/hooks/run-checks.sh apps/web/tests/api/midao-legacy-draft-materialization.test.mjs apps/web/tests/api/midao-service-drafts.test.mjs apps/web/tests/api/midao-services-list.test.mjs --typecheck`，42/42 pass + typecheck pass。
+- Worktree 缺 dev dependencies 時，依 integrity procedure 以隔離 HOME/npmrc 執行 `npm ci --include=dev --ignore-scripts --no-audit --no-fund`；package.json、package-lock.json、yarn.lock SHA-256 均在前後一致，未變更 lockfile。

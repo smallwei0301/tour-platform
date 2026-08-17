@@ -23,7 +23,7 @@
 //   - S1 schema（guide_service_drafts、service_publication_versions；activities/activity_plans 既有）。
 
 import { getSupabase, hasSupabaseEnv } from '../supabase-env.mjs';
-import { isMidaoLegacyDraftMaterializationEnabled } from '../../config/feature-flags.mjs';
+import { isMidaoLegacyDraftMaterializationEnabledForGuide } from '../../config/feature-flags.mjs';
 import { ensureLegacyServiceDraftMaterialized } from './db-legacy-service-draft-materialization.mjs';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -306,7 +306,8 @@ export async function resolveGuideServiceList(
 
   if (hasSupabaseEnv()) {
     return resolveInSupabase(normalizedGuideId, { page, pageSize, status }, {
-      materializationEnabled: dependencies.materializationEnabled ?? isMidaoLegacyDraftMaterializationEnabled(),
+      materializationEnabled: dependencies.materializationEnabled
+        ?? isMidaoLegacyDraftMaterializationEnabledForGuide(normalizedGuideId),
       ensureLegacyDraftMaterialized: dependencies.ensureLegacyDraftMaterialized ?? ensureLegacyServiceDraftMaterialized,
     });
   }
