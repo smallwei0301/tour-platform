@@ -8,6 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const createRoute = readFileSync(join(__dirname, '../../app/api/payments/ecpay/create/route.ts'), 'utf8');
 const callbackRoute = readFileSync(join(__dirname, '../../app/api/payments/ecpay/callback/route.ts'), 'utf8');
 const dbLib = readFileSync(join(__dirname, '../../src/lib/db.mjs'), 'utf8');
+const paymentAttemptDb = readFileSync(join(__dirname, '../../src/lib/payment/db-payment-attempt.mjs'), 'utf8');
 const orchestrationLib = readFileSync(join(__dirname, '../../src/lib/ecpay-create-orchestration.mjs'), 'utf8');
 
 test('create route persists pending payment attempt before returning form params', () => {
@@ -28,7 +29,7 @@ test('callback DB path forwards merchant_trade_no/provider into callback RPC', (
 });
 
 test('create DB upsert payload avoids legacy payments.method column dependency', () => {
-  const fnBlock = dbLib.match(/export async function upsertEcpayPaymentAttemptDb\(input = \{\}\) \{[\s\S]*?\n\}/);
+  const fnBlock = paymentAttemptDb.match(/export async function upsertEcpayPaymentAttemptDb\(input = \{\}\) \{[\s\S]*?\n\}/);
   assert.ok(fnBlock, 'upsertEcpayPaymentAttemptDb function block should exist');
   assert.doesNotMatch(fnBlock[0], /\bmethod\s*:\s*['\"]credit_card['\"]/);
 });

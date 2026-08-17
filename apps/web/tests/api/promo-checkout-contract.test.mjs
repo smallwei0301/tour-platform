@@ -116,11 +116,11 @@ test('AC5: ecpay/create does NOT accept TotalAmount from request body', () => {
   );
 });
 
-test('AC5: ecpay/create uses getOrderDetailForPayment to fetch order', () => {
+test('AC5: ecpay/create uses the persisted materialized aggregate to fetch order', () => {
   assert.match(
     ecpayCreateSrc,
-    /getOrderDetailForPayment/,
-    'ECPay create should use getOrderDetailForPayment (not trust client total)'
+    /getMaterializedOrderDetailForPayment/,
+    'ECPay create should use the materialized aggregate (not trust client total)'
   );
 });
 

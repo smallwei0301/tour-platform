@@ -1,13 +1,9 @@
 import { fail, ok } from '../../../../../src/lib/api';
-import {
-  getOrderDetailForPayment,
-  getSupabase,
-  hasSupabaseEnv,
-  upsertEcpayPaymentAttemptDb,
-} from '../../../../../src/lib/db.mjs';
+import { upsertEcpayPaymentAttemptDb } from '../../../../../src/lib/payment/db-payment-attempt.mjs';
 import { generateCheckMacValue, getECPayCredentials } from '../../../../../src/lib/ecpay';
-import { buildEcpayCheckoutParams } from '../../../../../src/lib/ecpay-create-orchestration.mjs';
+import { buildEcpayCheckoutParams, isMaterializedOrderReadyForPayment } from '../../../../../src/lib/ecpay-create-orchestration.mjs';
 import { canCheckoutTravelerConfirmation } from '../../../../../src/lib/booking-type-flow.mjs';
+import { getMaterializedOrderDetailForPayment } from '../../../../../src/lib/payment/db-payment-detail.mjs';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../../../src/lib/rate-limit';
 
 /**
@@ -53,43 +49,25 @@ export async function POST(request: Request) {
       return Response.json(fail('INVALID_REQUEST', 'orderId is required'), { status: 400 });
     }
 
-    // 取得訂單詳情
-    const order = await getOrderDetailForPayment({ orderId });
+    // #1815: legacy 入口與 V2 共用已提交 aggregate 的 payment boundary；
+    // 不能只依 order status 讓半完成的訂單建立付款嘗試。
+    const order = await getMaterializedOrderDetailForPayment(orderId);
 
     if (!order) {
       return Response.json(fail('NOT_FOUND', 'Order not found'), { status: 404 });
     }
 
-    if (order.status !== 'pending_payment') {
+    if (!isMaterializedOrderReadyForPayment(order)) {
       return Response.json(
-        fail('INVALID_STATE', `Order is not pending payment (current: ${order.status})`),
-        { status: 400 }
+        fail('ORDER_NOT_MATERIALIZED', 'Order is not ready for payment'),
+        { status: 409 }
       );
     }
 
     // #1802：/order/pay 走 ECPay create 時，同樣必須擋下尚未完成旅客確認的 LINE 詢問單。
-    let booking: {
-      source_inquiry_id?: string | null;
-      traveler_confirmation_status?: string;
-    } | null = null;
-    if (hasSupabaseEnv()) {
-      const supabase = await getSupabase();
-      const { data, error } = await supabase
-        .from('bookings')
-        .select('source_inquiry_id, traveler_confirmation_status')
-        .eq('order_id', orderId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) {
-        throw new Error(error.message || 'Failed to fetch booking confirmation status');
-      }
-      booking = data;
-    }
-
     const cGate = canCheckoutTravelerConfirmation({
-      sourceInquiryId: booking?.source_inquiry_id,
-      travelerConfirmationStatus: booking?.traveler_confirmation_status,
+      sourceInquiryId: order.sourceInquiryId,
+      travelerConfirmationStatus: order.travelerConfirmationStatus,
     });
     if (!cGate.allowed) {
       return Response.json(fail(cGate.code, cGate.messageZh), { status: 409 });
@@ -152,6 +130,6 @@ export async function POST(request: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
     console.error('[ecpay/create] Error:', message);
-    return Response.json(fail('SERVER_ERROR', message), { status: 500 });
+    return Response.json(fail('SERVER_ERROR', '伺服器發生錯誤，請稍後再試'), { status: 500 });
   }
 }

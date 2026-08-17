@@ -1257,6 +1257,12 @@ export function buildMidaoPlaywrightEnvironment({ parentEnv = process.env, local
     MIDAO_BACKEND_ENABLED: '1',
     MIDAO_BACKEND_MUTATIONS_ENABLED: '1',
     MIDAO_BACKEND_MODE_SWITCH_ENABLED: '1',
+    // Isolated dummy credentials only generate a local form payload; no ECPay
+    // request is issued by the test runner.
+    ECPAY_ENV: 'stage',
+    ECPAY_MERCHANT_ID: '2000132',
+    ECPAY_HASH_KEY: 'midao-e2e-test-hash-key',
+    ECPAY_HASH_IV: 'midao-e2e-test-hash-iv',
   };
   delete environment.PLAYWRIGHT_NO_WEBSERVER;
   return environment;
