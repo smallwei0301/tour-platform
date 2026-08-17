@@ -16,6 +16,15 @@ const valid = {
 
 test('RED: payment accepts only a committed booking/order/item total', () => {
   assert.equal(isMaterializedOrderReadyForPayment(valid), true);
+  assert.equal(isMaterializedOrderReadyForPayment({
+    ...valid,
+    totalTwd: 1100,
+    items: [
+      valid.items[0],
+      { order_id: 'order-1815', booking_id: 'booking-1815', item_type: 'fee', subtotal_amount: 400, metadata: { kind: 'addon' } },
+      { order_id: 'order-1815', booking_id: 'booking-1815', item_type: 'discount', subtotal_amount: -500, metadata: { kind: 'points_redemption' } },
+    ],
+  }), true);
   assert.equal(isMaterializedOrderReadyForPayment({ ...valid, items: [] }), false);
   assert.equal(isMaterializedOrderReadyForPayment({ ...valid, totalTwd: 1199 }), false);
   assert.equal(isMaterializedOrderReadyForPayment({ ...valid, booking: { ...valid.booking, order_id: 'other' } }), false);

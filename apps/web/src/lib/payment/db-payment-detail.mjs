@@ -9,7 +9,7 @@ export async function getMaterializedOrderDetailForPayment(orderId) {
     .select(`
       id, booking_id, status, payment_status, total_twd, contact_name, contact_email, activity_id,
       booking:bookings!orders_booking_id_fkey(id, order_id, status, source_inquiry_id, traveler_confirmation_status),
-      items:order_items!order_items_order_id_fkey(order_id, booking_id, item_type, subtotal_amount)
+      items:order_items!order_items_order_id_fkey(order_id, booking_id, item_type, subtotal_amount, metadata)
     `)
     .eq('id', orderId)
     .single();
