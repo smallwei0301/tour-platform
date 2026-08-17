@@ -5,22 +5,32 @@ import { materializeDraftBookingOrder } from '../../src/lib/checkout/booking-ord
 import { buildEcpayCheckoutParams } from '../../src/lib/ecpay-create-orchestration.mjs';
 
 for (const scenario of [
-  { name: 'basic', totalTwd: 7400 },
-  { name: 'valid add-on', totalTwd: 7800 },
-  { name: 'valid points redemption', totalTwd: 6900 },
+  { name: 'basic', totalTwd: 7400, addonSelections: [], redeemPoints: 0 },
+  { name: 'valid add-on', totalTwd: 7800, addonSelections: [{ addonId: 'addon-1815', quantity: 1 }], redeemPoints: 0 },
+  { name: 'valid points redemption', totalTwd: 6900, addonSelections: [], redeemPoints: 500 },
 ]) {
   test(`#1815 ${scenario.name}: response, notification double and payment double use the committed total`, async () => {
     const notificationTotals = [];
+    const events = [];
     const result = await materializeDraftBookingOrder({
       activityId: 'activity-1815', planId: 'plan-1815', participants: 2,
+      addonSelections: scenario.addonSelections, redeemPoints: scenario.redeemPoints,
     }, {
-      createAtomic: async () => ({ bookingId: `booking-${scenario.name}`, orderId: `order-${scenario.name}` }),
-      readBack: async () => ({
+      createAtomic: async (input) => {
+        events.push('atomic');
+        assert.deepEqual(input.addonSelections, scenario.addonSelections);
+        assert.equal(input.redeemPoints, scenario.redeemPoints);
+        return { bookingId: `booking-${scenario.name}`, orderId: `order-${scenario.name}` };
+      },
+      readBack: async () => {
+        events.push('read-back');
+        return {
         bookingId: `booking-${scenario.name}`, bookingNo: 'BK-1815', bookingStatus: 'draft',
         activityId: 'activity-1815', planId: 'plan-1815', orderId: `order-${scenario.name}`,
         orderStatus: 'pending_payment', totalTwd: scenario.totalTwd,
-      }),
-      notify: async ({ totalTwd }) => { notificationTotals.push(totalTwd); },
+        };
+      },
+      notify: async ({ totalTwd }) => { events.push('notify'); notificationTotals.push(totalTwd); },
     });
 
     const paymentDouble = buildEcpayCheckoutParams({
@@ -30,6 +40,7 @@ for (const scenario of [
     });
 
     assert.equal(result.amount, scenario.totalTwd);
+    assert.deepEqual(events, ['atomic', 'read-back', 'notify']);
     assert.deepEqual(notificationTotals, [scenario.totalTwd]);
     assert.equal(Number(paymentDouble.TotalAmount), scenario.totalTwd);
   });

@@ -2,7 +2,7 @@ import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { __setSupabaseClientForTest } from '../../src/lib/supabase-env.mjs';
-import { upsertEcpayPaymentAttemptDb } from '../../src/lib/payment/db-payment-attempt.mjs';
+import { __resetEcpayPaymentAttemptsForTest, upsertEcpayPaymentAttemptDb } from '../../src/lib/payment/db-payment-attempt.mjs';
 import { buildEcpayCheckoutParams } from '../../src/lib/ecpay-create-orchestration.mjs';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -29,6 +29,7 @@ function restoreEnv() {
 beforeEach(() => {
   setSupabaseEnv();
   __setSupabaseClientForTest(null);
+  __resetEcpayPaymentAttemptsForTest();
 });
 
 afterEach(() => {
@@ -206,13 +207,19 @@ test('in-memory payment-attempt fallback keeps the persisted result contract', a
   });
 
   assert.deepEqual(result, {
-    id: null,
+    id: 'memory-ecpay-1',
     orderId: '77777777-7777-7777-7777-777777777777',
     merchantTradeNo: 'SIMULATEDTRADE1',
     status: 'pending',
     reused: false,
     simulated: true,
   });
+  assert.deepEqual(
+    await upsertEcpayPaymentAttemptDb({
+      orderId: '77777777-7777-7777-7777-777777777777', merchantTradeNo: 'RETRYTRADE1815', amountTwd: 4321,
+    }),
+    { ...result, reused: true },
+  );
 });
 
 test('route orchestration uses persisted/reused merchantTradeNo for checkout params', () => {

@@ -1,5 +1,11 @@
 import { getSupabase, hasSupabaseEnv } from '../supabase-env.mjs';
 
+const memoryPendingAttempts = new Map();
+
+export function __resetEcpayPaymentAttemptsForTest() {
+  memoryPendingAttempts.clear();
+}
+
 /**
  * Creates, or safely reuses, the one pending ECPay attempt for an order.
  * The database uniqueness constraint is the concurrency authority.
@@ -14,14 +20,18 @@ export async function upsertEcpayPaymentAttemptDb(input = {}) {
   if (!Number.isFinite(amountTwd) || amountTwd < 0) throw new Error('amountTwd must be a non-negative number');
 
   if (!hasSupabaseEnv()) {
-    return {
-      id: null,
+    const existing = memoryPendingAttempts.get(orderId);
+    if (existing) return { ...existing, reused: true };
+    const created = {
+      id: `memory-ecpay-${memoryPendingAttempts.size + 1}`,
       orderId,
       merchantTradeNo,
       status: 'pending',
       reused: false,
       simulated: true,
     };
+    memoryPendingAttempts.set(orderId, created);
+    return created;
   }
 
   const supabase = await getSupabase();

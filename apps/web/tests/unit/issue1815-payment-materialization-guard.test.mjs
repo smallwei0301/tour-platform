@@ -2,7 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { isMaterializedOrderReadyForPayment } from '../../src/lib/ecpay-create-orchestration.mjs';
-import { getMaterializedOrderDetailForPayment } from '../../src/lib/payment/db-payment-detail.mjs';
+import {
+  __resetMaterializedOrdersForPaymentTest,
+  __seedMaterializedOrderForPaymentTest,
+  getMaterializedOrderDetailForPayment,
+} from '../../src/lib/payment/db-payment-detail.mjs';
 
 const valid = {
   id: 'order-1815',
@@ -35,14 +39,24 @@ test('RED: payment accepts only a committed booking/order/item total', () => {
   assert.equal(isMaterializedOrderReadyForPayment({ ...valid, items: [{ ...valid.items[0], booking_id: null }] }), false);
 });
 
-test('in-memory fallback has no V2 materialized aggregate and therefore cannot open payment', async () => {
+test('in-memory fallback projects the same materialized aggregate contract', async () => {
   const savedUrl = process.env.SUPABASE_URL;
   const savedKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   try {
-    assert.equal(await getMaterializedOrderDetailForPayment('order-1815'), null);
+    __resetMaterializedOrdersForPaymentTest();
+    __seedMaterializedOrderForPaymentTest(valid);
+    assert.deepEqual(await getMaterializedOrderDetailForPayment('order-1815'), {
+      ...valid,
+      sourceInquiryId: null,
+      travelerConfirmationStatus: null,
+      title: null,
+      contactName: null,
+      contactEmail: null,
+    });
   } finally {
+    __resetMaterializedOrdersForPaymentTest();
     if (savedUrl === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = savedUrl;
     if (savedKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = savedKey;
   }
