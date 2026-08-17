@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-本檔是所有 Claude Code session 的主入口。**開工順序：讀完本檔 → 讀 `.cursor/harness/00_INDEX.md` → 建立或接續 `docs/operations/worklogs/issueNNNN.md`。**（改版前全文備份：`CLAUDE.md.bak`）
+本檔是所有 Claude Code session 的主入口。**開工順序：讀完本檔 → 涉及測試、bug、API／DB／UI變更或驗收聲明時讀 `docs/04-tech/04-tech-architecture/17-testing-strategy-and-agent-standard.md` → 讀 `.cursor/harness/00_INDEX.md` → 建立或接續 `docs/operations/worklogs/issueNNNN.md`。**（改版前全文備份：`CLAUDE.md.bak`）
 
 ## 🔒 十條鐵律（由 hooks 強制執行；違反任一條 = 本輪工作無效）
 
@@ -25,7 +25,8 @@ Root scripts 代理到 `@tour/web` workspace：
 
 - `npm run dev` / `npm run build` / `npm run lint`（Node 22 上跑）/ `npm run typecheck` / `npm test`
 - 測試用 **Node 內建 test runner**（`.mjs`，非 Jest/Vitest）；單檔：`node --test apps/web/tests/api/xxx.test.mjs`
-- **commit 證據**：`.claude/hooks/run-checks.sh <test 檔…>`（`--typecheck`／`--all`）
+- 測試充分性／分層／去重／停止條件：`docs/04-tech/04-tech-architecture/17-testing-strategy-and-agent-standard.md`；完整行為矩陣只在 owner layer 測一次，consumer只測接線與獨有風險。這只控制新增測試設計，不免除下列既有全套驗證／CI gate。
+- **commit 證據**：`.claude/hooks/run-checks.sh <targeted tests>`（`--typecheck`／`--all`）；Backend依harness/07先targeted再`npm test`，PR前依rubric執行`--all`或取得current head SHA的CI全綠證據。
 - E2E：`npm run test:e2e -w @tour/web`（需另開 `npm run dev`）；CI smoke lane：`test:e2e:smoke`
 - `npm run readiness:snapshot` 重生 readiness 報告（live 數字不手寫）
 - 完整測試/QA 細節 → `.cursor/harness/07_testing_playbook.md`
@@ -52,6 +53,7 @@ Root scripts 代理到 `@tour/web` workspace：
 | harness 自我維護規則 | `.cursor/harness/05_maintenance.md` |
 | 交接信＋腐化預防 | `.cursor/harness/06_manifesto.md` |
 | 測試/QA playbook（完整版） | `.cursor/harness/07_testing_playbook.md` |
+| 測試策略、充分性、去重與停止條件 | `docs/04-tech/04-tech-architecture/17-testing-strategy-and-agent-standard.md` |
 | branch 衛生（完整版） | `.cursor/harness/08_branch_hygiene.md` |
 | 踩坑教訓（可追加） | `.cursor/harness/lessons.md` |
 | V2 API 契約 | `docs/04-tech/04-tech-architecture/10-api-spec-v2-booking-pos.md` |
@@ -62,7 +64,7 @@ Root scripts 代理到 `@tour/web` workspace：
 
 ## QA 驗收（摘要；完整標準＝harness/07 §1，逐條照辦）
 
-實測綠燈才算過（不得推測）；使用者可見流程必跑真實瀏覽器（Playwright）；無法安全執行才標 `NOT_VERIFIED-live` 並附 blocker；驗收報告繁中寫入 `docs/operations/qa-reports/`（含 URL、SHA、Asia/Taipei 時間、逐條 AC 證據，不含密鑰/PII）；流程＝開 PR → 盯 CI → merge → 逐條 AC → sign-off → 關 issue。
+實測綠燈才算過（不得推測）；測試選擇先依主規範完成 AC → 風險 → owner layer → seam矩陣，避免重複矩陣與實作細節測試；使用者可見流程必跑真實瀏覽器（Playwright）；無法安全執行才標 `NOT_VERIFIED-live` 並附 blocker；驗收報告繁中寫入 `docs/operations/qa-reports/`（含 URL、SHA、Asia/Taipei 時間、逐條 AC 證據，不含密鑰/PII）；流程＝開 PR → 盯 CI → merge → 逐條 AC → sign-off → 關 issue。
 
 ## Conventions
 

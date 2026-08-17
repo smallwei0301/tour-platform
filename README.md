@@ -12,15 +12,17 @@
 |---|---|
 | 品牌語氣與文案 | [`BRAND_BOOK.md`](./BRAND_BOOK.md) |
 | 工程限制、凍結區與開工規則 | [`CLAUDE.md`](./CLAUDE.md) |
+| 測試充分性、分層、去重與停止條件 | [`測試策略與 Agent 施工規範`](./docs/04-tech/04-tech-architecture/17-testing-strategy-and-agent-standard.md) |
 | 文件分類與任務路由 | [`docs/README.md`](./docs/README.md) |
 | 專案即時 issue／PR／readiness | [`docs/operations/reports/readiness-live-state-latest.md`](./docs/operations/reports/readiness-live-state-latest.md)；先跑 `npm run readiness:check` |
 
 ## Agent／維護者開工順序
 
 1. 先讀 [`CLAUDE.md`](./CLAUDE.md)，遵守凍結區、migration、測試與 production side-effect 規則。
-2. 再讀 [`.cursor/harness/00_INDEX.md`](./.cursor/harness/00_INDEX.md)，依任務需要進入 testing、orchestration 或 branch hygiene 文件；每個 issue 都必須先建立或接續對應的 worklog（`docs/operations/worklogs/issueNNNN.md`），先讀 worklog，再依 worklog 讀取並在每個里程碑雙寫狀態。
-3. 進入 [`docs/README.md`](./docs/README.md)，依任務類型選擇首讀、次讀與真值來源。
-4. 需要即時狀態時查 live GitHub issue／PR；readiness snapshot 只作 bounded snapshot，不能取代 live query。
+2. 任務涉及測試、bug、API／DB／UI變更或驗收聲明時，讀 [`測試策略與 Agent 施工規範`](./docs/04-tech/04-tech-architecture/17-testing-strategy-and-agent-standard.md)，先建立AC → 風險 → owner layer → seam矩陣。
+3. 再讀 [`.cursor/harness/00_INDEX.md`](./.cursor/harness/00_INDEX.md)，依任務需要進入 testing、orchestration 或 branch hygiene 文件；每個 issue 都必須先建立或接續對應的 worklog（`docs/operations/worklogs/issueNNNN.md`），先讀 worklog，再依 worklog讀取並在每個里程碑雙寫狀態。
+4. 進入 [`docs/README.md`](./docs/README.md)，依任務類型選擇首讀、次讀與真值來源。
+5. 需要即時狀態時查 live GitHub issue／PR；readiness snapshot只作bounded snapshot，不能取代live query。
 
 不要從舊 roadmap、dated QA report、歷史 incident closure 或設計草稿推導目前 backlog。若文件與現行 code、tests、migrations、live issue／PR 或 runtime evidence 衝突，以對應領域的真值來源為準。
 
@@ -60,7 +62,7 @@ npm run readiness:check
 npm run readiness:snapshot
 ```
 
-QA 與測試細節以 [`.cursor/harness/07_testing_playbook.md`](./.cursor/harness/07_testing_playbook.md) 及 [`docs/qa/README.md`](./docs/qa/README.md) 為準。
+測試選擇、充分性、去重與停止條件以 [`測試策略與 Agent 施工規範`](./docs/04-tech/04-tech-architecture/17-testing-strategy-and-agent-standard.md) 為準。測試命令與QA證據流程以 [`.cursor/harness/07_testing_playbook.md`](./.cursor/harness/07_testing_playbook.md) 及 [`docs/qa/README.md`](./docs/qa/README.md) 為準。
 
 ## Repo 結構
 

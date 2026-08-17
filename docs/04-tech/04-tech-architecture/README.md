@@ -5,6 +5,10 @@
 > - [`06-seed-data-spec.md`](./06-seed-data-spec.md)
 > - [`02-database-schema.md`](./02-database-schema.md)
 
+## 穩定技術契約
+
+- [`17-testing-strategy-and-agent-standard.md`](./17-testing-strategy-and-agent-standard.md) — 新增／修改測試、修bug、改API／DB／UI或聲稱驗收前必讀。定義測試充分性、分層、去重、真PostgreSQL／Playwright門檻與停止條件。
+
 ## 4.1 技術選型總覽
 
 ```

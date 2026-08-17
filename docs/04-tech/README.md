@@ -12,6 +12,7 @@
 - [`04-tech-architecture/01-system-diagram.md`](04-tech-architecture/01-system-diagram.md) — 系統邊界與元件圖。
 - [`04-tech-architecture/11-frontend-perf-pitfalls.md`](04-tech-architecture/11-frontend-perf-pitfalls.md) — 前端效能與 SSR／資源載入風險。
 - [`04-tech-architecture/15-architecture-modularity-review.md`](04-tech-architecture/15-architecture-modularity-review.md) — 模組邊界與架構檢視。
+- [`04-tech-architecture/17-testing-strategy-and-agent-standard.md`](04-tech-architecture/17-testing-strategy-and-agent-standard.md) — 測試充分性、分層、去重、真DB／瀏覽器門檻與Agent停止條件。
 
 ### API／Booking／Payment
 
@@ -48,7 +49,7 @@
 
 ## QA 對接
 
-- Backend／API 任務依 [`.cursor/harness/07_testing_playbook.md`](../../.cursor/harness/07_testing_playbook.md) 先做 focused regression，再視範圍擴大。
+- Backend／API任務先依 [`測試策略與 Agent 施工規範`](04-tech-architecture/17-testing-strategy-and-agent-standard.md)選擇owner layer與最小seam，再依 [`.cursor/harness/07_testing_playbook.md`](../../.cursor/harness/07_testing_playbook.md)執行focused regression並按風險擴大。
 - 代表性契約／防回歸檢查包括 [`../../apps/web/tests/unit/db-mjs-size-guard.test.mjs`](../../apps/web/tests/unit/db-mjs-size-guard.test.mjs)；實際應跑哪些 tests 由 issue AC 與變更範圍決定。
 - UI 或 API↔UI hybrid 任務不可只靠 source-contract 代替必要的 Playwright／preview evidence，詳見 [`../qa/README.md`](../qa/README.md)。
 

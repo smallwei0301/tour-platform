@@ -14,6 +14,7 @@
 - [`implementation/README.md`](implementation/README.md) — issue/date-bounded implementation contract
 - [`operations/README.md`](operations/README.md) — runbook、worklog、readiness 與 evidence
 - [`qa/README.md`](qa/README.md) — QA policy、測試指令與 dated evidence 邊界
+- [`04-tech/04-tech-architecture/17-testing-strategy-and-agent-standard.md`](04-tech/04-tech-architecture/17-testing-strategy-and-agent-standard.md) — 測試充分性、分層、去重與停止條件
 - [`security/README.md`](security/README.md) — incident/security 文件與 redaction 邊界
 
 ## 文件狀態標籤
@@ -38,7 +39,7 @@
 |---|---|---|---|
 | API／DB | [`../CLAUDE.md`](../CLAUDE.md) + [`04-tech/README.md`](04-tech/README.md) | [`implementation/README.md`](implementation/README.md)、[`../supabase/migrations/README.md`](../supabase/migrations/README.md)、對應 migration SOP | live issue／PR + `apps/web/app/api/**`、`apps/web/src/lib/**`、`supabase/migrations/**`、focused tests |
 | UI／互動 | [`../CLAUDE.md`](../CLAUDE.md) + [`../BRAND_BOOK.md`](../BRAND_BOOK.md) | [`.cursor/harness/07_testing_playbook.md`](../.cursor/harness/07_testing_playbook.md)、[`04-tech/04-tech-architecture/11-frontend-perf-pitfalls.md`](04-tech/04-tech-architecture/11-frontend-perf-pitfalls.md)、相關 product/design | live issue／PR + `apps/web/app/**`、components、Playwright／E2E output |
-| QA | [`.cursor/harness/07_testing_playbook.md`](../.cursor/harness/07_testing_playbook.md) + [`qa/README.md`](qa/README.md) | [`../apps/web/e2e/README.md`](../apps/web/e2e/README.md)、[`../scripts/qa/README.md`](../scripts/qa/README.md)、對應 dated report | issue AC + current head SHA + actual test／CI／preview result |
+| QA／測試設計 | [`04-tech/04-tech-architecture/17-testing-strategy-and-agent-standard.md`](04-tech/04-tech-architecture/17-testing-strategy-and-agent-standard.md) + [`.cursor/harness/07_testing_playbook.md`](../.cursor/harness/07_testing_playbook.md) | [`qa/README.md`](qa/README.md)、[`../apps/web/e2e/README.md`](../apps/web/e2e/README.md)、[`../scripts/qa/README.md`](../scripts/qa/README.md) | issue AC + current head SHA + actual test／CI／preview result；owner layer完整矩陣與consumer seam不重複 |
 | Ops／release | [`operations/README.md`](operations/README.md) + 對應 runbook | `operations/worklogs/`、`operations/reports/`、`operations/qa-reports/` | live issue／PR + runtime／provider console + fresh generated/evidence output；依 action domain 分流至 DML audit、schema `SQL-OVERRIDE`／migration SOP，或付款、credential、restore、incident 的既有 gate |
 | 產品／roadmap | [`07-transformation/midao-travel-hotcake-transformation-plan.md`](07-transformation/midao-travel-hotcake-transformation-plan.md) | [`01-strategy/README.md`](01-strategy/README.md)、`02-product/`、`05-business/`、`06-legal/` | owner-approved live issue／decision；未被接受的 roadmap 只作 context/proposal |
 | Incident／security | [`../CLAUDE.md`](../CLAUDE.md) + [`security/README.md`](security/README.md) | [`../.cursor/harness/01_diagnostics.md`](../.cursor/harness/01_diagnostics.md)、[`security/evidence-artifact-governance.md`](security/evidence-artifact-governance.md)、對應 runbook | live security issue + 現行 guards/config + redacted evidence；高風險 side effect 不得自行執行 |
@@ -62,6 +63,7 @@
 ## QA
 
 - QA policy 首指 [`.cursor/harness/07_testing_playbook.md`](../.cursor/harness/07_testing_playbook.md)。
+- 測試選擇、充分性、分層、去重與停止條件首指 [`測試策略與 Agent 施工規範`](04-tech/04-tech-architecture/17-testing-strategy-and-agent-standard.md)。
 - [`qa/README.md`](qa/README.md) 定義 root／app scripts、E2E、QA script 與 dated evidence 的邊界。
 - `docs/qa/**` 與 `docs/operations/qa-reports/**` 多為帶日期的 checklist／evidence；只有與 current head SHA、CI、preview 或 live output 綁定時，才能支持目前驗收結論。
 
