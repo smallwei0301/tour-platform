@@ -177,7 +177,16 @@ jobs:
           containers="$(docker ps -aq --filter "label=com.supabase.cli.project=$SUPABASE_PROJECT_ID")"
           networks="$(docker network ls -q --filter "label=com.supabase.cli.project=$SUPABASE_PROJECT_ID")"
           volumes="$(docker volume ls -q --filter "label=com.supabase.cli.project=$SUPABASE_PROJECT_ID")"
-          if test -n "$containers" || test -n "$networks" || test -n "$volumes" || test -e /tmp/tour-platform-local-supabase.lock; then
+          lock_state='absent'
+          if test -e /tmp/tour-platform-local-supabase.lock/runner.lock; then
+            if jq -e '.released == true' /tmp/tour-platform-local-supabase.lock/runner.lock >/dev/null; then
+              lock_state='released'
+            else
+              lock_state='not-released'
+              residual=1
+            fi
+          fi
+          if test -n "$containers" || test -n "$networks" || test -n "$volumes"; then
             residual=1
           fi
           {
@@ -190,7 +199,7 @@ jobs:
             printf '\nresidual_project_containers=%s\n' "${containers:-none}"
             printf 'residual_project_networks=%s\n' "${networks:-none}"
             printf 'residual_project_volumes=%s\n' "${volumes:-none}"
-            printf 'runner_lock_present=%s\n' "$(test -e /tmp/tour-platform-local-supabase.lock && echo yes || echo no)"
+            printf 'runner_lock_state=%s\n' "$lock_state"
             printf 'cleanup_exit_code=%s\n' "$residual"
           } | tee -a "$EVIDENCE_PATH"
           if test "$residual" -ne 0; then
