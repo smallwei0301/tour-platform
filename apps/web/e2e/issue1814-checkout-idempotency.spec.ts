@@ -1,7 +1,8 @@
-import { expect, test } from '@playwright/test';
+import { expect, setTravelerSession, test } from './helpers';
 
 const ACTIVITY_ID = '18140000-0000-4000-8000-000000000002';
 const PLAN_ID = '18140000-0000-4000-8000-000000000003';
+const ADDON_ID = '18140000-0000-4000-8000-000000000004';
 const DATE = '2030-07-05';
 
 async function stubDraftIntent(page: import('@playwright/test').Page) {
@@ -26,6 +27,17 @@ async function stubDraftIntent(page: import('@playwright/test').Page) {
     } }),
   }));
   await page.route('**/api/me/wishlist/ids', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) }));
+}
+
+async function stubCheckoutExtras(page: import('@playwright/test').Page) {
+  await page.route(`**/api/v2/activities/${ACTIVITY_ID}/addons`, (route) => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({ data: { items: [
+      { id: ADDON_ID, name: '測試午餐', priceTwd: 100, unit: 'per_person', stock: 8, isActive: true },
+    ] } }),
+  }));
+  await page.route('**/api/me/points', (route) => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({ data: { balance: 1000 } }),
+  }));
 }
 
 test('#1814 browser: transport retry keeps a key, while a changed scheduled slot gets a new key', async ({ page }) => {
@@ -56,4 +68,41 @@ test('#1814 browser: transport retry keeps a key, while a changed scheduled slot
   await submit.click();
   await expect.poll(() => keys.length).toBe(3);
   expect(keys[2]).not.toBe(keys[0]);
+});
+
+test('#1815 browser: selected add-on and points are sent together, and a rejected checkout stays editable', async ({ page }) => {
+  await setTravelerSession(page);
+  await stubDraftIntent(page);
+  await stubCheckoutExtras(page);
+  let draftBody: Record<string, unknown> | null = null;
+  await page.route('**/api/v2/bookings/draft', async (route) => {
+    draftBody = JSON.parse(route.request().postData() || '{}');
+    await route.fulfill({
+      status: 400, contentType: 'application/json', body: JSON.stringify({
+        success: false,
+        error: { code: 'ADDON_UNAVAILABLE', messageZh: '所選加購目前無法使用，請重新選擇' },
+      }),
+    });
+  });
+
+  await page.goto(`/booking/issue1814-fixture?plan=${PLAN_ID}&date=${DATE}`);
+  await page.getByTestId('traveler-slot-option').first().click();
+  await page.getByRole('button', { name: /下一步：填寫資訊/ }).click();
+  await expect(page.getByTestId('checkout-addons')).toBeVisible();
+  await page.getByRole('button', { name: '增加 測試午餐' }).click();
+  await page.getByTestId('points-redeem-toggle').check();
+  await page.getByPlaceholder('請輸入真實姓名').fill('測試旅客');
+  await page.getByPlaceholder('0912-345-678').fill('0912345678');
+  await page.getByPlaceholder('you@example.com').fill('issue1815@example.com');
+  await page.locator('input[name="agreement"]').check();
+  await page.getByRole('button', { name: /建立訂單並前往付款/ }).click();
+
+  await expect.poll(() => draftBody).not.toBeNull();
+  expect(draftBody).toMatchObject({
+    addonSelections: [{ addonId: ADDON_ID, quantity: 1 }],
+    redeemPoints: 330,
+  });
+  await expect(page.getByText('所選加購目前無法使用，請重新選擇')).toBeVisible();
+  await expect(page.getByTestId('checkout-addons')).toBeVisible();
+  await expect(page.getByTestId('points-redeem-toggle')).toBeChecked();
 });
