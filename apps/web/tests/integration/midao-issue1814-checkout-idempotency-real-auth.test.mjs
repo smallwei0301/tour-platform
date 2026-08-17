@@ -92,6 +92,14 @@ async function callPayment(orderId) {
   });
 }
 
+async function callLegacyPayment(orderId) {
+  return jsonRequest(new URL('/api/payments/ecpay/create', API_BASE_URL), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ orderId }),
+  });
+}
+
 async function state(key = null) {
   const orders = await client.query('SELECT id, total_twd FROM public.orders WHERE activity_id = $1 ORDER BY created_at', [ACTIVITY_ID]);
   const orderIds = orders.rows.map((row) => row.id);
@@ -312,6 +320,14 @@ test('#1815 release gate: persisted draft amount reconciles before payment, whil
     firstPayment.body?.data?.merchantTradeNo,
     'double-click payment requests must reuse one pending payment attempt',
   );
+  const legacyPayment = await callLegacyPayment(order.id);
+  assert.equal(legacyPayment.status, 200, legacyPayment.text);
+  assert.equal(Number(legacyPayment.body?.data?.params?.TotalAmount), Number(order.total_twd));
+  assert.equal(
+    legacyPayment.body?.data?.merchantTradeNo,
+    firstPayment.body?.data?.merchantTradeNo,
+    'legacy payment entry must use the same pending payment attempt',
+  );
   const createdAttempt = await client.query('SELECT amount_twd FROM public.payments WHERE order_id = $1', [order.id]);
   assert.equal(createdAttempt.rowCount, 1);
   assert.equal(Number(createdAttempt.rows[0].amount_twd), Number(order.total_twd));
@@ -321,6 +337,10 @@ test('#1815 release gate: persisted draft amount reconciles before payment, whil
   assert.equal(rejected.status, 409, rejected.text);
   assert.equal(rejected.body?.error?.code, 'ORDER_NOT_MATERIALIZED');
   assert.doesNotMatch(rejected.text, /MerchantTradeNo|CheckMacValue|paymentUrl|checkoutUrl/iu);
+  const legacyRejected = await callLegacyPayment(order.id);
+  assert.equal(legacyRejected.status, 409, legacyRejected.text);
+  assert.equal(legacyRejected.body?.error?.code, 'ORDER_NOT_MATERIALIZED');
+  assert.doesNotMatch(legacyRejected.text, /MerchantTradeNo|CheckMacValue|paymentUrl|checkoutUrl/iu);
   const paymentAttempts = await client.query('SELECT id FROM public.payments WHERE order_id = $1', [order.id]);
   assert.equal(paymentAttempts.rowCount, 1, 'rejected aggregate must not create another payment attempt');
 });
