@@ -21,8 +21,8 @@ test('RED: payment accepts only a committed booking/order/item total', () => {
     totalTwd: 1100,
     items: [
       valid.items[0],
-      { order_id: 'order-1815', booking_id: 'booking-1815', item_type: 'fee', subtotal_amount: 400, metadata: { kind: 'addon' } },
-      { order_id: 'order-1815', booking_id: 'booking-1815', item_type: 'discount', subtotal_amount: -500, metadata: { kind: 'points_redemption' } },
+      { order_id: 'order-1815', booking_id: null, item_type: 'fee', subtotal_amount: 400, metadata: { kind: 'addon' } },
+      { order_id: 'order-1815', booking_id: null, item_type: 'discount', subtotal_amount: -500, metadata: { kind: 'points_redemption' } },
     ],
   }), true);
   assert.equal(isMaterializedOrderReadyForPayment({ ...valid, items: [] }), false);
@@ -31,6 +31,8 @@ test('RED: payment accepts only a committed booking/order/item total', () => {
   assert.equal(isMaterializedOrderReadyForPayment({ ...valid, paymentStatus: 'paid' }), false);
   assert.equal(isMaterializedOrderReadyForPayment({ ...valid, items: [...valid.items, valid.items[0]] }), false);
   assert.equal(isMaterializedOrderReadyForPayment({ ...valid, items: [{ ...valid.items[0], item_type: 'other' }] }), false);
+  assert.equal(isMaterializedOrderReadyForPayment({ ...valid, items: [{ ...valid.items[0], order_id: 'other' }] }), false);
+  assert.equal(isMaterializedOrderReadyForPayment({ ...valid, items: [{ ...valid.items[0], booking_id: null }] }), false);
 });
 
 test('in-memory fallback has no V2 materialized aggregate and therefore cannot open payment', async () => {

@@ -24,12 +24,13 @@ export function isMaterializedOrderReadyForPayment(order = {}) {
 
   if (baseItems.length !== 1) return false;
   const itemTotal = items.reduce((sum, item) => {
-    if (item?.order_id !== order.id || item?.booking_id !== order.bookingId) return Number.NaN;
+    if (item?.order_id !== order.id) return Number.NaN;
     const subtotal = Number(item?.subtotal_amount);
     const allowed = item?.item_type === 'activity_booking'
       || (item?.item_type === 'fee' && item?.metadata?.kind === 'addon')
       || (item?.item_type === 'discount' && item?.metadata?.kind === 'points_redemption');
-    return allowed && Number.isSafeInteger(subtotal) ? sum + subtotal : Number.NaN;
+    const hasExpectedBooking = item?.item_type !== 'activity_booking' || item?.booking_id === order.bookingId;
+    return allowed && hasExpectedBooking && Number.isSafeInteger(subtotal) ? sum + subtotal : Number.NaN;
   }, 0);
   return itemTotal === totalTwd;
 }
