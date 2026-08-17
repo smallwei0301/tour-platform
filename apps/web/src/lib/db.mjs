@@ -46,6 +46,7 @@ import { selectWithOptionalColumnFallback } from './optional-column-fallback.mjs
 // #1613 strangler P1 第 0 步：Supabase client 存取抽到 supabase-env.mjs，解除 db.mjs ⇄ db-*.mjs 循環。
 // db.mjs 內部沿用同名 binding，並 re-export 讓既有 caller 與測試（__setSupabaseClientForTest）零改動。
 import { hasSupabaseEnv, getSupabase, __setSupabaseClientForTest } from './supabase-env.mjs';
+export { upsertEcpayPaymentAttemptDb } from './payment/db-payment-attempt.mjs';
 import { getSupabaseServiceRoleKey } from '../../src/config/supabase-service-env.mjs';
 export { hasSupabaseEnv, getSupabase, __setSupabaseClientForTest };
 
@@ -429,98 +430,6 @@ export async function getOrderDetailForPayment(input = {}) {
     title,
     contactName: order.contact_name,
     contactEmail: order.contact_email,
-  };
-}
-
-export async function upsertEcpayPaymentAttemptDb(input = {}) {
-  const orderId = String(input?.orderId || '').trim();
-  const merchantTradeNo = String(input?.merchantTradeNo || '').trim();
-  const amountTwd = Number(input?.amountTwd || 0);
-
-  if (!orderId) throw new Error('orderId is required');
-  if (!merchantTradeNo) throw new Error('merchantTradeNo is required');
-  if (!Number.isFinite(amountTwd) || amountTwd < 0) throw new Error('amountTwd must be a non-negative number');
-
-  if (!hasSupabaseEnv()) {
-    return {
-      orderId,
-      merchantTradeNo,
-      status: 'pending',
-      simulated: true,
-    };
-  }
-
-  const now = new Date().toISOString();
-  const supabase = await getSupabase();
-
-  const findExistingPending = async () => {
-    const { data, error } = await supabase
-      .from('payments')
-      .select('id, order_id, merchant_trade_no, status')
-      .eq('order_id', orderId)
-      .eq('provider', 'ecpay')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error) throw new Error(error.message || 'failed to fetch existing pending payment attempt');
-    return data;
-  };
-
-  const existingPending = await findExistingPending();
-
-  if (existingPending) {
-    return {
-      id: existingPending.id,
-      orderId: existingPending.order_id,
-      merchantTradeNo: existingPending.merchant_trade_no,
-      status: existingPending.status,
-      reused: true,
-    };
-  }
-
-  const payload = {
-    order_id: orderId,
-    provider: 'ecpay',
-    merchant_trade_no: merchantTradeNo,
-    amount_twd: Math.round(amountTwd),
-    currency: 'TWD',
-    status: 'pending',
-    provider_status: 'pending',
-    updated_at: now,
-  };
-
-  const { data, error } = await supabase
-    .from('payments')
-    .insert(payload)
-    .select('id, order_id, merchant_trade_no, status')
-    .single();
-
-  if (error || !data) {
-    // The unique order_id constraint is the authority during a double-click race.
-    // If another request inserted first, read and reuse its pending attempt rather
-    // than leaking a transient unique-violation 500 to the traveler.
-    if (error?.code === '23505') {
-      const winner = await findExistingPending();
-      if (winner) {
-        return {
-          id: winner.id,
-          orderId: winner.order_id,
-          merchantTradeNo: winner.merchant_trade_no,
-          status: winner.status,
-          reused: true,
-        };
-      }
-    }
-    throw new Error(error?.message || 'failed to create ecpay payment attempt');
-  }
-
-  return {
-    id: data.id,
-    orderId: data.order_id,
-    merchantTradeNo: data.merchant_trade_no,
-    status: data.status,
-    reused: false,
   };
 }
 
