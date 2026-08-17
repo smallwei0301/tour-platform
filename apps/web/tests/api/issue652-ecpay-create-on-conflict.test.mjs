@@ -139,6 +139,61 @@ test('creates pending payment attempt when none exists', async () => {
   assert.equal(result.reused, false);
 });
 
+test('concurrent payment-attempt unique conflict reuses the winner instead of returning a 500', async () => {
+  const existing = {
+    id: '55555555-5555-5555-5555-555555555555',
+    order_id: '66666666-6666-6666-6666-666666666666',
+    merchant_trade_no: 'WINNERTRADE123',
+    status: 'pending',
+  };
+  let lookupCount = 0;
+  const supabase = {
+    from(table) {
+      assert.equal(table, 'payments');
+      return {
+        select() {
+          return {
+            eq() { return this; },
+            order() { return this; },
+            limit() { return this; },
+            async maybeSingle() {
+              lookupCount += 1;
+              return { data: lookupCount === 1 ? null : existing, error: null };
+            },
+          };
+        },
+        insert() {
+          return {
+            select() {
+              return {
+                async single() {
+                  return { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint' } };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  };
+  __setSupabaseClientForTest(supabase);
+
+  const result = await upsertEcpayPaymentAttemptDb({
+    orderId: existing.order_id,
+    merchantTradeNo: 'LOSERTRADE123',
+    amountTwd: 4321,
+  });
+
+  assert.equal(lookupCount, 2);
+  assert.deepEqual(result, {
+    id: existing.id,
+    orderId: existing.order_id,
+    merchantTradeNo: existing.merchant_trade_no,
+    status: 'pending',
+    reused: true,
+  });
+});
+
 test('route orchestration uses persisted/reused merchantTradeNo for checkout params', () => {
   const persistedMerchantTradeNo = 'EXISTINGTRADE123';
   const generatedMerchantTradeNo = 'NEWTRADE999';

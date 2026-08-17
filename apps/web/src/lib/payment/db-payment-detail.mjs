@@ -1,9 +1,9 @@
 import { getSupabase, hasSupabaseEnv } from '../supabase-env.mjs';
 
 /** Persisted checkout aggregate projection for the V2 payment boundary. */
-export async function getMaterializedOrderDetailForPayment(orderId) {
-  if (!hasSupabaseEnv()) return null;
-  const supabase = await getSupabase();
+export async function getMaterializedOrderDetailForPayment(orderId, injectedSupabase) {
+  if (!injectedSupabase && !hasSupabaseEnv()) return null;
+  const supabase = injectedSupabase ?? await getSupabase();
   const { data: order, error } = await supabase
     .from('orders')
     .select(`
@@ -12,12 +12,22 @@ export async function getMaterializedOrderDetailForPayment(orderId) {
       items:order_items!order_items_order_id_fkey(order_id, booking_id, item_type, subtotal_amount, metadata)
     `)
     .eq('id', orderId)
-    .single();
-  if (error || !order) return null;
+    .maybeSingle();
+  if (error) {
+    const failure = new Error(error.message || 'failed to load payment order');
+    failure.code = error.code;
+    throw failure;
+  }
+  if (!order) return null;
 
   let title = null;
   if (order.activity_id) {
-    const { data: activity } = await supabase.from('activities').select('title').eq('id', order.activity_id).single();
+    const { data: activity, error: activityError } = await supabase.from('activities').select('title').eq('id', order.activity_id).maybeSingle();
+    if (activityError) {
+      const failure = new Error(activityError.message || 'failed to load payment activity');
+      failure.code = activityError.code;
+      throw failure;
+    }
     title = activity?.title || null;
   }
   const booking = Array.isArray(order.booking) ? order.booking[0] ?? null : order.booking;

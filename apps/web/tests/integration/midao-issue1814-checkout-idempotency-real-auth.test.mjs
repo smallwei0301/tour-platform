@@ -302,9 +302,16 @@ test('#1815 release gate: persisted draft amount reconciles before payment, whil
   );
   assert.equal(created.body?.data?.amount, Number(order.total_twd), 'draft response must use the committed order total');
 
-  const payment = await callPayment(order.id);
-  assert.equal(payment.status, 200, payment.text);
-  assert.equal(Number(payment.body?.data?.params?.TotalAmount), Number(order.total_twd));
+  const [firstPayment, secondPayment] = await Promise.all([callPayment(order.id), callPayment(order.id)]);
+  assert.equal(firstPayment.status, 200, firstPayment.text);
+  assert.equal(secondPayment.status, 200, secondPayment.text);
+  assert.equal(Number(firstPayment.body?.data?.params?.TotalAmount), Number(order.total_twd));
+  assert.equal(Number(secondPayment.body?.data?.params?.TotalAmount), Number(order.total_twd));
+  assert.equal(
+    secondPayment.body?.data?.merchantTradeNo,
+    firstPayment.body?.data?.merchantTradeNo,
+    'double-click payment requests must reuse one pending payment attempt',
+  );
   const createdAttempt = await client.query('SELECT amount_twd FROM public.payments WHERE order_id = $1', [order.id]);
   assert.equal(createdAttempt.rowCount, 1);
   assert.equal(Number(createdAttempt.rows[0].amount_twd), Number(order.total_twd));

@@ -453,19 +453,21 @@ export async function upsertEcpayPaymentAttemptDb(input = {}) {
   const now = new Date().toISOString();
   const supabase = await getSupabase();
 
-  const { data: existingPending, error: existingPendingError } = await supabase
-    .from('payments')
-    .select('id, order_id, merchant_trade_no, status')
-    .eq('order_id', orderId)
-    .eq('provider', 'ecpay')
-    .eq('status', 'pending')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const findExistingPending = async () => {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('id, order_id, merchant_trade_no, status')
+      .eq('order_id', orderId)
+      .eq('provider', 'ecpay')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new Error(error.message || 'failed to fetch existing pending payment attempt');
+    return data;
+  };
 
-  if (existingPendingError) {
-    throw new Error(existingPendingError.message || 'failed to fetch existing pending payment attempt');
-  }
+  const existingPending = await findExistingPending();
 
   if (existingPending) {
     return {
@@ -494,7 +496,24 @@ export async function upsertEcpayPaymentAttemptDb(input = {}) {
     .select('id, order_id, merchant_trade_no, status')
     .single();
 
-  if (error || !data) throw new Error(error?.message || 'failed to create ecpay payment attempt');
+  if (error || !data) {
+    // The unique order_id constraint is the authority during a double-click race.
+    // If another request inserted first, read and reuse its pending attempt rather
+    // than leaking a transient unique-violation 500 to the traveler.
+    if (error?.code === '23505') {
+      const winner = await findExistingPending();
+      if (winner) {
+        return {
+          id: winner.id,
+          orderId: winner.order_id,
+          merchantTradeNo: winner.merchant_trade_no,
+          status: winner.status,
+          reused: true,
+        };
+      }
+    }
+    throw new Error(error?.message || 'failed to create ecpay payment attempt');
+  }
 
   return {
     id: data.id,
