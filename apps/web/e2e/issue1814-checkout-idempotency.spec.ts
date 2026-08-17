@@ -30,12 +30,12 @@ async function stubDraftIntent(page: import('@playwright/test').Page) {
 }
 
 async function stubCheckoutExtras(page: import('@playwright/test').Page) {
-  await page.route(`**/api/v2/activities/${ACTIVITY_ID}/addons`, (route) => route.fulfill({
+  await page.route('**/api/v2/activities/**/addons**', (route) => route.fulfill({
     status: 200, contentType: 'application/json', body: JSON.stringify({ data: { items: [
       { id: ADDON_ID, name: '測試午餐', priceTwd: 100, unit: 'per_person', stock: 8, isActive: true },
     ] } }),
   }));
-  await page.route('**/api/me/points', (route) => route.fulfill({
+  await page.route('**/api/me/points**', (route) => route.fulfill({
     status: 200, contentType: 'application/json', body: JSON.stringify({ data: { balance: 1000 } }),
   }));
 }
