@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-08-16T05:07:35.205Z -->
+<!-- query_timestamp: 2026-08-17T05:13:07.775Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-16T05:07:35.205Z  
-**Commit SHA:** `512f9d534d2cfc92e9f7313cbe7c3e664252c65b`
+**Query timestamp:** 2026-08-17T05:13:07.775Z  
+**Commit SHA:** `fbc0f65628d3df4e1caf5c2bca15c1744081d320`
 
 ---
 
@@ -14,7 +14,7 @@
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1832 | [fix(payment): #1815 付款僅接受已持久化訂單](https://github.com/smallwei0301/tour-platform/pull/1832) _(draft)_ | `agent/issue-1815-payment-release-gate` |
+| #1832 | [fix(payment): #1815 付款僅接受已持久化訂單](https://github.com/smallwei0301/tour-platform/pull/1832) | `agent/issue-1815-payment-release-gate` |
 | #1776 | [feat(shop): 完成導遊商店匯款 beta 文案與 SOP（#1607）](https://github.com/smallwei0301/tour-platform/pull/1776) _(draft)_ | `fix/issue-1607-guide-shop-beta` |
 | #1763 | [feat: midao2 導遊接案後台（接案 CRM）＋公開接案頁 /g/[slug]](https://github.com/smallwei0301/tour-platform/pull/1763) | `claude/superpowers-midao-backend-x90czx` |
 | #1690 | [docs(security): 建立「已接受安全風險」定案清單](https://github.com/smallwei0301/tour-platform/pull/1690) | `claude/code-workflow-architecture-mmm4ba` |
@@ -121,6 +121,7 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1840 | [feat(availability): wire traveler dynamic canonical selector](https://github.com/smallwei0301/tour-platform/pull/1840) | 2026-08-16 |
 | #1839 | [[#1825] rollback 伴隨檔 exact-source static guard checkpoint](https://github.com/smallwei0301/tour-platform/pull/1839) | 2026-08-15 |
 | #1838 | [feat(availability): #1760 P5 slice 2a — resolver policy/day-override seam (dormant)](https://github.com/smallwei0301/tour-platform/pull/1838) | 2026-08-14 |
 | #1836 | [feat(availability): #1760 P5 first slice — dormant scope/policy schema + atomic day CAS](https://github.com/smallwei0301/tour-platform/pull/1836) | 2026-08-14 |
@@ -130,7 +131,6 @@
 | #1830 | [fix(checkout): #1814 原子冪等建單](https://github.com/smallwei0301/tour-platform/pull/1830) | 2026-08-13 |
 | #1829 | [【#1827】/midao/me 原生能力中心靜態視覺外殼（C-only）](https://github.com/smallwei0301/tour-platform/pull/1829) | 2026-08-12 |
 | #1828 | [fix(checkout): #1813 點數折抵原子化](https://github.com/smallwei0301/tour-platform/pull/1828) | 2026-08-12 |
-| #1826 | [fix(checkout): #1812 加購快照與訂單總額原子化](https://github.com/smallwei0301/tour-platform/pull/1826) | 2026-08-12 |
 
 ---
 
