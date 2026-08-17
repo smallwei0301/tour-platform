@@ -1,7 +1,8 @@
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { __setSupabaseClientForTest, upsertEcpayPaymentAttemptDb } from '../../src/lib/db.mjs';
+import { __setSupabaseClientForTest } from '../../src/lib/supabase-env.mjs';
+import { upsertEcpayPaymentAttemptDb } from '../../src/lib/payment/db-payment-attempt.mjs';
 import { buildEcpayCheckoutParams } from '../../src/lib/ecpay-create-orchestration.mjs';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -191,6 +192,26 @@ test('concurrent payment-attempt unique conflict reuses the winner instead of re
     merchantTradeNo: existing.merchant_trade_no,
     status: 'pending',
     reused: true,
+  });
+});
+
+test('in-memory payment-attempt fallback keeps the persisted result contract', async () => {
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  const result = await upsertEcpayPaymentAttemptDb({
+    orderId: '77777777-7777-7777-7777-777777777777',
+    merchantTradeNo: 'SIMULATEDTRADE1',
+    amountTwd: 4321,
+  });
+
+  assert.deepEqual(result, {
+    id: null,
+    orderId: '77777777-7777-7777-7777-777777777777',
+    merchantTradeNo: 'SIMULATEDTRADE1',
+    status: 'pending',
+    reused: false,
+    simulated: true,
   });
 });
 

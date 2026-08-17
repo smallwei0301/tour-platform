@@ -1,5 +1,5 @@
 import { jsonError, jsonOk } from '../../../../../../src/lib/api-response';
-import { upsertEcpayPaymentAttemptDb } from '../../../../../../src/lib/db.mjs';
+import { upsertEcpayPaymentAttemptDb } from '../../../../../../src/lib/payment/db-payment-attempt.mjs';
 import { generateCheckMacValue, getECPayCredentials } from '../../../../../../src/lib/ecpay';
 import { buildEcpayCheckoutParams, isMaterializedOrderReadyForPayment } from '../../../../../../src/lib/ecpay-create-orchestration.mjs';
 import { canCheckoutTravelerConfirmation } from '../../../../../../src/lib/booking-type-flow.mjs';

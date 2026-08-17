@@ -14,7 +14,14 @@ export async function upsertEcpayPaymentAttemptDb(input = {}) {
   if (!Number.isFinite(amountTwd) || amountTwd < 0) throw new Error('amountTwd must be a non-negative number');
 
   if (!hasSupabaseEnv()) {
-    return { orderId, merchantTradeNo, status: 'pending', simulated: true };
+    return {
+      id: null,
+      orderId,
+      merchantTradeNo,
+      status: 'pending',
+      reused: false,
+      simulated: true,
+    };
   }
 
   const supabase = await getSupabase();

@@ -106,3 +106,28 @@ test('#1815 browser: selected add-on and points are sent together, and a rejecte
   await expect(page.getByTestId('checkout-addons')).toBeVisible();
   await expect(page.getByTestId('points-redeem-toggle')).toBeChecked();
 });
+
+test('#1815 browser: payment page shows the persisted amount and exposes a materialization guard error', async ({ page }) => {
+  await setTravelerSession(page);
+  const orderId = '18150000-0000-4000-8000-000000000001';
+  await page.route(`**/api/v2/orders/${orderId}**`, (route) => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({ data: {
+      id: orderId, status: 'pending_payment', totalTwd: 6900, title: '付款閘門測試行程', peopleCount: 2,
+      contactName: '測試旅客', contactEmail: 'issue1815@example.com',
+    } }),
+  }));
+  let paymentCalls = 0;
+  await page.route('**/api/v2/payments/ecpay/create', (route) => {
+    paymentCalls += 1;
+    return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({
+      error: { code: 'ORDER_NOT_MATERIALIZED', message: '訂單尚未完成，暫時無法付款' },
+    }) });
+  });
+
+  await page.goto(`/order/pay?orderId=${orderId}`);
+  await expect(page.getByText('NT$ 6,900')).toBeVisible();
+  await page.getByTestId('ecpay-pay-btn').click();
+  await expect.poll(() => paymentCalls).toBe(1);
+  await expect(page.getByText('訂單尚未完成，暫時無法付款')).toBeVisible();
+  await expect(page.getByTestId('ecpay-pay-btn')).toBeEnabled();
+});

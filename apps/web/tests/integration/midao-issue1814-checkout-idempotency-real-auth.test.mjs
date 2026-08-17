@@ -105,11 +105,12 @@ async function state(key = null) {
   const orderIds = orders.rows.map((row) => row.id);
   const bookings = await client.query('SELECT id, order_id FROM public.bookings WHERE activity_id = $1 ORDER BY created_at', [ACTIVITY_ID]);
   const addons = await client.query('SELECT addon_id, quantity, unit_price_twd, subtotal_twd FROM public.order_addons WHERE order_id = ANY($1::uuid[])', [orderIds]);
+  const items = await client.query('SELECT item_type, subtotal_amount, metadata FROM public.order_items WHERE order_id = ANY($1::uuid[]) ORDER BY created_at', [orderIds]);
   const ledger = await client.query("SELECT id, order_id, delta FROM public.user_points_ledger WHERE reason = 'redeem_order' AND order_id = ANY($1::uuid[])", [orderIds]);
   const claims = await client.query(`SELECT state, request_hash, response_body FROM public.midao_idempotency_records
     WHERE scope_type = 'checkout' AND scope_id = $1 AND command_name = 'create_booking_draft'
       AND ($2::text IS NULL OR idempotency_key = $2)`, [SCOPE_ID, key]);
-  return { orders: orders.rows, bookings: bookings.rows, addons: addons.rows, ledger: ledger.rows, claims: claims.rows };
+  return { orders: orders.rows, bookings: bookings.rows, addons: addons.rows, items: items.rows, ledger: ledger.rows, claims: claims.rows };
 }
 
 async function cleanup() {
@@ -213,6 +214,38 @@ test('#1814 RED: sequential same-key replay returns one persisted order, one led
   assert.equal(Number(after.ledger[0].delta), -500);
   assert.deepEqual(after.claims.map((row) => row.state), ['completed']);
 });
+
+for (const scenario of [
+  { name: 'basic', overrides: { addonSelections: [], redeemPoints: 0 }, totalTwd: 7400, addonCount: 0, pointsDelta: null },
+  { name: 'valid add-on', overrides: { redeemPoints: 0 }, totalTwd: 7800, addonCount: 1, pointsDelta: null },
+  { name: 'valid points', overrides: { addonSelections: [] }, totalTwd: 6900, addonCount: 0, pointsDelta: -500 },
+]) {
+  test(`#1815 release matrix: ${scenario.name} persists one reconciled checkout aggregate`, async () => {
+    const traveler = await loginTraveler();
+    const key = `issue1815-${scenario.name.replace(/\s+/g, '-')}`;
+    const created = await callPublic(traveler, key, scenario.overrides);
+    assert.equal(created.status, 200, created.text);
+    assert.equal(Number(created.body?.data?.amount), scenario.totalTwd);
+
+    const after = await state(key);
+    assert.equal(after.orders.length, 1);
+    assert.equal(Number(after.orders[0].total_twd), scenario.totalTwd);
+    assert.equal(after.addons.length, scenario.addonCount);
+    assert.equal(
+      after.items.reduce((sum, item) => sum + Number(item.subtotal_amount), 0),
+      scenario.totalTwd,
+      'persisted order total must equal its materialized item sum',
+    );
+    if (scenario.pointsDelta === null) assert.equal(after.ledger.length, 0);
+    else assert.deepEqual(after.ledger.map((row) => Number(row.delta)), [scenario.pointsDelta]);
+
+    const payment = await callPayment(after.orders[0].id);
+    assert.equal(payment.status, 200, payment.text);
+    assert.equal(Number(payment.body?.data?.params?.TotalAmount), scenario.totalTwd);
+    const attempts = await client.query('SELECT amount_twd FROM public.payments WHERE order_id = $1', [after.orders[0].id]);
+    assert.deepEqual(attempts.rows.map((row) => Number(row.amount_twd)), [scenario.totalTwd]);
+  });
+}
 
 test('#1814 RED: concurrent same-key HTTP calls have one materialization and one points debit', async () => {
   const traveler = await loginTraveler();

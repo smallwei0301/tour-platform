@@ -46,7 +46,6 @@ import { selectWithOptionalColumnFallback } from './optional-column-fallback.mjs
 // #1613 strangler P1 第 0 步：Supabase client 存取抽到 supabase-env.mjs，解除 db.mjs ⇄ db-*.mjs 循環。
 // db.mjs 內部沿用同名 binding，並 re-export 讓既有 caller 與測試（__setSupabaseClientForTest）零改動。
 import { hasSupabaseEnv, getSupabase, __setSupabaseClientForTest } from './supabase-env.mjs';
-export { upsertEcpayPaymentAttemptDb } from './payment/db-payment-attempt.mjs';
 import { getSupabaseServiceRoleKey } from '../../src/config/supabase-service-env.mjs';
 export { hasSupabaseEnv, getSupabase, __setSupabaseClientForTest };
 
