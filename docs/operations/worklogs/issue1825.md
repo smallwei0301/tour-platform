@@ -56,6 +56,14 @@
 ## 下一步（更新）
 - 交 `tp-builder-api` 依 `docs/plans/2026-08-18-issue1825-admin-plan-non-v4-uuid-validator.md` 在專屬乾淨 worktree 實作；完成後由 `tp-reviewer`／Rita 以 immutable commit range 重跑指定 checks。
 
+## 2026-08-18 — admin plan 非 v4 UUID validator 實作（t_1acfd2ad）
+- TDD RED：新增 `issue1825-admin-plan-non-v4-uuid-validator.test.mjs` 後，`node --test tests/api/issue1825-admin-plan-non-v4-uuid-validator.test.mjs` 實測 4/6 pass、2/6 fail；失敗明確指出 collection route 拒絕 native structural UUID，且仍保留 RFC version／variant 限制。
+- 最小 GREEN：只將 collection plans route、single-plan route 與 `activity-plan-seasons.ts` 的既有 `UUID_REGEX` 改為 structural 8-4-4-4-12 hexadecimal pattern；auth、CSRF、pre-DB guards、ownership query、revalidation 與 publication recovery 均未改。
+- GREEN：同一 regression test 實測 6/6 pass；包含 native sample acceptance、non-hex rejection、collection GET／single GET/PUT pre-DB gate、seasons `isUuid` continuity 與 publication recovery strict policy guard。
+- 正式 gate：以 `npx --package=node@22` 提供的 Node v22.23.2 執行 `NODE_OPTIONS='--max-old-space-size=1024' .claude/hooks/run-checks.sh apps/web/tests/api/issue1825-admin-plan-non-v4-uuid-validator.test.mjs apps/web/tests/api/issue862-admin-v2-plan-crud-auth.test.mjs apps/web/tests/api/plan-write-revalidates-activity.test.mjs --typecheck`，19/19 pass 且 `tsc --noEmit` pass，exit 0。
+- 依賴 bootstrap：隔離 HOME/npmrc 下 `npm ci --include=dev --ignore-scripts --no-audit --no-fund` exit 0（661 packages）；`package.json`、`apps/web/package.json`、`package-lock.json`、`yarn.lock` SHA-256 前後相同，並確認 `tsc`、`pngjs`、`pixelmatch`、`@types/react-dom` 可用。
+- 待完成：diff hygiene、單一 commit 與 Rita independent review。
+
 ## 絕不重做（新增）
 - t_71104d93 已完成的 native activity rich plan 資料補齊及其 production/read-only 驗證，不是本 validator 規格的範圍。
 - t_08d99b02／t_ddb1449b 的 legacy_activity materialization、atomic batch RPC 與 plan snapshot 規格，與 native admin direct-edit UUID gate 分離，不得混入此 implementation commit。
