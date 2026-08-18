@@ -67,3 +67,13 @@
 ## 絕不重做（新增）
 - t_71104d93 已完成的 native activity rich plan 資料補齊及其 production/read-only 驗證，不是本 validator 規格的範圍。
 - t_08d99b02／t_ddb1449b 的 legacy_activity materialization、atomic batch RPC 與 plan snapshot 規格，與 native admin direct-edit UUID gate 分離，不得混入此 implementation commit。
+
+## 2026-08-18 — 導遊「我的服務」非 v4 UUID／native fallback 規格（t_b610c3b5）
+- 新規格：`docs/plans/2026-08-18-issue1825-guide-service-list-structural-uuid.md`；本輪只讀規劃、未改產品碼/production 資料/migration/feature flag。
+- source 證實第一層 root cause：`service-list-resolver.ts` 的 strict RFC UUID regex 會在 `resolveInSupabase()` 將 `c0000003-...-0001/2/3` filter 掉；即使改成 structural UUID，現行 `buildItem()` 在無 active draft 與 publication version 時仍排除，因此只改 regex 不足。
+- source 亦證實 card 前提衝突：現行 materialization loop 對 published + no-draft/version 會呼叫 legacy RPC，但 migration 將新 draft 的 `materialization_origin` 硬編碼為 `legacy_activity`；origin 只存在 draft table，而題述三筆沒有 draft，resolver 無 native discriminator。不得把開 flag 當作 native 修復。
+- 建議 owner 選擇 canonical `activities.status='published'` fallback（零寫入、保留 publishedVersion=null）並禁止用 legacy materializer 處理 native activity；若堅持 no-draft/version 不列出，需另由 owner 指定可靠 native-vs-legacy source discriminator，不能猜 proxy。
+- UUID helper 決策：本卡不抽 shared helper；admin plan、resolver、feature gate/RPC/recovery 的 boundary policy 不同，先用精準 regression 固定行為，日後另卡處理具名 policy helper/inventory。
+
+## 下一步（更新）
+- 等木村哥/Ava 對上述唯一 blocker 選擇 A 或 B；A 才能交 `tp-builder-api` 依新規格 TDD 實作，之後由 Rita 以 immutable range + default UI path evidence 做 final review。
