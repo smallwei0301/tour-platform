@@ -26,6 +26,11 @@ const ACTIVITY_A = '11111111-1111-4111-8111-111111111111';
 const ACTIVITY_B = '22222222-2222-4222-8222-222222222222';
 const ACTIVITY_C = '33333333-3333-4333-8333-333333333333';
 const ACTIVITY_D = '44444444-4444-4444-8444-444444444444';
+const NATIVE_FALLBACK_ACTIVITY_IDS = [
+  'c0000003-0000-0000-0000-000000000001',
+  'c0000003-0000-0000-0000-000000000002',
+  'c0000003-0000-0000-0000-000000000003',
+];
 const GUIDE_SESSION_SECRET = 'task29-services-list-test-guide-session-secret-0123456789';
 const SESSION_VERSION = 7;
 
@@ -39,6 +44,7 @@ const {
   __seedMidaoServiceListPlanForTest,
   __seedMidaoServiceListDraftForTest,
   __seedMidaoServiceListVersionForTest,
+  __internal,
 } = resolverModule;
 
 const { __setSupabaseClientForTest } = await import('../../src/lib/supabase-env.mjs');
@@ -312,6 +318,78 @@ test('resolver parity: Supabase 路徑與 in-memory 一致（狀態、min/max、
 
   const publishedOnly = await resolveGuideServiceList(GUIDE_ID, { status: 'published' });
   assert.deepEqual(publishedOnly.items.map((i) => i.activityId), [ACTIVITY_B]);
+});
+
+test('resolver parity: #1825 已知 native published activities 無 draft/version 時以零 RPC fallback 顯示', async () => {
+  resetInMemory();
+  assert.equal(__internal.normalizeUuid(NATIVE_FALLBACK_ACTIVITY_IDS[0]), NATIVE_FALLBACK_ACTIVITY_IDS[0]);
+  for (const invalidUuid of [
+    'c0000003-0000-0000-0000-00000000000g',
+    `${NATIVE_FALLBACK_ACTIVITY_IDS[0]}-suffix`,
+    'not-a-uuid',
+  ]) {
+    assert.equal(__internal.normalizeUuid(invalidUuid), null);
+  }
+  const nativePrices = [[1800, 3200], [2400, 4100], [900, 1500]];
+  const fake = createSupabaseFake({
+    activities: [
+      ...NATIVE_FALLBACK_ACTIVITY_IDS.map((id, index) => ({
+        id,
+        guide_id: GUIDE_ID,
+        title: `native-${index + 1}`,
+        slug: `native-${index + 1}`,
+        status: 'published',
+        updated_at: `2026-08-0${index + 1}T00:00:00.000Z`,
+      })),
+      {
+        id: 'c0000003-0000-0000-0000-000000000004',
+        guide_id: GUIDE_ID,
+        title: 'not allowlisted',
+        slug: 'not-allowlisted',
+        status: 'published',
+        updated_at: '2026-08-04T00:00:00.000Z',
+      },
+    ],
+    plans: NATIVE_FALLBACK_ACTIVITY_IDS.flatMap((activity_id, index) => nativePrices[index].map((base_price) => ({ activity_id, base_price }))),
+  });
+  useSupabase(fake);
+
+  const disabledResult = await resolveGuideServiceList(GUIDE_ID, { status: 'published' }, {
+    materializationEnabled: false,
+  });
+  assert.equal(disabledResult.total, 3);
+  assert.deepEqual(disabledResult.items.map((item) => item.activityId).sort(), NATIVE_FALLBACK_ACTIVITY_IDS.slice().sort());
+
+  const materializationCalls = [];
+  const result = await resolveGuideServiceList(GUIDE_ID, { status: 'published' }, {
+    materializationEnabled: true,
+    ensureLegacyDraftMaterialized: async (...args) => {
+      materializationCalls.push(args);
+      return { ok: true, revision: 1 };
+    },
+  });
+
+  assert.equal(result.total, 3);
+  assert.deepEqual(result.items.map((item) => item.activityId).sort(), NATIVE_FALLBACK_ACTIVITY_IDS.slice().sort());
+  assert.deepEqual(
+    materializationCalls.filter(([activityId]) => NATIVE_FALLBACK_ACTIVITY_IDS.includes(activityId)),
+    [],
+    '白名單 native fallback 不得呼叫 legacy materializer',
+  );
+  assert.deepEqual(
+    materializationCalls,
+    [['c0000003-0000-0000-0000-000000000004', GUIDE_ID]],
+    '白名單外 activity 維持既有 materialization 行為',
+  );
+  for (const [index, activityId] of NATIVE_FALLBACK_ACTIVITY_IDS.entries()) {
+    const item = result.items.find((candidate) => candidate.activityId === activityId);
+    assert.ok(item);
+    assert.equal(item.status, 'published');
+    assert.equal(item.hasUnpublishedChanges, false);
+    assert.equal(item.publishedVersion, null);
+    assert.equal(item.minPrice, nativePrices[index][0]);
+    assert.equal(item.maxPrice, nativePrices[index][1]);
+  }
 });
 
 test('resolver parity: Supabase 無活動 → 空清單', async () => {

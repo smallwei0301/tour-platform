@@ -83,3 +83,11 @@
 
 ## 下一步（更新）
 - 建立 `tp-builder-api` 專屬乾淨 worktree 施工卡；builder 完成後建立以 exact `base_sha..head_sha` 綁定的 `tp-reviewer`／Rita 獨立 review card。
+
+## 2026-08-18 — 導遊「我的服務」native fallback 實作（t_dc903eb6）
+- Owner 縮限決策：不採全域 `status='published'` fallback；在 resolver 以 `KNOWN_NATIVE_PUBLISHED_FALLBACK_ACTIVITY_IDS` 精準列出 `c0000003-...0001/2/3`。這三筆 `status='published'`、無 draft/version 的 native activity 顯示為 published，`publishedVersion` 保持 `null`，價格仍由 `activity_plans.base_price` 聚合。
+- Structural UUID：resolver 的 format validator 改為 `8-4-4-4-12` hexadecimal；保留 trim/lowercase 與 malformed、suffix、non-UUID fail-closed。既有 v4/draft precedence 行為未變。
+- Native 白名單在 materialization gate 為 true 時亦跳過 legacy materializer；白名單外 activity 維持既有 materialization 行為。無 production SQL/data/schema/migration/RPC 寫入。
+- TDD RED：新增 Supabase parity regression 後執行 `cd apps/web && node --test tests/api/midao-services-list.test.mjs`，14/15 pass；新 assertion 實際為 `total: 0 !== 3`。
+- GREEN：Node v22.23.2 執行 list 15/15、legacy materialization 7/7；正式 `NODE_OPTIONS='--max-old-space-size=1024' .claude/hooks/run-checks.sh apps/web/tests/api/midao-services-list.test.mjs apps/web/tests/api/midao-legacy-draft-materialization.test.mjs --typecheck` 為 22/22 pass + typecheck pass。
+- UI：`NOT_VERIFIED-live`；本 worktree 沒有可安全重用、已驗證對應三筆 native c-ID 的 guide browser fixture，不能以 resolver/API tests 宣稱預設「我的服務」UI 已實測。交 Rita review 時保留此 blocker。
