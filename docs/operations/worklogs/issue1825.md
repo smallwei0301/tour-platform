@@ -67,3 +67,27 @@
 ## 絕不重做（新增）
 - t_71104d93 已完成的 native activity rich plan 資料補齊及其 production/read-only 驗證，不是本 validator 規格的範圍。
 - t_08d99b02／t_ddb1449b 的 legacy_activity materialization、atomic batch RPC 與 plan snapshot 規格，與 native admin direct-edit UUID gate 分離，不得混入此 implementation commit。
+
+## 2026-08-18 — 導遊「我的服務」非 v4 UUID／native fallback 規格（t_b610c3b5）
+- 新規格：`docs/plans/2026-08-18-issue1825-guide-service-list-structural-uuid.md`；本輪只讀規劃、未改產品碼/production 資料/migration/feature flag。
+- source 證實第一層 root cause：`service-list-resolver.ts` 的 strict RFC UUID regex 會在 `resolveInSupabase()` 將 `c0000003-...-0001/2/3` filter 掉；即使改成 structural UUID，現行 `buildItem()` 在無 active draft 與 publication version 時仍排除，因此只改 regex 不足。
+- source 亦證實 card 前提衝突：現行 materialization loop 對 published + no-draft/version 會呼叫 legacy RPC，但 migration 將新 draft 的 `materialization_origin` 硬編碼為 `legacy_activity`；origin 只存在 draft table，而題述三筆沒有 draft，resolver 無 native discriminator。不得把開 flag 當作 native 修復。
+- 建議 owner 選擇 canonical `activities.status='published'` fallback（零寫入、保留 publishedVersion=null）並禁止用 legacy materializer 處理 native activity；若堅持 no-draft/version 不列出，需另由 owner 指定可靠 native-vs-legacy source discriminator，不能猜 proxy。
+- UUID helper 決策：本卡不抽 shared helper；admin plan、resolver、feature gate/RPC/recovery 的 boundary policy 不同，先用精準 regression 固定行為，日後另卡處理具名 policy helper/inventory。
+
+## 2026-08-18 — 導遊「我的服務」native fallback owner 決策（t_b610c3b5）
+- 木村哥/Ava 已選擇方案 A：通過 guide ownership query 的 `activities.status='published'`，即使沒有 draft/version，也視為 canonical published service fallback 並出現在「我的服務」清單；價格繼續以 `activity_plans.base_price` 聚合，`publishedVersion` 固定為 `null`。
+- 決策刻意禁止以 legacy materialization flag/RPC 處理三筆 native c-ID activity，故零 production 寫入、零 schema/data 變更，且不修改既有 `legacy_activity` 路徑、atomic RPC/snapshot 規格或 PR #1849 admin plans scope。
+- UUID policy：本次不抽 shared helper；僅修正 resolver 的 structural UUID compatibility，保留各高風險 consumer 的獨立 policy。
+- Builder 必須依 `docs/plans/2026-08-18-issue1825-guide-service-list-structural-uuid.md` 先 RED 後 GREEN，完成 immutable commit + focused run-checks/typecheck 後建立 Rita review card，交付 default guide「我的服務」UI path 的 browser evidence 或明確 `NOT_VERIFIED-live` blocker。
+
+## 下一步（更新）
+- 建立 `tp-builder-api` 專屬乾淨 worktree 施工卡；builder 完成後建立以 exact `base_sha..head_sha` 綁定的 `tp-reviewer`／Rita 獨立 review card。
+
+## 2026-08-18 — 導遊「我的服務」native fallback 實作（t_dc903eb6）
+- Owner 縮限決策：不採全域 `status='published'` fallback；在 resolver 以 `KNOWN_NATIVE_PUBLISHED_FALLBACK_ACTIVITY_IDS` 精準列出 `c0000003-...0001/2/3`。這三筆 `status='published'`、無 draft/version 的 native activity 顯示為 published，`publishedVersion` 保持 `null`，價格仍由 `activity_plans.base_price` 聚合。
+- Structural UUID：resolver 的 format validator 改為 `8-4-4-4-12` hexadecimal；保留 trim/lowercase 與 malformed、suffix、non-UUID fail-closed。既有 v4/draft precedence 行為未變。
+- Native 白名單在 materialization gate 為 true 時亦跳過 legacy materializer；白名單外 activity 維持既有 materialization 行為。無 production SQL/data/schema/migration/RPC 寫入。
+- TDD RED：新增 Supabase parity regression 後執行 `cd apps/web && node --test tests/api/midao-services-list.test.mjs`，14/15 pass；新 assertion 實際為 `total: 0 !== 3`。
+- GREEN：Node v22.23.2 執行 list 15/15、legacy materialization 7/7；正式 `NODE_OPTIONS='--max-old-space-size=1024' .claude/hooks/run-checks.sh apps/web/tests/api/midao-services-list.test.mjs apps/web/tests/api/midao-legacy-draft-materialization.test.mjs --typecheck` 為 22/22 pass + typecheck pass。
+- UI：`NOT_VERIFIED-live`；本 worktree 沒有可安全重用、已驗證對應三筆 native c-ID 的 guide browser fixture，不能以 resolver/API tests 宣稱預設「我的服務」UI 已實測。交 Rita review 時保留此 blocker。

@@ -26,7 +26,15 @@ import { getSupabase, hasSupabaseEnv } from '../supabase-env.mjs';
 import { isMidaoLegacyDraftMaterializationEnabledForGuide } from '../../config/feature-flags.mjs';
 import { ensureLegacyServiceDraftMaterialized } from './db-legacy-service-draft-materialization.mjs';
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+
+// #1825：t_71104d93 已補齊的三筆 native activity 尚無 draft/version，僅能以
+// canonical activities.status 做 read-only published fallback；不得交給 legacy materializer。
+const KNOWN_NATIVE_PUBLISHED_FALLBACK_ACTIVITY_IDS: ReadonlySet<string> = new Set([
+  'c0000003-0000-0000-0000-000000000001',
+  'c0000003-0000-0000-0000-000000000002',
+  'c0000003-0000-0000-0000-000000000003',
+]);
 
 export const DEFAULT_PAGE_SIZE = 20;
 // 分頁上限比照既有 list gateway 慣例（db-requests.mjs MAX_LIMIT = 50）。
@@ -242,9 +250,12 @@ function buildItem(
   const publishedVersion = input.versionByActivity.get(activity.activityId) ?? null;
   const hasDraft = draftRevision !== null;
   const hasPublished = publishedVersion !== null;
+  const hasKnownNativePublishedFallback =
+    activity.legacyStatus === 'published'
+    && KNOWN_NATIVE_PUBLISHED_FALLBACK_ACTIVITY_IDS.has(activity.activityId);
 
   // 皆無 → 尚非服務項目，不列入清單。
-  if (!hasDraft && !hasPublished) return null;
+  if (!hasDraft && !hasPublished && !hasKnownNativePublishedFallback) return null;
 
   // 兩者皆有時以 draft 優先顯示，並標記「有未發布變更」。
   const status: ServiceDisplayStatus = hasDraft ? 'draft' : 'published';
@@ -438,6 +449,7 @@ async function resolveInSupabase(
         activity.legacyStatus !== 'published'
         || draftRevisionByActivity.has(activity.activityId)
         || versionByActivity.has(activity.activityId)
+        || KNOWN_NATIVE_PUBLISHED_FALLBACK_ACTIVITY_IDS.has(activity.activityId)
       ) continue;
 
       const ensured = await dependencies.ensureLegacyDraftMaterialized(activity.activityId, guideId);
