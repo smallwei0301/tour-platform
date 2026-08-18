@@ -1,6 +1,6 @@
 # #1825 導遊「我的服務」非 v4 UUID 與 native activity 清單修復規格
 
-> 狀態：**BLOCKED — source contract 與卡片前提衝突；不可在未決策下交 builder 實作。**
+> 狀態：**OWNER_ACCEPTED — 2026-08-18 木村哥/Ava 已選擇方案 A；可依本文最小範圍交 builder 實作。**
 >
 > 本文只讀規劃；未變更 production 資料、migration、產品碼或 feature flag。
 
@@ -34,6 +34,12 @@
 - **選項 B（若產品語意堅持「沒有 draft/version 不得列出」）：** 先由 owner 指定可靠的 native-vs-legacy source discriminator（資料欄位／受控 whitelist／已存在可讀 provenance），並另立 migration/資料契約卡；其後才可修改 materialization eligibility。現有 source 沒有此 discriminator，不能猜測 `pending_changes`、UUID version 或 title 等 proxy。
 
 本規格推薦 **A**。它把 native canonical `published` activity 視為 published service，避免以 legacy RPC 補出錯誤 provenance；B 擴大為 schema/data 變更，違反本卡最小且不碰 canonical data 的邊界。
+
+## Owner decision（2026-08-18）
+
+木村哥/Ava 已明確接受建議 A：對通過 guide ownership query 的 `activities.status='published'`，即使沒有 draft/version，仍以 `status: 'published'` 列入服務清單；價格仍從 `activity_plans.base_price` 聚合，`publishedVersion` 保持 `null`。這是刻意的 native canonical fallback 語意，不是資料修復或 publication version 的替代品。
+
+本決策同時鎖定以下界線：不得啟用或依賴 legacy materialization 處理這三筆 native activity；不得新增 schema/data discriminator；不抽 shared UUID helper，維持各 consumer 的 boundary-specific validator policy。本次只處理 resolver 與其 regression。
 
 ## A 獲授權後的 builder handoff（最小實作）
 

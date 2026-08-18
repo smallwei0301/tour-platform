@@ -75,5 +75,11 @@
 - 建議 owner 選擇 canonical `activities.status='published'` fallback（零寫入、保留 publishedVersion=null）並禁止用 legacy materializer 處理 native activity；若堅持 no-draft/version 不列出，需另由 owner 指定可靠 native-vs-legacy source discriminator，不能猜 proxy。
 - UUID helper 決策：本卡不抽 shared helper；admin plan、resolver、feature gate/RPC/recovery 的 boundary policy 不同，先用精準 regression 固定行為，日後另卡處理具名 policy helper/inventory。
 
+## 2026-08-18 — 導遊「我的服務」native fallback owner 決策（t_b610c3b5）
+- 木村哥/Ava 已選擇方案 A：通過 guide ownership query 的 `activities.status='published'`，即使沒有 draft/version，也視為 canonical published service fallback 並出現在「我的服務」清單；價格繼續以 `activity_plans.base_price` 聚合，`publishedVersion` 固定為 `null`。
+- 決策刻意禁止以 legacy materialization flag/RPC 處理三筆 native c-ID activity，故零 production 寫入、零 schema/data 變更，且不修改既有 `legacy_activity` 路徑、atomic RPC/snapshot 規格或 PR #1849 admin plans scope。
+- UUID policy：本次不抽 shared helper；僅修正 resolver 的 structural UUID compatibility，保留各高風險 consumer 的獨立 policy。
+- Builder 必須依 `docs/plans/2026-08-18-issue1825-guide-service-list-structural-uuid.md` 先 RED 後 GREEN，完成 immutable commit + focused run-checks/typecheck 後建立 Rita review card，交付 default guide「我的服務」UI path 的 browser evidence 或明確 `NOT_VERIFIED-live` blocker。
+
 ## 下一步（更新）
-- 等木村哥/Ava 對上述唯一 blocker 選擇 A 或 B；A 才能交 `tp-builder-api` 依新規格 TDD 實作，之後由 Rita 以 immutable range + default UI path evidence 做 final review。
+- 建立 `tp-builder-api` 專屬乾淨 worktree 施工卡；builder 完成後建立以 exact `base_sha..head_sha` 綁定的 `tp-reviewer`／Rita 獨立 review card。
