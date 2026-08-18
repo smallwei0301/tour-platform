@@ -45,3 +45,17 @@
 - resolver 以已 normalize 的 guideId 計算 production default，保留顯式 `materializationEnabled` DI override；GET route 以 canonical session guideId 在 eligibility query 前做同一 scoped gate。關閉 master gate 時只停止新的 materialization，既有 legacy-origin draft 維持原有讀取結果。
 - TDD：resolver/feature-flag RED（7 tests 內 2 failed）→ GREEN 7/7；GET route RED（21 tests 內 1 failed）→ GREEN 21/21。正式 gate：`NODE_OPTIONS='--max-old-space-size=1024' .claude/hooks/run-checks.sh apps/web/tests/api/midao-legacy-draft-materialization.test.mjs apps/web/tests/api/midao-service-drafts.test.mjs apps/web/tests/api/midao-services-list.test.mjs --typecheck`，42/42 pass + typecheck pass。
 - Worktree 缺 dev dependencies 時，依 integrity procedure 以隔離 HOME/npmrc 執行 `npm ci --include=dev --ignore-scripts --no-audit --no-fund`；package.json、package-lock.json、yarn.lock SHA-256 均在前後一致，未變更 lockfile。
+
+## 2026-08-18 — admin plan 非 v4 UUID validator 規格（t_069ed17b）
+- 目標限定為 native activity 的 admin plans page flow：collection list/create、single plan GET/PUT/DELETE 與同頁 seasons 子路徑；不重做既有 legacy draft materialization／data backfill。
+- source inventory：collection route 與 single-item route 各自有 RFC v1–v5／variant 限制 regex；`src/lib/activity-plan-seasons.ts` 的 `isUuid()` 同樣 strict，會讓 plans page 的 seasons panel 對相同 non-v4 `activityId` 留下 400 dead end。
+- 已確認相鄰 schedules/readiness route 已採 structural 8-4-4-4-12 regex；publication-versions、restore-publication 維持 strict pattern，因屬獨立高風險 publication recovery，明確排除於本次變更。
+- 可執行規格：`docs/plans/2026-08-18-issue1825-admin-plan-non-v4-uuid-validator.md`。要求先 RED 新增 issue1825 regression contract test，再只改三個 plans-flow validator；GREEN 後以 run-checks + typecheck 驗證，最後交 Rita fresh independent review。
+- 規格 commit：`2de8c3fd0642d69e1320ec3dd3669a6c9ce03d95`（後續 amend 以最終 SHA 為準）。`git diff --check` 已通過；既有 admin safety + plan revalidation tests 為 13/13 pass。此 planner worktree 僅有 Node 24.14.0、未找到 Node 22 runtime，因此這是文件/既有測試的輔助證據，非 implementation 的 Node 22 acceptance 替代；builder 仍須依計畫在 Node 22 重跑 run-checks + typecheck。
+
+## 下一步（更新）
+- 交 `tp-builder-api` 依 `docs/plans/2026-08-18-issue1825-admin-plan-non-v4-uuid-validator.md` 在專屬乾淨 worktree 實作；完成後由 `tp-reviewer`／Rita 以 immutable commit range 重跑指定 checks。
+
+## 絕不重做（新增）
+- t_71104d93 已完成的 native activity rich plan 資料補齊及其 production/read-only 驗證，不是本 validator 規格的範圍。
+- t_08d99b02／t_ddb1449b 的 legacy_activity materialization、atomic batch RPC 與 plan snapshot 規格，與 native admin direct-edit UUID gate 分離，不得混入此 implementation commit。
