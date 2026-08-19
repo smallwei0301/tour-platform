@@ -209,8 +209,8 @@ BEGIN
   v_payload := COALESCE(v_draft.payload, '{}'::jsonb);
 
   -- 說明文字：優先 description 字串，否則彙整 descriptions[] 非空段落。
-  v_name := pg_catalog.nullif(pg_catalog.btrim(v_payload->>'name'), '');
-  v_description := pg_catalog.nullif(pg_catalog.btrim(v_payload->>'description'), '');
+  v_name := NULLIF(pg_catalog.btrim(v_payload->>'name'), '');
+  v_description := NULLIF(pg_catalog.btrim(v_payload->>'description'), '');
   IF v_description IS NULL THEN
     SELECT pg_catalog.string_agg(pg_catalog.btrim(elem), E'\n\n')
       INTO v_description
@@ -249,17 +249,17 @@ BEGIN
   )
   SELECT
     p_activity_id,
-    COALESCE(pg_catalog.nullif(pg_catalog.btrim(plan.elem->>'name'), ''), 'Plan ' || plan.ord::text),
+    COALESCE(NULLIF(pg_catalog.btrim(plan.elem->>'name'), ''), 'Plan ' || plan.ord::text),
     COALESCE(
-      pg_catalog.nullif(pg_catalog.btrim(plan.elem->>'slug'), ''),
+      NULLIF(pg_catalog.btrim(plan.elem->>'slug'), ''),
       'plan-' || pg_catalog.md5(COALESCE(plan.elem->>'name', '') || '-' || plan.ord::text)
     ),
     COALESCE((plan.elem->>'duration_minutes')::integer, 60),
-    COALESCE(pg_catalog.nullif(pg_catalog.btrim(plan.elem->>'price_type'), ''), 'per_person'),
+    COALESCE(NULLIF(pg_catalog.btrim(plan.elem->>'price_type'), ''), 'per_person'),
     COALESCE((plan.elem->>'base_price')::integer, 0),
     COALESCE((plan.elem->>'min_participants')::integer, 1),
     COALESCE((plan.elem->>'max_participants')::integer, 10),
-    COALESCE(pg_catalog.nullif(pg_catalog.btrim(plan.elem->>'booking_type'), ''), 'instant'),
+    COALESCE(NULLIF(pg_catalog.btrim(plan.elem->>'booking_type'), ''), 'instant'),
     'active',
     v_now
   FROM pg_catalog.jsonb_array_elements(COALESCE(v_payload->'plans', '[]'::jsonb))
@@ -291,7 +291,7 @@ BEGIN
   SELECT
     p_activity_id,
     q.elem->>'question_key',
-    COALESCE(pg_catalog.nullif(pg_catalog.btrim(q.elem->>'label'), ''), q.elem->>'question_key'),
+    COALESCE(NULLIF(pg_catalog.btrim(q.elem->>'label'), ''), q.elem->>'question_key'),
     q.elem->>'type',
     COALESCE(q.elem->'options', '[]'::jsonb),
     COALESCE((q.elem->>'required')::boolean, false),
