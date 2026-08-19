@@ -40677,6 +40677,29 @@
         "volatility": "v"
       },
       {
+        "bodySha256": "e207a2eb5ec984f722002684605bd5d940f44f61a3fbc14d0ca9b2ecbfdbe510",
+        "canonicalKey": [
+          "routine",
+          "public",
+          "midao_ensure_native_service_draft",
+          "p_activity_id uuid, p_guide_id uuid"
+        ],
+        "configuration": [
+          "search_path=pg_catalog"
+        ],
+        "identityArguments": "p_activity_id uuid, p_guide_id uuid",
+        "kind": "f",
+        "language": "plpgsql",
+        "leakProof": false,
+        "name": "midao_ensure_native_service_draft",
+        "parallel": "u",
+        "result": "jsonb",
+        "schema": "public",
+        "securityDefiner": true,
+        "strict": false,
+        "volatility": "v"
+      },
+      {
         "bodySha256": "81d72e3ec171def1d81a8a543ff3c6af58d6a0299c6445452c387801d1d2d25c",
         "canonicalKey": [
           "routine",
@@ -110465,6 +110488,66 @@
           "acl",
           "routine",
           "public",
+          "midao_ensure_native_service_draft(p_activity_id uuid, p_guide_id uuid)",
+          "supabase_admin",
+          "postgres",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_ensure_native_service_draft(p_activity_id uuid, p_guide_id uuid)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "midao_ensure_native_service_draft(p_activity_id uuid, p_guide_id uuid)",
+          "supabase_admin",
+          "service_role",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_ensure_native_service_draft(p_activity_id uuid, p_guide_id uuid)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "midao_ensure_native_service_draft(p_activity_id uuid, p_guide_id uuid)",
+          "supabase_admin",
+          "supabase_admin",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_ensure_native_service_draft(p_activity_id uuid, p_guide_id uuid)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
           "midao_expire_stale_confirmation_atomic(p_booking_id uuid, p_now timestamp with time zone)",
           "supabase_admin",
           "postgres",
@@ -118811,6 +118894,19 @@
           "p_guide_id uuid, p_actor_type text, p_actor_id text, p_booking_id uuid, p_action text, p_note text, p_idempotency_key text, p_request_hash text"
         ],
         "object": "midao_decide_booking_request(p_guide_id uuid, p_actor_type text, p_actor_id text, p_booking_id uuid, p_action text, p_note text, p_idempotency_key text, p_request_hash text)",
+        "objectType": "routine",
+        "owner": "supabase_admin",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "owner",
+          "routine",
+          "public",
+          "midao_ensure_native_service_draft",
+          "p_activity_id uuid, p_guide_id uuid"
+        ],
+        "object": "midao_ensure_native_service_draft(p_activity_id uuid, p_guide_id uuid)",
         "objectType": "routine",
         "owner": "supabase_admin",
         "schema": "public"
