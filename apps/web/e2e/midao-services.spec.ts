@@ -293,6 +293,6 @@ test('native ensure failure leaves the guide on the service list and shows an er
   await page.goto('/midao/services', { waitUntil: 'domcontentloaded' });
 
   await page.getByRole('button', { name: '編輯服務：原生溪谷導覽', exact: true }).click();
-  await expect(page.getByRole('alert')).toHaveText('原生服務資料無法建立草稿');
+  await expect(page.locator('[role="alert"]', { hasText: '原生服務資料無法建立草稿' })).toHaveText('原生服務資料無法建立草稿');
   await expect(page).toHaveURL(/\/midao\/services$/u);
 });
