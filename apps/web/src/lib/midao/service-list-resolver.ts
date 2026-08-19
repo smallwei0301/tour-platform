@@ -23,8 +23,6 @@
 //   - S1 schema（guide_service_drafts、service_publication_versions；activities/activity_plans 既有）。
 
 import { getSupabase, hasSupabaseEnv } from '../supabase-env.mjs';
-import { isMidaoLegacyDraftMaterializationEnabledForGuide } from '../../config/feature-flags.mjs';
-import { ensureLegacyServiceDraftMaterialized } from './db-legacy-service-draft-materialization.mjs';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
@@ -150,11 +148,6 @@ interface ActivityRecord {
   slug: string | null;
   legacyStatus: string | null;
   updatedAt: string | null;
-}
-
-export interface ServiceListDependencies {
-  materializationEnabled?: boolean;
-  ensureLegacyDraftMaterialized?: typeof ensureLegacyServiceDraftMaterialized;
 }
 
 const activityStore = new Map<string, ActivityRecord>();
@@ -325,7 +318,6 @@ function assembleServiceList(input: AssembleInput): ServiceListResult {
 export async function resolveGuideServiceList(
   guideId: unknown,
   query: ServiceListQuery = {},
-  dependencies: ServiceListDependencies = {},
 ): Promise<ServiceListResult> {
   const normalizedGuideId = normalizeUuid(guideId);
   if (!normalizedGuideId) throw new InvalidServiceListQueryError('guideId must be a UUID');
@@ -335,11 +327,7 @@ export async function resolveGuideServiceList(
   const status = normalizeStatus(query.status);
 
   if (hasSupabaseEnv()) {
-    return resolveInSupabase(normalizedGuideId, { page, pageSize, status }, {
-      materializationEnabled: dependencies.materializationEnabled
-        ?? isMidaoLegacyDraftMaterializationEnabledForGuide(normalizedGuideId),
-      ensureLegacyDraftMaterialized: dependencies.ensureLegacyDraftMaterialized ?? ensureLegacyServiceDraftMaterialized,
-    });
+    return resolveInSupabase(normalizedGuideId, { page, pageSize, status });
   }
   return resolveInMemory(normalizedGuideId, { page, pageSize, status });
 }
@@ -379,7 +367,6 @@ function resolveInMemory(
 async function resolveInSupabase(
   guideId: string,
   { page, pageSize, status }: { page: number; pageSize: number; status: ServiceListStatusFilter },
-  dependencies: Required<ServiceListDependencies>,
 ): Promise<ServiceListResult> {
   const supabase = await getSupabase();
 
@@ -460,24 +447,6 @@ async function resolveInSupabase(
     if (version === null) continue;
     const prior = versionByActivity.get(activityId);
     versionByActivity.set(activityId, prior === undefined ? version : Math.max(prior, version));
-  }
-
-  if (dependencies.materializationEnabled) {
-    for (const activity of activities) {
-      if (
-        activity.legacyStatus !== 'published'
-        || draftRevisionByActivity.has(activity.activityId)
-        || versionByActivity.has(activity.activityId)
-        || KNOWN_NATIVE_PUBLISHED_FALLBACK_ACTIVITY_IDS.has(activity.activityId)
-      ) continue;
-
-      const ensured = await dependencies.ensureLegacyDraftMaterialized(activity.activityId, guideId);
-      if (!ensured.ok) throw unexpected('Midao legacy draft materialization was rejected');
-      if (typeof ensured.revision !== 'number' || !Number.isInteger(ensured.revision) || ensured.revision < 1) {
-        throw unexpected('Midao legacy draft materialization returned an invalid revision');
-      }
-      draftRevisionByActivity.set(activity.activityId, ensured.revision);
-    }
   }
 
   return assembleServiceList({

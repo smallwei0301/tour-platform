@@ -53,3 +53,13 @@ test('issue1825 native ensure migration is service-role-only and writes only dra
     assert.doesNotMatch(source, new RegExp(forbidden.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
   }
 });
+
+test('issue1825 guide service list resolver has no legacy materialization write dependency', async () => {
+  const source = await readFile(
+    new URL('../../src/lib/midao/service-list-resolver.ts', import.meta.url),
+    'utf8',
+  );
+  assert.doesNotMatch(source, /ensureLegacyServiceDraftMaterialized/u);
+  assert.doesNotMatch(source, /isMidaoLegacyDraftMaterializationEnabledForGuide/u);
+  assert.doesNotMatch(source, /midao_materialize_legacy_service_draft/u);
+});

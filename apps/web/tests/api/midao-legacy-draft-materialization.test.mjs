@@ -117,7 +117,7 @@ test('resolver makes zero RPC writes for master-off, missing, malformed, or mism
   }
 });
 
-test('resolver flag-on materializes only the calling guide published activity without draft or version', async () => {
+test('resolver remains read-only even when the legacy materialization flag is enabled', async () => {
   process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED = '1';
   process.env.NODE_ENV = 'production';
   process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST = GUIDE_ID;
@@ -131,8 +131,8 @@ test('resolver flag-on materializes only the calling guide published activity wi
   });
   useSupabase(fake);
   const result = await resolveGuideServiceList(GUIDE_ID, {});
-  assert.deepEqual(fake.calls, [{ name: 'midao_materialize_legacy_service_draft', args: { p_activity_id: ACTIVITY_ID, p_guide_id: GUIDE_ID } }]);
-  assert.deepEqual(result.items.map((item) => item.activityId).sort(), [ACTIVITY_ID, OTHER_GUIDE_ID].sort());
+  assert.deepEqual(fake.calls, []);
+  assert.deepEqual(result.items.map((item) => item.activityId), [OTHER_GUIDE_ID]);
 });
 
 test('gateway preserves the RPC ownership denial as a non-success result', async () => {

@@ -23,7 +23,12 @@ import test from 'node:test';
 const GUIDE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OTHER_GUIDE_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const ACTIVITY_ID = '33333333-3333-4333-8333-333333333333';
-const NATIVE_ACTIVITY_ID = 'c0000003-0000-0000-0000-000000000001';
+const NATIVE_ACTIVITY_IDS = [
+  'c0000003-0000-0000-0000-000000000001',
+  'c0000003-0000-0000-0000-000000000002',
+  'c0000003-0000-0000-0000-000000000003',
+];
+const NATIVE_ACTIVITY_ID = NATIVE_ACTIVITY_IDS[0];
 const GUIDE_SESSION_SECRET = 'task26-api-test-guide-session-secret-0123456789';
 const SESSION_VERSION = 7;
 const FIXED_NOW = '2026-07-31T12:00:00.000Z';
@@ -82,7 +87,17 @@ function createSupabaseFake({
   materialize = null,
   runtimeBackendMode = 'midao',
 } = {}) {
-  const state = { drafts: drafts.map((d) => structuredClone(d)) };
+  const state = {
+    drafts: drafts.map((d) => structuredClone(d)),
+    sideEffects: {
+      activities: 0,
+      activityPlans: 0,
+      orders: 0,
+      bookings: 0,
+      publicationVersions: 0,
+      outbox: 0,
+    },
+  };
   const calls = [];
 
   function draftBuilder() {
@@ -321,37 +336,47 @@ test('routes import cleanly and export their HTTP methods', () => {
   assert.equal(typeof ensureRoute.POST, 'function');
 });
 
-test('POST ensure accepts an owned native c-ID, converges repeats, and only invokes the native ensure RPC', async () => {
-  const fake = createSupabaseFake({
-    activityId: NATIVE_ACTIVITY_ID,
-    materialize: (args) => ({
-      data: {
-        code: 'CREATED',
-        activityId: args.p_activity_id,
-        draftId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-        revision: 1,
-      },
-      error: null,
-    }),
-  });
-  installEnv(fake);
+test('POST ensure accepts every owned native c-ID, converges repeats, and records no forbidden side effects', async () => {
+  for (const nativeActivityId of NATIVE_ACTIVITY_IDS) {
+    const fake = createSupabaseFake({
+      activityId: nativeActivityId,
+      materialize: (args) => ({
+        data: {
+          code: 'CREATED',
+          activityId: args.p_activity_id,
+          draftId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+          revision: 1,
+        },
+        error: null,
+      }),
+    });
+    installEnv(fake);
 
-  const [first, second] = await Promise.all([
-    payload(await callEnsure(ensureRequest(NATIVE_ACTIVITY_ID))),
-    payload(await callEnsure(ensureRequest(NATIVE_ACTIVITY_ID))),
-  ]);
+    const [first, second] = await Promise.all([
+      payload(await callEnsure(ensureRequest(nativeActivityId))),
+      payload(await callEnsure(ensureRequest(nativeActivityId))),
+    ]);
 
-  for (const result of [first, second]) {
-    assert.equal(result.status, 200);
-    assert.equal(result.body.data.draft.activityId, NATIVE_ACTIVITY_ID);
-    assert.equal(result.body.data.draft.revision, 1);
-    assert.equal(result.body.data.draft.materializationOrigin, 'native');
+    for (const result of [first, second]) {
+      assert.equal(result.status, 200);
+      assert.equal(result.body.data.draft.activityId, nativeActivityId);
+      assert.equal(result.body.data.draft.revision, 1);
+      assert.equal(result.body.data.draft.materializationOrigin, 'native');
+    }
+    assert.equal(fake.state.drafts.filter((row) => row.activity_id === nativeActivityId && row.status === 'active').length, 1);
+    assert.deepEqual(fake.calls.filter((call) => call.type === 'rpc').map((call) => call.name), [
+      'midao_ensure_native_service_draft',
+      'midao_ensure_native_service_draft',
+    ]);
+    assert.deepEqual(fake.state.sideEffects, {
+      activities: 0,
+      activityPlans: 0,
+      orders: 0,
+      bookings: 0,
+      publicationVersions: 0,
+      outbox: 0,
+    });
   }
-  assert.equal(fake.state.drafts.filter((row) => row.activity_id === NATIVE_ACTIVITY_ID && row.status === 'active').length, 1);
-  assert.deepEqual(fake.calls.filter((call) => call.type === 'rpc').map((call) => call.name), [
-    'midao_ensure_native_service_draft',
-    'midao_ensure_native_service_draft',
-  ]);
 });
 
 test('POST ensure collapses non-owner native c-ID to 404 before draft RPC', async () => {
@@ -362,6 +387,26 @@ test('POST ensure collapses non-owner native c-ID to 404 before draft RPC', asyn
   assert.equal(result.body.error.code, 'NOT_FOUND');
   assert.deepEqual(fake.calls.filter((call) => call.type === 'rpc'), []);
   assert.deepEqual(fake.state.drafts, []);
+});
+
+test('POST ensure maps an invalid native source to 422 without creating a draft', async () => {
+  const fake = createSupabaseFake({
+    activityId: NATIVE_ACTIVITY_IDS[2],
+    materialize: () => ({ data: { code: 'NATIVE_DRAFT_SOURCE_INVALID' }, error: null }),
+  });
+  installEnv(fake);
+  const result = await payload(await callEnsure(ensureRequest(NATIVE_ACTIVITY_IDS[2])));
+  assert.equal(result.status, 422);
+  assert.equal(result.body.error.code, 'NATIVE_DRAFT_SOURCE_INVALID');
+  assert.deepEqual(fake.state.drafts, []);
+  assert.deepEqual(fake.state.sideEffects, {
+    activities: 0,
+    activityPlans: 0,
+    orders: 0,
+    bookings: 0,
+    publicationVersions: 0,
+    outbox: 0,
+  });
 });
 
 test('GET returns the active draft for the owning guide', async () => {
