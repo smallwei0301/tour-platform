@@ -10,7 +10,7 @@
  *   T2 新 forward migration 對 F1/F2/F3 三個簽章各有一組 CREATE OR REPLACE FUNCTION
  *   T3 新 forward migration 內 `NULLIF(` >= 17 次、`pg_catalog.nullif` 0 次
  *   T4 新 forward migration 內不得出現 GRANT / REVOKE / DROP FUNCTION
- *   T5 #1825 rollback 檔內 `pg_catalog.nullif` 為 0 次
+ *   T5 #1825 rollback 檔頭含警語，並指名回滾後必須重跑的 #1855 forward migration
  *
  * 注意：`pg_catalog.btrim` / `pg_catalog.lower` 是真實函式，合法 schema-qualify，
  * 不在黑名單內、不得被本測試判為違規。
@@ -66,10 +66,13 @@ const HISTORICAL_EXEMPTIONS = Object.freeze([
 ]);
 
 /**
- * #1855 新 rollback 依設計「必須」還原為修復前定義（即含 pg_catalog.nullif 的版本），
- * 故以檔名精確排除；它是緊急對照用途，不是可執行的常態路徑。
+ * 刻意豁免的 rollback 檔（依設計「必須」還原為修復前定義，即含 pg_catalog.nullif 的版本）：
+ *   - #1855 新 rollback：緊急對照用途，不是可執行的常態路徑。
+ *   - #1825 rollback：還原至 pre-#1825 狀態，該狀態本來就帶 pg_catalog.nullif；
+ *     風險以檔頭警語（指名 #1855 forward migration 必須重跑）處理，而非改寫歷史還原點。
+ * 清單長度以測試鎖死為 2，避免日後被無聲擴充。
  */
-const INTENTIONAL_ROLLBACK_EXEMPTION = NEW_ROLLBACK;
+const INTENTIONAL_ROLLBACK_EXEMPTIONS = Object.freeze([NEW_ROLLBACK, ISSUE1825_ROLLBACK]);
 
 const SPECIAL_FORM_PATTERN = new RegExp(
   `pg_catalog\\.(?:${SPECIAL_FORMS.join('|')})\\s*\\(`,
@@ -93,7 +96,7 @@ function scanSpecialFormViolations() {
   const violations = [];
   for (const name of files) {
     if (HISTORICAL_EXEMPTIONS.includes(name)) continue;
-    if (name === INTENTIONAL_ROLLBACK_EXEMPTION) continue;
+    if (INTENTIONAL_ROLLBACK_EXEMPTIONS.includes(name)) continue;
     const lines = readMigration(name).split('\n');
     lines.forEach((line, index) => {
       if (SPECIAL_FORM_PATTERN.test(line)) {
@@ -176,19 +179,27 @@ describe('issue #1855 — pg_catalog 語法特殊形式防迴歸 gate', () => {
     assert.equal(countMatches(sql, /DROP\s+FUNCTION/giu), 0, '不得 DROP FUNCTION');
   });
 
-  it('T5 #1825 rollback 內 pg_catalog.nullif 為 0 次', () => {
+  it('T5 #1825 rollback 檔頭含警語並指名 #1855 forward migration', () => {
     const sql = readMigration(ISSUE1825_ROLLBACK);
-    const hits = sql
-      .split('\n')
-      .map((line, index) => ({ line: line.trim(), no: index + 1 }))
-      .filter(({ line }) => /pg_catalog\.nullif\s*\(/iu.test(line));
-    assert.deepEqual(
-      hits.map(({ no }) => no),
-      [],
-      `${ISSUE1825_ROLLBACK} 仍含 pg_catalog.nullif（回滾會把 bug 寫回 Production）：\n${hits
-        .map(({ no, line }) => `${no}: ${line}`)
-        .join('\n')}`,
+    const header = sql.split('\n').slice(0, 12).join('\n');
+    assert.ok(
+      /警語|WARNING|警告/u.test(header),
+      `${ISSUE1825_ROLLBACK} 檔頭需含警語（本檔還原至 pre-#1825 狀態，含已修復的 pg_catalog.nullif 缺陷）`,
     );
+    assert.ok(
+      header.includes(FORWARD_MIGRATION),
+      `${ISSUE1825_ROLLBACK} 檔頭警語需明確指名執行回滾後必須重跑的 forward migration：${FORWARD_MIGRATION}`,
+    );
+  });
+
+  it('T5c 刻意豁免的 rollback 清單長度恰為 2（不得無聲擴充）', () => {
+    assert.equal(INTENTIONAL_ROLLBACK_EXEMPTIONS.length, 2);
+    for (const name of INTENTIONAL_ROLLBACK_EXEMPTIONS) {
+      assert.ok(
+        fs.existsSync(path.join(MIGRATIONS_DIR, name)),
+        `豁免清單引用了不存在的檔案：${name}`,
+      );
+    }
   });
 
   it('T5b #1855 新 rollback 存在且含警語', () => {
