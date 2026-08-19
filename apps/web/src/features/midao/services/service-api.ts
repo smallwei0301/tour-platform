@@ -68,6 +68,20 @@ export async function fetchServiceDraft(activityId: string): Promise<DraftRespon
   return normalizeDraftResponseData(envelope.data);
 }
 
+export async function ensureNativeServiceDraft(activityId: string): Promise<DraftResponseData> {
+  await prepareServiceMutations();
+  const response = await fetch('/api/v2/guide/service-drafts/ensure', {
+    method: 'POST',
+    headers: csrfHeaders({ 'content-type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify({ activityId }),
+  });
+  const envelope = await readEnvelope(response);
+  const data = normalizeDraftResponseData(envelope.data);
+  if (!data.draft) throw new Error('草稿尚未準備完成');
+  return data;
+}
+
 export async function saveServiceDraft(activityId: string, expectedRevision: number, patch: ServiceDraftPayload): Promise<DraftResponseData> {
   const response = await fetch('/api/v2/guide/service-drafts', {
     method: 'POST',

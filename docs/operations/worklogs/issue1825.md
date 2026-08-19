@@ -91,3 +91,40 @@
 - TDD RED：新增 Supabase parity regression 後執行 `cd apps/web && node --test tests/api/midao-services-list.test.mjs`，14/15 pass；新 assertion 實際為 `total: 0 !== 3`。
 - GREEN：Node v22.23.2 執行 list 15/15、legacy materialization 7/7；正式 `NODE_OPTIONS='--max-old-space-size=1024' .claude/hooks/run-checks.sh apps/web/tests/api/midao-services-list.test.mjs apps/web/tests/api/midao-legacy-draft-materialization.test.mjs --typecheck` 為 22/22 pass + typecheck pass。
 - UI：`NOT_VERIFIED-live`；本 worktree 沒有可安全重用、已驗證對應三筆 native c-ID 的 guide browser fixture，不能以 resolver/API tests 宣稱預設「我的服務」UI 已實測。交 Rita review 時保留此 blocker。
+
+## 2026-08-19 — native lazy draft lifecycle + 發佈狀態統一規格（t_4212922d）
+- Owner 已授權修復導遊實測的兩個新症狀：c-ID 進 `/api/v2/guide/service-drafts` 在 ownership 查詢前被 RFC v1–v5 UUID gate 回 404；服務卡上方顯示「已發布」但下方因 `publishedVersion=null` 顯示「尚未發布」。本輪只讀規劃，未改產品碼或 production。
+- 已完成完整 service-draft identity inventory：strict UUID gate 不只 index route，detail discard、publish command、draft gateway 與 publication gateway 也會讓 c-ID 在後續存檔／正式重發佈失敗；規格把 structural helper 限定於這條 activity identity chain，保留 feature allowlist、legacy materializer、recovery、booking/payment 等獨立 strict policy。
+- 已決定 explicit `POST /api/v2/guide/service-drafts/ensure` + forward-only DB RPC：session/CSRF/mutations/ownership 後，在單一 transaction 建立或重用 native active draft；GET 保持純讀，禁止從頁面載入偷跑 legacy RPC。初始 payload 只讀 native canonical title/description，來源不合法即 422 且零 draft，不開空白 editor。
+- 已決定 resolver/API 輸出單一 `lifecycleState`（`draft`／`published_versioned`／`published_unversioned`／`unpublished`），ServiceCard 上下文案必須同源；三筆 c-ID 即使已有 native active draft，直到首次真正產生 version 前都保持 `published_unversioned`。不補寫 publication version。
+- 可執行規格：`docs/plans/2026-08-19-issue1825-native-draft-lifecycle.md`；包含 migration/RPC、精確檔案、RED→GREEN、local PostgreSQL/side-effect ledger、default UI path、rollback 與同卡 Rita final-review gate。
+
+## 下一步（更新）
+- `tp-builder-api` 依 native lazy draft lifecycle 規格先做 regression RED，再最小實作；builder 完成 exact commit/tests 後，在同一 builder card 請 Rita `kanban_request_review(reviewer="tp-reviewer")`。不得以本規劃完成宣稱 #1825 user symptom 已修復。
+
+## 絕不重做（新增）
+- 不重新啟用／擴張 legacy materialization 作 native edit 修復：其 RPC 硬寫 `legacy_activity` origin，且 GET 寫入違反本次不變量。
+- 不將 `KNOWN_NATIVE_PUBLISHED_FALLBACK_ACTIVITY_IDS` 當 domain truth；它只在三筆已證實資料的 transition eligibility 使用，首次 versioned publish 後須另案退場。
+
+## 2026-08-19 — native lazy draft lifecycle 實作進度（t_3e193c7b）
+- 已完成 RED→GREEN 的 structural UUID/lifecycle core regression：native c-ID 與 v4 UUID 均只以結構格式接受；三筆 bridge activity 即使已有 native draft 仍解析為 `published_unversioned`。
+- 已新增 explicit ensure route/gateway 與 forward-only migration 初稿，GET service-drafts 已移除 legacy materialization RPC 呼叫；尚未完成全部 identity consumer、完整 ensure fake/concurrency/side-effect test 與 final gate，故不得視為完成或套用 migration。
+
+## 2026-08-19 — native lazy draft lifecycle 實作完成（t_3e193c7b）
+- identity chain 已收斂至 `normalizeStructuralUuid()`：index GET/POST、discard、publish command、draft gateway 與 publication gateway 均接受 structural c-ID，但每個 route 仍先完成 canonical session、CSRF/mutations（寫入）與 guide ownership gate；沒有放寬 legacy materializer、recovery 或 booking/payment 邊界。
+- 新增 explicit `POST /api/v2/guide/service-drafts/ensure` 與 `midao_ensure_native_service_draft` forward-only migration：函式鎖定 canonical activity、限三筆 published native bridge、只建立／重用 native active draft，並限制 execute 至 `service_role`；未套用 production migration。
+- GET 已改為純讀取（零 materialization RPC）；resolver/API 輸出 `lifecycleState`，ServiceCard 上下顯示皆由同一 state mapping 產生。native bridge 在已有 draft 但無 version 時仍為 `published_unversioned`。
+- TDD evidence：initial core regression 0/2 failed（helper/lifecycle 尚不存在）→ GREEN；新增 structural-consumer/migration static RED（2 failures）→ GREEN；Node 22 gate `NODE_OPTIONS='--max-old-space-size=1024' .claude/hooks/run-checks.sh apps/web/tests/api/issue1825-native-draft-lifecycle.test.mjs apps/web/tests/api/midao-service-drafts.test.mjs apps/web/tests/api/midao-service-drafts-gateway.test.mjs apps/web/tests/api/midao-services-list.test.mjs apps/web/tests/api/midao-legacy-draft-materialization.test.mjs --typecheck` 實測 76/76 pass + `tsc --noEmit` pass。
+- NOT_VERIFIED-live：沒有可安全使用且已認證對應三筆 c-ID 的 guide browser fixture；未宣稱 default「我的服務」browser path、editor autosave 或 production DB migration 已驗證。交 Rita 時需保留此限制。
+
+## 2026-08-19 — Rita 變更要求修正（t_3e193c7b）
+- 移除 `service-list-resolver.ts` 的 legacy materialization feature-flag／gateway 相依與 Supabase list resolver RPC branch；現在 GET service list 不具 RPC 寫入能力。既有 legacy gateway 本身與其他獨立 command 未刪除或放寬。
+- 擴充 route fake：三筆 native c-ID 分別測 owner ensure、每筆重複 ensure 收斂一筆 active draft、non-owner 404、invalid source 422 零 draft，以及 only-draft fake side-effect ledger；migration static contract 仍拒絕 forbidden canonical tables／publication version／outbox 寫入。
+- 更新可重用 Playwright spec 的 `lifecycleState` mock、card button role 與 draft/versioned 文案，新增 native published ensure 成功導頁與 422 留在列表的流程。host Chrome 已可由 `PW_EXECUTABLE_PATH=/usr/local/bin/google-chrome` 啟動，但本 worktree 無 runtime Supabase fixture，SSR `MidaoLayout` 在 mock guide session 下回 `MIDAO_RUNTIME_DB_UNAVAILABLE`，故 Playwright 仍為 `NOT_VERIFIED-local`，不得視為通過；未讀取或使用 production credentials。
+- Node 22 exact gate：`NODE_OPTIONS='--max-old-space-size=1024' npx --yes --package=node@22 bash .claude/hooks/run-checks.sh apps/web/tests/api/issue1825-native-draft-lifecycle.test.mjs apps/web/tests/api/midao-service-drafts.test.mjs apps/web/tests/api/midao-service-drafts-gateway.test.mjs apps/web/tests/api/midao-services-list.test.mjs apps/web/tests/api/midao-legacy-draft-materialization.test.mjs --typecheck` → 78/78 pass + `tsc --noEmit` pass（commit 後需同 SHA 重跑）。
+
+## 2026-08-19 — Rita 變更要求驗證續跑（t_3e193c7b）
+- 以 `tp_browser_smoke_guard.py --project tour-platform --json --write-log` 完成 local browser 前置檢查：host inotify 限制低於基線，回報 `POLLING_REQUIRED`，且未發現 stale Next／Playwright process。
+- Playwright spec 可由 `GUIDE_SESSION_SECRET` 的非機密 list-only 值載入並列出 7 項測試；包含 lifecycle mock／button role、`published_unversioned` ensure 成功導頁與 422 留在列表兩條新增流程。
+- `NOT_VERIFIED-local`：此 worker runtime 沒有 `SUPABASE_URL`、service-role、guide session 或 admin env；未讀取 `.env`／production credentials。未提供受控 DB fixture 時，無法安全啟動 SSR Midao guide layout 後執行互動瀏覽器測試；不可將 spec discovery 視為 browser pass。
+- 待以本次 review handoff 的 exact HEAD 重跑 Node 22 gate 後交 Rita 複審；production migration 仍未套用。

@@ -254,6 +254,7 @@ describe('issue #1758 — repo現況verified release gate維持fail-closed', () 
       '20260812213000_issue1814_checkout_idempotency_atomic.sql',
       '20260814130000_issue1760_availability_scope_contract.sql',
       '20260814130100_issue1760_atomic_day_availability.sql',
+      '20260819002727_issue1825_native_service_draft_ensure.sql',
     ]);
     assert.deepEqual(result.unverified, []);
 

@@ -128,14 +128,17 @@ test('resolver: 顯示狀態 — draft / published / 兩者皆有以 draft 優�
   const byId = Object.fromEntries(result.items.map((i) => [i.activityId, i]));
 
   assert.equal(byId[ACTIVITY_A].status, 'draft');
+  assert.equal(byId[ACTIVITY_A].lifecycleState, 'draft');
   assert.equal(byId[ACTIVITY_A].hasUnpublishedChanges, false);
   assert.equal(byId[ACTIVITY_A].draftRevision, 2);
   assert.equal(byId[ACTIVITY_A].publishedVersion, null);
 
   assert.equal(byId[ACTIVITY_B].status, 'published');
+  assert.equal(byId[ACTIVITY_B].lifecycleState, 'published_versioned');
   assert.equal(byId[ACTIVITY_B].hasUnpublishedChanges, false);
 
   assert.equal(byId[ACTIVITY_C].status, 'draft', '兩者皆有時以 draft 優先顯示');
+  assert.equal(byId[ACTIVITY_C].lifecycleState, 'draft');
   assert.equal(byId[ACTIVITY_C].hasUnpublishedChanges, true);
   assert.equal(byId[ACTIVITY_C].draftRevision, 5);
   assert.equal(byId[ACTIVITY_C].publishedVersion, 1);
@@ -272,6 +275,9 @@ function createSupabaseFake({
       };
       return query;
     },
+    rpc() {
+      throw new Error('GET service list must not invoke an RPC');
+    },
   };
 }
 
@@ -354,37 +360,15 @@ test('resolver parity: #1825 已知 native published activities 無 draft/versio
   });
   useSupabase(fake);
 
-  const disabledResult = await resolveGuideServiceList(GUIDE_ID, { status: 'published' }, {
-    materializationEnabled: false,
-  });
-  assert.equal(disabledResult.total, 3);
-  assert.deepEqual(disabledResult.items.map((item) => item.activityId).sort(), NATIVE_FALLBACK_ACTIVITY_IDS.slice().sort());
-
-  const materializationCalls = [];
-  const result = await resolveGuideServiceList(GUIDE_ID, { status: 'published' }, {
-    materializationEnabled: true,
-    ensureLegacyDraftMaterialized: async (...args) => {
-      materializationCalls.push(args);
-      return { ok: true, revision: 1 };
-    },
-  });
+  const result = await resolveGuideServiceList(GUIDE_ID, { status: 'published' });
 
   assert.equal(result.total, 3);
   assert.deepEqual(result.items.map((item) => item.activityId).sort(), NATIVE_FALLBACK_ACTIVITY_IDS.slice().sort());
-  assert.deepEqual(
-    materializationCalls.filter(([activityId]) => NATIVE_FALLBACK_ACTIVITY_IDS.includes(activityId)),
-    [],
-    '白名單 native fallback 不得呼叫 legacy materializer',
-  );
-  assert.deepEqual(
-    materializationCalls,
-    [['c0000003-0000-0000-0000-000000000004', GUIDE_ID]],
-    '白名單外 activity 維持既有 materialization 行為',
-  );
   for (const [index, activityId] of NATIVE_FALLBACK_ACTIVITY_IDS.entries()) {
     const item = result.items.find((candidate) => candidate.activityId === activityId);
     assert.ok(item);
     assert.equal(item.status, 'published');
+    assert.equal(item.lifecycleState, 'published_unversioned');
     assert.equal(item.hasUnpublishedChanges, false);
     assert.equal(item.publishedVersion, null);
     assert.equal(item.minPrice, nativePrices[index][0]);

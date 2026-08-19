@@ -44,8 +44,8 @@ import { getSupabase, hasSupabaseEnv } from '../supabase-env.mjs';
 import { getSiteBaseUrl } from '../../config/env.ts';
 import { validateServiceForPublication } from './service-publication.ts';
 import { getServiceDraft } from './db-midao-service-drafts.mjs';
+import { normalizeStructuralUuid } from './structural-uuid.mjs';
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const DRAFT_STATUSES = new Set(['active', 'discarded', 'published']);
 
 // PostgreSQL error 碼：唯一可被視為「slug 衝突」的 RPC 失敗原因。
@@ -145,8 +145,7 @@ function isPlainObject(value) {
 }
 
 function normalizeUuid(value) {
-  if (typeof value !== 'string' || !UUID_PATTERN.test(value.trim())) return null;
-  return value.trim().toLowerCase();
+  return normalizeStructuralUuid(value);
 }
 
 // publish 一定針對既有 active 草稿，revision 必為 >= 1（比照 S6 RPC 的參數約束）。

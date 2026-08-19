@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { test, expect, type Page } from '@playwright/test';
 import { loginMidaoGuideViaApi } from './helpers';
 
@@ -99,6 +100,16 @@ async function installWizardRoutes(page: Page, options: { conflict?: boolean } =
 }
 
 async function login(page: Page) {
+  if (process.env.MIDAO_E2E_MOCK_GUIDE_SESSION === '1') {
+    const secret = process.env.GUIDE_SESSION_SECRET;
+    if (!secret) throw new Error('MIDAO_E2E_MOCK_GUIDE_SESSION requires GUIDE_SESSION_SECRET');
+    const signature = createHmac('sha256', secret).update(`${guide.guideId}:1`, 'utf8').digest('hex');
+    await page.context().addCookies([
+      { name: 'guide_token', value: `${guide.guideId}:1:${signature}`, url: 'http://127.0.0.1:3333' },
+      { name: 'guide_id', value: guide.guideId, url: 'http://127.0.0.1:3333' },
+    ]);
+    return;
+  }
   await loginMidaoGuideViaApi(page, guide);
 }
 
@@ -200,8 +211,8 @@ test('Midao services list renders status, price range, empty state and paginatio
       body: JSON.stringify({
         success: true,
         data: isSecondPage
-          ? { items: [{ activityId: '22222222-2222-4222-8222-222222222222', title: '溪谷觀察', slug: 'valley', status: 'published', hasUnpublishedChanges: false, minPrice: 1800, maxPrice: 1800, publishedVersion: 1, draftRevision: null, updatedAt: null }], page: 2, pageSize: 1, total: 2, totalPages: 2 }
-          : { items: [{ activityId, title: '山徑晨光', slug: 'morning', status: 'draft', hasUnpublishedChanges: true, minPrice: 1200, maxPrice: 2400, publishedVersion: 1, draftRevision: 3, updatedAt: null }], page: 1, pageSize: 1, total: 2, totalPages: 2 },
+          ? { items: [{ activityId: '22222222-2222-4222-8222-222222222222', title: '溪谷觀察', slug: 'valley', status: 'published', lifecycleState: 'published_versioned', hasUnpublishedChanges: false, minPrice: 1800, maxPrice: 1800, publishedVersion: 1, draftRevision: null, updatedAt: null }], page: 2, pageSize: 1, total: 2, totalPages: 2 }
+          : { items: [{ activityId, title: '山徑晨光', slug: 'morning', status: 'draft', lifecycleState: 'draft', hasUnpublishedChanges: true, minPrice: 1200, maxPrice: 2400, publishedVersion: 1, draftRevision: 3, updatedAt: null }], page: 1, pageSize: 1, total: 2, totalPages: 2 },
       }),
     });
   });
@@ -209,17 +220,79 @@ test('Midao services list renders status, price range, empty state and paginatio
   await page.goto('/midao/services', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { name: '我的服務' })).toBeVisible();
-  const morningServiceCard = page.getByRole('link', { name: '編輯服務：山徑晨光', exact: true });
+  const morningServiceCard = page.getByRole('button', { name: '編輯服務：山徑晨光', exact: true });
   await expect(morningServiceCard.getByRole('heading', { name: '山徑晨光', exact: true })).toBeVisible();
   await expect(morningServiceCard.getByText('草稿', { exact: true })).toBeVisible();
   await expect(morningServiceCard.getByText('有未發布變更', { exact: true })).toBeVisible();
+  await expect(morningServiceCard.getByText('草稿第 3 版', { exact: true })).toBeVisible();
   await expect(morningServiceCard.getByText('NT$ 1,200 – 2,400', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '下一頁' }).click();
-  const valleyServiceCard = page.getByRole('link', { name: '編輯服務：溪谷觀察', exact: true });
+  const valleyServiceCard = page.getByRole('button', { name: '編輯服務：溪谷觀察', exact: true });
   await expect(valleyServiceCard.getByRole('heading', { name: '溪谷觀察', exact: true })).toBeVisible();
   await expect(valleyServiceCard.getByText('已發布', { exact: true })).toBeVisible();
+  await expect(valleyServiceCard.getByText('發布第 1 版', { exact: true })).toBeVisible();
 
   const screenshotPath = testInfo.outputPath('midao-services-list.png');
   await page.screenshot({ path: screenshotPath, fullPage: true });
   await testInfo.attach('midao-services-list', { path: screenshotPath, contentType: 'image/png' });
+});
+
+test('native published card explicitly ensures a draft before navigating to the editor', async ({ page }) => {
+  test.setTimeout(180_000);
+  const nativeActivityId = 'c0000003-0000-0000-0000-000000000001';
+  let ensureCalls = 0;
+  await page.route('**/api/v2/guide/services**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: { items: [{ activityId: nativeActivityId, title: '原生山海導覽', slug: 'native-guide', status: 'published', lifecycleState: 'published_unversioned', hasUnpublishedChanges: false, minPrice: 1600, maxPrice: 1600, publishedVersion: null, draftRevision: null, updatedAt: null }], page: 1, pageSize: 8, total: 1, totalPages: 1 },
+      }),
+    });
+  });
+  await page.route('**/api/v2/guide/service-drafts/ensure', async (route) => {
+    ensureCalls += 1;
+    expect(route.request().method()).toBe('POST');
+    expect(route.request().postDataJSON()).toEqual({ activityId: nativeActivityId });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(draftResponse({ name: '原生山海導覽', description: '原有說明', descriptions: ['原有說明'], plans: [], questions: [] })) });
+  });
+  await page.route('**/api/v2/guide/service-drafts**', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(draftResponse({ name: '原生山海導覽', description: '原有說明', descriptions: ['原有說明'], plans: [], questions: [] })) });
+  });
+  await login(page);
+  await page.goto('/midao/services', { waitUntil: 'domcontentloaded' });
+
+  const card = page.getByRole('button', { name: '編輯服務：原生山海導覽', exact: true });
+  await expect(card.getByText('已發布', { exact: true })).toBeVisible();
+  await expect(card.getByText('尚未版本化', { exact: true })).toBeVisible();
+  await card.click();
+  await page.waitForURL(`/midao/services/${nativeActivityId}/edit`);
+  await expect(page.getByLabel('服務名稱')).toHaveValue('原生山海導覽');
+  expect(ensureCalls).toBe(1);
+});
+
+test('native ensure failure leaves the guide on the service list and shows an error', async ({ page }) => {
+  test.setTimeout(180_000);
+  const nativeActivityId = 'c0000003-0000-0000-0000-000000000002';
+  await page.route('**/api/v2/guide/services**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: { items: [{ activityId: nativeActivityId, title: '原生溪谷導覽', slug: 'native-valley', status: 'published', lifecycleState: 'published_unversioned', hasUnpublishedChanges: false, minPrice: 1800, maxPrice: 1800, publishedVersion: null, draftRevision: null, updatedAt: null }], page: 1, pageSize: 8, total: 1, totalPages: 1 },
+      }),
+    });
+  });
+  await page.route('**/api/v2/guide/service-drafts/ensure', async (route) => {
+    await route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ success: false, error: { code: 'NATIVE_DRAFT_SOURCE_INVALID', message: '原生服務資料無法建立草稿' } }) });
+  });
+  await login(page);
+  await page.goto('/midao/services', { waitUntil: 'domcontentloaded' });
+
+  await page.getByRole('button', { name: '編輯服務：原生溪谷導覽', exact: true }).click();
+  await expect(page.locator('[role="alert"]', { hasText: '原生服務資料無法建立草稿' })).toHaveText('原生服務資料無法建立草稿');
+  await expect(page).toHaveURL(/\/midao\/services$/u);
 });

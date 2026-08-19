@@ -22,11 +22,11 @@ import {
   MidaoRuntimeAccessError,
 } from '../../../../../../src/lib/midao/canonical-guide-session.ts';
 import { discardServiceDraft } from '../../../../../../src/lib/midao/db-midao-service-drafts.mjs';
+import { normalizeStructuralUuid } from '../../../../../../src/lib/midao/structural-uuid.mjs';
 import { jsonOk, jsonError, jsonErrorWithExtras } from '../../../../../../src/lib/api-response.ts';
 import { reportRouteError } from '../../../../../../src/lib/route-error.ts';
 
 const ROUTE = 'v2/guide/service-drafts/[draftId]';
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 const SAFE_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Unauthorized',
@@ -99,8 +99,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ d
   }
 
   // [draftId] 路徑段承載活動 id（見檔頭語意說明）；非 UUID 一律收斂成 404。
-  const activityId = String((await params).draftId || '').trim();
-  if (!UUID_PATTERN.test(activityId)) return jsonError('NOT_FOUND', 'Resource not found', 404);
+  const activityId = normalizeStructuralUuid((await params).draftId);
+  if (!activityId) return jsonError('NOT_FOUND', 'Resource not found', 404);
 
   const deny = await denyIfNotOwner(guideId, activityId);
   if (deny) return deny;

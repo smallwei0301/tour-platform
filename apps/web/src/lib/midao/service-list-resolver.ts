@@ -23,8 +23,6 @@
 //   - S1 schema（guide_service_drafts、service_publication_versions；activities/activity_plans 既有）。
 
 import { getSupabase, hasSupabaseEnv } from '../supabase-env.mjs';
-import { isMidaoLegacyDraftMaterializationEnabledForGuide } from '../../config/feature-flags.mjs';
-import { ensureLegacyServiceDraftMaterialized } from './db-legacy-service-draft-materialization.mjs';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
@@ -48,12 +46,14 @@ const STATUS_FILTERS: ReadonlySet<ServiceListStatusFilter> = new Set([
 ] as const);
 
 export type ServiceDisplayStatus = 'draft' | 'published';
+export type ServiceLifecycleState = 'draft' | 'published_versioned' | 'published_unversioned' | 'unpublished';
 
 export interface ServiceListItem {
   activityId: string;
   title: string | null;
   slug: string | null;
   status: ServiceDisplayStatus;
+  lifecycleState: ServiceLifecycleState;
   hasUnpublishedChanges: boolean;
   minPrice: number | null;
   maxPrice: number | null;
@@ -150,11 +150,6 @@ interface ActivityRecord {
   updatedAt: string | null;
 }
 
-export interface ServiceListDependencies {
-  materializationEnabled?: boolean;
-  ensureLegacyDraftMaterialized?: typeof ensureLegacyServiceDraftMaterialized;
-}
-
 const activityStore = new Map<string, ActivityRecord>();
 const planStore = new Map<string, number[]>();
 const draftStore = new Map<string, { revision: number }>();
@@ -242,24 +237,40 @@ function priceRange(prices: number[] | undefined): { minPrice: number | null; ma
   return { minPrice: min, maxPrice: max };
 }
 
+function resolveLifecycleState({
+  activityId,
+  legacyStatus,
+  draftRevision,
+  publishedVersion,
+}: {
+  activityId: string;
+  legacyStatus: string | null;
+  draftRevision: number | null;
+  publishedVersion: number | null;
+}): ServiceLifecycleState {
+  const isNativePublishedBridge = legacyStatus === 'published'
+    && KNOWN_NATIVE_PUBLISHED_FALLBACK_ACTIVITY_IDS.has(activityId);
+  if (isNativePublishedBridge && publishedVersion === null) return 'published_unversioned';
+  if (draftRevision !== null) return 'draft';
+  if (publishedVersion !== null) return 'published_versioned';
+  return 'unpublished';
+}
+
 function buildItem(
   activity: ActivityRecord,
   input: AssembleInput,
 ): ServiceListItem | null {
   const draftRevision = input.draftRevisionByActivity.get(activity.activityId) ?? null;
   const publishedVersion = input.versionByActivity.get(activity.activityId) ?? null;
-  const hasDraft = draftRevision !== null;
-  const hasPublished = publishedVersion !== null;
-  const hasKnownNativePublishedFallback =
-    activity.legacyStatus === 'published'
-    && KNOWN_NATIVE_PUBLISHED_FALLBACK_ACTIVITY_IDS.has(activity.activityId);
-
-  // 皆無 → 尚非服務項目，不列入清單。
-  if (!hasDraft && !hasPublished && !hasKnownNativePublishedFallback) return null;
-
-  // 兩者皆有時以 draft 優先顯示，並標記「有未發布變更」。
-  const status: ServiceDisplayStatus = hasDraft ? 'draft' : 'published';
-  const hasUnpublishedChanges = hasDraft && hasPublished;
+  const lifecycleState = resolveLifecycleState({
+    activityId: activity.activityId,
+    legacyStatus: activity.legacyStatus,
+    draftRevision,
+    publishedVersion,
+  });
+  if (lifecycleState === 'unpublished') return null;
+  const status: ServiceDisplayStatus = lifecycleState === 'draft' ? 'draft' : 'published';
+  const hasUnpublishedChanges = lifecycleState === 'draft' && publishedVersion !== null;
 
   const { minPrice, maxPrice } = priceRange(input.pricesByActivity.get(activity.activityId));
 
@@ -268,6 +279,7 @@ function buildItem(
     title: activity.title,
     slug: activity.slug,
     status,
+    lifecycleState,
     hasUnpublishedChanges,
     minPrice,
     maxPrice,
@@ -306,7 +318,6 @@ function assembleServiceList(input: AssembleInput): ServiceListResult {
 export async function resolveGuideServiceList(
   guideId: unknown,
   query: ServiceListQuery = {},
-  dependencies: ServiceListDependencies = {},
 ): Promise<ServiceListResult> {
   const normalizedGuideId = normalizeUuid(guideId);
   if (!normalizedGuideId) throw new InvalidServiceListQueryError('guideId must be a UUID');
@@ -316,11 +327,7 @@ export async function resolveGuideServiceList(
   const status = normalizeStatus(query.status);
 
   if (hasSupabaseEnv()) {
-    return resolveInSupabase(normalizedGuideId, { page, pageSize, status }, {
-      materializationEnabled: dependencies.materializationEnabled
-        ?? isMidaoLegacyDraftMaterializationEnabledForGuide(normalizedGuideId),
-      ensureLegacyDraftMaterialized: dependencies.ensureLegacyDraftMaterialized ?? ensureLegacyServiceDraftMaterialized,
-    });
+    return resolveInSupabase(normalizedGuideId, { page, pageSize, status });
   }
   return resolveInMemory(normalizedGuideId, { page, pageSize, status });
 }
@@ -360,7 +367,6 @@ function resolveInMemory(
 async function resolveInSupabase(
   guideId: string,
   { page, pageSize, status }: { page: number; pageSize: number; status: ServiceListStatusFilter },
-  dependencies: Required<ServiceListDependencies>,
 ): Promise<ServiceListResult> {
   const supabase = await getSupabase();
 
@@ -443,24 +449,6 @@ async function resolveInSupabase(
     versionByActivity.set(activityId, prior === undefined ? version : Math.max(prior, version));
   }
 
-  if (dependencies.materializationEnabled) {
-    for (const activity of activities) {
-      if (
-        activity.legacyStatus !== 'published'
-        || draftRevisionByActivity.has(activity.activityId)
-        || versionByActivity.has(activity.activityId)
-        || KNOWN_NATIVE_PUBLISHED_FALLBACK_ACTIVITY_IDS.has(activity.activityId)
-      ) continue;
-
-      const ensured = await dependencies.ensureLegacyDraftMaterialized(activity.activityId, guideId);
-      if (!ensured.ok) throw unexpected('Midao legacy draft materialization was rejected');
-      if (typeof ensured.revision !== 'number' || !Number.isInteger(ensured.revision) || ensured.revision < 1) {
-        throw unexpected('Midao legacy draft materialization returned an invalid revision');
-      }
-      draftRevisionByActivity.set(activity.activityId, ensured.revision);
-    }
-  }
-
   return assembleServiceList({
     activities,
     pricesByActivity,
@@ -480,4 +468,5 @@ export const __internal = {
   coercePrice,
   priceRange,
   assembleServiceList,
+  resolveLifecycleState,
 };

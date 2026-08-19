@@ -1,4 +1,5 @@
 export type ServiceStatus = 'draft' | 'published';
+export type ServiceLifecycleState = 'draft' | 'published_versioned' | 'published_unversioned' | 'unpublished';
 export type BookingType = 'scheduled' | 'request' | 'instant';
 export type QuestionType = 'single_choice' | 'multi_choice' | 'short_text' | 'long_text';
 
@@ -7,6 +8,7 @@ export interface ServiceListItem {
   title: string | null;
   slug: string | null;
   status: ServiceStatus;
+  lifecycleState: ServiceLifecycleState;
   hasUnpublishedChanges: boolean;
   minPrice: number | null;
   maxPrice: number | null;
