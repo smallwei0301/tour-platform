@@ -122,3 +122,9 @@
 - 擴充 route fake：三筆 native c-ID 分別測 owner ensure、每筆重複 ensure 收斂一筆 active draft、non-owner 404、invalid source 422 零 draft，以及 only-draft fake side-effect ledger；migration static contract 仍拒絕 forbidden canonical tables／publication version／outbox 寫入。
 - 更新可重用 Playwright spec 的 `lifecycleState` mock、card button role 與 draft/versioned 文案，新增 native published ensure 成功導頁與 422 留在列表的流程。host Chrome 已可由 `PW_EXECUTABLE_PATH=/usr/local/bin/google-chrome` 啟動，但本 worktree 無 runtime Supabase fixture，SSR `MidaoLayout` 在 mock guide session 下回 `MIDAO_RUNTIME_DB_UNAVAILABLE`，故 Playwright 仍為 `NOT_VERIFIED-local`，不得視為通過；未讀取或使用 production credentials。
 - Node 22 exact gate：`NODE_OPTIONS='--max-old-space-size=1024' npx --yes --package=node@22 bash .claude/hooks/run-checks.sh apps/web/tests/api/issue1825-native-draft-lifecycle.test.mjs apps/web/tests/api/midao-service-drafts.test.mjs apps/web/tests/api/midao-service-drafts-gateway.test.mjs apps/web/tests/api/midao-services-list.test.mjs apps/web/tests/api/midao-legacy-draft-materialization.test.mjs --typecheck` → 78/78 pass + `tsc --noEmit` pass（commit 後需同 SHA 重跑）。
+
+## 2026-08-19 — Rita 變更要求驗證續跑（t_3e193c7b）
+- 以 `tp_browser_smoke_guard.py --project tour-platform --json --write-log` 完成 local browser 前置檢查：host inotify 限制低於基線，回報 `POLLING_REQUIRED`，且未發現 stale Next／Playwright process。
+- Playwright spec 可由 `GUIDE_SESSION_SECRET` 的非機密 list-only 值載入並列出 7 項測試；包含 lifecycle mock／button role、`published_unversioned` ensure 成功導頁與 422 留在列表兩條新增流程。
+- `NOT_VERIFIED-local`：此 worker runtime 沒有 `SUPABASE_URL`、service-role、guide session 或 admin env；未讀取 `.env`／production credentials。未提供受控 DB fixture 時，無法安全啟動 SSR Midao guide layout 後執行互動瀏覽器測試；不可將 spec discovery 視為 browser pass。
+- 待以本次 review handoff 的 exact HEAD 重跑 Node 22 gate 後交 Rita 複審；production migration 仍未套用。
