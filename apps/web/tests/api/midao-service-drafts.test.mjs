@@ -23,6 +23,7 @@ import test from 'node:test';
 const GUIDE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OTHER_GUIDE_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const ACTIVITY_ID = '33333333-3333-4333-8333-333333333333';
+const NATIVE_ACTIVITY_ID = 'c0000003-0000-0000-0000-000000000001';
 const GUIDE_SESSION_SECRET = 'task26-api-test-guide-session-secret-0123456789';
 const SESSION_VERSION = 7;
 const FIXED_NOW = '2026-07-31T12:00:00.000Z';
@@ -37,10 +38,12 @@ const {
 
 let indexRoute = {};
 let detailRoute = {};
+let ensureRoute = {};
 let routeImportError = null;
 try {
   indexRoute = await import('../../app/api/v2/guide/service-drafts/route.ts');
   detailRoute = await import('../../app/api/v2/guide/service-drafts/[draftId]/route.ts');
+  ensureRoute = await import('../../app/api/v2/guide/service-drafts/ensure/route.ts');
 } catch (error) {
   routeImportError = error;
 }
@@ -71,6 +74,7 @@ function projectDraft(row) {
 // ownership／session 真正用到的鏈式呼叫。
 function createSupabaseFake({
   drafts = [],
+  activityId = ACTIVITY_ID,
   activityGuideId = GUIDE_ID,
   activityStatus = 'published',
   versions = [],
@@ -160,12 +164,12 @@ function createSupabaseFake({
           select() { return query; },
           eq(field, value) { if (field === 'id') query._id = value; return query; },
           async single() {
-            if (query._id !== ACTIVITY_ID) return { data: null, error: { message: 'not found' } };
-            return { data: { id: ACTIVITY_ID, guide_id: activityGuideId, status: activityStatus }, error: null };
+            if (query._id !== activityId) return { data: null, error: { message: 'not found' } };
+            return { data: { id: activityId, guide_id: activityGuideId, status: activityStatus }, error: null };
           },
           async maybeSingle() {
-            if (query._id !== ACTIVITY_ID) return { data: null, error: null };
-            return { data: { id: ACTIVITY_ID, guide_id: activityGuideId, status: activityStatus }, error: null };
+            if (query._id !== activityId) return { data: null, error: null };
+            return { data: { id: activityId, guide_id: activityGuideId, status: activityStatus }, error: null };
           },
         };
         return query;
@@ -234,6 +238,19 @@ function postRequest(body, { authenticated = true, csrf = 'csrf-value' } = {}) {
   });
 }
 
+function ensureRequest(activityId, { authenticated = true, csrf = 'csrf-value' } = {}) {
+  const headers = { 'content-type': 'application/json' };
+  if (authenticated) {
+    headers.cookie = csrf ? `${guideCookies()}; tp_csrf=${csrf}` : guideCookies();
+    if (csrf) headers['x-csrf-token'] = csrf;
+  }
+  return new Request('https://example.test/api/v2/guide/service-drafts/ensure', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ activityId }),
+  });
+}
+
 function deleteRequest(draftId, body, { authenticated = true, csrf = 'csrf-value' } = {}) {
   const headers = { 'content-type': 'application/json' };
   if (authenticated) {
@@ -256,6 +273,9 @@ function callGet(request) {
 }
 function callPost(request) {
   return indexRoute.POST(request);
+}
+function callEnsure(request) {
+  return ensureRoute.POST(request);
 }
 function callDelete(request, draftId) {
   return detailRoute.DELETE(request, { params: Promise.resolve({ draftId }) });
@@ -298,6 +318,50 @@ test('routes import cleanly and export their HTTP methods', () => {
   assert.equal(typeof indexRoute.GET, 'function');
   assert.equal(typeof indexRoute.POST, 'function');
   assert.equal(typeof detailRoute.DELETE, 'function');
+  assert.equal(typeof ensureRoute.POST, 'function');
+});
+
+test('POST ensure accepts an owned native c-ID, converges repeats, and only invokes the native ensure RPC', async () => {
+  const fake = createSupabaseFake({
+    activityId: NATIVE_ACTIVITY_ID,
+    materialize: (args) => ({
+      data: {
+        code: 'CREATED',
+        activityId: args.p_activity_id,
+        draftId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        revision: 1,
+      },
+      error: null,
+    }),
+  });
+  installEnv(fake);
+
+  const [first, second] = await Promise.all([
+    payload(await callEnsure(ensureRequest(NATIVE_ACTIVITY_ID))),
+    payload(await callEnsure(ensureRequest(NATIVE_ACTIVITY_ID))),
+  ]);
+
+  for (const result of [first, second]) {
+    assert.equal(result.status, 200);
+    assert.equal(result.body.data.draft.activityId, NATIVE_ACTIVITY_ID);
+    assert.equal(result.body.data.draft.revision, 1);
+    assert.equal(result.body.data.draft.materializationOrigin, 'native');
+  }
+  assert.equal(fake.state.drafts.filter((row) => row.activity_id === NATIVE_ACTIVITY_ID && row.status === 'active').length, 1);
+  assert.deepEqual(fake.calls.filter((call) => call.type === 'rpc').map((call) => call.name), [
+    'midao_ensure_native_service_draft',
+    'midao_ensure_native_service_draft',
+  ]);
+});
+
+test('POST ensure collapses non-owner native c-ID to 404 before draft RPC', async () => {
+  const fake = createSupabaseFake({ activityId: NATIVE_ACTIVITY_ID, activityGuideId: OTHER_GUIDE_ID });
+  installEnv(fake);
+  const result = await payload(await callEnsure(ensureRequest(NATIVE_ACTIVITY_ID)));
+  assert.equal(result.status, 404);
+  assert.equal(result.body.error.code, 'NOT_FOUND');
+  assert.deepEqual(fake.calls.filter((call) => call.type === 'rpc'), []);
+  assert.deepEqual(fake.state.drafts, []);
 });
 
 test('GET returns the active draft for the owning guide', async () => {
@@ -343,7 +407,7 @@ test('GET with no active draft returns draft:null', async () => {
   assert.equal(body.data.draft, null);
 });
 
-test('GET materializes an owned published activity and returns the materialized active draft', async () => {
+test('GET is read-only and does not materialize an owned published activity', async () => {
   const fake = createSupabaseFake({
     drafts: [],
     materialize: () => ({
@@ -362,13 +426,8 @@ test('GET materializes an owned published activity and returns the materialized 
   process.env.NODE_ENV = 'production';
   const { status, body } = await payload(await callGet(getRequest()));
   assert.equal(status, 200);
-  assert.equal(body.data.draft.revision, 1);
-  assert.equal(body.data.draft.payload.name, 'legacy materialized');
-  assert.deepEqual(fake.calls.filter((call) => call.type === 'rpc'), [{
-    type: 'rpc',
-    name: 'midao_materialize_legacy_service_draft',
-    args: { p_activity_id: ACTIVITY_ID, p_guide_id: GUIDE_ID },
-  }]);
+  assert.equal(body.data.draft, null);
+  assert.deepEqual(fake.calls.filter((call) => call.type === 'rpc'), []);
 });
 
 test('GET keeps draft:null and makes zero RPC calls for missing, malformed, or nonmatching production allowlists', async () => {
@@ -406,20 +465,16 @@ test('GET leaves an existing legacy-origin draft intact after the master gate is
   assert.deepEqual(fake.calls.filter((call) => call.type === 'rpc'), []);
 });
 
-test('GET materializes an owned published activity without a draft and returns explicit failure when the RPC rejects', async () => {
+test('GET does not call a rejecting materialization RPC when no draft exists', async () => {
   const fake = createSupabaseFake({ drafts: [] });
   installEnv(fake);
   process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_ENABLED = '1';
   process.env.MIDAO_LEGACY_DRAFT_MATERIALIZATION_GUIDE_ALLOWLIST = GUIDE_ID;
   process.env.NODE_ENV = 'production';
   const { status, body } = await payload(await callGet(getRequest()));
-  assert.equal(status, 500);
-  assert.equal(body.error.code, 'INTERNAL_ERROR');
-  assert.deepEqual(fake.calls.filter((call) => call.type === 'rpc'), [{
-    type: 'rpc',
-    name: 'midao_materialize_legacy_service_draft',
-    args: { p_activity_id: ACTIVITY_ID, p_guide_id: GUIDE_ID },
-  }]);
+  assert.equal(status, 200);
+  assert.equal(body.data.draft, null);
+  assert.deepEqual(fake.calls.filter((call) => call.type === 'rpc'), []);
 });
 
 test('GET missing auth returns 401', async () => {

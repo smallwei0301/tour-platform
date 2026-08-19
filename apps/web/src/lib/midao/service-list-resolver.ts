@@ -48,12 +48,14 @@ const STATUS_FILTERS: ReadonlySet<ServiceListStatusFilter> = new Set([
 ] as const);
 
 export type ServiceDisplayStatus = 'draft' | 'published';
+export type ServiceLifecycleState = 'draft' | 'published_versioned' | 'published_unversioned' | 'unpublished';
 
 export interface ServiceListItem {
   activityId: string;
   title: string | null;
   slug: string | null;
   status: ServiceDisplayStatus;
+  lifecycleState: ServiceLifecycleState;
   hasUnpublishedChanges: boolean;
   minPrice: number | null;
   maxPrice: number | null;
@@ -242,24 +244,40 @@ function priceRange(prices: number[] | undefined): { minPrice: number | null; ma
   return { minPrice: min, maxPrice: max };
 }
 
+function resolveLifecycleState({
+  activityId,
+  legacyStatus,
+  draftRevision,
+  publishedVersion,
+}: {
+  activityId: string;
+  legacyStatus: string | null;
+  draftRevision: number | null;
+  publishedVersion: number | null;
+}): ServiceLifecycleState {
+  const isNativePublishedBridge = legacyStatus === 'published'
+    && KNOWN_NATIVE_PUBLISHED_FALLBACK_ACTIVITY_IDS.has(activityId);
+  if (isNativePublishedBridge && publishedVersion === null) return 'published_unversioned';
+  if (draftRevision !== null) return 'draft';
+  if (publishedVersion !== null) return 'published_versioned';
+  return 'unpublished';
+}
+
 function buildItem(
   activity: ActivityRecord,
   input: AssembleInput,
 ): ServiceListItem | null {
   const draftRevision = input.draftRevisionByActivity.get(activity.activityId) ?? null;
   const publishedVersion = input.versionByActivity.get(activity.activityId) ?? null;
-  const hasDraft = draftRevision !== null;
-  const hasPublished = publishedVersion !== null;
-  const hasKnownNativePublishedFallback =
-    activity.legacyStatus === 'published'
-    && KNOWN_NATIVE_PUBLISHED_FALLBACK_ACTIVITY_IDS.has(activity.activityId);
-
-  // 皆無 → 尚非服務項目，不列入清單。
-  if (!hasDraft && !hasPublished && !hasKnownNativePublishedFallback) return null;
-
-  // 兩者皆有時以 draft 優先顯示，並標記「有未發布變更」。
-  const status: ServiceDisplayStatus = hasDraft ? 'draft' : 'published';
-  const hasUnpublishedChanges = hasDraft && hasPublished;
+  const lifecycleState = resolveLifecycleState({
+    activityId: activity.activityId,
+    legacyStatus: activity.legacyStatus,
+    draftRevision,
+    publishedVersion,
+  });
+  if (lifecycleState === 'unpublished') return null;
+  const status: ServiceDisplayStatus = lifecycleState === 'draft' ? 'draft' : 'published';
+  const hasUnpublishedChanges = lifecycleState === 'draft' && publishedVersion !== null;
 
   const { minPrice, maxPrice } = priceRange(input.pricesByActivity.get(activity.activityId));
 
@@ -268,6 +286,7 @@ function buildItem(
     title: activity.title,
     slug: activity.slug,
     status,
+    lifecycleState,
     hasUnpublishedChanges,
     minPrice,
     maxPrice,
@@ -480,4 +499,5 @@ export const __internal = {
   coercePrice,
   priceRange,
   assembleServiceList,
+  resolveLifecycleState,
 };

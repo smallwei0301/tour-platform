@@ -105,3 +105,14 @@
 ## 絕不重做（新增）
 - 不重新啟用／擴張 legacy materialization 作 native edit 修復：其 RPC 硬寫 `legacy_activity` origin，且 GET 寫入違反本次不變量。
 - 不將 `KNOWN_NATIVE_PUBLISHED_FALLBACK_ACTIVITY_IDS` 當 domain truth；它只在三筆已證實資料的 transition eligibility 使用，首次 versioned publish 後須另案退場。
+
+## 2026-08-19 — native lazy draft lifecycle 實作進度（t_3e193c7b）
+- 已完成 RED→GREEN 的 structural UUID/lifecycle core regression：native c-ID 與 v4 UUID 均只以結構格式接受；三筆 bridge activity 即使已有 native draft 仍解析為 `published_unversioned`。
+- 已新增 explicit ensure route/gateway 與 forward-only migration 初稿，GET service-drafts 已移除 legacy materialization RPC 呼叫；尚未完成全部 identity consumer、完整 ensure fake/concurrency/side-effect test 與 final gate，故不得視為完成或套用 migration。
+
+## 2026-08-19 — native lazy draft lifecycle 實作完成（t_3e193c7b）
+- identity chain 已收斂至 `normalizeStructuralUuid()`：index GET/POST、discard、publish command、draft gateway 與 publication gateway 均接受 structural c-ID，但每個 route 仍先完成 canonical session、CSRF/mutations（寫入）與 guide ownership gate；沒有放寬 legacy materializer、recovery 或 booking/payment 邊界。
+- 新增 explicit `POST /api/v2/guide/service-drafts/ensure` 與 `midao_ensure_native_service_draft` forward-only migration：函式鎖定 canonical activity、限三筆 published native bridge、只建立／重用 native active draft，並限制 execute 至 `service_role`；未套用 production migration。
+- GET 已改為純讀取（零 materialization RPC）；resolver/API 輸出 `lifecycleState`，ServiceCard 上下顯示皆由同一 state mapping 產生。native bridge 在已有 draft 但無 version 時仍為 `published_unversioned`。
+- TDD evidence：initial core regression 0/2 failed（helper/lifecycle 尚不存在）→ GREEN；新增 structural-consumer/migration static RED（2 failures）→ GREEN；Node 22 gate `NODE_OPTIONS='--max-old-space-size=1024' .claude/hooks/run-checks.sh apps/web/tests/api/issue1825-native-draft-lifecycle.test.mjs apps/web/tests/api/midao-service-drafts.test.mjs apps/web/tests/api/midao-service-drafts-gateway.test.mjs apps/web/tests/api/midao-services-list.test.mjs apps/web/tests/api/midao-legacy-draft-materialization.test.mjs --typecheck` 實測 76/76 pass + `tsc --noEmit` pass。
+- NOT_VERIFIED-live：沒有可安全使用且已認證對應三筆 c-ID 的 guide browser fixture；未宣稱 default「我的服務」browser path、editor autosave 或 production DB migration 已驗證。交 Rita 時需保留此限制。

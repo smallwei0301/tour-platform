@@ -28,8 +28,8 @@
 import { getSupabase, hasSupabaseEnv } from '../supabase-env.mjs';
 import { validateIntakeQuestion } from './questionnaire-schema.mjs';
 import { validateServiceForPublication } from './service-publication.ts';
+import { normalizeStructuralUuid } from './structural-uuid.mjs';
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const DRAFT_STATUSES = new Set(['active', 'discarded', 'published']);
 // 對外結構化結果碼；status 供呼叫端直接映射 HTTP 狀態。
 const CONFLICT = 'REVISION_CONFLICT';
@@ -93,10 +93,7 @@ function isPlainObject(value) {
 }
 
 function normalizeActivityId(value) {
-  if (typeof value !== 'string' || !UUID_PATTERN.test(value.trim())) {
-    return null;
-  }
-  return value.trim().toLowerCase();
+  return normalizeStructuralUuid(value);
 }
 
 // expectedRevision 語意：

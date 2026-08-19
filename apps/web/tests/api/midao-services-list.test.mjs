@@ -128,14 +128,17 @@ test('resolver: 顯示狀態 — draft / published / 兩者皆有以 draft 優�
   const byId = Object.fromEntries(result.items.map((i) => [i.activityId, i]));
 
   assert.equal(byId[ACTIVITY_A].status, 'draft');
+  assert.equal(byId[ACTIVITY_A].lifecycleState, 'draft');
   assert.equal(byId[ACTIVITY_A].hasUnpublishedChanges, false);
   assert.equal(byId[ACTIVITY_A].draftRevision, 2);
   assert.equal(byId[ACTIVITY_A].publishedVersion, null);
 
   assert.equal(byId[ACTIVITY_B].status, 'published');
+  assert.equal(byId[ACTIVITY_B].lifecycleState, 'published_versioned');
   assert.equal(byId[ACTIVITY_B].hasUnpublishedChanges, false);
 
   assert.equal(byId[ACTIVITY_C].status, 'draft', '兩者皆有時以 draft 優先顯示');
+  assert.equal(byId[ACTIVITY_C].lifecycleState, 'draft');
   assert.equal(byId[ACTIVITY_C].hasUnpublishedChanges, true);
   assert.equal(byId[ACTIVITY_C].draftRevision, 5);
   assert.equal(byId[ACTIVITY_C].publishedVersion, 1);
@@ -385,6 +388,7 @@ test('resolver parity: #1825 已知 native published activities 無 draft/versio
     const item = result.items.find((candidate) => candidate.activityId === activityId);
     assert.ok(item);
     assert.equal(item.status, 'published');
+    assert.equal(item.lifecycleState, 'published_unversioned');
     assert.equal(item.hasUnpublishedChanges, false);
     assert.equal(item.publishedVersion, null);
     assert.equal(item.minPrice, nativePrices[index][0]);
