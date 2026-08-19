@@ -315,6 +315,14 @@
       "applied_at": "2026-08-07T17:20:00+08:00",
       "status": "verified",
       "note": "Issue #1759 Task 38 atomic inquiry conversion RPC（PR #1797，commit f580d2007e8d044d93c73c9228823db4a743fb59）。三支 RPC＋midao_booking_capacity_locks mutex 表。第一輪 Canary 諮詢給出5項硬阻塞設計問題，Pandora逐項定案（t_75ef9b4a/t_441b0c65）；PLAN_DRIFT（t_7fc893de）修正案例H矛盾，M1/M2未動。Rita第一次審查（t_d8ec57d1）PASS。第二輪Canary（production-migration-apply-gate-v2）NO_GO，發現2缺陷：(1)plan存在性檢查順序錯誤致23503而非P0002；(2)案例J併發矩陣漏測2/5函式。窄範圍修復（t_8875505e→t_cc773218→Rita t_9e8a7db1 PASS，獨立第三容器重跑）修復兩缺陷。第三輪Canary（production-migration-apply-gate-v3）GO，逐項確認已解決。owner(smallwei0301) SQL-OVERRIDE授權套用。經direct pooler（aws-1-ap-northeast-1.pooler.supabase.com:5432）以5s lock_timeout/60s statement_timeout套用，全部成功。backup: Supabase專案標準每日備份+PITR（Management API token對此project回401，依循Task32既有慣例）。套用前preflight：mutex表與三支函式皆不存在。套用後直連catalog驗證：mutex表relrowsecurity=t/relforcerowsecurity=t；三支函式prosecdef=t、proconfig=search_path=pg_catalog；anon/authenticated零EXECUTE權限，service_role有權限。REST交叉確認：NEXT_PUBLIC_SUPABASE_ANON_KEY已失效（既有憑證過期，非本次引入，與#1121一致），改用service_role執行非破壞性smoke test（傳不存在id得22023驗證錯誤，套用後capacity_locks/idempotency_records/bookings三表0殘留）。套用後健康檢查：pg_locks零blocked、無長交易，既有三支相關函式簽章/prosecdef未受影響。rollback: 同名.rollback.sql（只revoke/drop三支函式，保留mutex表，不刪業務資料）。此migration上線時無應用程式呼叫端（builder RPC-only，前端串接為後續Task），dormant-but-verified視窗經第三輪Canary評估可接受（anon/authenticated零grant）。Refs #1759 #1795 #1796 PR#1797。"
+    },
+    {
+      "filename": "20260819002727_issue1825_native_service_draft_ensure.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301) 授權 + Ava 執行與驗證（Canary advisory session 20260819_182216_a6d139 核准）",
+      "applied_at": "2026-08-19T18:36:00+08:00",
+      "status": "verified",
+      "note": "經 psql 單一 transaction 套用（lock_timeout=5s, statement_timeout=60s, ON_ERROR_STOP=1）；backup: 套用前對 production 做完整 pg_dump（sha256=4daba77768e6e8e348e2375b73c6929f171df3b89e8f64cfcd43192a88ddbee5，未存入本 repo）＋隔離 Docker 容器還原比對表數/關鍵表列數一致；rollback: DROP FUNCTION public.midao_ensure_native_service_draft(uuid, uuid)（純新增函式，無其他物件依賴）；驗證: pg_proc.prosecdef=true, proconfig={search_path=pg_catalog}, 僅 service_role 具 EXECUTE，PostgREST 探測 404 PGRST202 已消失、改回正常業務回應；真人 Andy Lee 帳號登入點擊編輯已確認進入 /midao/services/<id>/edit 頁面（非失效頁）。詳見 GitHub Issue #1825 留言與 Kanban t_68b328c7。"
     }
   ]
 }
