@@ -91,3 +91,17 @@
 - TDD RED：新增 Supabase parity regression 後執行 `cd apps/web && node --test tests/api/midao-services-list.test.mjs`，14/15 pass；新 assertion 實際為 `total: 0 !== 3`。
 - GREEN：Node v22.23.2 執行 list 15/15、legacy materialization 7/7；正式 `NODE_OPTIONS='--max-old-space-size=1024' .claude/hooks/run-checks.sh apps/web/tests/api/midao-services-list.test.mjs apps/web/tests/api/midao-legacy-draft-materialization.test.mjs --typecheck` 為 22/22 pass + typecheck pass。
 - UI：`NOT_VERIFIED-live`；本 worktree 沒有可安全重用、已驗證對應三筆 native c-ID 的 guide browser fixture，不能以 resolver/API tests 宣稱預設「我的服務」UI 已實測。交 Rita review 時保留此 blocker。
+
+## 2026-08-19 — native lazy draft lifecycle + 發佈狀態統一規格（t_4212922d）
+- Owner 已授權修復導遊實測的兩個新症狀：c-ID 進 `/api/v2/guide/service-drafts` 在 ownership 查詢前被 RFC v1–v5 UUID gate 回 404；服務卡上方顯示「已發布」但下方因 `publishedVersion=null` 顯示「尚未發布」。本輪只讀規劃，未改產品碼或 production。
+- 已完成完整 service-draft identity inventory：strict UUID gate 不只 index route，detail discard、publish command、draft gateway 與 publication gateway 也會讓 c-ID 在後續存檔／正式重發佈失敗；規格把 structural helper 限定於這條 activity identity chain，保留 feature allowlist、legacy materializer、recovery、booking/payment 等獨立 strict policy。
+- 已決定 explicit `POST /api/v2/guide/service-drafts/ensure` + forward-only DB RPC：session/CSRF/mutations/ownership 後，在單一 transaction 建立或重用 native active draft；GET 保持純讀，禁止從頁面載入偷跑 legacy RPC。初始 payload 只讀 native canonical title/description，來源不合法即 422 且零 draft，不開空白 editor。
+- 已決定 resolver/API 輸出單一 `lifecycleState`（`draft`／`published_versioned`／`published_unversioned`／`unpublished`），ServiceCard 上下文案必須同源；三筆 c-ID 即使已有 native active draft，直到首次真正產生 version 前都保持 `published_unversioned`。不補寫 publication version。
+- 可執行規格：`docs/plans/2026-08-19-issue1825-native-draft-lifecycle.md`；包含 migration/RPC、精確檔案、RED→GREEN、local PostgreSQL/side-effect ledger、default UI path、rollback 與同卡 Rita final-review gate。
+
+## 下一步（更新）
+- `tp-builder-api` 依 native lazy draft lifecycle 規格先做 regression RED，再最小實作；builder 完成 exact commit/tests 後，在同一 builder card 請 Rita `kanban_request_review(reviewer="tp-reviewer")`。不得以本規劃完成宣稱 #1825 user symptom 已修復。
+
+## 絕不重做（新增）
+- 不重新啟用／擴張 legacy materialization 作 native edit 修復：其 RPC 硬寫 `legacy_activity` origin，且 GET 寫入違反本次不變量。
+- 不將 `KNOWN_NATIVE_PUBLISHED_FALLBACK_ACTIVITY_IDS` 當 domain truth；它只在三筆已證實資料的 transition eligibility 使用，首次 versioned publish 後須另案退場。
