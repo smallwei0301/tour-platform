@@ -19,8 +19,23 @@
 
 ### 1. 備份（backup）
 
+備份證據**依專案方案是否支援 PITR 分成兩條路徑**，擇一完成即視為滿足本步驟。
+
+#### 1-A. 若專案方案支援 PITR / 每日備份
+
 - 於 Supabase Dashboard 確認有可用的 PITR / 每日備份點，或對受影響資料表先行匯出快照。
 - 記下備份參考（例如「PITR 可回復至 2026-07-02 20:00 (UTC+8)」），寫進 record 的 `note` — **不得含 connection string、密碼、token**。
+
+#### 1-B. 若專案方案不支援 PITR（本專案 Supabase Free plan 現況）
+
+本專案 Supabase 專案永久維持 Free plan，**不支援 PITR / daily backup**，1-A 在現實中不可能達成。此時改採下列「人工可還原快照」作為補償控制，且四項證據**必須在套用前、同一連線、同一時點取得**：
+
+1. 受影響物件（函式／view／policy 等）的**完整定義全文**存檔，例如函式用 `pg_get_functiondef(oid)`。
+2. 受影響物件的**身分與權限屬性快照**：`oid`、`prosecdef`、`proconfig`、`proacl`、`proowner`、`oid::regprocedure::text`（非函式物件取對應等價欄位）。
+3. 上述存檔內容的 **SHA-256** 記入 Ops 卡 comment 與 ledger `note`；**全文本身不入 repo**，以 kanban 附件或工作區保存。
+4. `note` 內明確記載「本專案無 PITR，回復路徑＝對應 rollback SQL 逐字還原 ＋ roll-forward 優先」。
+
+> **適用範圍限制**：此替代路徑僅適用於**不含 DML、不含結構性 DDL** 的變更（例如純 `CREATE OR REPLACE FUNCTION`）。若變更含資料異動或結構性 DDL，且專案無 PITR，**必須先取得 Owner 對殘餘風險的個案書面同意**，不得逕行套用本替代路徑。
 
 ### 2. 套用（apply）
 
@@ -77,5 +92,5 @@
 
 ## Refs
 
-- #1293（本 SOP 與 gate）、#1286（drift 事件根因）、#1287（偵測層）、#1560（2026-07-02 drift 大清查＋baseline 依據）
+- #1293（本 SOP 與 gate）、#1286（drift 事件根因）、#1287（偵測層）、#1560（2026-07-02 drift 大清查＋baseline 依據）、#1855（Free plan 無 PITR 的替代 backup 分支）
 - 測試：`apps/web/tests/api/issue1293-migration-ledger-gate.test.mjs`
