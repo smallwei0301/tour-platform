@@ -1,3 +1,9 @@
+-- ⚠️ WARNING / 警語（#1855）：本檔還原至 pre-#1825 狀態，該狀態含 #1855 已修復的
+-- pg_catalog.nullif 缺陷（NULLIF 為 PostgreSQL 語法層級特殊形式，pg_catalog 內無同名
+-- 函式，一經呼叫必拋 `function pg_catalog.nullif(text, unknown) does not exist`）。
+-- 因此執行本回滾後，必須立即重跑 20260819210000_issue1855_pg_catalog_nullif_repair.sql，
+-- 否則 midao 原子函式會停留在必然失敗的狀態。
+--
 -- #1825 operator-only rollback companion.
 -- Never auto-run. Consider only after the application no longer calls the materializer,
 -- an operator-verified backup exists, and the owner explicitly authorizes this rollback.

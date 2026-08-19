@@ -323,6 +323,14 @@
       "applied_at": "2026-08-19T18:36:00+08:00",
       "status": "verified",
       "note": "經 psql 單一 transaction 套用（lock_timeout=5s, statement_timeout=60s, ON_ERROR_STOP=1）；backup: 套用前對 production 做完整 pg_dump（sha256=4daba77768e6e8e348e2375b73c6929f171df3b89e8f64cfcd43192a88ddbee5，未存入本 repo）＋隔離 Docker 容器還原比對表數/關鍵表列數一致；rollback: DROP FUNCTION public.midao_ensure_native_service_draft(uuid, uuid)（純新增函式，無其他物件依賴）；驗證: pg_proc.prosecdef=true, proconfig={search_path=pg_catalog}, 僅 service_role 具 EXECUTE，PostgREST 探測 404 PGRST202 已消失、改回正常業務回應；真人 Andy Lee 帳號登入點擊編輯已確認進入 /midao/services/<id>/edit 頁面（非失效頁）。詳見 GitHub Issue #1825 留言與 Kanban t_68b328c7。"
+    },
+    {
+      "filename": "20260819210000_issue1855_pg_catalog_nullif_repair.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301) 授權 + Canary 覆核核准 + Ava 執行與驗證（Kanban t_476113b5）",
+      "applied_at": "2026-08-19T21:05:00+08:00",
+      "status": "verified",
+      "note": "修復 3 支 midao atomic 函式誤用不存在的 pg_catalog.nullif 導致 100% 失敗（public.midao_publish_service_draft / midao_restore_service_publication / midao_replace_global_day_availability）。套用方式: psql 單一 transaction（--single-transaction, ON_ERROR_STOP=1, lock_timeout=5s, statement_timeout=60s）經 direct pooler session mode，輸出 SET/SET/CREATE FUNCTION x3，PSQL_EXIT=0。backup: 本專案 Supabase 為 Free plan，永不支援官方 PITR / daily backup，依 Canary 裁示改採等效補償控制——套用前於同一連線唯讀匯出 3 支函式完整 pg_get_functiondef 全文快照（sha256=c2372377e39414c445fe0af48ea5b2034282ef8e4d32e9eef959b83e6e8ef077，未存入本 repo）＋身分權限屬性快照 oid/prosecdef/proconfig/proacl/proowner（sha256=48808e74c4c023902db1863fed4983891f5d921d0c8fdc516fd48d08cf932eed）；因本次為純 CREATE OR REPLACE FUNCTION，不含 DML 亦不含結構性 DDL，函式定義全文快照即為完整可還原基準。rollback: 20260819210000_issue1855_pg_catalog_nullif_repair.rollback.sql 可逐字還原至修復前定義（惟還原後 3 函式回到全面失敗狀態，屬兩害相權，優先 roll-forward；執行需另行請示）。驗證: (1) 全 public schema 掃描 pg_get_functiondef ~* 'pg_catalog[.]nullif' 由套用前 3 rows 變為 0 rows；(2) 3 支函式 oid/prosecdef/proconfig/proacl/proowner 與套用前快照 diff 零差異（oid 26842/26847/27080 未變，SECURITY DEFINER 保持 true，search_path 與 ACL 未動）；(3) live 定義 bare NULLIF( 計數 7/3/8 皆 > 0；(4) 控制組 select pg_catalog.nullif(1,1) 仍回 42883 does not exist，證明探測有效；(5) node scripts/verify-migrations-applied.mjs → 0 missing tables / 0 missing columns（81 tables, 163 columns）；(6) midao_publish_service_draft 於 BEGIN…ROLLBACK 內以不存在的 draft id 呼叫，回傳 without_error（修復前必 500），零寫入；(7) NOTIFY pgrst reload schema 已送出。事前審查: Rita（tp-reviewer）獨立複驗 commit 689464a6，live vs repo 逐函式 ALL_MATCH（僅機械替換 pg_catalog.nullif( → NULLIF(），RED 6 FAIL / GREEN 8/8，migration source gate exit 0，Production BEGIN…ROLLBACK 唯讀預演 still_bad 0 rows 且零寫入。真人端到端發布驗證: PENDING_OWNER（交回木村哥以真實導遊帳號實測）。Refs #1855，Kanban t_f322bd76 / t_476113b5。"
     }
   ]
 }
