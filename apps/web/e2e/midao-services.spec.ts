@@ -132,6 +132,81 @@ test.describe('Midao services wizard', () => {
     await expect(page.getByRole('button', { name: '發布服務' })).toBeDisabled();
   });
 
+  test('#1859 既有多方案載入後保真：只改第一個方案名稱，存檔仍送出全部方案與價格', async ({ page }) => {
+    test.setTimeout(180_000);
+    const existingPlans = [
+      { slug: 'morning-tour', name: '日間小團', booking_type: 'scheduled', duration_minutes: 180, price_type: 'per_person', base_price: 1800, min_participants: 2, max_participants: 8 },
+      { slug: 'sunset-private', name: '黃昏包團', booking_type: 'request', duration_minutes: 240, price_type: 'per_group', base_price: 9600, min_participants: 1, max_participants: 6 },
+    ];
+    const savedPatches: Array<{ plans?: Array<Record<string, unknown>> }> = [];
+    await page.route('**/api/v2/guide/service-drafts**', async (route) => {
+      const request = route.request();
+      if (request.method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(draftResponse({ name: '山徑晨光', description: '既有說明', plans: existingPlans, questions: [] }, 3)),
+        });
+        return;
+      }
+      const body = request.postDataJSON() as { patch?: { plans?: Array<Record<string, unknown>> } };
+      savedPatches.push(body.patch ?? {});
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(draftResponse(body.patch ?? {}, 4)) });
+    });
+    await login(page);
+    await page.goto(`/midao/services/${activityId}/edit`, { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('service-plans-disclosure')).toContainText('此服務目前有 2 個方案');
+    await expect(page.getByTestId('service-plans-disclosure')).toContainText('未列在這個畫面上的方案會被下架');
+    await expect(page.getByLabel('方案 1 名稱')).toHaveValue('日間小團');
+    await expect(page.getByLabel('方案 1 價格（新台幣）')).toHaveValue('1800');
+    await expect(page.getByLabel('方案 2 名稱')).toHaveValue('黃昏包團');
+    await expect(page.getByLabel('方案 2 價格（新台幣）')).toHaveValue('9600');
+    await expect(page.getByLabel('方案 1 代碼')).toHaveAttribute('readonly', '');
+
+    await page.getByLabel('方案 1 名稱').fill('日間小團（限額）');
+    await expect(page.getByTestId('service-save-status')).toHaveText('已儲存');
+
+    expect(savedPatches.length).toBeGreaterThan(0);
+    const lastPlans = savedPatches[savedPatches.length - 1].plans ?? [];
+    expect(lastPlans).toHaveLength(2);
+    expect(lastPlans[0]).toMatchObject({ slug: 'morning-tour', name: '日間小團（限額）', base_price: 1800, duration_minutes: 180, price_type: 'per_person', min_participants: 2, max_participants: 8 });
+    expect(lastPlans[1]).toMatchObject({ slug: 'sunset-private', name: '黃昏包團', base_price: 9600, duration_minutes: 240, price_type: 'per_group', min_participants: 1, max_participants: 6 });
+  });
+
+  test('#1859 下架單一方案：確認文案後方案自畫面陣列移除，且不呼叫刪除 API', async ({ page }) => {
+    test.setTimeout(180_000);
+    const existingPlans = [
+      { slug: 'morning-tour', name: '日間小團', booking_type: 'scheduled', duration_minutes: 180, price_type: 'per_person', base_price: 1800, min_participants: 2, max_participants: 8 },
+      { slug: 'sunset-private', name: '黃昏包團', booking_type: 'request', duration_minutes: 240, price_type: 'per_group', base_price: 9600, min_participants: 1, max_participants: 6 },
+    ];
+    const savedPatches: Array<{ plans?: Array<Record<string, unknown>> }> = [];
+    await page.route('**/api/v2/guide/service-drafts**', async (route) => {
+      const request = route.request();
+      if (request.method() === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(draftResponse({ name: '山徑晨光', description: '既有說明', plans: existingPlans, questions: [] }, 3)) });
+        return;
+      }
+      const body = request.postDataJSON() as { patch?: { plans?: Array<Record<string, unknown>> } };
+      savedPatches.push(body.patch ?? {});
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(draftResponse(body.patch ?? {}, 4)) });
+    });
+    await login(page);
+    await page.goto(`/midao/services/${activityId}/edit`, { waitUntil: 'domcontentloaded' });
+
+    await page.getByRole('article', { name: '方案 2' }).getByRole('button', { name: '下架此方案' }).click();
+    const confirmAlert = page.getByRole('alert').filter({ hasText: '下架後旅人將無法選購此方案' });
+    await expect(confirmAlert).toContainText('既有訂單不受影響');
+    await expect(confirmAlert).toContainText('發布後生效');
+    await confirmAlert.getByRole('button', { name: '確定下架此方案' }).click();
+
+    await expect(page.getByTestId('service-plans-disclosure')).toContainText('此服務目前有 1 個方案');
+    await expect(page.getByTestId('service-save-status')).toHaveText('已儲存');
+    const lastPlans = savedPatches[savedPatches.length - 1].plans ?? [];
+    expect(lastPlans).toHaveLength(1);
+    expect(lastPlans[0]).toMatchObject({ slug: 'morning-tour', base_price: 1800 });
+  });
+
   test('新增服務 → auto-save → 問卷 → 預覽 → 發布成功', async ({ page }, testInfo) => {
     test.setTimeout(180_000);
     await installWizardRoutes(page);
@@ -141,7 +216,7 @@ test.describe('Midao services wizard', () => {
     await expect(page.getByRole('heading', { name: '新增服務' })).toBeVisible();
     await page.getByLabel('服務名稱').fill('山徑晨光體驗');
     await page.getByLabel('服務說明').fill('由熟悉山徑的在地引路人帶你慢慢走。');
-    await page.getByLabel('第一個方案名稱').fill('晨光小團');
+    await page.getByLabel('方案 1 名稱').fill('晨光小團');
     await expect(page.getByTestId('service-save-status')).toHaveText('已儲存');
 
     await page.getByRole('button', { name: '下一步：設定問卷' }).click();

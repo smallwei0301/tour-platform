@@ -1,6 +1,7 @@
 import styles from './services.module.css';
 import { QuestionPreview } from './QuestionPreview';
 import type { PublicationPreview, ServiceDraftPayload } from './service-types';
+import { BOOKING_TYPE_LABELS } from './service-types';
 
 interface ServicePreviewStepProps {
   form: ServiceDraftPayload;
@@ -51,7 +52,13 @@ export function ServicePreviewStep({ form, publicationPreview }: ServicePreviewS
           <p className={styles.previewDescription}>{form.description || '尚未填寫服務說明。'}</p>
           <div>
             <h4 className="midao-heading">方案</h4>
-            {form.plans.length > 0 ? form.plans.map((plan, index) => <p className={styles.hint} key={`${plan.name}-${index}`}>{plan.name || `方案 ${index + 1}`} · {plan.booking_type}</p>) : <p className={styles.hint}>尚未設定方案</p>}
+            {form.plans.length > 0 ? form.plans.map((plan, index) => (
+              <div className={styles.hint} key={`${plan.slug ?? 'new-plan'}-${index}`}>
+                <strong>{plan.name || `方案 ${index + 1}`}</strong> · {BOOKING_TYPE_LABELS[plan.booking_type] ?? plan.booking_type}
+                <br />
+                {plan.price_type === 'per_group' ? '整團' : '每人'} NT$ {plan.base_price.toLocaleString('zh-TW')} · {plan.duration_minutes} 分鐘 · {plan.min_participants}–{plan.max_participants} 人
+              </div>
+            )) : <p className={styles.hint}>尚未設定方案</p>}
           </div>
           <div>
             <h4 className="midao-heading">自訂問卷</h4>
