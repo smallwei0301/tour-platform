@@ -48,6 +48,7 @@ const exactMigrations = [
   ['20260814130100_issue1760_atomic_day_availability.sql', '2f495fef2ace0e7200857fc0894b1c69003e8d8156fd7efa0ffea5aad02e5327'],
   ['20260819002727_issue1825_native_service_draft_ensure.sql', '60d28474f023d6fa6dccb87cde8af27b068ce42fb99a432e6d2ce3406983e15c'],
   ['20260819210000_issue1855_pg_catalog_nullif_repair.sql', 'e098674c2ce4bff9342a3ef4de032988ac6910b067ae549fe4dc16ba3cb0ffc3'],
+  ['20260820120000_issue1859_native_draft_prefill.sql', '3fe39b2e9964262cc4fa809cf3b1af90be596e032595c7ed1170e58cf4df8b85'],
 ];
 const historyVersions = ['00000000000001', ...exactMigrations.map(([name]) => name.slice(0, 14))];
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
