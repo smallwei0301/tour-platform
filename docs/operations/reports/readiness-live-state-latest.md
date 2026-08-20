@@ -1,20 +1,19 @@
-<!-- query_timestamp: 2026-08-19T05:09:02.567Z -->
+<!-- query_timestamp: 2026-08-20T05:09:56.172Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-19T05:09:02.567Z  
-**Commit SHA:** `e0a1803badb87a115e66db43394710f0f43eeaf8`
+**Query timestamp:** 2026-08-20T05:09:56.172Z  
+**Commit SHA:** `9025ac79a21eeee3c03b102ed6dba864b2792a94`
 
 ---
 
-## Open PRs (12)
+## Open PRs (11)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1852 | [fix(midao): #1825 native draft lazy ensure + unified lifecycle state](https://github.com/smallwei0301/tour-platform/pull/1852) | `issue1825-native-draft-lifecycle-8cd0663a` |
 | #1776 | [feat(shop): 完成導遊商店匯款 beta 文案與 SOP（#1607）](https://github.com/smallwei0301/tour-platform/pull/1776) _(draft)_ | `fix/issue-1607-guide-shop-beta` |
 | #1763 | [feat: midao2 導遊接案後台（接案 CRM）＋公開接案頁 /g/[slug]](https://github.com/smallwei0301/tour-platform/pull/1763) | `claude/superpowers-midao-backend-x90czx` |
 | #1690 | [docs(security): 建立「已接受安全風險」定案清單](https://github.com/smallwei0301/tour-platform/pull/1690) | `claude/code-workflow-architecture-mmm4ba` |
@@ -27,7 +26,7 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (64 total)
+## Open Issues (66 total)
 
 ### P0 (1)
 
@@ -102,10 +101,12 @@
 |---|-------|--------|
 | #1647 | [[Payments] Decide and verify post-#1637 historical paid-order / payout reconciliation](https://github.com/smallwei0301/tour-platform/issues/1647) | triaged, priority:P1, owner:human-decision, status:needs-decision, type:decision, payments, orders |
 
-### Other (11)
+### Other (13)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1859 | [[Midao Backend] 服務發布 RPC 全量替換方案語意，會靜默下架未包含在草稿內的既有方案](https://github.com/smallwei0301/tour-platform/issues/1859) | — |
+| #1857 | [#1825 回滾 precondition 指紋已對今天的 Production 失效（#1855 修復後）](https://github.com/smallwei0301/tour-platform/issues/1857) | — |
 | #1851 | [[Midao] 「我的服務」需區分「已發布到 Midao 前台」與「僅商店頁展示」兩種狀態](https://github.com/smallwei0301/tour-platform/issues/1851) | — |
 | #1819 | [[Docs] 建立正式測試分層規範（unit / integration real-HTTP / mock E2E / real-data E2E + CI enforcement）](https://github.com/smallwei0301/tour-platform/issues/1819) | — |
 | #1796 | [fn_expire_unpaid_order_atomic 有 42702 ambiguous column 缺陷（OUT 參數 booking_id 遮蔽表欄位）](https://github.com/smallwei0301/tour-platform/issues/1796) | bug |
@@ -124,16 +125,16 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1858 | [docs(ops): #1855 migration SOP 第 1 步補 Free-plan（無 PITR）替代 backup 分支](https://github.com/smallwei0301/tour-platform/pull/1858) | 2026-08-19 |
+| #1856 | [fix(db): #1855 修復 midao 原子函式誤用 pg_catalog.nullif（production 已套用 + ledger）](https://github.com/smallwei0301/tour-platform/pull/1856) | 2026-08-19 |
+| #1854 | [chore(ops): #1825 補 migration-ledger production record 並更新 gate 測試期望值](https://github.com/smallwei0301/tour-platform/pull/1854) | 2026-08-19 |
+| #1852 | [fix(midao): #1825 native draft lazy ensure + unified lifecycle state](https://github.com/smallwei0301/tour-platform/pull/1852) | 2026-08-19 |
 | #1850 | [fix(midao): #1825 native published fallback in guide service list](https://github.com/smallwei0301/tour-platform/pull/1850) | 2026-08-18 |
 | #1849 | [fix(admin): #1825 accept structural UUIDs in plan routes](https://github.com/smallwei0301/tour-platform/pull/1849) | 2026-08-18 |
 | #1846 | [feat(midao): #1825 啟用 legacy draft materialization（master flag + guide allowlist）](https://github.com/smallwei0301/tour-platform/pull/1846) | 2026-08-17 |
 | #1843 | [docs(ledger): record #1825 legacy Midao draft materialization verified apply](https://github.com/smallwei0301/tour-platform/pull/1843) | 2026-08-17 |
 | #1840 | [feat(availability): wire traveler dynamic canonical selector](https://github.com/smallwei0301/tour-platform/pull/1840) | 2026-08-16 |
 | #1839 | [[#1825] rollback 伴隨檔 exact-source static guard checkpoint](https://github.com/smallwei0301/tour-platform/pull/1839) | 2026-08-15 |
-| #1838 | [feat(availability): #1760 P5 slice 2a — resolver policy/day-override seam (dormant)](https://github.com/smallwei0301/tour-platform/pull/1838) | 2026-08-14 |
-| #1836 | [feat(availability): #1760 P5 first slice — dormant scope/policy schema + atomic day CAS](https://github.com/smallwei0301/tour-platform/pull/1836) | 2026-08-14 |
-| #1835 | [feat(midao): #1827 connect me capability center safely](https://github.com/smallwei0301/tour-platform/pull/1835) | 2026-08-14 |
-| #1833 | [feat(midao): #1825 legacy service draft migration (S1-S3)](https://github.com/smallwei0301/tour-platform/pull/1833) | 2026-08-13 |
 
 ---
 
