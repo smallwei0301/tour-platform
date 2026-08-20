@@ -23,7 +23,7 @@ export async function ensureNativeServiceDraft(activityId, guideId) {
   const code = response?.data?.code;
   if (code === 'ACTIVITY_NOT_FOUND_OR_OWNERSHIP_MISMATCH') return { ok: false, code: 'NOT_FOUND', status: 404, draft: null };
   if (code === 'NATIVE_DRAFT_SOURCE_INVALID') return { ok: false, code, status: 422, draft: null };
-  if (code !== 'CREATED' && code !== 'REUSED') throw unexpected('Midao native service draft ensure RPC returned an unrecognized code');
+  if (code !== 'CREATED' && code !== 'REUSED' && code !== 'REUSED_REPAIRED') throw unexpected('Midao native service draft ensure RPC returned an unrecognized code');
   const result = await getServiceDraft(normalizedActivityId);
   if (!result.ok || !result.draft) throw unexpected('Midao native service draft ensure did not return an active draft');
   return { ok: true, code, status: 200, draft: result.draft };
