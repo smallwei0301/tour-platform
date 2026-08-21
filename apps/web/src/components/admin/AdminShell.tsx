@@ -26,6 +26,7 @@ const NAV_ITEMS = [
   { href: '/admin/soft-launch', label: '軟啟動控制', icon: '🎛️' },
   { href: '/admin/notifications', label: '通知設定', icon: '🔔' },
   { href: '/admin/settings/kpi', label: '設定', icon: '⚙️' },
+  { href: '/admin/midao-requests', label: 'midao2 需求單', icon: '📨' },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

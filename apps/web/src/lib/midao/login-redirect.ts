@@ -3,7 +3,12 @@ type GuideRealm = 'guide' | 'midao';
 
 function realmOf(pathname: string): GuideRealm | null {
   if (pathname === '/guide' || pathname.startsWith('/guide/')) return 'guide';
-  if (pathname === '/midao' || pathname.startsWith('/midao/')) return 'midao';
+  if (
+    pathname === '/midao' ||
+    pathname.startsWith('/midao/') ||
+    pathname === '/midao2' ||
+    pathname.startsWith('/midao2/')
+  ) return 'midao';
   return null;
 }
 
