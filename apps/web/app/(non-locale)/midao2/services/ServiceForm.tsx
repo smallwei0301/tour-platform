@@ -13,6 +13,93 @@ export type DealMode = 'instant_booking' | 'confirm_first' | 'line_inquiry';
 export type QuestionType = 'text' | 'yes_no' | 'single_choice' | 'multi_choice';
 export type ServiceQuestion = { id?: string; label: string; type: QuestionType; options: string[]; required: boolean };
 
+// ── 多方案（#1860 Stage 1B）───────────────────────────────
+// canonical `activity_plans` 的 UI 投影。方案的新增／編輯／下架一律走單方案 API，
+// 不經 ServiceValues、不經服務層 PATCH（避免全量替換造成未觸碰方案被靜默下架）。
+export type PlanBookingType = 'scheduled' | 'request' | 'instant';
+export type PlanPriceType = 'per_person' | 'per_group';
+export type PlanStatus = 'active' | 'inactive';
+
+export type ServicePlan = {
+  id: string;
+  slug: string | null;
+  name: string;
+  bookingType: PlanBookingType;
+  durationMinutes: number;
+  priceType: PlanPriceType;
+  basePrice: number;
+  minParticipants: number;
+  maxParticipants: number;
+  status: PlanStatus;
+  updatedAt?: string | null;
+};
+
+// 送往單方案 API 的可編輯欄位（不含 id／slug／status／歸屬）。
+export type ServicePlanDraft = {
+  name: string;
+  bookingType: PlanBookingType;
+  durationMinutes: number;
+  priceType: PlanPriceType;
+  basePrice: number;
+  minParticipants: number;
+  maxParticipants: number;
+};
+
+const PLAN_BOOKING_TYPES: { key: PlanBookingType; label: string }[] = [
+  { key: 'request', label: '先確認再成立' },
+  { key: 'instant', label: '可直接預約' },
+  { key: 'scheduled', label: '固定梯次' },
+];
+const PLAN_PRICE_TYPES: { key: PlanPriceType; label: string }[] = [
+  { key: 'per_person', label: '每人計價' },
+  { key: 'per_group', label: '每團計價' },
+];
+const PLAN_PRICE_TYPE_LABEL: Record<string, string> = {
+  per_person: '每人計價',
+  per_group: '每團計價',
+};
+const PLAN_BOOKING_TYPE_LABEL: Record<string, string> = {
+  request: '先確認再成立',
+  instant: '可直接預約',
+  scheduled: '固定梯次',
+};
+
+// 服務層儲存前的固定提示（驗收要求逐字一致）。
+export const PLAN_SAVE_NOTICE = '儲存後會立即更新前台';
+// 單方案下架的必要警示（驗收要求逐字一致）。
+export const PLAN_DEACTIVATE_WARNING = '只下架這一個方案，其他方案不受影響，已成立的訂單與歷史紀錄不受影響';
+
+const EMPTY_PLAN_DRAFT: ServicePlanDraft = {
+  name: '',
+  bookingType: 'request',
+  durationMinutes: 180,
+  priceType: 'per_person',
+  basePrice: 0,
+  minParticipants: 1,
+  maxParticipants: 6,
+};
+
+function planToDraft(plan: ServicePlan): ServicePlanDraft {
+  return {
+    name: plan.name ?? '',
+    bookingType: plan.bookingType ?? 'request',
+    durationMinutes: Number(plan.durationMinutes ?? 0),
+    priceType: plan.priceType ?? 'per_person',
+    basePrice: Number(plan.basePrice ?? 0),
+    minParticipants: Number(plan.minParticipants ?? 1),
+    maxParticipants: Number(plan.maxParticipants ?? 1),
+  };
+}
+
+function validatePlanDraft(draft: ServicePlanDraft): string | null {
+  if (!draft.name.trim()) return '請填寫方案名稱';
+  if (!Number.isFinite(draft.durationMinutes) || draft.durationMinutes <= 0) return '請填寫方案時長（分鐘）';
+  if (!Number.isFinite(draft.basePrice) || draft.basePrice < 0) return '請填寫方案價格';
+  if (!Number.isFinite(draft.minParticipants) || draft.minParticipants < 1) return '最少人數需至少 1 人';
+  if (!Number.isFinite(draft.maxParticipants) || draft.maxParticipants < draft.minParticipants) return '最多人數需大於或等於最少人數';
+  return null;
+}
+
 export type ServiceValues = {
   title: string;
   tagline: string;
@@ -77,11 +164,24 @@ export default function ServiceForm({
   onSubmit,
   submitting,
   mode,
+  plans,
+  plansLoading,
+  plansError,
+  onPlanCreate,
+  onPlanUpdate,
+  onPlanDeactivate,
 }: {
   initial?: ServiceFormInitial;
   onSubmit: (values: ServiceValues, publish: boolean | null, coverFile?: File | null) => void;
   submitting?: boolean;
   mode: 'create' | 'edit';
+  // 方案清單由父層獨立載入；ServiceValues 永遠不攜帶 plans。
+  plans?: ServicePlan[];
+  plansLoading?: boolean;
+  plansError?: string | null;
+  onPlanCreate?: (draft: ServicePlanDraft) => Promise<void>;
+  onPlanUpdate?: (plan: ServicePlan, draft: ServicePlanDraft) => Promise<void>;
+  onPlanDeactivate?: (plan: ServicePlan) => Promise<void>;
 }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [form, setForm] = useState<ServiceValues>(() => initValues(initial));
@@ -91,6 +191,15 @@ export default function ServiceForm({
   const [coverPreview, setCoverPreview] = useState<string | null>(initial?.coverImageUrl ?? null);
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverError, setCoverError] = useState<string | null>(null);
+  // 方案編輯狀態：'new' 代表新增表單，其餘為 planId。
+  const [planEditingId, setPlanEditingId] = useState<string | null>(null);
+  const [planDraft, setPlanDraft] = useState<ServicePlanDraft>(EMPTY_PLAN_DRAFT);
+  const [planFormError, setPlanFormError] = useState<string | null>(null);
+  const [planBusy, setPlanBusy] = useState(false);
+  const [planActionError, setPlanActionError] = useState<string | null>(null);
+  const [deactivateTarget, setDeactivateTarget] = useState<ServicePlan | null>(null);
+
+  const planList = plans ?? [];
 
   function set<K extends keyof ServiceValues>(key: K, value: ServiceValues[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -165,6 +274,270 @@ export default function ServiceForm({
 
   function removeQuestion(idx: number) {
     set('questions', form.questions.filter((_, i) => i !== idx));
+  }
+
+  // ── 方案管理（單方案命令；不經 onSubmit、不經服務層 PATCH）──────────
+  function openPlanCreate() {
+    setPlanActionError(null);
+    setPlanFormError(null);
+    setPlanDraft({ ...EMPTY_PLAN_DRAFT });
+    setPlanEditingId('new');
+  }
+
+  function openPlanEdit(plan: ServicePlan) {
+    setPlanActionError(null);
+    setPlanFormError(null);
+    setPlanDraft(planToDraft(plan));
+    setPlanEditingId(plan.id);
+  }
+
+  function closePlanForm() {
+    setPlanEditingId(null);
+    setPlanFormError(null);
+  }
+
+  function setPlanField<K extends keyof ServicePlanDraft>(key: K, value: ServicePlanDraft[K]) {
+    setPlanDraft((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function submitPlanForm() {
+    if (planBusy) return;
+    const invalid = validatePlanDraft(planDraft);
+    if (invalid) { setPlanFormError(invalid); return; }
+    setPlanFormError(null);
+    setPlanActionError(null);
+    setPlanBusy(true);
+    try {
+      if (planEditingId === 'new') {
+        if (!onPlanCreate) return;
+        await onPlanCreate({ ...planDraft, name: planDraft.name.trim() });
+      } else {
+        const target = planList.find((p) => p.id === planEditingId);
+        if (!target || !onPlanUpdate) return;
+        // 僅送這一個方案，其他方案不進 payload。
+        await onPlanUpdate(target, { ...planDraft, name: planDraft.name.trim() });
+      }
+      setPlanEditingId(null);
+    } catch (err: any) {
+      setPlanFormError(err?.message || '方案儲存失敗');
+    } finally {
+      setPlanBusy(false);
+    }
+  }
+
+  async function confirmDeactivate() {
+    if (!deactivateTarget || planBusy || !onPlanDeactivate) return;
+    setPlanBusy(true);
+    setPlanActionError(null);
+    try {
+      await onPlanDeactivate(deactivateTarget);
+      setDeactivateTarget(null);
+    } catch (err: any) {
+      setPlanActionError(err?.message || '下架失敗');
+    } finally {
+      setPlanBusy(false);
+    }
+  }
+
+  function renderPlanForm() {
+    return (
+      <div
+        data-testid="midao2-plan-form"
+        style={{ border: `1px solid ${C.ACCENT}`, borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}
+      >
+        <div style={{ fontSize: 14, fontWeight: 700 }}>{planEditingId === 'new' ? '新增方案' : '編輯方案'}</div>
+        <Field label="方案名稱">
+          <input
+            value={planDraft.name}
+            onChange={(e) => setPlanField('name', e.target.value)}
+            data-testid="midao2-plan-field-name"
+            style={inputStyle}
+          />
+        </Field>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <Field label="時長（分鐘）">
+            <input
+              type="number" min={1} value={planDraft.durationMinutes}
+              onChange={(e) => setPlanField('durationMinutes', Number(e.target.value))}
+              data-testid="midao2-plan-field-duration"
+              style={inputStyle}
+            />
+          </Field>
+          <Field label="價格（NT$）">
+            <input
+              type="number" min={0} value={planDraft.basePrice}
+              onChange={(e) => setPlanField('basePrice', Number(e.target.value))}
+              data-testid="midao2-plan-field-price"
+              style={inputStyle}
+            />
+          </Field>
+        </div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <Field label="最少人數">
+            <input
+              type="number" min={1} value={planDraft.minParticipants}
+              onChange={(e) => setPlanField('minParticipants', Number(e.target.value))}
+              data-testid="midao2-plan-field-min"
+              style={inputStyle}
+            />
+          </Field>
+          <Field label="最多人數">
+            <input
+              type="number" min={1} value={planDraft.maxParticipants}
+              onChange={(e) => setPlanField('maxParticipants', Number(e.target.value))}
+              data-testid="midao2-plan-field-max"
+              style={inputStyle}
+            />
+          </Field>
+        </div>
+        <Field label="計價方式">
+          <select
+            value={planDraft.priceType}
+            onChange={(e) => setPlanField('priceType', e.target.value as PlanPriceType)}
+            data-testid="midao2-plan-field-price-type"
+            style={selectStyle}
+          >
+            {PLAN_PRICE_TYPES.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+          </select>
+        </Field>
+        <Field label="預約方式">
+          <select
+            value={planDraft.bookingType}
+            onChange={(e) => setPlanField('bookingType', e.target.value as PlanBookingType)}
+            data-testid="midao2-plan-field-booking-type"
+            style={selectStyle}
+          >
+            {PLAN_BOOKING_TYPES.map((b) => <option key={b.key} value={b.key}>{b.label}</option>)}
+          </select>
+        </Field>
+        {planFormError && <div data-testid="midao2-plan-form-error" style={{ color: C.RED, fontSize: 13 }}>{planFormError}</div>}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Btn kind="primary" disabled={planBusy} onClick={submitPlanForm} data-testid="midao2-plan-save">
+            {planBusy ? '儲存中…' : '儲存方案'}
+          </Btn>
+          <Btn kind="secondary" disabled={planBusy} onClick={closePlanForm} data-testid="midao2-plan-cancel">取消</Btn>
+        </div>
+      </div>
+    );
+  }
+
+  function renderPlanSection() {
+    return (
+      <div
+        data-testid="midao2-plan-section"
+        style={{ border: `1px solid ${C.BORDER}`, borderRadius: 16, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>方案管理</div>
+            <div style={{ fontSize: 12, color: C.MUTED }}>每個方案獨立儲存；調整一個方案不會影響其他方案。</div>
+          </div>
+          <Btn
+            kind="secondary"
+            onClick={openPlanCreate}
+            disabled={planBusy || planEditingId === 'new'}
+            data-testid="midao2-plan-add"
+            style={{ width: 'auto', height: 36, borderRadius: 999, fontSize: 13, padding: '0 14px' }}
+          >
+            ＋ 新增方案
+          </Btn>
+        </div>
+
+        {plansError && <div data-testid="midao2-plan-error" style={{ color: C.RED, fontSize: 13 }}>{plansError}</div>}
+        {planActionError && <div data-testid="midao2-plan-action-error" style={{ color: C.RED, fontSize: 13 }}>{planActionError}</div>}
+
+        {plansLoading ? (
+          <div data-testid="midao2-plan-loading" style={{ fontSize: 13, color: C.MUTED }}>方案載入中…</div>
+        ) : (
+          <div data-testid="midao2-plan-list" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {planList.length === 0 ? (
+              <div data-testid="midao2-plan-empty" style={{ fontSize: 13, color: C.MUTED }}>尚未建立方案</div>
+            ) : (
+              planList.map((plan) => {
+                const inactive = plan.status === 'inactive';
+                return (
+                  <div
+                    key={plan.id}
+                    data-testid={`midao2-plan-row-${plan.id}`}
+                    data-plan-status={plan.status}
+                    style={{
+                      border: `1px solid ${C.BORDER}`, borderRadius: 12, padding: 12,
+                      background: inactive ? C.BG : C.CARD,
+                      display: 'flex', flexDirection: 'column', gap: 6,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span data-testid={`midao2-plan-name-${plan.id}`} style={{ fontSize: 15, fontWeight: 700, color: inactive ? C.MUTED : C.TEXT }}>
+                        {plan.name}
+                      </span>
+                      {inactive && (
+                        <span
+                          data-testid={`midao2-plan-inactive-${plan.id}`}
+                          style={{ fontSize: 12, fontWeight: 700, color: C.MUTED, background: C.BORDER, borderRadius: 999, padding: '2px 10px' }}
+                        >
+                          已下架
+                        </span>
+                      )}
+                    </div>
+                    <div data-testid={`midao2-plan-meta-${plan.id}`} style={{ fontSize: 13, color: C.MUTED }}>
+                      {hoursLabel(plan.durationMinutes || 0)} ・ {plan.minParticipants}-{plan.maxParticipants} 人 ・{' '}
+                      {PLAN_PRICE_TYPE_LABEL[plan.priceType] || plan.priceType} ・ {PLAN_BOOKING_TYPE_LABEL[plan.bookingType] || plan.bookingType}
+                    </div>
+                    <div data-testid={`midao2-plan-price-${plan.id}`} style={{ fontSize: 16, fontWeight: 700, color: C.GREEN }}>
+                      NT${Number(plan.basePrice || 0).toLocaleString()}
+                    </div>
+                    <div data-testid={`midao2-plan-slug-${plan.id}`} style={{ fontSize: 12, color: C.MUTED }}>{plan.slug || '—'}</div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <Btn
+                        kind="secondary" disabled={planBusy} onClick={() => openPlanEdit(plan)}
+                        data-testid={`midao2-plan-edit-${plan.id}`}
+                        style={{ width: 'auto', height: 34, borderRadius: 999, fontSize: 13, padding: '0 14px', flex: '1 1 100px', minWidth: 0 }}
+                      >
+                        編輯
+                      </Btn>
+                      {!inactive && (
+                        <Btn
+                          kind="ghost" disabled={planBusy}
+                          onClick={() => { setPlanActionError(null); setDeactivateTarget(plan); }}
+                          data-testid={`midao2-plan-deactivate-${plan.id}`}
+                          style={{ width: 'auto', height: 34, borderRadius: 999, fontSize: 13, padding: '0 14px', color: C.RED, flex: '1 1 100px', minWidth: 0 }}
+                        >
+                          下架
+                        </Btn>
+                      )}
+                    </div>
+                    {planEditingId === plan.id && renderPlanForm()}
+                  </div>
+                );
+              })
+            )}
+            {planEditingId === 'new' && renderPlanForm()}
+          </div>
+        )}
+
+        {deactivateTarget && (
+          <div
+            role="dialog"
+            aria-label="下架方案確認"
+            data-testid="midao2-plan-deactivate-dialog"
+            style={{ border: `1px solid ${C.RED}`, borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 10, background: C.ORANGE_SOFT }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 700 }}>要下架「{deactivateTarget.name}」嗎？</div>
+            <div data-testid="midao2-plan-deactivate-warning" style={{ fontSize: 13, color: C.TEXT }}>
+              {PLAN_DEACTIVATE_WARNING}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Btn kind="primary" disabled={planBusy} onClick={confirmDeactivate} data-testid="midao2-plan-deactivate-confirm">
+                {planBusy ? '處理中…' : '確認下架這一個方案'}
+              </Btn>
+              <Btn kind="secondary" disabled={planBusy} onClick={() => setDeactivateTarget(null)} data-testid="midao2-plan-deactivate-cancel">
+                取消
+              </Btn>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   }
 
   const stepMeta = [
@@ -290,6 +663,7 @@ export default function ServiceForm({
             </div>
           </Field>
           {step1Error && <div style={{ color: C.RED, fontSize: 13 }}>{step1Error}</div>}
+          {mode === 'edit' && renderPlanSection()}
           <Btn kind="primary" onClick={goStep2} data-testid="midao2-form-next1">下一步：設定需求問題</Btn>
         </div>
       )}
@@ -356,6 +730,9 @@ export default function ServiceForm({
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             <Btn kind="secondary" onClick={() => setStep(2)}>上一步</Btn>
+          </div>
+          <div data-testid="midao2-form-save-notice" style={{ fontSize: 13, color: C.ORANGE, background: C.ORANGE_SOFT, borderRadius: 8, padding: '8px 12px' }}>
+            {PLAN_SAVE_NOTICE}
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             {mode === 'edit' ? (

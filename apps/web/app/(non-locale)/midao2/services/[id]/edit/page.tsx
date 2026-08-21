@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { C, Card, Btn, Spinner, ErrorState, apiGet, apiSend, Icon } from '../../../ui';
 import { csrfHeaders } from '../../../../../../src/lib/csrf-client';
-import ServiceForm, { type ServiceValues } from '../../ServiceForm';
+import ServiceForm, { type ServiceValues, type ServicePlan, type ServicePlanDraft } from '../../ServiceForm';
 
 type MidaoService = ServiceValues & {
   activityId: string;
@@ -30,6 +30,73 @@ export default function Midao2EditServicePage() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewSent, setReviewSent] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  // 方案清單獨立載入／獨立刷新；絕不併入服務層 PATCH payload。
+  const [plans, setPlans] = useState<ServicePlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError] = useState<string | null>(null);
+
+  const plansPath = `/api/v2/guide/midao/services/${activityId}/plans`;
+
+  function normalizePlan(raw: any): ServicePlan {
+    return {
+      id: String(raw?.id ?? raw?.planId ?? ''),
+      slug: raw?.slug ?? null,
+      name: String(raw?.name ?? ''),
+      bookingType: (raw?.bookingType ?? 'request') as ServicePlan['bookingType'],
+      durationMinutes: Number(raw?.durationMinutes ?? 0),
+      priceType: (raw?.priceType ?? 'per_person') as ServicePlan['priceType'],
+      basePrice: Number(raw?.basePrice ?? 0),
+      minParticipants: Number(raw?.minParticipants ?? 1),
+      maxParticipants: Number(raw?.maxParticipants ?? 1),
+      status: (raw?.status === 'inactive' ? 'inactive' : 'active') as ServicePlan['status'],
+      updatedAt: raw?.updatedAt ?? null,
+    };
+  }
+
+  // 只重抓方案清單，不重送服務 PATCH。
+  async function reloadPlans() {
+    setPlansError(null);
+    try {
+      const data = await apiGet(plansPath);
+      setPlans((Array.isArray(data?.plans) ? data.plans : []).map(normalizePlan));
+    } catch (err: any) {
+      setPlansError(err?.message || '方案載入失敗');
+    }
+  }
+
+  function draftToPayload(draft: ServicePlanDraft) {
+    return {
+      name: draft.name,
+      bookingType: draft.bookingType,
+      durationMinutes: draft.durationMinutes,
+      priceType: draft.priceType,
+      basePrice: draft.basePrice,
+      minParticipants: draft.minParticipants,
+      maxParticipants: draft.maxParticipants,
+    };
+  }
+
+  // 每個 callback 只打一支單方案 API，成功後只刷新方案清單。
+  async function handlePlanCreate(draft: ServicePlanDraft) {
+    await apiSend(plansPath, 'POST', draftToPayload(draft));
+    await reloadPlans();
+  }
+
+  async function handlePlanUpdate(plan: ServicePlan, draft: ServicePlanDraft) {
+    await apiSend(`${plansPath}/${plan.id}`, 'PATCH', {
+      ...draftToPayload(draft),
+      expectedUpdatedAt: plan.updatedAt ?? null,
+    });
+    await reloadPlans();
+  }
+
+  async function handlePlanDeactivate(plan: ServicePlan) {
+    await apiSend(`${plansPath}/${plan.id}`, 'PATCH', {
+      deactivate: true,
+      expectedUpdatedAt: plan.updatedAt ?? null,
+    });
+    await reloadPlans();
+  }
 
   function load() {
     setLoading(true);
@@ -46,6 +113,8 @@ export default function Midao2EditServicePage() {
 
   useEffect(() => {
     load();
+    setPlansLoading(true);
+    reloadPlans().finally(() => setPlansLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activityId]);
 
@@ -146,7 +215,18 @@ export default function Midao2EditServicePage() {
       {reviewError && <div style={{ color: C.RED, fontSize: 13 }}>{reviewError}</div>}
 
       {formError && <div style={{ color: C.RED, fontSize: 13 }}>{formError}</div>}
-      <ServiceForm mode="edit" initial={service} submitting={submitting} onSubmit={handleSubmit} />
+      <ServiceForm
+        mode="edit"
+        initial={service}
+        submitting={submitting}
+        onSubmit={handleSubmit}
+        plans={plans}
+        plansLoading={plansLoading}
+        plansError={plansError}
+        onPlanCreate={handlePlanCreate}
+        onPlanUpdate={handlePlanUpdate}
+        onPlanDeactivate={handlePlanDeactivate}
+      />
     </div>
   );
 }

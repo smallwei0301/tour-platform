@@ -20,6 +20,8 @@ type MidaoService = {
   priceFromTwd?: number | null;
   dealMode: 'instant_booking' | 'confirm_first' | 'line_inquiry';
   questions: unknown[];
+  // 多方案投影（#1860 Stage 1B）：列表僅需型別存在，顯示行為不變。
+  plans?: unknown[];
   showcasePublished: boolean;
   mainSiteStatus: string;
   midaoSortOrder: number | null;
