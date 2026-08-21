@@ -233,8 +233,55 @@ node --test \
 
 合計 88 tests / 88 passed / 0 failed。
 
-typecheck：`npx tsc -p apps/web/tsconfig.json --noEmit`，本次變更的 5 個實作檔（`midao-calendar-canonical.ts`、`db-midao-canonical-availability.mjs`、public availability route、defaults route、`WeeklyDefaultsModal.tsx`）零錯誤。
+typecheck（round 2 原記載為「零錯誤」，經 Rita round 2 指出並由本輪實測更正）：本機 `npx tsc` 會解析到非 TypeScript 的同名 decoy 套件，且全專案 `tsc -p apps/web/tsconfig.json --noEmit` 因 node_modules 缺 `react`／`@types/node` 等依賴而產生 15080 筆 pre-existing 錯誤，無法作為本卡證據。改以本機真實編譯器隔離單檔量測（`apps/web/node_modules/.bin/tsc --noEmit --ignoreConfig --allowJs --checkJs --strict`）：commit `c98e94b8` 於 `db-midao-canonical-availability.mjs` 淨新增 `TS7006` 2 筆（`guideId`、`month`，皆位於 L148），即 Rita 的 R-4；round 3 修正後同一量測為 0 筆。原「零錯誤」宣稱不成立，特此更正。
 
 ### Round 2 scope
 
 本輪僅改動 8 檔，全在 Owner APPROVE_A 修正後允許清單內：5 個實作檔與 3 個既有 Stage 2 測試檔。未新增檔案、未改 lockfile、migration、harness、middleware、security-env、orders/payments、resolver、slot-generator；無 push、PR、merge、deploy；NOT_VERIFIED-local 條目（Playwright、traveler-dynamic-selector-parity）狀態不變，原因仍為本機缺 `next-intl`。
+
+## Stage 2 Round 3（Rita round 2 判決 R-4 修正）
+
+### 修正項目
+
+R-4（唯一阻擋）：`apps/web/src/lib/midao/db-midao-canonical-availability.mjs` L144-146 於 round 2 改寫 JSDoc 時，移除了 `guideId`／`month` 的型別註記，並把 options 寫成順序顛倒的非法形式 `@param options {{...}}`，回退了同 branch commit `0a99129d` 已修好的 typecheck。
+
+修法（僅還原三行註解，零邏輯變更，R-1 的中文根因說明段落完整保留）：
+
+```
+ * @param {string} guideId
+ * @param {string} month 'YYYY-MM'
+ * @param {{ timezone?: string, policy?: 'inherit'|'restrict'|'closed' }} [options]
+```
+
+### typecheck 實測（更正 round 2 的不實宣稱）
+
+本機兩項環境限制使「全域 typecheck 綠燈」無法作為證據，據實記錄：
+
+1. `npx tsc` 解析到非 TypeScript 的同名 decoy 套件（輸出 `This is not the tsc command you are looking for`），round 2 據此得出的結論無效。
+2. 真實編譯器 `apps/web/node_modules/.bin/tsc -p apps/web/tsconfig.json --noEmit` 產生 `15080` 筆錯誤，主因為 node_modules 缺 `react`、`@types/node`、`next-intl` 等依賴（pre-existing 環境缺件，卡片禁止安裝依賴／改 lockfile），與本次 diff 無交集。
+
+因此採用 Rita 的隔離單檔量測法，同一編譯器、同一 flags、只餵此檔：
+
+```
+apps/web/node_modules/.bin/tsc --noEmit --ignoreConfig --allowJs --checkJs --strict \
+  --target ES2022 --module esnext --moduleResolution bundler --skipLibCheck \
+  src/lib/midao/db-midao-canonical-availability.mjs
+```
+
+| 版本 | 該檔 TS7006 |
+|---|---|
+| base `e1511a1b` | 0 |
+| head `c98e94b8`（round 2） | 2 — L148 `guideId`、L148 `month` |
+| round 3 修正後 | 0 |
+
+R-4 完全重現且已修復；淨新增 0 筆。備註：量測必須帶 `--ignoreConfig`，否則 tsc 只回 `TS5112` 而不做任何檢查（此即先前誤判為 0 的原因）。
+
+### 測試
+
+焦點 6 檔：`62` tests、`62` passed、`0` failed。
+回歸 4 檔（`issue1760-availability-scope-day-cas`、`issue1760-effective-availability-policy-resolver`、`midao2-pages-contract`、`tests/unit/midao2-migration-contract`）：`26` tests、`26` passed、`0` failed。
+合計 88 tests / 88 passed / 0 failed。
+
+### Round 3 scope
+
+僅改動 2 檔：`db-midao-canonical-availability.mjs`（三行 JSDoc）與本 worklog。無邏輯、契約、API 或測試行為變更。無 push、PR、merge、deploy、migration 套用、Production 操作。NOT_VERIFIED-local 條目（Playwright、traveler-dynamic-selector-parity）狀態不變，原因仍為本機缺 `next-intl`。

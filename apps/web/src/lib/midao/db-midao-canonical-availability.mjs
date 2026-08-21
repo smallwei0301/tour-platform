@@ -141,9 +141,9 @@ async function loadCanonicalMonthSources(guideId, month) {
  * 導致「導遊已關閉的日子」在讀取面 fail-open 退回週期規則。
  * 正解：逐日以該日 revision 自身的 timezone 建 selector（無日修訂時才用預設時區）。
  *
- * @param guideId
- * @param month 'YYYY-MM'
- * @param options {{ timezone?: string, policy?: 'inherit'|'restrict'|'closed' }}
+ * @param {string} guideId
+ * @param {string} month 'YYYY-MM'
+ * @param {{ timezone?: string, policy?: 'inherit'|'restrict'|'closed' }} [options]
  */
 export async function getCanonicalMonthCalendarDb(guideId, month, options = {}) {
   const fallbackTimezone = options.timezone || MIDAO_DEFAULT_TIMEZONE;
