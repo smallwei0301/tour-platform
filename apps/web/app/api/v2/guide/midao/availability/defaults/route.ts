@@ -44,7 +44,8 @@ export async function GET(request: Request) {
       const sameWeekday = days.filter((day: { date: string }) => weekdayOf(day.date) === weekday);
       const allTrue = (period: 'morning' | 'afternoon' | 'evening') =>
         sameWeekday.length > 0 &&
-        sameWeekday.every((day: { availability: Record<string, boolean> }) => day.availability[period] === true);
+        sameWeekday.every((day: { availability: Record<'morning' | 'afternoon' | 'evening', boolean> }) =>
+          day.availability[period] === true);
       return {
         weekday,
         morning: allTrue('morning'),

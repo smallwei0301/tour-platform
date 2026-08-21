@@ -37,6 +37,7 @@ export class MidaoCanonicalAvailabilityError extends Error {
 }
 
 /** RPC code → HTTP status／對外錯誤碼（RPC 自帶 status，這裡只做嚴格白名單）。 */
+/** @type {Record<string, number>} */
 const RPC_ERROR_STATUS = {
   REVISION_CONFLICT: 409,
   IDEMPOTENCY_KEY_REUSED: 409,
@@ -47,6 +48,7 @@ const RPC_ERROR_STATUS = {
   GUIDE_NOT_FOUND: 404,
 };
 
+/** @type {Record<string, string>} */
 const RPC_ERROR_MESSAGE = {
   REVISION_CONFLICT: '此日期已被其他更新覆蓋，請重新載入後再試',
   IDEMPOTENCY_KEY_REUSED: '相同請求識別碼已用於不同內容',
@@ -74,10 +76,12 @@ export function __resetMemCanonicalAvailability() {
   _memIdempotency.clear();
 }
 
-/** 測試用：直接種入 canonical 規則／日修訂。 */
-export function __seedMemCanonicalAvailability({ rules = [], dayRevisions = [] } = {}) {
-  _memRules.push(...rules);
-  _memDayRevisions.push(...dayRevisions);
+/** 測試用：直接種入 canonical 規則／日修訂。
+ * @param {{ rules?: any[], dayRevisions?: any[] }} [seed]
+ */
+export function __seedMemCanonicalAvailability(seed = {}) {
+  _memRules.push(...(seed.rules ?? []));
+  _memDayRevisions.push(...(seed.dayRevisions ?? []));
 }
 
 /* ------------------------------------------------------------------ *
@@ -174,8 +178,13 @@ export async function getCanonicalDayDb(guideId, date, options = {}) {
  * 寫：單日 CAS（唯一寫入路徑）
  * ------------------------------------------------------------------ */
 
-/** 記憶體 fallback 下模擬 RPC 語意（僅供無 Supabase env 的測試環境）。 */
-function replaceDayInMemory({ guideId, date, timezone, expectedRevision, ranges, idempotencyKey, requestHash }) {
+/** 記憶體 fallback 下模擬 RPC 語意（僅供無 Supabase env 的測試環境）。
+ * @param {{ guideId:string, date:string, timezone:string, expectedRevision:number,
+ *  ranges:Array<{startTimeLocal:string,endTimeLocal:string}>,
+ *  idempotencyKey:string, requestHash:string }} command
+ */
+function replaceDayInMemory(command) {
+  const { guideId, date, timezone, expectedRevision, ranges, idempotencyKey, requestHash } = command;
   const idemKey = `${guideId}:${date}:${idempotencyKey}`;
   const existing = _memIdempotency.get(idemKey);
   if (existing) {
@@ -257,6 +266,7 @@ export async function replaceCanonicalDayAvailabilityDb(command) {
     if (!status) {
       throw new MidaoCanonicalAvailabilityError('AVAILABILITY_WRITE_FAILED', '可用時段更新失敗', 500);
     }
+    /** @type {Record<string, unknown>} */
     const details = {};
     if (result?.currentRevision !== undefined) details.currentRevision = Number(result.currentRevision);
     if (result?.timezone !== undefined) details.timezone = result.timezone;
