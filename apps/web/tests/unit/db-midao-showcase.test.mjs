@@ -158,3 +158,68 @@ test('serviceShape：無方案時 priceFromTwd fallback priceTwd', async () => {
   assert.equal(items[0].planOptions.length, 0);
   assert.equal(items[0].priceFromTwd, items[0].priceTwd);
 });
+
+test('#1860 F4：serviceShape.plans 含 inactive 方案與完整八欄，planOptions／priceFromTwd 語意不變', async () => {
+  const norm = normalizeServiceInput(serviceInput());
+  const created = await createMidaoServiceDb(G, norm.value, { publish: true });
+  __seedMemMidaoPlans([
+    { id: 'plan-1', activity_id: created.activityId, name: '半日方案', base_price: 4800,
+      price_type: 'per_group', duration_minutes: 240, status: 'active', slug: 'half-day',
+      min_participants: 2, max_participants: 6, booking_type: 'request' },
+    { id: 'plan-2', activity_id: created.activityId, name: '全日方案', base_price: 3200,
+      price_type: 'per_group', duration_minutes: 480, status: 'active', slug: 'full-day',
+      min_participants: 1, max_participants: 8, booking_type: 'scheduled' },
+    { id: 'plan-3', activity_id: created.activityId, name: '已下架方案', base_price: 100,
+      price_type: 'per_person', duration_minutes: 60, status: 'inactive', slug: 'inactive-one',
+      min_participants: 1, max_participants: 2, booking_type: 'request' },
+    { id: 'plan-4', activity_id: created.activityId, name: '封存方案', base_price: 1,
+      price_type: 'per_person', duration_minutes: 60, status: 'archived', slug: 'archived-one',
+      min_participants: 1, max_participants: 2, booking_type: 'request' },
+  ]);
+  const items = await listMidaoServicesDb(G);
+  const svc = items[0];
+
+  // 既有語意完全不變：只有 active 方案進 planOptions／最低價
+  assert.equal(svc.planOptions.length, 2);
+  assert.equal(svc.priceFromTwd, 3200);
+
+  // 新的完整 plans 欄位：含 inactive、排除 archived
+  assert.ok(Array.isArray(svc.plans));
+  assert.deepEqual(svc.plans.map((p) => p.planId).sort(), ['plan-1', 'plan-2', 'plan-3']);
+  const inactive = svc.plans.find((p) => p.planId === 'plan-3');
+  assert.equal(inactive.status, 'inactive');
+  const first = svc.plans.find((p) => p.planId === 'plan-1');
+  assert.equal(first.slug, 'half-day');
+  assert.equal(first.minParticipants, 2);
+  assert.equal(first.maxParticipants, 6);
+  assert.equal(first.bookingType, 'request');
+  assert.equal(first.durationMinutes, 240);
+  assert.equal(first.priceType, 'per_group');
+  assert.equal(first.basePrice, 4800);
+});
+
+test('#1860 F4：服務 PATCH 未動方案時仍回傳非空 plans，且所有方案狀態不變', async () => {
+  const norm = normalizeServiceInput(serviceInput());
+  const created = await createMidaoServiceDb(G, norm.value, { publish: true });
+  __seedMemMidaoPlans([
+    { id: 'plan-1', activity_id: created.activityId, name: 'A', base_price: 4800,
+      price_type: 'per_group', duration_minutes: 240, status: 'active', slug: 'a',
+      min_participants: 2, max_participants: 6, booking_type: 'request' },
+    { id: 'plan-2', activity_id: created.activityId, name: 'B', base_price: 3200,
+      price_type: 'per_group', duration_minutes: 480, status: 'inactive', slug: 'b',
+      min_participants: 1, max_participants: 8, booking_type: 'scheduled' },
+  ]);
+  const updated = await updateMidaoServiceDb(G, created.activityId, { tagline: '換句話說' });
+  assert.equal(updated.ok, true);
+  assert.equal(updated.service.plans.length, 2);
+  assert.equal(updated.service.plans.find((p) => p.planId === 'plan-1').status, 'active');
+  assert.equal(updated.service.plans.find((p) => p.planId === 'plan-2').status, 'inactive');
+  assert.equal(updated.service.planOptions.length, 1); // 只有 active
+});
+
+test('#1860 F4：normalizeServiceInput 不得接受 plans 欄位（方案不走服務 PATCH）', () => {
+  const r = normalizeServiceInput({ plans: [{ id: 'x', base_price: 1 }] }, true);
+  assert.equal(r.ok, true);
+  assert.equal(r.value.plans, undefined);
+  assert.equal(r.value.activity_plans, undefined);
+});

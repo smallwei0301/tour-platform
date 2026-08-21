@@ -34,12 +34,22 @@ export function isShowcaseVisible({ midaoStatus, status }) {
 
 /** @param {any} a @param {any[]} [plans] */
 function serviceShape(a, plans = []) {
-  const activePlans = plans
-    .filter((p) => p.activity_id === a.id)
-    .filter((p) => !p.status || p.status === 'active');
+  const activityPlans = plans.filter((p) => p.activity_id === a.id);
+  const activePlans = activityPlans.filter((p) => !p.status || p.status === 'active');
   const planOptions = activePlans.map((p) => ({
     planId: p.id, name: p.name, basePrice: p.base_price,
     priceType: p.price_type, durationMinutes: p.duration_minutes ?? null,
+  }));
+  // #1860 F4：完整方案清單（含 inactive；archived 已在 fetch 層排除）供 /midao2 直接編輯，
+  // 與 planOptions／priceFromTwd 的 active-only／最低價語意完全分離，不得互相影響。
+  const allPlans = activityPlans.map((p) => ({
+    planId: p.id, name: p.name, basePrice: p.base_price,
+    priceType: p.price_type, durationMinutes: p.duration_minutes ?? null,
+    slug: p.slug ?? null,
+    minParticipants: p.min_participants ?? null,
+    maxParticipants: p.max_participants ?? null,
+    bookingType: p.booking_type ?? null,
+    status: p.status ?? 'active',
   }));
   const positivePrices = activePlans
     .map((p) => Number(p.base_price))
@@ -51,7 +61,7 @@ function serviceShape(a, plans = []) {
     minParticipants: a.min_participants ?? 1, maxParticipants: a.max_participants ?? 10,
     region: a.region ?? null, languages: Array.isArray(a.languages) ? a.languages : [],
     priceTwd: a.price_twd ?? 0,
-    planOptions, priceFromTwd,
+    planOptions, priceFromTwd, plans: allPlans,
     dealMode: a.midao_deal_mode ?? 'confirm_first',
     questions: Array.isArray(a.midao_questions) ? a.midao_questions : [],
     showcasePublished: isShowcaseVisible({ midaoStatus: a.midao_status ?? null, status: a.status }),
@@ -70,7 +80,7 @@ async function fetchPlansByActivityIds(ids) {
   }
   const supabase = await getSupabase();
   const { data } = await supabase.from('activity_plans')
-    .select('id, activity_id, name, base_price, price_type, duration_minutes, status')
+    .select('id, activity_id, name, base_price, price_type, duration_minutes, status, slug, min_participants, max_participants, booking_type')
     .in('activity_id', ids).neq('status', 'archived');
   return Array.isArray(data) ? data : [];
 }
@@ -216,7 +226,9 @@ export async function updateMidaoServiceDb(guideId, activityId, patch) {
     const nextMax = norm.value.max_participants ?? row.max_participants ?? 10;
     if (nextMax < nextMin) return { ok: false, code: 'INVALID_PARTICIPANTS', message: '適合人數範圍不正確' };
     Object.assign(row, norm.value);
-    return { ok: true, service: serviceShape(row) };
+    // #1860 F4：服務 PATCH 不碰方案，但回傳 shape 必須帶既有方案，避免前台誤判為零方案。
+    const plans = await fetchPlansByActivityIds([row.id]);
+    return { ok: true, service: serviceShape(row, plans) };
   }
   const supabase = await getSupabase();
   // 單欄 patch 不得造成 min>max：先讀既有列合併檢查
@@ -231,7 +243,8 @@ export async function updateMidaoServiceDb(guideId, activityId, patch) {
     .eq('id', activityId).eq('guide_id', guideId).select(ACT_COLS).maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return { ok: false, code: 'NOT_FOUND', message: '服務不存在' };
-  return { ok: true, service: serviceShape(data) };
+  const plans = await fetchPlansByActivityIds([data.id]);
+  return { ok: true, service: serviceShape(data, plans) };
 }
 
 /**
