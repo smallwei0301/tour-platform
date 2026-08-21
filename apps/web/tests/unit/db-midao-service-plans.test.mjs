@@ -225,6 +225,64 @@ test('updateServicePlanDb：越權或不存在皆為 NOT_FOUND 404（不洩漏�
   }), notFound);
 });
 
+test('updateServicePlanDb：單欄 patch 不得造成 min>max（只送 max）= 422 且資料不變', async () => {
+  seedActivity();
+  seedPlan({ id: 'plan-a', min_participants: 5, max_participants: 8 });
+
+  await assert.rejects(
+    () => updateServicePlanDb({
+      guideId: GUIDE_ID,
+      activityId: ACTIVITY_ID,
+      planId: 'plan-a',
+      input: { max_participants: 1 },
+      expectedUpdatedAt: T0,
+    }),
+    (err) => err.code === 'INVALID_PLAN_INPUT' && err.status === 422,
+  );
+
+  const row = __listMidaoServicePlanRowsForTest().find((r) => r.id === 'plan-a');
+  assert.equal(row.min_participants, 5);
+  assert.equal(row.max_participants, 8);
+  assert.equal(row.updated_at, T0); // 未寫入
+});
+
+test('updateServicePlanDb：單欄 patch 不得造成 min>max（只送 min）= 422 且資料不變', async () => {
+  seedActivity();
+  seedPlan({ id: 'plan-a', min_participants: 2, max_participants: 4 });
+
+  await assert.rejects(
+    () => updateServicePlanDb({
+      guideId: GUIDE_ID,
+      activityId: ACTIVITY_ID,
+      planId: 'plan-a',
+      input: { min_participants: 9 },
+      expectedUpdatedAt: T0,
+    }),
+    (err) => err.code === 'INVALID_PLAN_INPUT' && err.status === 422,
+  );
+
+  const row = __listMidaoServicePlanRowsForTest().find((r) => r.id === 'plan-a');
+  assert.equal(row.min_participants, 2);
+  assert.equal(row.max_participants, 4);
+  assert.equal(row.updated_at, T0);
+});
+
+test('updateServicePlanDb：單欄 patch 合併後合法時仍可正常寫入', async () => {
+  seedActivity();
+  seedPlan({ id: 'plan-a', min_participants: 2, max_participants: 4 });
+
+  const result = await updateServicePlanDb({
+    guideId: GUIDE_ID,
+    activityId: ACTIVITY_ID,
+    planId: 'plan-a',
+    input: { max_participants: 2 },
+    expectedUpdatedAt: T0,
+  });
+  assert.equal(result.plan.maxParticipants, 2);
+  assert.equal(result.plan.minParticipants, 2);
+  assert.deepEqual(result.changedFields, ['max_participants']);
+});
+
 test('deactivateServicePlanDb：只寫 status=inactive，不 DELETE 也不 archived', async () => {
   seedActivity();
   seedPlan({ id: 'plan-a' });

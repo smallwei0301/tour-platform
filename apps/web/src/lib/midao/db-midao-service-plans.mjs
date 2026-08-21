@@ -336,6 +336,17 @@ export async function updateServicePlanDb({ guideId, activityId, planId, input, 
   const existing = await readPlanRow(activityId, planId);
   if (!existing) throw notFound();
 
+  // 單欄 patch 不得造成 min>max：以既有列合併後再做跨欄檢查（與 updateMidaoServiceDb 同語意）。
+  // 少了這段，只送 min 或只送 max 時 normalizePlanInput(partial) 的跨欄檢查永遠不成立：
+  // in-memory 會直接寫入非法區間並「立即生效」，Supabase 則撞 CHECK 約束冒泡成 500 而非 422。
+  if (norm.value.min_participants !== undefined || norm.value.max_participants !== undefined) {
+    const nextMin = norm.value.min_participants ?? existing.min_participants ?? 1;
+    const nextMax = norm.value.max_participants ?? existing.max_participants ?? 10;
+    if (nextMax < nextMin) {
+      throw planError('INVALID_PLAN_INPUT', '人數區間不合法（最多需 ≥ 最少）', 422);
+    }
+  }
+
   const before = pickEditablePlanSnapshot(existing, Object.keys(norm.value));
   const changedFields = Object.keys(norm.value)
     .filter((key) => existing[key] !== norm.value[key])

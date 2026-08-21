@@ -115,3 +115,70 @@ admin 審核 UI；`activity_id` 整批 UPDATE；`db.mjs`／orders／payments／`
 
 交由 `tp-reviewer`（Rita）做 manifest-bound fresh review；
 binding 為 `sha256-manifest`（`foundation-manifest.json`），`commit_sha=null`（Canary 凍結 index 例外）。
+
+---
+
+## Run 2 返工：Rita 審查阻擋缺陷 B1（2026-08-21）
+
+### 缺陷內容（Rita run 999 判定「未通過／需修正」）
+
+`apps/web/src/lib/midao/db-midao-service-plans.mjs` 的 `normalizePlanInput(input, partial=true)`
+只在 `min_participants` 與 `max_participants` **同時**出現在 patch 內時才做跨欄檢查；
+`updateServicePlanDb` 又未像既有 `db-midao-showcase.mjs:234-241`（服務層）那樣先讀既有列合併驗證。
+
+因此「單欄 PATCH」可寫出非法人數區間：
+
+- in-memory／fallback：直接寫入 `min > max` 並依本卡「直接生效」語意即時上到公開介面；
+- Supabase canonical：撞上 `activity_plans` 的 `CHECK (max_participants >= min_participants)`，
+  以 `throw new Error(...)` 冒泡成 500，而非契約要求的 422 `INVALID_PLAN_INPUT`。
+
+兩路徑行為分歧，違反 `CLAUDE.md` 的 gateway/fallback 契約平價，也違反本卡「preserve validation」。
+
+### 最小修正
+
+`updateServicePlanDb` 於既有 `readPlanRow` 之後、寫入之前，補上合併式跨欄檢查：
+
+```js
+if (norm.value.min_participants !== undefined || norm.value.max_participants !== undefined) {
+  const nextMin = norm.value.min_participants ?? existing.min_participants ?? 1;
+  const nextMax = norm.value.max_participants ?? existing.max_participants ?? 10;
+  if (nextMax < nextMin) throw planError('INVALID_PLAN_INPUT', '人數區間不合法（最多需大於等於最少）', 422);
+}
+```
+
+語意刻意對齊既有服務層 `updateMidaoServiceDb`（同樣以 `?? existing ?? 預設` 合併後比較），
+避免同專案內兩套人數驗證語意。`normalizePlanInput` 本身未改動，既有完整建立路徑行為不變。
+
+### RED 轉 GREEN 證據（皆為實跑）
+
+| 階段 | 指令 | 結果 |
+|---|---|---|
+| RED（unit） | `node --test --test-concurrency=1 tests/unit/db-midao-service-plans.test.mjs` | pass 12 / **fail 2**（`Missing expected rejection`） |
+| GREEN（unit） | 同上 | **pass 14 / fail 0** |
+| RED（route，反證法） | 暫時停用 guard 後跑 contract 測試 | pass 12 / **fail 1**（新測試） |
+| 還原驗證 | `sha256sum db-midao-service-plans.mjs` | `b89b2b5dd71d862fe9a68646f9429d2759e55108bd0337d9b67ea0ac1b9413fe`（與修正後版本 byte-identical） |
+| GREEN（route） | `node --test --test-concurrency=1 tests/api/v2-midao-guide-service-plans-contract.test.mjs` | **pass 13 / fail 0** |
+| 合併證據 | `.claude/hooks/run-checks.sh <5 檔> --typecheck` | **tests 52 / pass 52 / fail 0** 加 `tsc --noEmit` 綠燈，exit 0 |
+
+測試數由 48 增至 52，即本輪新增 4 筆（3 unit 加 1 route contract），無既有測試被移除或放寬。
+
+### 新增測試涵蓋
+
+1. 只送 `max_participants`（小於既有 min）回 422 `INVALID_PLAN_INPUT`，資料與 `updated_at` 完全不變。
+2. 只送 `min_participants`（大於既有 max）回 422，資料不變。
+3. 單欄 patch 合併後**合法**時仍可正常寫入（確認未過度封鎖）。
+4. Route 層：422 回應加目標方案零寫入加該次**零稽核事件**，同批合法 patch 仍只寫一筆稽核。
+
+### 本輪異動檔案（3 檔，皆在卡片允許清單內）
+
+- `apps/web/src/lib/midao/db-midao-service-plans.mjs`
+- `apps/web/tests/unit/db-midao-service-plans.test.mjs`
+- `apps/web/tests/api/v2-midao-guide-service-plans-contract.test.mjs`
+
+未新增檔案、未觸碰 migration／`.rpc()`／`review_state`／`pending_changes`／`db.mjs`／
+orders／payments／`middleware.ts`／UI／Playwright／Production。Rita 已通過的部分（樂觀鎖、
+稽核 metadata、結構不變式、F4 讀取形狀、路由邊界）均未被改動。
+
+### 仍保留的已知風險
+
+稽核非原子（Canary OPEN_FINDING）維持原狀，本卡未授權補償路徑，續於 #1863 或後續卡追蹤。

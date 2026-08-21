@@ -273,6 +273,31 @@ test('缺 CSRF 回 CSRF_REQUIRED/CSRF_INVALID；缺 Idempotency-Key 回 422 INVA
   assert.equal(__listMidaoAuditEventsForTest().length, 0);
 });
 
+test('PATCH：單欄更新造成 min>max 回 422 INVALID_PLAN_INPUT，資料不變且零稽核', async () => {
+  // seed plan-a：min=1 / max=8。只送 min_participants=9 合併後 9>8 為非法區間。
+  const tooHighMin = await readJson(await patchPlan(buildRequest('https://example.test/plans/1', {
+    method: 'PATCH', body: { min_participants: 9, expectedUpdatedAt: T0 },
+  })));
+  assert.equal(tooHighMin.status, 422);
+  assert.equal(tooHighMin.body.error.code, 'INVALID_PLAN_INPUT');
+
+  // 只送 max_participants=0 以下界；改以既有 min=1 合併，max 需 >= min
+  const tooLowMax = await readJson(await patchPlan(buildRequest('https://example.test/plans/2', {
+    method: 'PATCH', body: { max_participants: 3, expectedUpdatedAt: T0 },
+  }), OTHER_PLAN_ID));
+  assert.equal(tooLowMax.status, 200); // B 方案 min=1，max=3 合法，確認未過度封鎖
+
+  const rowA = __listMidaoServicePlanRowsForTest().find((r) => r.id === PLAN_ID);
+  assert.equal(rowA.min_participants, 1);
+  assert.equal(rowA.max_participants, 8);
+  assert.equal(rowA.updated_at, T0); // A 方案完全未被寫入
+
+  // 422 的那一次不得留下稽核；合法的 200 只會有一筆
+  const events = __listMidaoAuditEventsForTest();
+  assert.equal(events.length, 1);
+  assert.equal(events[0].resource_id, OTHER_PLAN_ID);
+});
+
 test('驗證失敗（422）寫零筆稽核事件', async () => {
   const bad = await readJson(await postPlan(buildRequest('https://example.test/plans', {
     body: planPayload({ base_price: -5 }),
