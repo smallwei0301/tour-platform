@@ -154,7 +154,9 @@ export interface CanonicalDayProjection {
   availability: MidaoSegmentProjection;
 }
 
-/** 單日 canonical 投影：帶出 ranges/segments/revision/isClosed/timezone。 */
+/** 單日 canonical 投影：帶出 ranges/segments/revision/isClosed/timezone。
+ * fail-closed：`isClosed=true` 一律清空 ranges，避免「已關閉卻仍帶開放區間」的自相矛盾 payload。
+ */
 export function buildDayAvailabilityProjection(input: {
   date: string;
   ranges?: CanonicalRange[];
@@ -162,15 +164,45 @@ export function buildDayAvailabilityProjection(input: {
   isClosed?: boolean;
   timezone?: string;
 }): CanonicalDayProjection {
-  const ranges = normalizeCanonicalRanges(input?.ranges ?? []);
+  const isClosed = input?.isClosed === true;
+  const ranges = isClosed ? [] : normalizeCanonicalRanges(input?.ranges ?? []);
   return {
     date: input.date,
     ranges,
     revision: Number.isSafeInteger(input?.revision) ? Number(input.revision) : 0,
-    isClosed: input?.isClosed === true,
+    isClosed,
     timezone: input?.timezone || MIDAO_DEFAULT_TIMEZONE,
     availability: canonicalRangesToSegments(ranges),
   };
+}
+
+/**
+ * W-2 批次只能寫未來日期：以指定時區的「今天」為界，當日與過去日皆非未來。
+ * @param date 'YYYY-MM-DD'
+ */
+export function isFutureLocalDate(
+  date: string,
+  timezone: string = MIDAO_DEFAULT_TIMEZONE,
+  now: Date = new Date(),
+): boolean {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: timezone,
+  }).format(now);
+  return String(date) > today;
+}
+
+/** 過濾出未來日期（保持輸入順序）。 */
+export function selectFutureDates(
+  dates: string[],
+  timezone: string = MIDAO_DEFAULT_TIMEZONE,
+  now: Date = new Date(),
+): string[] {
+  return (Array.isArray(dates) ? dates : []).filter((date) =>
+    isFutureLocalDate(date, timezone, now),
+  );
 }
 
 /** 'YYYY-MM' → 該月天數。 */

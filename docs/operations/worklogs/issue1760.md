@@ -182,3 +182,59 @@ typecheck：`apps/web/node_modules/.bin/tsc --noEmit`（TypeScript 6.0.2）— �
 - 僅動 Owner 修正後允許清單內檔案；未改 lockfile、migration、harness、middleware、security-env、orders/payments、scheduled-plan-slots、canonical resolver、traveler available-slots 或 guide preview。
 - 無新 migration、無 migration apply、無 ledger、RLS、ACL，無 Production SQL 或資料操作，無 feature flag 或 backend_mode。
 - 無 push、PR、merge、rebase、deploy；未 clean/reset/stash primary checkout。
+
+---
+
+## Stage 2 round 2 — Rita R-1/R-2/R-3 修正（builder run 1009）
+
+Rita（tp-reviewer）round 1 verdict = FAIL，base `90c324f7` -> head `e1511a1b`，提出三項需修正。以下逐條處置，全部先寫 RED 測試再實作。
+
+### R-1（阻擋，已修）canonical 讀取面對非 Asia/Taipei 日修訂 fail-open
+
+根因：`getCanonicalMonthCalendarDb` 以單一 `options.timezone || 'Asia/Taipei'` 建 selector，而 `effective-availability-resolver.ts:56-60` 對 dayRevision 的比對條件包含 `revision.timezone === context.timezone`。日修訂的 timezone 是 per-row 欄位，route 無從預知，因此單一 context timezone 必然漏掉其他時區的日修訂，造成單日關閉或覆寫在讀取面被整列忽略、退回週期規則（fail-open）。
+
+修法（`apps/web/src/lib/midao/db-midao-canonical-availability.mjs`）：改為逐日以該日 revision 自身的 timezone 建 selector（以 Map 依 timezone 快取，避免每天重建），無日修訂的日子才用預設時區；並在投影前對 `isClosed` 明確清空 ranges。
+
+同時修正自相矛盾 payload（`apps/web/src/lib/midao/midao-calendar-canonical.ts`）：`buildDayAvailabilityProjection` 對 `isClosed=true` 一律回 `ranges: []` 與全 false 的 `availability`，純函式層即 fail-closed。
+
+### R-2（阻擋，已修）公開接案頁未看 isClosed
+
+`apps/web/app/api/v2/public/midao/guides/[slug]/availability/route.ts` 原本只由 `d.ranges` 推導 `openPeriods`。改為 `d.isClosed ? [] : canonicalRangesToOpenPeriods(d.ranges)`，對已關閉日明確 fail-closed。URL、回應形狀、公開資料邊界與無 mutation/auth 擴張皆不變。
+
+### R-3（已修）W-2 批次未限定未來日期
+
+- 新增純函式 `isFutureLocalDate(date, timezone, now)` 與 `selectFutureDates(...)`，以指定時區的今天為界，當日與過去日皆不算未來。
+- `apps/web/app/api/v2/guide/midao/availability/defaults/route.ts`：POST 對非未來日不送出 CAS 寫入，改列入回應新增的 `skipped: [{date, reason:'NOT_FUTURE_DATE'}]`，伺服器端為權威判斷。
+- `WeeklyDefaultsModal.tsx`：送出前先濾掉非未來日，並更新說明文案為「套用到尚未到來的每一個對應星期（已過去的日期不會被更動）」。
+
+### RED to GREEN 證據
+
+RED（實作前，本機 `node --test`）：新增 8 個測試全數 fail
+
+- calendar-canonical-read：非 Asia/Taipei 日修訂「關閉必須生效」「開放覆寫必須生效」、「isClosed 與非空 ranges 不得並存」、「純函式層 isClosed fail-closed」共 4 fail
+- public-guide-availability-canonical：「openPeriods 必須對 isClosed 明確 fail-closed」「已關閉日（非 Asia/Taipei）對旅客不得顯示為開放」共 2 fail
+- day-cas-mutation：「批次只寫未來日期」「defaults route 只對未來日送 CAS 並回報 skipped」共 2 fail
+
+GREEN（實作後）：
+
+```
+node --test \
+  apps/web/tests/unit/issue1760-midao-segment-range-mapping.test.mjs \
+  apps/web/tests/api/issue1760-stage2-calendar-canonical-read.test.mjs \
+  apps/web/tests/api/issue1760-stage2-day-cas-mutation.test.mjs \
+  apps/web/tests/api/issue1760-stage2-public-guide-availability-canonical.test.mjs \
+  apps/web/tests/api/issue1760-stage2-cross-surface-parity.test.mjs \
+  apps/web/tests/api/issue1760-stage2-parallel-engine-retirement-guard.test.mjs
+```
+
+結果：`62` tests、`62` passed、`0` failed（含新增 8 項）。
+
+回歸（`issue1760-availability-scope-day-cas`、`issue1760-effective-availability-policy-resolver`、`midao2-pages-contract`、`midao2-migration-contract`）：`26` tests、`26` passed、`0` failed。
+
+合計 88 tests / 88 passed / 0 failed。
+
+typecheck：`npx tsc -p apps/web/tsconfig.json --noEmit`，本次變更的 5 個實作檔（`midao-calendar-canonical.ts`、`db-midao-canonical-availability.mjs`、public availability route、defaults route、`WeeklyDefaultsModal.tsx`）零錯誤。
+
+### Round 2 scope
+
+本輪僅改動 8 檔，全在 Owner APPROVE_A 修正後允許清單內：5 個實作檔與 3 個既有 Stage 2 測試檔。未新增檔案、未改 lockfile、migration、harness、middleware、security-env、orders/payments、resolver、slot-generator；無 push、PR、merge、deploy；NOT_VERIFIED-local 條目（Playwright、traveler-dynamic-selector-parity）狀態不變，原因仍為本機缺 `next-intl`。

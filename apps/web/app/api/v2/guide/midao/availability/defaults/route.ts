@@ -19,6 +19,7 @@ import {
   segmentsToCanonicalRanges,
   weekdayOf,
   listMonthDates,
+  isFutureLocalDate,
 } from '../../../../../../../src/lib/midao/midao-calendar-canonical.ts';
 import { jsonOk, jsonError } from '../../../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../../../src/lib/route-error';
@@ -102,6 +103,7 @@ export async function POST(request: Request) {
 
   const monthDates = new Set(listMonthDates(month));
   const days = [];
+  const skipped = [];
   try {
     for (const target of body.days as { date?: unknown; expectedRevision?: unknown }[]) {
       const date = String(target?.date ?? '');
@@ -111,6 +113,11 @@ export async function POST(request: Request) {
       const expectedRevision = Number(target?.expectedRevision);
       if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
         return jsonError('MISSING_EXPECTED_REVISION', '缺少或不正確的 expectedRevision', 422);
+      }
+      // W-2 只套用到未來日期：已過去（含當日）的日期一律不寫入。
+      if (!isFutureLocalDate(date, timezone)) {
+        skipped.push({ date, reason: 'NOT_FUTURE_DATE' });
+        continue;
       }
       const selection = selectionByWeekday.get(weekdayOf(date));
       if (!selection) continue;
@@ -137,7 +144,7 @@ export async function POST(request: Request) {
 
   try {
     const result = await applyCanonicalDayBatchDb({ guideId: session.guideId, days });
-    return jsonOk({ month, applied: result.applied, conflicts: result.conflicts });
+    return jsonOk({ month, applied: result.applied, conflicts: result.conflicts, skipped });
   } catch (err) {
     if (err instanceof MidaoCanonicalAvailabilityError) {
       return jsonError(err.code, err.message, err.status);

@@ -13,6 +13,7 @@ import {
   MIDAO_SEGMENT_RANGES,
   MIDAO_DEFAULT_TIMEZONE,
   weekdayOf,
+  isFutureLocalDate,
 } from '../../../../src/lib/midao/midao-calendar-canonical';
 
 type Period = 'morning' | 'afternoon' | 'evening';
@@ -89,8 +90,10 @@ export default function WeeklyDefaultsModal({
     setSaveError(null);
     try {
       const selectedWeekdays = new Set(weekdays.map((w) => w.weekday));
+      // W-2 批次只套用未來日期（後端同樣 fail-closed 略過非未來日）。
       const targetDays = days
         .filter((d) => selectedWeekdays.has(weekdayOf(d.date)))
+        .filter((d) => isFutureLocalDate(d.date, MIDAO_DEFAULT_TIMEZONE))
         .map((d) => ({ date: d.date, expectedRevision: d.revision }));
       const res = await fetch('/api/v2/guide/midao/availability/defaults', {
         method: 'POST',
@@ -148,7 +151,7 @@ export default function WeeklyDefaultsModal({
       {!loading && !error && weekdays && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 12, color: C.MUTED }}>
-            勾選後會套用到 {month} 的每一個對應星期，逐日寫入可用時段。
+            勾選後會套用到 {month} 中尚未到來的每一個對應星期，逐日寫入可用時段（已過去的日期不會被更動）。
           </div>
           <div
             style={{

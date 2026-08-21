@@ -104,6 +104,88 @@ test('closed 日（is_closed=true）不得回任何開放區間', async () => {
   assert.equal(day.revision, 9);
 });
 
+test('非 Asia/Taipei 的日修訂：關閉必須生效（不得 fail-open 退回週期規則）', async () => {
+  // 週期規則：每週六 09:00-12:00 開放；2026-09-05 為週六。
+  __seedMemCanonicalAvailability({
+    rules: [{
+      guide_id: G, activity_plan_id: null, weekday: 6,
+      start_time_local: '09:00:00', end_time_local: '12:00:00', timezone: 'Asia/Tokyo',
+      effective_from: null, effective_to: null, is_active: true,
+    }],
+    dayRevisions: [{
+      guide_id: G, local_date: '2026-09-05', timezone: 'Asia/Tokyo', revision: 1, is_closed: true,
+    }],
+  });
+  const day = await getCanonicalDayDb(G, '2026-09-05');
+  assert.equal(day.isClosed, true);
+  assert.deepEqual(day.ranges, []);
+  assert.equal(day.availability.morning, false);
+  assert.equal(day.timezone, 'Asia/Tokyo');
+});
+
+test('非 Asia/Taipei 的日修訂：開放覆寫同樣必須生效', async () => {
+  __seedMemCanonicalAvailability({
+    rules: [
+      {
+        guide_id: G, activity_plan_id: null, weekday: 6,
+        start_time_local: '09:00:00', end_time_local: '12:00:00', timezone: 'Asia/Tokyo',
+        effective_from: null, effective_to: null, is_active: true,
+      },
+      {
+        guide_id: G, activity_plan_id: null, weekday: 6,
+        start_time_local: '18:00:00', end_time_local: '21:00:00', timezone: 'Asia/Tokyo',
+        effective_from: '2026-09-05', effective_to: '2026-09-05', is_active: true,
+      },
+    ],
+    dayRevisions: [{
+      guide_id: G, local_date: '2026-09-05', timezone: 'Asia/Tokyo', revision: 2, is_closed: false,
+    }],
+  });
+  const day = await getCanonicalDayDb(G, '2026-09-05');
+  // 日修訂命中時只採單日覆寫規則，週期規則不得混入
+  assert.deepEqual(day.ranges, [{ startTimeLocal: '18:00', endTimeLocal: '21:00' }]);
+  assert.equal(day.availability.evening, true);
+  assert.equal(day.availability.morning, false);
+  assert.equal(day.revision, 2);
+});
+
+test('isClosed 與非空 ranges 不得並存（payload 不得自相矛盾）', async () => {
+  __seedMemCanonicalAvailability({
+    rules: [{
+      guide_id: G, activity_plan_id: null, weekday: 6,
+      start_time_local: '09:00:00', end_time_local: '12:00:00', timezone: 'Asia/Tokyo',
+      effective_from: null, effective_to: null, is_active: true,
+    }],
+    dayRevisions: [{
+      guide_id: G, local_date: '2026-09-05', timezone: 'Asia/Tokyo', revision: 7, is_closed: true,
+    }],
+  });
+  const days = await getCanonicalMonthCalendarDb(G, '2026-09');
+  for (const day of days) {
+    if (day.isClosed) {
+      assert.deepEqual(day.ranges, [], `${day.date} 已關閉卻仍回傳開放區間`);
+      assert.deepEqual(day.availability, {
+        morning: false, afternoon: false, evening: false, custom: [],
+      });
+    }
+  }
+});
+
+test('純函式層 buildDayAvailabilityProjection 對 isClosed fail-closed', async () => {
+  const { buildDayAvailabilityProjection } = await import(
+    '../../src/lib/midao/midao-calendar-canonical.ts'
+  );
+  const projected = buildDayAvailabilityProjection({
+    date: '2026-09-05',
+    ranges: [{ startTimeLocal: '09:00', endTimeLocal: '12:00' }],
+    revision: 1,
+    isClosed: true,
+    timezone: 'Asia/Tokyo',
+  });
+  assert.deepEqual(projected.ranges, []);
+  assert.equal(projected.availability.morning, false);
+});
+
 test('週期性 global 規則在無日修訂時依 weekday 生效', async () => {
   // 2026-09-05 為週六（getUTCDay=6）
   __seedMemCanonicalAvailability({

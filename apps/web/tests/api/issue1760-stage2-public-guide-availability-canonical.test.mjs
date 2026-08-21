@@ -68,6 +68,34 @@ test('canonical → openPeriods：U-1 段別依序輸出，自訂區間不冒充
   assert.deepEqual(canonicalRangesToOpenPeriods([]), []);
 });
 
+test('public route：openPeriods 必須對 isClosed 明確 fail-closed', () => {
+  const src = fs.readFileSync(publicRoute, 'utf8');
+  // 僅依 ranges 推導不足：已關閉日必須明確回空
+  assert.match(src, /isClosed/u);
+  assert.match(src, /d\.isClosed\s*\?\s*\[\]/u);
+});
+
+test('已關閉日（非 Asia/Taipei 時區）對旅客不得顯示為開放', async () => {
+  __seedMemCanonicalAvailability({
+    rules: [{
+      guide_id: G, activity_plan_id: null, weekday: 6,
+      start_time_local: '09:00:00', end_time_local: '12:00:00', timezone: 'Asia/Tokyo',
+      effective_from: null, effective_to: null, is_active: true,
+    }],
+    dayRevisions: [{
+      guide_id: G, local_date: '2026-09-05', timezone: 'Asia/Tokyo', revision: 1, is_closed: true,
+    }],
+  });
+  const days = await getCanonicalMonthCalendarDb(G, '2026-09');
+  const closed = days.find((d) => d.date === '2026-09-05');
+  assert.equal(closed.isClosed, true);
+  assert.deepEqual(closed.ranges, []);
+  assert.deepEqual(
+    closed.isClosed ? [] : canonicalRangesToOpenPeriods(closed.ranges),
+    [],
+  );
+});
+
 test('公開投影與 canonical 月投影同源：closed 日不得出現任何 openPeriods', async () => {
   __seedMemCanonicalAvailability({
     rules: [{

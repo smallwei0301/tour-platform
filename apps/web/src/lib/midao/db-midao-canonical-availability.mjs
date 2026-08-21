@@ -133,32 +133,55 @@ async function loadCanonicalMonthSources(guideId, month) {
 
 /**
  * 該月每日 canonical 生效可用性投影。
- * @param {string} guideId
- * @param {string} month 'YYYY-MM'
- * @param {{ timezone?: string, policy?: 'inherit'|'restrict'|'closed' }} [options]
+ *
+ * R-1 修正：canonical selector 對 dayRevision 的比對條件包含
+ * `revision.timezone === context.timezone`（effective-availability-resolver.ts）。
+ * 日修訂的 timezone 是 per-row 資料，route 無法預先得知，因此不能用單一
+ * context.timezone 涵蓋全月——否則任何非預設時區的日修訂會被整列忽略，
+ * 導致「導遊已關閉的日子」在讀取面 fail-open 退回週期規則。
+ * 正解：逐日以該日 revision 自身的 timezone 建 selector（無日修訂時才用預設時區）。
+ *
+ * @param guideId
+ * @param month 'YYYY-MM'
+ * @param options {{ timezone?: string, policy?: 'inherit'|'restrict'|'closed' }}
  */
 export async function getCanonicalMonthCalendarDb(guideId, month, options = {}) {
-  const timezone = options.timezone || MIDAO_DEFAULT_TIMEZONE;
+  const fallbackTimezone = options.timezone || MIDAO_DEFAULT_TIMEZONE;
+  const policy = options.policy || 'inherit';
   const { rules, dayRevisions } = await loadCanonicalMonthSources(guideId, month);
-  const selectRules = createCanonicalAvailabilityRuleSelector({
-    guideId,
-    planId: '',
-    policy: options.policy || 'inherit',
-    rules,
-    dayRevisions,
-    timezone,
-  });
+  /** @type {Map<string, (localDate: string) => any[]>} */
+  const selectorByTimezone = new Map();
+  /** @param {string} timezone */
+  const selectorFor = (timezone) => {
+    let selector = selectorByTimezone.get(timezone);
+    if (!selector) {
+      selector = createCanonicalAvailabilityRuleSelector({
+        guideId,
+        planId: '',
+        policy,
+        rules,
+        dayRevisions,
+        timezone,
+      });
+      selectorByTimezone.set(timezone, selector);
+    }
+    return selector;
+  };
   return listMonthDates(month).map((date) => {
     const revisionRow = dayRevisions.find(
       (row) => row.guide_id === guideId && row.local_date === date,
     );
-    const dayRules = selectRules(date);
+    // 以該日 revision 自身時區解析；無日修訂時退回預設時區（週期規則不受時區比對影響）。
+    const dayTimezone = revisionRow?.timezone || fallbackTimezone;
+    const dayRules = selectorFor(dayTimezone)(date);
+    const isClosed = revisionRow ? revisionRow.is_closed === true : false;
     return buildDayAvailabilityProjection({
       date,
-      ranges: rulesToDayRanges(dayRules, date),
+      // fail-closed：已關閉日不得帶出任何開放區間。
+      ranges: isClosed ? [] : rulesToDayRanges(dayRules, date),
       revision: revisionRow ? Number(revisionRow.revision) : 0,
-      isClosed: revisionRow ? revisionRow.is_closed === true : false,
-      timezone: revisionRow?.timezone || timezone,
+      isClosed,
+      timezone: dayTimezone,
     });
   });
 }

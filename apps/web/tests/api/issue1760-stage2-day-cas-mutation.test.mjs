@@ -169,3 +169,23 @@ test('W-2 defaults route：批次轉單日 canonical 寫入，不寫週預設dur
   assert.doesNotMatch(src, /midao_availability_defaults/u);
   assert.match(src, /validateCsrf/u);
 });
+
+test('W-2 批次只寫未來日期：過去日不得被批次工具覆寫', async () => {
+  const { isFutureLocalDate, selectFutureDates } = await import(
+    '../../src/lib/midao/midao-calendar-canonical.ts'
+  );
+  const now = new Date('2026-09-10T03:00:00Z'); // Asia/Taipei 2026-09-10 11:00
+  assert.equal(isFutureLocalDate('2026-09-09', TZ, now), false);
+  assert.equal(isFutureLocalDate('2026-09-10', TZ, now), false); // 當日不算未來
+  assert.equal(isFutureLocalDate('2026-09-11', TZ, now), true);
+  assert.deepEqual(
+    selectFutureDates(['2026-09-01', '2026-09-10', '2026-09-11', '2026-09-30'], TZ, now),
+    ['2026-09-11', '2026-09-30'],
+  );
+});
+
+test('W-2 defaults route：明確只對未來日期送出 CAS 寫入並回報 skipped', () => {
+  const src = fs.readFileSync(defaultsRoute, 'utf8');
+  assert.match(src, /isFutureLocalDate/u);
+  assert.match(src, /skipped/u);
+});

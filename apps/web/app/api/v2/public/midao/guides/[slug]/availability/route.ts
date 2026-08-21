@@ -23,9 +23,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     const page = await getPublicMidaoPageDb(slug);
     if (!page) return jsonError('NOT_FOUND', '找不到此接案頁', 404);
     const days = (await getCanonicalMonthCalendarDb(page.guideId, month)).map(
-      (d: { date: string; ranges: unknown }) => ({
+      (d: { date: string; ranges: unknown; isClosed: boolean }) => ({
         date: d.date,
-        openPeriods: canonicalRangesToOpenPeriods(d.ranges),
+        // fail-closed：導遊已關閉的日子一律不對旅客顯示任何開放段別。
+        openPeriods: d.isClosed ? [] : canonicalRangesToOpenPeriods(d.ranges),
       }),
     );
     return jsonOk({ month, days });
