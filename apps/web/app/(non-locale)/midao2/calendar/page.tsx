@@ -1,26 +1,39 @@
 'use client';
 
-// midao2 行事曆：月導覽 → 月格點色 → 當日明細 → 當日可用時間（三格開關＋自訂時段）→ 週預設 modal。
+// midao2 行事曆：月導覽 → 月格點色 → 當日明細 → 當日可用時間（U-1 三格開關＋自訂時段）→ 週批次 modal。
+// #1760 Stage 2：可用性單一真相＝canonical；每日帶 revision，寫入為單日 CAS，
+// 撞到 409（REVISION_CONFLICT）時重新載入該月並提示使用者。
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { C, Card, Badge, Btn, Spinner, ErrorState, apiGet, apiSend, Icon } from '../ui';
+import { C, Card, Badge, Btn, Spinner, ErrorState, apiGet, Icon } from '../ui';
+import { csrfHeaders } from '../../../../src/lib/csrf-client';
 import { buildMonthGrid } from '../../../../src/lib/midao/midao-calendar-grid.mjs';
 import { periodLabel } from '../../../../src/lib/midao/midao-copy-templates.mjs';
+import {
+  MIDAO_SEGMENTS,
+  MIDAO_DEFAULT_TIMEZONE,
+  segmentsToCanonicalRanges,
+} from '../../../../src/lib/midao/midao-calendar-canonical';
 import WeeklyDefaultsModal from './WeeklyDefaultsModal';
 
 type Period = 'morning' | 'afternoon' | 'evening';
-type CustomSlot = { start: string; end: string; isOpen: boolean };
-type DayAvailability = { morning: boolean; afternoon: boolean; evening: boolean; custom: CustomSlot[] };
+type CanonicalRange = { startTimeLocal: string; endTimeLocal: string };
+type DayAvailability = { morning: boolean; afternoon: boolean; evening: boolean; custom: CanonicalRange[] };
 type CalendarItem = {
   type: 'midao_request' | 'booking'; id: string; travelerName: string | null; title: string | null;
   status: string; timeRange: string | null; participantsCount: number;
 };
-type CalendarDay = { date: string; availability: DayAvailability; hasPending: boolean; hasConfirmed: boolean; items: CalendarItem[] };
+type CalendarDay = {
+  date: string; availability: DayAvailability; ranges: CanonicalRange[];
+  revision: number; isClosed: boolean; timezone: string;
+  hasPending: boolean; hasConfirmed: boolean; items: CalendarItem[];
+};
 
 const WEEKDAY_HEADERS = ['一', '二', '三', '四', '五', '六', '日'];
 const WEEKDAY_NAMES = ['日', '一', '二', '三', '四', '五', '六'];
-const PERIODS: Period[] = ['morning', 'afternoon', 'evening'];
+const PERIODS: Period[] = MIDAO_SEGMENTS as Period[];
+const STALE_MESSAGE = '此日期已被其他更新覆蓋，已重新載入最新設定，請再試一次';
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const monthOf = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
@@ -42,9 +55,10 @@ function dayHeading(date: string): string {
   return `${d.getUTCMonth() + 1} 月 ${d.getUTCDate()} 日・星期${WEEKDAY_NAMES[d.getUTCDay()]}`;
 }
 
-// 樂觀更新單一日期的 availability 欄位（共用於三格開關/custom 新增刪除）。
-function patchDayAvailability(days: CalendarDay[], date: string, patch: Partial<DayAvailability>): CalendarDay[] {
-  return days.map((d) => (d.date === date ? { ...d, availability: { ...d.availability, ...patch } } : d));
+function newIdempotencyKey(): string {
+  const globalCrypto = typeof crypto !== 'undefined' ? crypto : undefined;
+  if (globalCrypto?.randomUUID) return globalCrypto.randomUUID();
+  return `midao2-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export default function Midao2CalendarPage() {
@@ -62,12 +76,16 @@ export default function Midao2CalendarPage() {
   const [customEnd, setCustomEnd] = useState('');
   const [customError, setCustomError] = useState<string | null>(null);
 
+  async function loadMonth(targetMonth: string): Promise<CalendarDay[]> {
+    const d = await apiGet(`/api/v2/guide/midao/calendar?month=${targetMonth}`);
+    return Array.isArray(d?.days) ? (d.days as CalendarDay[]) : [];
+  }
+
   async function refetch() {
     setLoading(true);
     setError(null);
     try {
-      const d = await apiGet(`/api/v2/guide/midao/calendar?month=${month}`);
-      setDays(Array.isArray(d?.days) ? d.days : []);
+      setDays(await loadMonth(month));
     } catch (err: any) {
       setError(err?.message || '載入失敗');
     } finally {
@@ -79,8 +97,8 @@ export default function Midao2CalendarPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    apiGet(`/api/v2/guide/midao/calendar?month=${month}`)
-      .then((d) => { if (!cancelled) setDays(Array.isArray(d?.days) ? d.days : []); })
+    loadMonth(month)
+      .then((next) => { if (!cancelled) setDays(next); })
       .catch((err) => { if (!cancelled) setError(err?.message || '載入失敗'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -106,14 +124,43 @@ export default function Midao2CalendarPage() {
   const selectedDay = days.find((d) => d.date === selectedDate) || null;
   const grid = buildMonthGrid(days as any[]);
 
-  // 樂觀更新 + PUT days/{date}；失敗回滾＋錯誤列。
-  async function patchDay(patch: Record<string, unknown>, prevAvail: Partial<DayAvailability>) {
+  /**
+   * 單日 canonical CAS 寫入：帶 expectedRevision 與 Idempotency-Key。
+   * 409（revision 過期）→ 重新載入該月＋提示；其他錯誤→顯示錯誤列。
+   */
+  async function putDay(day: CalendarDay, ranges: CanonicalRange[]) {
     setAvailError(null);
     setSaving(true);
     try {
-      await apiSend(`/api/v2/guide/midao/availability/days/${selectedDate}`, 'PUT', patch);
+      const res = await fetch(`/api/v2/guide/midao/availability/days/${day.date}`, {
+        method: 'PUT',
+        headers: csrfHeaders({
+          'content-type': 'application/json',
+          'idempotency-key': newIdempotencyKey(),
+        }),
+        body: JSON.stringify({
+          expectedRevision: day.revision,
+          timezone: day.timezone || MIDAO_DEFAULT_TIMEZONE,
+          ranges,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        window.location.assign('/guide/login?next=' + encodeURIComponent(location.pathname));
+        return;
+      }
+      if (!json?.success) {
+        if (res.status === 409) {
+          setDays(await loadMonth(month));
+          setAvailError(STALE_MESSAGE);
+          return;
+        }
+        setAvailError(json?.error?.message || '更新失敗');
+        setDays(await loadMonth(month));
+        return;
+      }
+      setDays(await loadMonth(month));
     } catch (err: any) {
-      setDays((prev) => patchDayAvailability(prev, selectedDate, prevAvail));
       setAvailError(err?.message || '更新失敗');
     } finally {
       setSaving(false);
@@ -122,17 +169,28 @@ export default function Midao2CalendarPage() {
 
   function togglePeriod(period: Period) {
     if (!selectedDay || saving) return;
-    const prevValue = selectedDay.availability[period];
-    setDays((prev) => patchDayAvailability(prev, selectedDate, { [period]: !prevValue }));
-    patchDay({ [period]: !prevValue }, { [period]: prevValue });
+    const nextSegments = {
+      morning: selectedDay.availability.morning,
+      afternoon: selectedDay.availability.afternoon,
+      evening: selectedDay.availability.evening,
+      [period]: !selectedDay.availability[period],
+    };
+    try {
+      const ranges = segmentsToCanonicalRanges(nextSegments, selectedDay.availability.custom);
+      void putDay(selectedDay, ranges);
+    } catch (err: any) {
+      setAvailError(err?.message || '時段設定不正確');
+    }
   }
 
   function removeCustom(idx: number) {
     if (!selectedDay || saving) return;
-    const prevCustom = selectedDay.availability.custom;
-    const nextCustom = prevCustom.filter((_, i) => i !== idx);
-    setDays((prev) => patchDayAvailability(prev, selectedDate, { custom: nextCustom }));
-    patchDay({ custom: nextCustom }, { custom: prevCustom });
+    const nextCustom = selectedDay.availability.custom.filter((_, i) => i !== idx);
+    try {
+      void putDay(selectedDay, segmentsToCanonicalRanges(selectedDay.availability, nextCustom));
+    } catch (err: any) {
+      setAvailError(err?.message || '時段設定不正確');
+    }
   }
 
   function confirmAddCustom() {
@@ -141,14 +199,22 @@ export default function Midao2CalendarPage() {
       setCustomError('開始時間需早於結束時間');
       return;
     }
-    const prevCustom = selectedDay.availability.custom;
-    const nextCustom = [...prevCustom, { start: customStart, end: customEnd, isOpen: true }];
-    setDays((prev) => patchDayAvailability(prev, selectedDate, { custom: nextCustom }));
+    const nextCustom = [
+      ...selectedDay.availability.custom,
+      { startTimeLocal: customStart, endTimeLocal: customEnd },
+    ];
+    let ranges: CanonicalRange[];
+    try {
+      ranges = segmentsToCanonicalRanges(selectedDay.availability, nextCustom);
+    } catch {
+      setCustomError('時段不可與既有時段重疊');
+      return;
+    }
     setCustomAdding(false);
     setCustomStart('');
     setCustomEnd('');
     setCustomError(null);
-    patchDay({ custom: nextCustom }, { custom: prevCustom });
+    void putDay(selectedDay, ranges);
   }
 
   if (loading && days.length === 0) return <Spinner />;
@@ -199,7 +265,8 @@ export default function Midao2CalendarPage() {
             week.map((day: CalendarDay | null, di: number) => {
               if (!day) return <div key={`empty-${wi}-${di}`} />;
               const selected = day.date === selectedDate;
-              const anyOpen = day.availability?.morning || day.availability?.afternoon || day.availability?.evening;
+              const anyOpen = day.availability?.morning || day.availability?.afternoon || day.availability?.evening
+                || (day.availability?.custom?.length ?? 0) > 0;
               return (
                 <button
                   key={day.date} type="button" data-testid={`midao2-cal-day-${day.date}`}
@@ -281,11 +348,11 @@ export default function Midao2CalendarPage() {
               );
             })}
           </div>
-          {availError && <div style={{ color: C.RED, fontSize: 13 }}>{availError}</div>}
+          {availError && <div data-testid="midao2-cal-avail-error" style={{ color: C.RED, fontSize: 13 }}>{availError}</div>}
 
           {selectedDay?.availability?.custom?.map((c, idx) => (
-            <div key={`${c.start}-${c.end}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-              <span>{c.start}–{c.end}</span>
+            <div key={`${c.startTimeLocal}-${c.endTimeLocal}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <span>{c.startTimeLocal}–{c.endTimeLocal}</span>
               <button type="button" onClick={() => removeCustom(idx)} disabled={saving}
                 style={{ background: 'transparent', border: 'none', color: C.RED, cursor: 'pointer', display: 'flex' }}>
                 <Icon name="close" size={14} />
@@ -322,7 +389,13 @@ export default function Midao2CalendarPage() {
         </div>
       </Card>
 
-      <WeeklyDefaultsModal open={showDefaults} onClose={() => setShowDefaults(false)} onSaved={refetch} />
+      <WeeklyDefaultsModal
+        open={showDefaults}
+        month={month}
+        days={days.map((d) => ({ date: d.date, revision: d.revision }))}
+        onClose={() => setShowDefaults(false)}
+        onSaved={refetch}
+      />
     </div>
   );
 }

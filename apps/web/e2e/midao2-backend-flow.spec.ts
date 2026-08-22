@@ -62,9 +62,16 @@ test('需求列表→詳情：自動轉待回覆＋radio 更新', async ({ page 
 });
 
 test('行事曆：時段開關 PUT', async ({ page }) => {
+  // #1760 Stage 2：calendar GET 帶 canonical ranges/revision/isClosed/timezone，
+  // 單日寫入為 CAS（expectedRevision + canonical ranges）。
   const days = Array.from({ length: 31 }, (_, i) => ({
     date: `2026-08-${String(i + 1).padStart(2, '0')}`,
     availability: { morning: false, afternoon: true, evening: true, custom: [] },
+    ranges: [
+      { startTimeLocal: '13:00', endTimeLocal: '17:00' },
+      { startTimeLocal: '18:00', endTimeLocal: '21:00' },
+    ],
+    revision: 3, isClosed: false, timezone: 'Asia/Taipei',
     hasPending: i === 14, hasConfirmed: i === 16, items: [],
   }));
   await page.route('**/api/v2/guide/midao/calendar*', (r) => r.fulfill({
@@ -73,12 +80,30 @@ test('行事曆：時段開關 PUT', async ({ page }) => {
   let putBody: any = null;
   await page.route('**/api/v2/guide/midao/availability/days/*', (r) => {
     putBody = r.request().postDataJSON();
-    return r.fulfill({ json: { success: true, data: { date: 'x', effective: { morning: true, afternoon: true, evening: true, custom: [] } } } });
+    return r.fulfill({
+      json: {
+        success: true,
+        data: {
+          date: '2026-08-15', revision: 4, isClosed: false,
+          ranges: [
+            { startTimeLocal: '09:00', endTimeLocal: '12:00' },
+            { startTimeLocal: '13:00', endTimeLocal: '17:00' },
+            { startTimeLocal: '18:00', endTimeLocal: '21:00' },
+          ],
+          effective: null,
+        },
+      },
+    });
   });
   await page.goto('/midao2/calendar');
   await page.getByTestId('midao2-cal-day-2026-08-15').click();
   await page.getByTestId('midao2-cal-period-morning').click();
-  await expect.poll(() => putBody).toEqual({ morning: true });
+  await expect.poll(() => putBody?.expectedRevision).toBe(3);
+  await expect.poll(() => putBody?.ranges).toEqual([
+    { startTimeLocal: '09:00', endTimeLocal: '12:00' },
+    { startTimeLocal: '13:00', endTimeLocal: '17:00' },
+    { startTimeLocal: '18:00', endTimeLocal: '21:00' },
+  ]);
 });
 
 test('服務列表與精靈第一步驗證', async ({ page }) => {

@@ -1,10 +1,11 @@
 /**
  * GET /api/v2/guide/midao/calendar?month=YYYY-MM — 月曆聚合。
- * 可用時段（獨立輕量表）＋需求單點色＋既有 bookings 唯讀疊加（查詢失敗 degrade，不整頁 500）。
+ * 可用時段（canonical 單一真相）＋需求單點色＋既有 bookings 唯讀疊加（查詢失敗 degrade，不整頁 500）。
  * 點色：橘=未結案需求（new/pending_reply/replied）、綠=closed_won 或既有 confirmed 訂單。
+ * #1760 Stage 2：可用性改讀 canonical rules/day revisions；可用性讀取失敗維持 5xx，不 degrade。
  */
 import { verifyGuideSession } from '../../../../../../src/lib/guide-auth';
-import { getMonthEffectiveDb } from '../../../../../../src/lib/midao/db-midao-availability.mjs';
+import { getCanonicalMonthCalendarDb } from '../../../../../../src/lib/midao/db-midao-canonical-availability.mjs';
 import { listMidaoRequestsDb } from '../../../../../../src/lib/midao/db-midao-requests.mjs';
 import { hasSupabaseEnv, getSupabase } from '../../../../../../src/lib/db.mjs';
 import { jsonOk, jsonError } from '../../../../../../src/lib/api-response';
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
   if (mm < 1 || mm > 12) return jsonError('INVALID_MONTH', '月份格式需為 YYYY-MM', 400);
   try {
     const [availability, requests, bookings] = await Promise.all([
-      getMonthEffectiveDb(session.guideId, month),
+      getCanonicalMonthCalendarDb(session.guideId, month),
       listMidaoRequestsDb(session.guideId, { status: 'all', sort: 'newest' }),
       fetchBookingsOverlay(session.guideId, month),
     ]);
@@ -68,7 +69,11 @@ export async function GET(request: Request) {
       const dayBookings = bookings.filter((b) => taipeiDateOf(String(b.start_at)) === day.date);
       return {
         date: day.date,
-        availability: { morning: day.morning, afternoon: day.afternoon, evening: day.evening, custom: day.custom },
+        availability: day.availability,
+        ranges: day.ranges,
+        revision: day.revision,
+        isClosed: day.isClosed,
+        timezone: day.timezone,
         hasPending: dayRequests.some((r) => OPEN_REQ.includes(r.status)),
         hasConfirmed: dayRequests.some((r) => r.status === 'closed_won') || dayBookings.some((b) => b.status === 'confirmed'),
         items: [
