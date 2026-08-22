@@ -7,7 +7,7 @@ import { extractCatalog } from './extract-catalog.mjs';
 import { normalizeCatalog } from './normalize-catalog.mjs';
 import { validateNormalizedCatalog } from './validate-normalized-catalog.mjs';
 import { assertNoAmbientDatabaseEnv, parseLocalConnectionEnv } from './build-expected-terminal.mjs';
-import { collectFrozenMigrations, renderFrozenManifest } from './build-frozen-migration-manifest.mjs';
+import { collectFrozenMigrations, DEFAULT_EXPECTED_COUNT, renderFrozenManifest } from './build-frozen-migration-manifest.mjs';
 import { materializeFreshWorkdir, POST_CUTOFF_MIGRATIONS } from './materialize-fresh-workdir.mjs';
 import { resolveRepositoryPublicationPaths } from './publish-baseline.mjs';
 import { resolveExpectedTerminalPublicationPaths } from './publish-expected-terminal.mjs';
@@ -112,7 +112,7 @@ async function extractExistingTerminal(databaseUrl, {
       const { rows } = await client.query('SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version');
       return rows;
     });
-    if (history.length !== 128 + POST_VERSIONS.length || history.some(({ version }) => version === '00000000000001')
+    if (history.length !== DEFAULT_EXPECTED_COUNT + POST_VERSIONS.length || history.some(({ version }) => version === '00000000000001')
       || JSON.stringify(history.slice(-POST_VERSIONS.length).map(({ version }) => version)) !== JSON.stringify(POST_VERSIONS)) {
       throw new Error('existing rehearsal exact history invalid');
     }
