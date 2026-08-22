@@ -15,11 +15,14 @@ test('公開接案頁 route：統一 404、不 import 私人欄位', async () =>
   assert.doesNotMatch(src, /guide_email|bank|transfer|line_user_id/);
 });
 
-test('公開可選日期 route：month 驗證＋只回 openPeriods', async () => {
+test('公開可選日期 route：month 驗證＋canonical 讀取＋只回 openPeriods', async () => {
   const src = await read('app/api/v2/public/midao/guides/[slug]/availability/route.ts');
   assert.match(src, /jsonError\('INVALID_MONTH'/);
   assert.match(src, /openPeriods/);
-  assert.match(src, /getMonthEffectiveDb\(/);
+  assert.match(src, /getCanonicalMonthCalendarDb\(page\.guideId, month\)/);
+  assert.match(src, /canonicalRangesToOpenPeriods\(d\.ranges\)/);
+  assert.match(src, /d\.isClosed \? \[\]/);
+  assert.doesNotMatch(src, /getMonthEffectiveDb\(/);
 });
 
 test('公開送單 route：rate-limit＋honeypot＋activity 歸屬＋LINE fire-and-forget', async () => {

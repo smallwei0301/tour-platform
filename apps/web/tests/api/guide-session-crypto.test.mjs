@@ -3,6 +3,9 @@ import { createHmac } from 'node:crypto';
 import test from 'node:test';
 import { spawnNodeEsm } from '../helpers/spawn-node.mjs';
 
+const TEST_GUIDE_SESSION_SECRET = 'configured-test-secret-at-least-32-bytes';
+process.env.GUIDE_SESSION_SECRET = TEST_GUIDE_SESSION_SECRET;
+
 const moduleUrl = new URL('../../src/lib/guide/session-crypto.ts', import.meta.url);
 const cryptoModule = await import(moduleUrl.href);
 const guideAuthModule = await import(new URL('../../src/lib/guide-auth.ts', import.meta.url).href);
@@ -14,7 +17,7 @@ const {
 } = cryptoModule;
 
 function expectedHmac(message) {
-  return createHmac('sha256', String(process.env.GUIDE_SESSION_SECRET || '').trim())
+  return createHmac('sha256', TEST_GUIDE_SESSION_SECRET)
     .update(message, 'utf8')
     .digest('hex');
 }
@@ -86,9 +89,9 @@ test('shared module enforces production secret policy and keeps configured dev s
 
   const deterministic = spawnNodeEsm(
     `const m = await import(${JSON.stringify(modulePath)}); console.log(m.signGuideSession('g', 2));`,
-    { env: { ...process.env, NODE_ENV: 'test', NEXT_PHASE: '', GUIDE_SESSION_SECRET: 'configured-test-secret-at-least-32-bytes' } },
+    { env: { ...process.env, NODE_ENV: 'test', NEXT_PHASE: '', GUIDE_SESSION_SECRET: TEST_GUIDE_SESSION_SECRET } },
   );
   assert.equal(deterministic.status, 0);
-  const expected = createHmac('sha256', 'configured-test-secret-at-least-32-bytes').update('g:2').digest('hex');
+  const expected = createHmac('sha256', TEST_GUIDE_SESSION_SECRET).update('g:2').digest('hex');
   assert.equal(deterministic.stdout.trim(), expected);
 });

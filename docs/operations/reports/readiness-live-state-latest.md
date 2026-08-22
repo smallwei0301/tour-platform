@@ -5,7 +5,7 @@
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-21T05:10:34.130Z  
+**Query timestamp:** 2026-08-21T05:10:34.130Z
 **Commit SHA:** `28dac019017a1d698c5366f746b477006c441ce5`
 
 ---

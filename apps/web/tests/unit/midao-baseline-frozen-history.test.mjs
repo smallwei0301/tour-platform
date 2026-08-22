@@ -45,22 +45,22 @@ test('builder command exists before manifest behavior can pass', async () => {
   await loadBuilder();
 });
 
-test('live cutoff collection is exact 128 and excludes rollback plus all post-cutoff files', async () => {
+test('live cutoff collection is exact 130 and excludes rollback plus all post-cutoff files', async () => {
   const { collectFrozenMigrations, renderFrozenManifest } = await loadBuilder();
   const entries = await collectFrozenMigrations({
     repoRoot,
     migrationsDir: 'supabase/migrations',
     cutoffName,
-    expectedCount: 128,
+    expectedCount: 130,
   });
-  assert.equal(entries.length, 128);
+  assert.equal(entries.length, 130);
   assert.equal(entries[0].filename, '001_mvp_core.sql');
-  assert.equal(entries.at(-1).filename, '20260710121345_pin_payment_callback_search_path.sql');
+  assert.equal(entries.at(-1).filename, '20260722100500_midao2_activity_showcase_columns.sql');
   assert.equal(entries.some((entry) => entry.filename.endsWith('.rollback.sql')), false);
   assert.equal(entries.some((entry) => entry.filename.startsWith('2026072300')), false);
   const rendered = renderFrozenManifest(entries);
   const lines = rendered.trimEnd().split('\n');
-  assert.equal(lines.length, 128);
+  assert.equal(lines.length, 130);
   assert.ok(lines.every((line) => /^[0-9a-f]{64}  supabase\/migrations\/[^/]+\.sql$/u.test(line)));
   assert.ok(rendered.endsWith('\n'));
 });
@@ -139,7 +139,7 @@ test('published live manifest is deterministic and verifies exact current bytes'
     repoRoot,
     migrationsDir: 'supabase/migrations',
     cutoffName,
-    expectedCount: 128,
+    expectedCount: 130,
     manifestText,
   });
 });

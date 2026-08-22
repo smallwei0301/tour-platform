@@ -1495,6 +1495,27 @@
         "canonicalKey": [
           "relation",
           "public",
+          "midao_slot_consumptions"
+        ],
+        "foreignOptions": [],
+        "foreignServer": null,
+        "isPartition": false,
+        "kind": "r",
+        "name": "midao_slot_consumptions",
+        "options": [],
+        "owner": "supabase_admin",
+        "partitionBound": null,
+        "partitionKey": null,
+        "persistence": "p",
+        "replicaIdentity": "d",
+        "schema": "public",
+        "viewDefinition": null
+      },
+      {
+        "accessMethod": "heap",
+        "canonicalKey": [
+          "relation",
+          "public",
           "notification_event_settings"
         ],
         "foreignOptions": [],
@@ -19048,6 +19069,30 @@
           "column",
           "public",
           "midao_requests",
+          "kind"
+        ],
+        "collationName": "default",
+        "collationSchema": "pg_catalog",
+        "compression": "",
+        "default": "'request'::text",
+        "formattedType": "text",
+        "generated": "",
+        "identity": "",
+        "name": "kind",
+        "notNull": true,
+        "position": 27,
+        "relation": "midao_requests",
+        "schema": "public",
+        "storage": "x",
+        "typeName": "text",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_requests",
           "language"
         ],
         "collationName": "default",
@@ -19472,6 +19517,174 @@
         "schema": "public",
         "storage": "p",
         "typeName": "timestamptz",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_slot_consumptions",
+          "created_at"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": "now()",
+        "formattedType": "timestamp with time zone",
+        "generated": "",
+        "identity": "",
+        "name": "created_at",
+        "notNull": true,
+        "position": 6,
+        "relation": "midao_slot_consumptions",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "timestamptz",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_slot_consumptions",
+          "date"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "date",
+        "generated": "",
+        "identity": "",
+        "name": "date",
+        "notNull": true,
+        "position": 4,
+        "relation": "midao_slot_consumptions",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "date",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_slot_consumptions",
+          "guide_id"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "uuid",
+        "generated": "",
+        "identity": "",
+        "name": "guide_id",
+        "notNull": true,
+        "position": 2,
+        "relation": "midao_slot_consumptions",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "uuid",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_slot_consumptions",
+          "id"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": "gen_random_uuid()",
+        "formattedType": "uuid",
+        "generated": "",
+        "identity": "",
+        "name": "id",
+        "notNull": true,
+        "position": 1,
+        "relation": "midao_slot_consumptions",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "uuid",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_slot_consumptions",
+          "period"
+        ],
+        "collationName": "default",
+        "collationSchema": "pg_catalog",
+        "compression": "",
+        "default": null,
+        "formattedType": "text",
+        "generated": "",
+        "identity": "",
+        "name": "period",
+        "notNull": true,
+        "position": 5,
+        "relation": "midao_slot_consumptions",
+        "schema": "public",
+        "storage": "x",
+        "typeName": "text",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_slot_consumptions",
+          "released_at"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "timestamp with time zone",
+        "generated": "",
+        "identity": "",
+        "name": "released_at",
+        "notNull": false,
+        "position": 7,
+        "relation": "midao_slot_consumptions",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "timestamptz",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_slot_consumptions",
+          "request_id"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "uuid",
+        "generated": "",
+        "identity": "",
+        "name": "request_id",
+        "notNull": true,
+        "position": 3,
+        "relation": "midao_slot_consumptions",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "uuid",
         "typeSchema": "pg_catalog"
       },
       {
@@ -31621,6 +31834,24 @@
           "relation",
           "public",
           "midao_requests",
+          "midao_requests_kind_check"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (kind = ANY (ARRAY['request'::text, 'instant'::text]))",
+        "name": "midao_requests_kind_check",
+        "relation": "midao_requests",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_requests",
           "midao_requests_pkey"
         ],
         "deferrable": false,
@@ -31661,7 +31892,7 @@
         ],
         "deferrable": false,
         "deferred": false,
-        "definition": "CHECK (preferred_period = ANY (ARRAY['morning'::text, 'afternoon'::text, 'evening'::text]))",
+        "definition": "CHECK (preferred_period = ANY (ARRAY['morning'::text, 'afternoon'::text, 'evening'::text, 'full_day'::text]))",
         "name": "midao_requests_preferred_period_check",
         "relation": "midao_requests",
         "schema": "public",
@@ -31715,12 +31946,84 @@
         ],
         "deferrable": false,
         "deferred": false,
-        "definition": "CHECK (status = ANY (ARRAY['new'::text, 'pending_reply'::text, 'replied'::text, 'closed_won'::text, 'closed_done'::text]))",
+        "definition": "CHECK (status = ANY (ARRAY['new'::text, 'pending_reply'::text, 'replied'::text, 'closed_won'::text, 'closed_done'::text, 'confirmed'::text, 'cancelled'::text]))",
         "name": "midao_requests_status_check",
         "relation": "midao_requests",
         "schema": "public",
         "targetKind": "relation",
         "type": "c",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "midao_slot_consumptions_guide_id_fkey"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "FOREIGN KEY (guide_id) REFERENCES public.guide_profiles(id) ON DELETE CASCADE",
+        "name": "midao_slot_consumptions_guide_id_fkey",
+        "relation": "midao_slot_consumptions",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "f",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "midao_slot_consumptions_period_check"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (period = ANY (ARRAY['morning'::text, 'afternoon'::text, 'evening'::text]))",
+        "name": "midao_slot_consumptions_period_check",
+        "relation": "midao_slot_consumptions",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "midao_slot_consumptions_pkey"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "PRIMARY KEY (id)",
+        "name": "midao_slot_consumptions_pkey",
+        "relation": "midao_slot_consumptions",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "p",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "midao_slot_consumptions_request_id_fkey"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "FOREIGN KEY (request_id) REFERENCES public.midao_requests(id) ON DELETE CASCADE",
+        "name": "midao_slot_consumptions_request_id_fkey",
+        "relation": "midao_slot_consumptions",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "f",
         "validated": true
       },
       {
@@ -35983,6 +36286,21 @@
         "canonicalKey": [
           "index",
           "public",
+          "idx_midao_slot_by_request"
+        ],
+        "definition": "CREATE INDEX idx_midao_slot_by_request ON public.midao_slot_consumptions USING btree (request_id)",
+        "name": "idx_midao_slot_by_request",
+        "primary": false,
+        "relation": "midao_slot_consumptions",
+        "replicaIdentity": false,
+        "schema": "public",
+        "unique": false,
+        "valid": true
+      },
+      {
+        "canonicalKey": [
+          "index",
+          "public",
           "idx_order_addons_order"
         ],
         "definition": "CREATE INDEX idx_order_addons_order ON public.order_addons USING btree (order_id)",
@@ -37123,6 +37441,21 @@
         "canonicalKey": [
           "index",
           "public",
+          "midao_slot_consumptions_pkey"
+        ],
+        "definition": "CREATE UNIQUE INDEX midao_slot_consumptions_pkey ON public.midao_slot_consumptions USING btree (id)",
+        "name": "midao_slot_consumptions_pkey",
+        "primary": true,
+        "relation": "midao_slot_consumptions",
+        "replicaIdentity": false,
+        "schema": "public",
+        "unique": true,
+        "valid": true
+      },
+      {
+        "canonicalKey": [
+          "index",
+          "public",
           "notification_event_settings_audit_pkey"
         ],
         "definition": "CREATE UNIQUE INDEX notification_event_settings_audit_pkey ON public.notification_event_settings_audit USING btree (id)",
@@ -38179,6 +38512,21 @@
         "name": "uq_midao_day_overrides_period",
         "primary": false,
         "relation": "midao_day_overrides",
+        "replicaIdentity": false,
+        "schema": "public",
+        "unique": true,
+        "valid": true
+      },
+      {
+        "canonicalKey": [
+          "index",
+          "public",
+          "uq_midao_slot_active"
+        ],
+        "definition": "CREATE UNIQUE INDEX uq_midao_slot_active ON public.midao_slot_consumptions USING btree (guide_id, date, period) WHERE (released_at IS NULL)",
+        "name": "uq_midao_slot_active",
+        "primary": false,
+        "relation": "midao_slot_consumptions",
         "replicaIdentity": false,
         "schema": "public",
         "unique": true,
@@ -41997,6 +42345,17 @@
         "enabled": true,
         "forced": false,
         "relation": "midao_requests",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "rls",
+          "public",
+          "midao_slot_consumptions"
+        ],
+        "enabled": true,
+        "forced": false,
+        "relation": "midao_slot_consumptions",
         "schema": "public"
       },
       {
@@ -77878,6 +78237,806 @@
         "grantee": "service_role",
         "grantor": "postgres",
         "object": "midao_requests",
+        "objectType": "relation",
+        "privilege": "UPDATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "anon",
+          "DELETE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "anon",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "DELETE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "anon",
+          "INSERT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "anon",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "INSERT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "anon",
+          "MAINTAIN",
+          false
+        ],
+        "grantable": false,
+        "grantee": "anon",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "MAINTAIN",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "anon",
+          "REFERENCES",
+          false
+        ],
+        "grantable": false,
+        "grantee": "anon",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "REFERENCES",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "anon",
+          "SELECT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "anon",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "SELECT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "anon",
+          "TRIGGER",
+          false
+        ],
+        "grantable": false,
+        "grantee": "anon",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "TRIGGER",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "anon",
+          "TRUNCATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "anon",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "TRUNCATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "anon",
+          "UPDATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "anon",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "UPDATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "authenticated",
+          "DELETE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "authenticated",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "DELETE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "authenticated",
+          "INSERT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "authenticated",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "INSERT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "authenticated",
+          "MAINTAIN",
+          false
+        ],
+        "grantable": false,
+        "grantee": "authenticated",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "MAINTAIN",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "authenticated",
+          "REFERENCES",
+          false
+        ],
+        "grantable": false,
+        "grantee": "authenticated",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "REFERENCES",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "authenticated",
+          "SELECT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "authenticated",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "SELECT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "authenticated",
+          "TRIGGER",
+          false
+        ],
+        "grantable": false,
+        "grantee": "authenticated",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "TRIGGER",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "authenticated",
+          "TRUNCATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "authenticated",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "TRUNCATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "authenticated",
+          "UPDATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "authenticated",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "UPDATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "postgres",
+          "DELETE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "DELETE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "postgres",
+          "INSERT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "INSERT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "postgres",
+          "MAINTAIN",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "MAINTAIN",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "postgres",
+          "REFERENCES",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "REFERENCES",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "postgres",
+          "SELECT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "SELECT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "postgres",
+          "TRIGGER",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "TRIGGER",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "postgres",
+          "TRUNCATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "TRUNCATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "postgres",
+          "UPDATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "UPDATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "service_role",
+          "DELETE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "DELETE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "service_role",
+          "INSERT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "INSERT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "service_role",
+          "MAINTAIN",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "MAINTAIN",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "service_role",
+          "REFERENCES",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "REFERENCES",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "service_role",
+          "SELECT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "SELECT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "service_role",
+          "TRIGGER",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "TRIGGER",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "service_role",
+          "TRUNCATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "TRUNCATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "service_role",
+          "UPDATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "UPDATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "supabase_admin",
+          "DELETE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "DELETE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "supabase_admin",
+          "INSERT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "INSERT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "supabase_admin",
+          "MAINTAIN",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "MAINTAIN",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "supabase_admin",
+          "REFERENCES",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "REFERENCES",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "supabase_admin",
+          "SELECT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "SELECT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "supabase_admin",
+          "TRIGGER",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "TRIGGER",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "supabase_admin",
+          "TRUNCATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "privilege": "TRUNCATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_slot_consumptions",
+          "supabase_admin",
+          "supabase_admin",
+          "UPDATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_slot_consumptions",
         "objectType": "relation",
         "privilege": "UPDATE",
         "schema": "public",
@@ -117003,6 +118162,18 @@
         "object": "midao_requests",
         "objectType": "relation",
         "owner": "postgres",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "owner",
+          "relation",
+          "public",
+          "midao_slot_consumptions"
+        ],
+        "object": "midao_slot_consumptions",
+        "objectType": "relation",
+        "owner": "supabase_admin",
         "schema": "public"
       },
       {
