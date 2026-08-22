@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 const DEFAULT_MIGRATIONS_DIR = 'supabase/migrations';
 const DEFAULT_OUTPUT = 'supabase/baselines/v1/frozen-migrations.sha256';
 const DEFAULT_CUTOFF = '20260723000000_midao_backend_mode.sql';
-const DEFAULT_EXPECTED_COUNT = 128;
+export const DEFAULT_EXPECTED_COUNT = 130;
 const HASH = /^[0-9a-f]{64}$/;
 const SAFE_SQL_NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]*\.sql$/;
 

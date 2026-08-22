@@ -97,3 +97,191 @@
 - 未修改 lockfile、migration、harness、#1825、P6、pilot、scheduled route、guide preview、calendar、payments/checkout 或 feature flag；既有依賴 symlink 僅供本機測試，未安裝或改寫依賴。
 - 無 Kanban mutation、無 GitHub remote mutation、無 push／PR／merge／deploy、無 production DDL/DML、無 credential 操作。
 - commit 前 final HEAD 將由本機 Git read-back；禁止推送，並以本節實跑證據作為 commit gate。
+
+---
+
+## Stage 2 — /midao2/calendar canonical availability convergence（Kanban t_eef2a09f，Anna / tp-builder-api）
+
+- 日期：2026-08-21（Asia/Taipei）
+- Worktree：`/root/.hermes/worktrees/tour-platform/build-1760-calendar-canonical`（linked，非 primary）
+- Branch：`builder/issue-1760-calendar-canonical-90c324f7`
+- base_sha：`90c324f75c2dc038050ab90733426dad1e7c60bc`
+- Owner 不可變決議：U-1 段別固定 `morning=09:00-12:00`／`afternoon=13:00-17:00`／`evening=18:00-21:00`；U-2 採 W-2（週預設只是 UI 批次工具，不落第二套 durable 真相）。
+- Owner APPROVE_A（卡片 comment #1351/#1352）：允許清單擴充旅客端公開接案頁 availability route、其舊模組單元測試，以及公開契約／parity 測試。
+
+### 目標
+
+把 `/midao2/calendar` 與其變更 API 收斂到既有 canonical effective availability（`guide_availability_rules` global ranges ＋ `guide_availability_day_revisions` ＋ `activity_plans.availability_policy`），並退役平行引擎，不新增第三套引擎、不做背景雙寫。
+
+### 變更檔案
+
+新增：
+- `apps/web/src/lib/midao/midao-calendar-canonical.ts` — U-1 段別與 canonical 區間互轉的純函式與單日投影。
+- `apps/web/src/lib/midao/db-midao-canonical-availability.mjs` — canonical 讀寫 gateway（月投影、單日 CAS、W-2 批次轉單日）；使用既有 `supabase-env.mjs` service-role seam，未經 `db.mjs`。
+- `apps/web/tests/unit/issue1760-midao-segment-range-mapping.test.mjs`
+- `apps/web/tests/api/issue1760-stage2-calendar-canonical-read.test.mjs`
+- `apps/web/tests/api/issue1760-stage2-day-cas-mutation.test.mjs`
+- `apps/web/tests/api/issue1760-stage2-cross-surface-parity.test.mjs`
+- `apps/web/tests/api/issue1760-stage2-public-guide-availability-canonical.test.mjs`
+- `apps/web/tests/api/issue1760-stage2-parallel-engine-retirement-guard.test.mjs`
+- `apps/web/e2e/midao2-calendar-canonical.spec.ts`
+
+修改：
+- `apps/web/app/api/v2/guide/midao/calendar/route.ts` — GET 改讀 canonical 月投影，新增 `revision`／`isClosed`／`timezone`／`ranges`，保留 `items`／`hasPending`／`hasConfirmed`／requests 疊加／bookings 疊加與既有 bookings degrade。
+- `apps/web/app/api/v2/guide/midao/availability/days/[date]/route.ts` — PUT 改為 canonical CAS：必填 `expectedRevision` 與 `Idempotency-Key`；`REVISION_CONFLICT` 對 409（帶 `currentRevision`），`DAY_TIMEZONE_MISMATCH`／`INVALID_RANGES`／`INVALID_IDEMPOTENCY`／`INVALID_ARGUMENT` 對 422，`GUIDE_NOT_FOUND` 對 404，`IDEMPOTENCY_KEY_REUSED` 對 409；CSRF 與 guide session 不放寬，guideId 一律取自 session。
+- `apps/web/app/api/v2/guide/midao/availability/defaults/route.ts` — W-2 批次工具：GET 由 canonical 月投影推導初始勾選，POST 將「星期幾 乘 U-1 段別」展開成逐日 canonical CAS 寫入；無週預設 durable 表、無新 RPC 或 migration。
+- `apps/web/app/(non-locale)/midao2/calendar/page.tsx` — day state 帶 revision，寫入送 canonical ranges 與 `Idempotency-Key`，409 時重新載入該月並顯示提示。
+- `apps/web/app/(non-locale)/midao2/calendar/WeeklyDefaultsModal.tsx` — 改批次 POST（month 與 days[{date,expectedRevision}]），標籤帶 U-1 固定 HH:MM。
+- `apps/web/app/api/v2/public/midao/guides/[slug]/availability/route.ts`（APPROVE_A）— 只替換可用性讀取來源為 canonical；URL、回應形狀、`openPeriods` 契約、公開資料邊界與 fail-closed 行為不變，無任何 mutation 或 auth 擴張。
+- `apps/web/e2e/midao2-backend-flow.spec.ts` — 行事曆案例對齊 canonical CAS 契約。
+
+刪除（退役）：
+- `apps/web/src/lib/midao/db-midao-availability.mjs`
+- `apps/web/tests/unit/db-midao-availability.test.mjs`（APPROVE_A 授權，改由退役 guard 取代）
+
+### RED 到 GREEN 證據
+
+RED（實跑捕獲，非事後補寫）：
+- U-1 mapping：`ERR_MODULE_NOT_FOUND: midao-calendar-canonical.ts`，pass 0、fail 1。
+- canonical read：9 tests，2 failed（calendar route 仍 import 平行引擎、缺 revision/isClosed/timezone）。
+- day CAS：12 tests，3 failed（day route 未接 canonical、缺 expectedRevision 與 Idempotency-Key、defaults route 仍寫週預設）。
+- 退役 guard：5 tests，3 failed（舊模組仍存在、仍有 import、app/src 仍有 midao 舊表參照）。
+
+GREEN（同一 tree，實跑）：
+
+```bash
+node --test apps/web/tests/unit/issue1760-midao-segment-range-mapping.test.mjs \
+  apps/web/tests/api/issue1760-stage2-calendar-canonical-read.test.mjs \
+  apps/web/tests/api/issue1760-stage2-day-cas-mutation.test.mjs \
+  apps/web/tests/api/issue1760-stage2-cross-surface-parity.test.mjs \
+  apps/web/tests/api/issue1760-stage2-public-guide-availability-canonical.test.mjs \
+  apps/web/tests/api/issue1760-stage2-parallel-engine-retirement-guard.test.mjs \
+  apps/web/tests/api/midao2-pages-contract.test.mjs \
+  apps/web/tests/unit/midao2-migration-contract.test.mjs \
+  apps/web/tests/api/issue1760-availability-scope-day-cas.test.mjs \
+  apps/web/tests/api/issue1760-effective-availability-policy-resolver.test.mjs
+```
+
+結果：`80` tests、`80` passed、`0` failed。
+
+typecheck：`apps/web/node_modules/.bin/tsc --noEmit`（TypeScript 6.0.2）— 本次變更檔案零錯誤。剩餘錯誤全為 pre-existing 缺依賴或既有型別債（`next-intl`、`zod`、`qrcode.react`、`@line/liff`、`pngjs`、`pixelmatch` 未安裝，以及 blog/orders 既有 implicit any），與本次 diff 無交集。
+
+### 退役守門
+
+- `application_table_reference_guard`：`apps/web/app/**` 與 `apps/web/src/**` 內 `midao_availability_defaults`／`midao_day_overrides` 參照數為 0；只排除歷史 SQL（`supabase/migrations/**`，migration 只增不改）。
+- `legacy_module_import_guard`：`apps/web/{app,src,tests,e2e}` 內對 `db-midao-availability.mjs` 的 import 或 require 為 0；不以 migration 例外掩蓋模組 import。
+- 兩個 guard 皆 GREEN 後才刪除舊模組；未保留 fallback 或雙寫。
+
+### NOT_VERIFIED-local
+
+- `npm run test:e2e -w @tour/web -- midao2-calendar-canonical`：未於本機實跑。blocker：本機 primary checkout 與本 worktree 的 `node_modules` 皆缺 `next-intl`（且該套件未列於 `apps/web/package.json` 依賴），Playwright 需完整依賴與 dev server；本卡片禁止安裝依賴或改 lockfile。Playwright spec 已依契約撰寫，實跑驗證留待 CI 或具完整依賴之環境。
+- `apps/web/tests/api/issue1760-traveler-dynamic-selector-parity.test.mjs`：本機 `ERR_MODULE_NOT_FOUND: next-intl`（來自 `src/i18n/routing.ts`），屬 pre-existing 環境缺依賴，與本次 diff 無交集（本次未觸及 available-slots、i18n、slot-generator、resolver 任一檔）。
+
+### Scope 與副作用封存
+
+- 僅動 Owner 修正後允許清單內檔案；未改 lockfile、migration、harness、middleware、security-env、orders/payments、scheduled-plan-slots、canonical resolver、traveler available-slots 或 guide preview。
+- 無新 migration、無 migration apply、無 ledger、RLS、ACL，無 Production SQL 或資料操作，無 feature flag 或 backend_mode。
+- 無 push、PR、merge、rebase、deploy；未 clean/reset/stash primary checkout。
+
+---
+
+## Stage 2 round 2 — Rita R-1/R-2/R-3 修正（builder run 1009）
+
+Rita（tp-reviewer）round 1 verdict = FAIL，base `90c324f7` -> head `e1511a1b`，提出三項需修正。以下逐條處置，全部先寫 RED 測試再實作。
+
+### R-1（阻擋，已修）canonical 讀取面對非 Asia/Taipei 日修訂 fail-open
+
+根因：`getCanonicalMonthCalendarDb` 以單一 `options.timezone || 'Asia/Taipei'` 建 selector，而 `effective-availability-resolver.ts:56-60` 對 dayRevision 的比對條件包含 `revision.timezone === context.timezone`。日修訂的 timezone 是 per-row 欄位，route 無從預知，因此單一 context timezone 必然漏掉其他時區的日修訂，造成單日關閉或覆寫在讀取面被整列忽略、退回週期規則（fail-open）。
+
+修法（`apps/web/src/lib/midao/db-midao-canonical-availability.mjs`）：改為逐日以該日 revision 自身的 timezone 建 selector（以 Map 依 timezone 快取，避免每天重建），無日修訂的日子才用預設時區；並在投影前對 `isClosed` 明確清空 ranges。
+
+同時修正自相矛盾 payload（`apps/web/src/lib/midao/midao-calendar-canonical.ts`）：`buildDayAvailabilityProjection` 對 `isClosed=true` 一律回 `ranges: []` 與全 false 的 `availability`，純函式層即 fail-closed。
+
+### R-2（阻擋，已修）公開接案頁未看 isClosed
+
+`apps/web/app/api/v2/public/midao/guides/[slug]/availability/route.ts` 原本只由 `d.ranges` 推導 `openPeriods`。改為 `d.isClosed ? [] : canonicalRangesToOpenPeriods(d.ranges)`，對已關閉日明確 fail-closed。URL、回應形狀、公開資料邊界與無 mutation/auth 擴張皆不變。
+
+### R-3（已修）W-2 批次未限定未來日期
+
+- 新增純函式 `isFutureLocalDate(date, timezone, now)` 與 `selectFutureDates(...)`，以指定時區的今天為界，當日與過去日皆不算未來。
+- `apps/web/app/api/v2/guide/midao/availability/defaults/route.ts`：POST 對非未來日不送出 CAS 寫入，改列入回應新增的 `skipped: [{date, reason:'NOT_FUTURE_DATE'}]`，伺服器端為權威判斷。
+- `WeeklyDefaultsModal.tsx`：送出前先濾掉非未來日，並更新說明文案為「套用到尚未到來的每一個對應星期（已過去的日期不會被更動）」。
+
+### RED to GREEN 證據
+
+RED（實作前，本機 `node --test`）：新增 8 個測試全數 fail
+
+- calendar-canonical-read：非 Asia/Taipei 日修訂「關閉必須生效」「開放覆寫必須生效」、「isClosed 與非空 ranges 不得並存」、「純函式層 isClosed fail-closed」共 4 fail
+- public-guide-availability-canonical：「openPeriods 必須對 isClosed 明確 fail-closed」「已關閉日（非 Asia/Taipei）對旅客不得顯示為開放」共 2 fail
+- day-cas-mutation：「批次只寫未來日期」「defaults route 只對未來日送 CAS 並回報 skipped」共 2 fail
+
+GREEN（實作後）：
+
+```
+node --test \
+  apps/web/tests/unit/issue1760-midao-segment-range-mapping.test.mjs \
+  apps/web/tests/api/issue1760-stage2-calendar-canonical-read.test.mjs \
+  apps/web/tests/api/issue1760-stage2-day-cas-mutation.test.mjs \
+  apps/web/tests/api/issue1760-stage2-public-guide-availability-canonical.test.mjs \
+  apps/web/tests/api/issue1760-stage2-cross-surface-parity.test.mjs \
+  apps/web/tests/api/issue1760-stage2-parallel-engine-retirement-guard.test.mjs
+```
+
+結果：`62` tests、`62` passed、`0` failed（含新增 8 項）。
+
+回歸（`issue1760-availability-scope-day-cas`、`issue1760-effective-availability-policy-resolver`、`midao2-pages-contract`、`midao2-migration-contract`）：`26` tests、`26` passed、`0` failed。
+
+合計 88 tests / 88 passed / 0 failed。
+
+typecheck（round 2 原記載為「零錯誤」，經 Rita round 2 指出並由本輪實測更正）：本機 `npx tsc` 會解析到非 TypeScript 的同名 decoy 套件，且全專案 `tsc -p apps/web/tsconfig.json --noEmit` 因 node_modules 缺 `react`／`@types/node` 等依賴而產生 15080 筆 pre-existing 錯誤，無法作為本卡證據。改以本機真實編譯器隔離單檔量測（`apps/web/node_modules/.bin/tsc --noEmit --ignoreConfig --allowJs --checkJs --strict`）：commit `c98e94b8` 於 `db-midao-canonical-availability.mjs` 淨新增 `TS7006` 2 筆（`guideId`、`month`，皆位於 L148），即 Rita 的 R-4；round 3 修正後同一量測為 0 筆。原「零錯誤」宣稱不成立，特此更正。
+
+### Round 2 scope
+
+本輪僅改動 8 檔，全在 Owner APPROVE_A 修正後允許清單內：5 個實作檔與 3 個既有 Stage 2 測試檔。未新增檔案、未改 lockfile、migration、harness、middleware、security-env、orders/payments、resolver、slot-generator；無 push、PR、merge、deploy；NOT_VERIFIED-local 條目（Playwright、traveler-dynamic-selector-parity）狀態不變，原因仍為本機缺 `next-intl`。
+
+## Stage 2 Round 3（Rita round 2 判決 R-4 修正）
+
+### 修正項目
+
+R-4（唯一阻擋）：`apps/web/src/lib/midao/db-midao-canonical-availability.mjs` L144-146 於 round 2 改寫 JSDoc 時，移除了 `guideId`／`month` 的型別註記，並把 options 寫成順序顛倒的非法形式 `@param options {{...}}`，回退了同 branch commit `0a99129d` 已修好的 typecheck。
+
+修法（僅還原三行註解，零邏輯變更，R-1 的中文根因說明段落完整保留）：
+
+```
+ * @param {string} guideId
+ * @param {string} month 'YYYY-MM'
+ * @param {{ timezone?: string, policy?: 'inherit'|'restrict'|'closed' }} [options]
+```
+
+### typecheck 實測（更正 round 2 的不實宣稱）
+
+本機兩項環境限制使「全域 typecheck 綠燈」無法作為證據，據實記錄：
+
+1. `npx tsc` 解析到非 TypeScript 的同名 decoy 套件（輸出 `This is not the tsc command you are looking for`），round 2 據此得出的結論無效。
+2. 真實編譯器 `apps/web/node_modules/.bin/tsc -p apps/web/tsconfig.json --noEmit` 產生 `15080` 筆錯誤，主因為 node_modules 缺 `react`、`@types/node`、`next-intl` 等依賴（pre-existing 環境缺件，卡片禁止安裝依賴／改 lockfile），與本次 diff 無交集。
+
+因此採用 Rita 的隔離單檔量測法，同一編譯器、同一 flags、只餵此檔：
+
+```
+apps/web/node_modules/.bin/tsc --noEmit --ignoreConfig --allowJs --checkJs --strict \
+  --target ES2022 --module esnext --moduleResolution bundler --skipLibCheck \
+  src/lib/midao/db-midao-canonical-availability.mjs
+```
+
+| 版本 | 該檔 TS7006 |
+|---|---|
+| base `e1511a1b` | 0 |
+| head `c98e94b8`（round 2） | 2 — L148 `guideId`、L148 `month` |
+| round 3 修正後 | 0 |
+
+R-4 完全重現且已修復；淨新增 0 筆。備註：量測必須帶 `--ignoreConfig`，否則 tsc 只回 `TS5112` 而不做任何檢查（此即先前誤判為 0 的原因）。
+
+### 測試
+
+焦點 6 檔：`62` tests、`62` passed、`0` failed。
+回歸 4 檔（`issue1760-availability-scope-day-cas`、`issue1760-effective-availability-policy-resolver`、`midao2-pages-contract`、`tests/unit/midao2-migration-contract`）：`26` tests、`26` passed、`0` failed。
+合計 88 tests / 88 passed / 0 failed。
+
+### Round 3 scope
+
+僅改動 2 檔：`db-midao-canonical-availability.mjs`（三行 JSDoc）與本 worklog。無邏輯、契約、API 或測試行為變更。無 push、PR、merge、deploy、migration 套用、Production 操作。NOT_VERIFIED-local 條目（Playwright、traveler-dynamic-selector-parity）狀態不變，原因仍為本機缺 `next-intl`。

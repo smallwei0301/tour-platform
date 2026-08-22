@@ -29,6 +29,8 @@ const exactMigrations = [
   ['20260723021000_midao_service_publication_versions.sql', '0d9d5b0acb56d657fbacc638622bc36faa35b682b7d2727db80aa63cb872bda6'],
   ['20260723022000_midao_atomic_service_publication.sql', 'b7b06f0029052c2187401e2b7b160545ab757099fee8ba088bc98c9743e9029c'],
   ['20260723023000_midao_atomic_publication_restore.sql', 'feb4e8db59acbb1703b56ee81417026bc077b0bed12669811c52ac98db832421'],
+  ['20260723090000_midao2_request_plan_columns.sql', 'ffa84961fcecbeea0922f6bd7ee117b5b38086951e883e6e62c8f79db5aea687'],
+  ['20260727120000_midao2_instant_booking.sql', 'c12b16109664baa7e812dfa7479ee1c54e429cdbd690c938d35ed174ad21a2da'],
   ['20260729160000_issue1777_atomic_settlement_and_payout_confirm.sql', 'e916be151520837e7d4e2c8fd3575dc11377ffcee88ed6bbd0f7149f18a3208c'],
   ['20260729170000_issue1777_refund_adjustment_ledger.sql', 'af3e498e2acd6dd0410182fd8aef60d098315df79d4d39cfbf246256840849b6'],
   ['20260729180000_issue1777_revoke_atomic_fns_from_anon.sql', 'a4294771928c98a5b071168db76c8f8301bd4db933e0fb214c1bae891476be24'],
