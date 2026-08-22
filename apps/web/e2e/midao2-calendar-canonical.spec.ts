@@ -25,8 +25,20 @@ function buildDays(overrides: Record<string, any> = {}) {
 }
 
 test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-08-15T00:00:00+08:00'));
   await setGuideSession(page, 'guide-e2e-1760');
   await page.route('**/api/guide/auth/csrf', (r) => r.fulfill({ json: { ok: true } }));
+  await page.route('**/api/v2/guide/midao/summary', (r) => r.fulfill({
+    json: {
+      success: true,
+      data: {
+        guideName: 'Guide 1760',
+        counts: { newRequests: 0, pendingReply: 0 },
+        topRequest: null,
+        recentRequests: [],
+      },
+    },
+  }));
 });
 
 test('月投影：canonical ranges 投影成 U-1 段別按鈕狀態', async ({ page }) => {
@@ -41,7 +53,7 @@ test('月投影：canonical ranges 投影成 U-1 段別按鈕狀態', async ({ p
     r.fulfill({ json: { success: true, data: { month: MONTH, days } } }),
   );
   await page.goto('/midao2/calendar');
-  await page.getByTestId('midao2-cal-prev').click();
+  await page.getByTestId('midao2-cal-next').click();
   await page.getByTestId('midao2-cal-day-2026-09-05').click();
   await expect(page.getByTestId('midao2-cal-period-morning')).toBeVisible();
   await expect(page.getByTestId('midao2-cal-period-afternoon')).toBeVisible();
@@ -68,7 +80,7 @@ test('單日寫入：帶 expectedRevision 與 Idempotency-Key 的 canonical CAS'
     });
   });
   await page.goto('/midao2/calendar');
-  await page.getByTestId('midao2-cal-prev').click();
+  await page.getByTestId('midao2-cal-next').click();
   await page.getByTestId('midao2-cal-day-2026-09-05').click();
   await page.getByTestId('midao2-cal-period-afternoon').click();
   await expect.poll(() => putBody?.expectedRevision).toBe(7);
@@ -93,7 +105,7 @@ test('自訂時段：送出 canonical 區間並與 U-1 段別合併', async ({ p
     return r.fulfill({ json: { success: true, data: { date: `${MONTH}-05`, revision: 2, isClosed: false, ranges: [], effective: null } } });
   });
   await page.goto('/midao2/calendar');
-  await page.getByTestId('midao2-cal-prev').click();
+  await page.getByTestId('midao2-cal-next').click();
   await page.getByTestId('midao2-cal-day-2026-09-05').click();
   await page.getByTestId('midao2-cal-custom-add').click();
   await page.locator('input[type="time"]').first().fill('07:00');
@@ -125,7 +137,7 @@ test('過期 revision：409 後重新載入並顯示提示訊息', async ({ page
     }),
   );
   await page.goto('/midao2/calendar');
-  await page.getByTestId('midao2-cal-prev').click();
+  await page.getByTestId('midao2-cal-next').click();
   await page.getByTestId('midao2-cal-day-2026-09-05').click();
   await page.getByTestId('midao2-cal-period-morning').click();
   await expect(page.getByTestId('midao2-cal-avail-error')).toContainText('已重新載入');
@@ -160,7 +172,7 @@ test('W-2 週批次：勾選段別後展開為單日 canonical 寫入', async ({
     }
   });
   await page.goto('/midao2/calendar');
-  await page.getByTestId('midao2-cal-prev').click();
+  await page.getByTestId('midao2-cal-next').click();
   await page.getByTestId('midao2-cal-defaults-btn').click();
   await page.getByTestId('midao2-default-6-morning').check();
   await page.getByTestId('midao2-defaults-save').click();

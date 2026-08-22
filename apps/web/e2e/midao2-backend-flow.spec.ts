@@ -29,6 +29,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('首頁：統計卡/需要你處理/底部導覽', async ({ page }) => {
+  test.setTimeout(60_000); // 本機首次編譯 /midao2 可超過預設 30 秒
   await page.goto('/midao2');
   await expect(page.getByText('Andy')).toBeVisible();
   await expect(page.getByTestId('midao2-stat-new')).toContainText('2');
