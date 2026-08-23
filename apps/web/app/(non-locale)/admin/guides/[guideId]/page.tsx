@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, PageHeader } from '../../../../../src/components/admin/ui';
 import { csrfHeaders, ensureCsrfToken } from '../../../../../src/lib/csrf-client';
-import { sanitizeGuideRealmRedirect } from '../../../../../src/lib/midao/login-redirect';
+import { resolveGuideLoginRedirect } from '../../../../../src/lib/midao/login-redirect';
 import {
   canSwitchAdminGuideBackendMode,
   executeAdminBackendModeSwitch,
@@ -94,7 +94,7 @@ export default function AdminGuideDetailPage() {
   const canImpersonate =
     guide?.kind !== 'application' && guide?.verification_status === 'approved';
 
-  async function handleEnterGuideBackend() {
+  async function handleEnterGuideBackend(target: string = '/guide/dashboard') {
     if (!guide || impersonating) return;
     setImpersonating(true);
     setImpersonateError('');
@@ -115,8 +115,8 @@ export default function AdminGuideDetailPage() {
         setImpersonating(false);
         return;
       }
-      // 取得導遊session cookie後使用API決定的canonical realm；本地sanitizer負責fail closed。
-      window.location.href = sanitizeGuideRealmRedirect(json.data.redirectTo);
+      // API 決定可進入的後台 realm；target 只能在同 realm 內細分到 midao2。
+      window.location.href = resolveGuideLoginRedirect(json.data.redirectTo, target);
     } catch {
       setImpersonateError('進入導遊後台失敗，請稍後再試');
       setImpersonating(false);
@@ -459,7 +459,7 @@ export default function AdminGuideDetailPage() {
                   <button
                     type="button"
                     data-testid="admin-enter-guide-backend"
-                    onClick={handleEnterGuideBackend}
+                    onClick={() => handleEnterGuideBackend()}
                     disabled={impersonating}
                     style={{
                       padding: '9px 16px', borderRadius: 8, border: '1px solid #7c3aed',
@@ -468,6 +468,21 @@ export default function AdminGuideDetailPage() {
                     }}
                   >
                     {impersonating ? '進入中…' : '🚪 進入導遊後台'}
+                  </button>
+                )}
+                {canImpersonate && (
+                  <button
+                    type="button"
+                    data-testid="admin-enter-midao2"
+                    onClick={() => handleEnterGuideBackend('/midao2')}
+                    disabled={impersonating}
+                    style={{
+                      padding: '9px 16px', borderRadius: 8, border: '1px solid #7c3aed',
+                      background: impersonating ? '#ede9fe' : '#f5f3ff', color: '#6d28d9',
+                      fontSize: 13, fontWeight: 600, cursor: impersonating ? 'wait' : 'pointer',
+                    }}
+                  >
+                    {impersonating ? '進入中…' : '✨ 進入 midao2 後台'}
                   </button>
                 )}
               </div>

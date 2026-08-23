@@ -49,6 +49,6 @@ test('source gate CLI validates current repo source without requiring production
   const body = JSON.parse(result.stdout);
   assert.equal(body.mode, 'source');
   assert.equal(body.status, 'verified');
-  assert.equal(body.frozenCount, 128);
+  assert.equal(body.frozenCount, 130);
   assert.equal(body.postCutoffCount >= 6, true);
 });
