@@ -53,3 +53,10 @@ The current harness redacts the actionable failure. Do not claim DB/RLS/concurre
 - RED evidence: pinned Node v22.23.1 parsed `apps/web/package.json` and failed because the exact Phase 3 spec was absent from `test:e2e:smoke`.
 - Added only `e2e/midao2-request-conversion.spec.ts` to that smoke command; its four existing specs remain in their original order and no product writer/RPC/migration behavior changed.
 - A remote execution still requires explicit Owner authorization for push/PR/workflow dispatch. Until then this browser AC is `HOLD_AWAITING_REMOTE_CI_AUTHORIZATION`; no GitHub, production, credential, deployment, payment, or LINE mutation was performed.
+
+## 2026-08-24 Phase 3 Builder rework — E2E summary auth probe
+
+- Remote GitHub `e2e-smoke` evidence for `e2f0ec2fe71b398dc22c2779812710952ca65b6c` found the canonical 409 reload test timed out on its first attempt and passed only on retry. The stable root cause was the unmocked `Midao2Layout` GET `/api/v2/guide/midao/summary`: its 401 branch redirects the page to `/guide/login?next=/midao2` before the request-detail test can interact with its mocked canonical routes.
+- Updated only `apps/web/e2e/midao2-request-conversion.spec.ts`: a reusable `mockMidaoGuideSummary(page)` installs a successful safe-envelope route before `page.goto` in both tests. It avoids timeout/retry expansion and leaves the canonical conversion/CRM-write assertions unchanged.
+- RED evidence is the authoritative remote first-attempt timeout plus a pre-change source check that found no summary route mock in this spec. GREEN local evidence: `NODE_ENV=test npx --no-install playwright test --list e2e/midao2-request-conversion.spec.ts` listed exactly two Chromium tests; `.claude/hooks/run-checks.sh --typecheck` passed 41/41 and `tsc --noEmit` under pinned Node 22.
+- Browser execution was intentionally not repeated locally: the card prohibits rerunning the known unavailable Chromium/local watcher lane. A new GitHub-hosted E2E smoke run still needs explicit Owner authorization for the next exact commit; no push, PR, workflow dispatch, production, credential, deployment, payment, or LINE mutation occurred.

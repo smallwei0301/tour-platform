@@ -1,14 +1,32 @@
 import { test, expect, setGuideSession } from './helpers';
+import type { Page } from '@playwright/test';
 
 const GUIDE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const REQUEST_ID = 'mreq-canonical-e2e';
 const INQUIRY_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const PLAN_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 
+const MIDAO_SUMMARY = {
+  success: true,
+  data: {
+    guideName: '測試導遊',
+    counts: { newRequests: 0, pendingReply: 0 },
+    topRequest: null,
+    recentRequests: [],
+  },
+};
+
+async function mockMidaoGuideSummary(page: Page): Promise<void> {
+  await page.route('**/api/v2/guide/midao/summary', (route) =>
+    route.fulfill({ json: MIDAO_SUMMARY }),
+  );
+}
+
 test.setTimeout(60_000);
 
 test('midao2 request conversion uses only the server-projected canonical command', async ({ page }) => {
   await setGuideSession(page, GUIDE_ID);
+  await mockMidaoGuideSummary(page);
   await page.context().addCookies([
     { name: 'tp_csrf', value: 'midao2-e2e-csrf', url: 'http://127.0.0.1:3333' },
   ]);
@@ -73,6 +91,7 @@ test('midao2 request conversion uses only the server-projected canonical command
 
 test('midao2 reloads the canonical projection after a conversion conflict', async ({ page }) => {
   await setGuideSession(page, GUIDE_ID);
+  await mockMidaoGuideSummary(page);
   await page.context().addCookies([
     { name: 'tp_csrf', value: 'midao2-e2e-csrf', url: 'http://127.0.0.1:3333' },
   ]);
