@@ -2,7 +2,7 @@
 
 // midao2 需求詳情：頭部聯絡資訊 → 行程需求卡 → 特殊需求提示 → 複製摘要 → 進度 radio → 複製 LINE 回覆。
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { C, Card, Badge, Btn, Spinner, ErrorState, copyToClipboard, apiGet, apiSend, Icon } from '../../ui';
 import {
@@ -58,6 +58,8 @@ const STATUS_OPTIONS: { key: string; label: string; testId: string }[] = [
   { key: 'closed_done', label: '結束案件', testId: 'midao2-status-closed_done' },
 ];
 
+const neverCancelled = () => false;
+
 function readGuideNameCookie(): string {
   if (typeof document === 'undefined') return '導遊';
   const match = document.cookie.match(/(?:^|; )guide_name=([^;]*)/);
@@ -95,37 +97,38 @@ export default function Midao2RequestDetailPage() {
     };
   }, []);
 
-  useEffect(() => {
+  const load = useCallback(async (isCancelled: () => boolean = neverCancelled) => {
     if (!id) return;
-    let cancelled = false;
     setLoading(true);
     setError(null);
-    apiGet(`/api/v2/guide/midao/requests/${id}`)
-      .then((d) => {
-        if (cancelled) return;
-        const found = d?.request as MidaoRequestDetail;
-        setRequest(found);
-        setCanonicalInquiry((d?.canonicalInquiry as CanonicalInquiryProjection | null | undefined) ?? null);
-        // 載入後若仍是「新需求」→ 自動轉待回覆（成功以回傳更新 state；失敗靜默不擋閱讀）。
-        if (found?.status === 'new') {
-          apiSend(`/api/v2/guide/midao/requests/${id}`, 'PATCH', { status: 'pending_reply' })
-            .then((r2) => {
-              if (!cancelled && r2?.request) setRequest(r2.request);
-            })
-            .catch(() => {});
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err?.message || '載入失敗');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    try {
+      const d = await apiGet(`/api/v2/guide/midao/requests/${id}`);
+      if (isCancelled()) return;
+      const found = d?.request as MidaoRequestDetail;
+      setRequest(found);
+      setCanonicalInquiry((d?.canonicalInquiry as CanonicalInquiryProjection | null | undefined) ?? null);
+      // 載入後若仍是「新需求」→ 自動轉待回覆（成功以回傳更新 state；失敗靜默不擋閱讀）。
+      if (found?.status === 'new') {
+        apiSend(`/api/v2/guide/midao/requests/${id}`, 'PATCH', { status: 'pending_reply' })
+          .then((r2) => {
+            if (!isCancelled() && r2?.request) setRequest(r2.request);
+          })
+          .catch(() => {});
+      }
+    } catch (err: unknown) {
+      if (!isCancelled()) setError(err instanceof Error ? err.message : '載入失敗');
+    } finally {
+      if (!isCancelled()) setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void load(() => cancelled);
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [load]);
 
   const handleCopySummary = async () => {
     if (!request) return;
@@ -170,7 +173,7 @@ export default function Midao2RequestDetailPage() {
   };
 
   if (loading) return <Spinner />;
-  if (error || !request) return <ErrorState text={error || '載入失敗'} onRetry={() => router.refresh()} />;
+  if (error || !request) return <ErrorState text={error || '載入失敗'} onRetry={() => void load()} />;
 
   const lineId = request.travelerLineId;
   const email = request.travelerEmail;
@@ -362,7 +365,7 @@ export default function Midao2RequestDetailPage() {
           preferredDate={canonicalInquiry.defaults.preferredDate}
           startTimeLocal={canonicalInquiry.defaults.startTimeLocal}
           onConverted={() => { /* 一次性 confirmation 結果由既有 sheet 保留顯示。 */ }}
-          onReload={async () => { router.refresh(); }}
+          onReload={load}
         />
       ) : canonicalInquiry?.convertedBookingId ? (
         <Card data-testid="midao2-canonical-converted">

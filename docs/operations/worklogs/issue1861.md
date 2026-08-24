@@ -39,3 +39,10 @@ The current harness redacts the actionable failure. Do not claim DB/RLS/concurre
 - Fresh verification: focused Node suite passed 41/41; disposable local PostgreSQL convergence passed 1/1; `git diff --check` passed before the final type narrowing fix.
 - `run-checks.sh --typecheck` initially exposed `TS2339` on the Phase 3 catch value. The builder narrowed it with `error instanceof Error`; the same hook runner then passed focused 41/41 plus `tsc --noEmit`.
 - Browser verification used only `scripts/testing/with-midao-local-supabase.mjs --playwright` and `/usr/bin/chromium`. It reached the real `/midao2/requests/[id]` compilation, but Next dev repeatedly timed out its local requests and Playwright reported a detached frame at `page.goto`; mark `NOT_AUTOMATABLE_LOCAL_WATCHERS` for the browser evidence. No plain dev server, production resource, credential, GitHub, payment, or LINE mutation was performed.
+
+## 2026-08-24 Phase 3 Builder rework — canonical 409 reload
+
+- Rita 發現 canonical convert route 回 `INQUIRY_ALREADY_CONVERTED`／409 時，`InquiryConversionSheet` 的「重新載入詳情」只呼叫 `router.refresh()`，不會重新執行 client-side request GET／`setCanonicalInquiry`，無法讀回 canonical `convertedBookingId`。
+- 先新增 Playwright 409 → reload → 第二次 GET 的回歸情境，再將 request GET/state 更新抽為穩定、可 await 的 `load` callback；初始 effect、error retry 與 sheet `onReload` 共用它。第二次 canonical projection 回傳 converted booking 後，UI 顯示 `midao2-canonical-converted` 並移除轉單 action；spec 同時鎖定沒有 CRM `closed_won` 或直接 booking/order write。
+- Fresh evidence: pinned Node `v22.23.1` focused suite 41/41 PASS; `npm run typecheck -w @tour/web` PASS; `.claude/hooks/run-checks.sh --typecheck` refreshed green 41/41; disposable local Supabase convergence passed 5/5 with `ready → complete → cleanup`; `git diff --check` PASS.
+- Browser runner was not rerun because the card explicitly prohibits retrying the known local watcher/Chromium failure. Keep `NOT_AUTOMATABLE_LOCAL_WATCHERS` as residual risk; no production, GitHub, credential, payment, LINE, deployment, or other external mutation occurred.
