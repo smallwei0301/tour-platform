@@ -7,7 +7,13 @@
 import { RateLimiter } from '../../../../../../../../src/lib/rate-limit';
 import { resolveTrustedClientIp } from '../../../../../../../../src/lib/trusted-ip.mjs';
 import { getPublicMidaoPageDb } from '../../../../../../../../src/lib/midao/db-midao-showcase.mjs';
-import { createMidaoRequestDb, normalizeRequestInput } from '../../../../../../../../src/lib/midao/db-midao-requests.mjs';
+import { normalizeRequestInput } from '../../../../../../../../src/lib/midao/db-midao-requests.mjs';
+import { issueMidaoRequestClaimDb } from '../../../../../../../../src/lib/midao/db-midao-request-claims.mjs';
+import {
+  createMidaoRequestClaimToken,
+  hashMidaoRequestClaimToken,
+  readMidaoRequestClaimPepperFromEnv,
+} from '../../../../../../../../src/lib/midao/midao-request-claim.ts';
 import { notifyGuideNewMidaoRequest } from '../../../../../../../../src/lib/midao/midao-request-notify.mjs';
 import { jsonOk, jsonError } from '../../../../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../../../../src/lib/route-error';
@@ -44,17 +50,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     }
     const norm = normalizeRequestInput(body);
     if (!norm.ok) return jsonError(norm.code, norm.message, 400);
-    const created = await createMidaoRequestDb({
+    const rawClaimToken = createMidaoRequestClaimToken();
+    const claimTokenHash = hashMidaoRequestClaimToken(rawClaimToken, readMidaoRequestClaimPepperFromEnv());
+    const created = await issueMidaoRequestClaimDb({
       guideId: page.guideId, activityId, activityTitle: service.title,
-      value: norm.value, source: 'public_page',
+      value: norm.value, tokenHash: claimTokenHash,
     });
     // fire-and-forget：不 await 失敗路徑影響回應
     notifyGuideNewMidaoRequest({
-      guideId: page.guideId, requestNo: created.requestNo, travelerName: created.travelerName,
-      activityTitle: service.title, preferredDate: created.preferredDate,
-      participantsCount: created.participantsCount,
+      guideId: page.guideId, requestNo: created.requestNo, travelerName: norm.value.traveler_name,
+      activityTitle: service.title, preferredDate: norm.value.preferred_date,
+      participantsCount: norm.value.participants_count,
     }).catch(() => {});
-    return jsonOk({ requestNo: created.requestNo });
+    const response = jsonOk({ requestNo: created.requestNo, claimToken: rawClaimToken });
+    response.headers.set('Cache-Control', 'private, no-store');
+    return response;
   } catch (err) {
     return handleRouteError(err, { route: 'v2/public/midao/guides:submit' });
   }
