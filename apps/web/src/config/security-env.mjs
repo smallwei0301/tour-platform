@@ -19,6 +19,12 @@ export function isValidMidaoRequestClaimPepper(value) {
   return decoded.length === 32 && decoded.toString('base64url') === value;
 }
 
+export function readMidaoRequestClaimPepperFromEnv(env = process.env) {
+  const value = env.MIDAO_REQUEST_CLAIM_PEPPER;
+  if (!isValidMidaoRequestClaimPepper(value)) throw new TypeError('MIDAO_REQUEST_CLAIM_PEPPER_INVALID');
+  return value;
+}
+
 export function getAdminAuthEnv(env = process.env) {
   return {
     adminAccessToken: env.ADMIN_ACCESS_TOKEN,

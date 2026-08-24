@@ -28,10 +28,6 @@ export function decodeMidaoRequestClaimPepper(value: unknown): Buffer {
   return decoded;
 }
 
-export function readMidaoRequestClaimPepperFromEnv(env: NodeJS.ProcessEnv = process.env): Buffer {
-  return decodeMidaoRequestClaimPepper(env.MIDAO_REQUEST_CLAIM_PEPPER);
-}
-
 /**
  * Claim capability uses an isolated HMAC namespace.  The raw token is only
  * returned to the route's request-local scope and must never be persisted.

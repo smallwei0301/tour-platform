@@ -32,7 +32,8 @@ test('公開送單 route：rate-limit＋honeypot＋activity 歸屬＋LINE fire-a
   assert.match(src, /body\.website/);                       // honeypot
   assert.match(src, /jsonError\('INVALID_ACTIVITY'/);       // 歸屬檢查
   assert.match(src, /normalizeRequestInput\(body\)/);
-  assert.match(src, /source: 'public_page'/);
+  assert.match(src, /issueMidaoRequestClaimDb\(/);
+  assert.match(src, /claimToken: rawClaimToken/);
   assert.match(src, /notifyGuideNewMidaoRequest\(/);
   assert.match(src, /\.catch\(\(\) => \{\}\)/);             // fire-and-forget
 });

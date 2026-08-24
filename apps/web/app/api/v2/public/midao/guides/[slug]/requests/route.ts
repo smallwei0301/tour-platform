@@ -12,8 +12,8 @@ import { issueMidaoRequestClaimDb } from '../../../../../../../../src/lib/midao/
 import {
   createMidaoRequestClaimToken,
   hashMidaoRequestClaimToken,
-  readMidaoRequestClaimPepperFromEnv,
 } from '../../../../../../../../src/lib/midao/midao-request-claim.ts';
+import { readMidaoRequestClaimPepperFromEnv } from '../../../../../../../../src/config/security-env.mjs';
 import { notifyGuideNewMidaoRequest } from '../../../../../../../../src/lib/midao/midao-request-notify.mjs';
 import { jsonOk, jsonError } from '../../../../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../../../../src/lib/route-error';

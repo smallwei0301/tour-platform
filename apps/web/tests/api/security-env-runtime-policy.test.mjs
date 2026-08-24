@@ -29,6 +29,7 @@ describe('security-env runtime policy — production secret length + blocklist',
       NODE_ENV: 'production',
       GUIDE_SESSION_SECRET: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', // 34 chars
       ADMIN_ACCESS_TOKEN: 'bbbbbbbbbbbbbbbbbb', // 18 chars
+      MIDAO_REQUEST_CLAIM_PEPPER: 'AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE',
     };
     assert.equal(assertRuntimeSecretPolicy(env), true);
   });

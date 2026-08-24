@@ -23,6 +23,7 @@ test('startup env passes with valid required production values', () => {
     NODE_ENV: 'production',
     GUIDE_SESSION_SECRET: '12345678901234567890123456789012',
     ADMIN_ACCESS_TOKEN: '1234567890abcdef',
+    MIDAO_REQUEST_CLAIM_PEPPER: 'AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE',
     NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
   });
 
@@ -35,6 +36,7 @@ test('startup env allows missing SUPABASE vars in production startup check', () 
     NODE_ENV: 'production',
     GUIDE_SESSION_SECRET: '12345678901234567890123456789012',
     ADMIN_ACCESS_TOKEN: '1234567890abcdef',
+    MIDAO_REQUEST_CLAIM_PEPPER: 'AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE',
   });
 
   assert.equal(result.ok, true);
