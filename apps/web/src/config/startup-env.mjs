@@ -1,3 +1,5 @@
+import { isValidMidaoRequestClaimPepper } from './security-env.mjs';
+
 const URL_KEYS = ['NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL', 'SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL'];
 
 function hasValue(v) {
@@ -36,6 +38,7 @@ function requiredRules(profile, env = process.env) {
     const rules = [
       { key: 'GUIDE_SESSION_SECRET', check: (v) => hasValue(v) && String(v).trim().length >= 32, reason: 'must be >=32 chars', envScope: 'required in production runtime' },
       { key: 'ADMIN_ACCESS_TOKEN', check: (v) => hasValue(v) && String(v).trim().length >= 16, reason: 'must be >=16 chars', envScope: 'required in production runtime' },
+      { key: 'MIDAO_REQUEST_CLAIM_PEPPER', check: isValidMidaoRequestClaimPepper, reason: 'must be canonical unpadded base64url for exactly 32 random bytes', envScope: 'required in production runtime' },
     ];
 
     // LINE Messaging API secrets are only required once the kill-switch is ON.

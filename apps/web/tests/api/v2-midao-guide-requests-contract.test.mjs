@@ -26,13 +26,16 @@ test('midao requests collection route：list 驗證 query、create 走 CSRF＋ma
   assert.match(src, /source: 'manual'/);
 });
 
-test('midao request item route：詳情 404＋狀態 PATCH 驗證轉換', async () => {
+test('midao request item route：GET 以 session guide 投影 canonical inquiry，PATCH 保持 CRM-only', async () => {
   const src = await read('app/api/v2/guide/midao/requests/[requestId]/route.ts');
   assert.match(src, /export\s+async\s+function\s+GET/);
   assert.match(src, /export\s+async\s+function\s+PATCH/);
   assert.match(src, /validateCsrf\(request\)/);
   assert.match(src, /MIDAO_REQUEST_STATUSES\.includes\(body\.status\)/);
   assert.match(src, /getMidaoRequestDb\(session\.guideId, requestId\)/);
+  assert.match(src, /getMidaoRequestCanonicalInquiryProjectionDb\(session\.guideId, requestId\)/);
+  assert.match(src, /canonicalInquiry/);
   assert.match(src, /updateMidaoRequestStatusDb\(session\.guideId, requestId, body\.status\)/);
   assert.match(src, /'NOT_FOUND' \? 404 : 409/);
+  assert.doesNotMatch(src, /from\(['"](?:bookings|orders)['"]\)|\.rpc\(/);
 });

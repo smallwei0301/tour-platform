@@ -206,6 +206,8 @@ export function resolveNpmExecutable({ execPath = process.execPath, fsAdapter = 
   fail('no validated npm executable found');
 }
 
+const MIDAO_REQUEST_CLAIM_PEPPER = 'Zbes8k78swTKyk7YI6DhFZv6A0WgHfFmEXwdXmK2zTw';
+
 function derivedSecret(randomBytes, label) {
   const random = randomBytes(48);
   if (!Buffer.isBuffer(random) || random.length < 32) fail('random secret source is too short');
@@ -234,6 +236,7 @@ export function buildChildEnvironment({ mode, nodePath, npmPath, temp, parent = 
   if (mode === 'build') {
     env.GUIDE_SESSION_SECRET = derivedSecret(randomBytes, 'guide');
     env.ADMIN_ACCESS_TOKEN = derivedSecret(randomBytes, 'admin');
+    env.MIDAO_REQUEST_CLAIM_PEPPER = MIDAO_REQUEST_CLAIM_PEPPER;
   }
   void parent;
   return env;

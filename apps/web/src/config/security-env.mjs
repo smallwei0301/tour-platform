@@ -13,6 +13,18 @@ const WEAK_TOKEN_VALUES = new Set([
   'password',
 ]);
 
+export function isValidMidaoRequestClaimPepper(value) {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{43}$/u.test(value) || /^(.)\1{42}$/u.test(value)) return false;
+  const decoded = Buffer.from(value, 'base64url');
+  return decoded.length === 32 && decoded.toString('base64url') === value;
+}
+
+export function readMidaoRequestClaimPepperFromEnv(env = process.env) {
+  const value = env.MIDAO_REQUEST_CLAIM_PEPPER;
+  if (!isValidMidaoRequestClaimPepper(value)) throw new TypeError('MIDAO_REQUEST_CLAIM_PEPPER_INVALID');
+  return value;
+}
+
 export function getAdminAuthEnv(env = process.env) {
   return {
     adminAccessToken: env.ADMIN_ACCESS_TOKEN,
@@ -43,6 +55,10 @@ export function assertRuntimeSecretPolicy(env = process.env) {
   const adminToken = env.ADMIN_ACCESS_TOKEN;
   if (isWeakSecret(adminToken, 16)) {
     violations.push('ADMIN_ACCESS_TOKEN missing/weak/default (production requires >=16 chars)');
+  }
+
+  if (!isValidMidaoRequestClaimPepper(env.MIDAO_REQUEST_CLAIM_PEPPER)) {
+    violations.push('MIDAO_REQUEST_CLAIM_PEPPER missing/invalid (production requires canonical 32-byte base64url)');
   }
 
   // LINE Messaging secrets are only enforced once the kill-switch is ON, so the

@@ -82,6 +82,11 @@ test('primary CI pins Node 22.23.1 and runs lock-backed typecheck before tests/b
   const workflow = readFileSync(repoFile('.github/workflows/ci.yml'), 'utf8');
   assert.match(workflow, /node-version: '22\.23\.1'/u);
   assert.match(workflow, /- name: Web typecheck\n\s+run: npm run typecheck -w @tour\/web/u);
+  assert.match(
+    workflow,
+    /MIDAO_REQUEST_CLAIM_PEPPER:\s*Zbes8k78swTKyk7YI6DhFZv6A0WgHfFmEXwdXmK2zTw/u,
+    'production CI build must receive its deterministic non-secret 32-byte claim pepper',
+  );
 });
 
 test('migration drift workflow keeps pull requests source-only and cannot send external failure notifications', () => {

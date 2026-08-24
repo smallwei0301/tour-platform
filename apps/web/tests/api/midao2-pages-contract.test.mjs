@@ -27,13 +27,13 @@ test('midao2 需求列表：tab 對映＋排序＋卡片導轉', async () => {
   assert.match(src, /VALID_STATUSES|includes\(rawStatus/);
 });
 
-test('midao2 需求詳情：自動轉待回覆＋radio 三態＋複製回覆帶轉確認中', async () => {
+test('midao2 需求詳情：自動轉待回覆＋radio 兩態＋複製回覆帶轉確認中', async () => {
   const src = await read('app/(non-locale)/midao2/requests/[id]/page.tsx');
   assert.match(src, /pending_reply/);
   assert.match(src, /buildRequestSummaryText/);
   assert.match(src, /buildLineReplyText/);
   assert.match(src, /line\.me\/R\/ti\/p\/~/);
-  for (const v of ['replied', 'closed_won', 'closed_done']) assert.match(src, new RegExp(`midao2-status-${v}`));
+  for (const v of ['replied', 'closed_done']) assert.match(src, new RegExp(`midao2-status-${v}`));
   assert.match(src, /midao2-detail-copy-reply/);
   assert.match(src, /planTitle/);                           // 服務列有方案時顯示 {activityTitle}（{planTitle}）
   assert.match(src, /request\.activityTitle.*（.*request\.planTitle.*）/);

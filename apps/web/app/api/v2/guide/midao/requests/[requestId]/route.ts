@@ -5,7 +5,8 @@
 import { validateCsrf } from '../../../../../../../src/lib/csrf.mjs';
 import { verifyGuideSession } from '../../../../../../../src/lib/guide-auth';
 import {
-  getMidaoRequestDb, updateMidaoRequestStatusDb, MIDAO_REQUEST_STATUSES,
+  getMidaoRequestDb, getMidaoRequestCanonicalInquiryProjectionDb,
+  updateMidaoRequestStatusDb, MIDAO_REQUEST_STATUSES,
 } from '../../../../../../../src/lib/midao/db-midao-requests.mjs';
 import { jsonOk, jsonError } from '../../../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../../../src/lib/route-error';
@@ -17,7 +18,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ requ
   try {
     const found = await getMidaoRequestDb(session.guideId, requestId);
     if (!found) return jsonError('NOT_FOUND', '需求單不存在', 404);
-    return jsonOk({ request: found });
+    const canonicalInquiry = await getMidaoRequestCanonicalInquiryProjectionDb(session.guideId, requestId);
+    return jsonOk({ request: found, canonicalInquiry });
   } catch (err) {
     return handleRouteError(err, { route: 'v2/guide/midao/requests:detail' });
   }

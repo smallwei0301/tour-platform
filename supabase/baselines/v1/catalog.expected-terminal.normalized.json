@@ -1474,6 +1474,48 @@
         "canonicalKey": [
           "relation",
           "public",
+          "midao_request_claims"
+        ],
+        "foreignOptions": [],
+        "foreignServer": null,
+        "isPartition": false,
+        "kind": "r",
+        "name": "midao_request_claims",
+        "options": [],
+        "owner": "supabase_admin",
+        "partitionBound": null,
+        "partitionKey": null,
+        "persistence": "p",
+        "replicaIdentity": "d",
+        "schema": "public",
+        "viewDefinition": null
+      },
+      {
+        "accessMethod": "heap",
+        "canonicalKey": [
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings"
+        ],
+        "foreignOptions": [],
+        "foreignServer": null,
+        "isPartition": false,
+        "kind": "r",
+        "name": "midao_request_inquiry_mappings",
+        "options": [],
+        "owner": "supabase_admin",
+        "partitionBound": null,
+        "partitionKey": null,
+        "persistence": "p",
+        "replicaIdentity": "d",
+        "schema": "public",
+        "viewDefinition": null
+      },
+      {
+        "accessMethod": "heap",
+        "canonicalKey": [
+          "relation",
+          "public",
           "midao_requests"
         ],
         "foreignOptions": [],
@@ -18876,6 +18918,318 @@
         "canonicalKey": [
           "column",
           "public",
+          "midao_request_claims",
+          "claimed_at"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "timestamp with time zone",
+        "generated": "",
+        "identity": "",
+        "name": "claimed_at",
+        "notNull": false,
+        "position": 6,
+        "relation": "midao_request_claims",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "timestamptz",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_request_claims",
+          "claimed_by_user_id"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "uuid",
+        "generated": "",
+        "identity": "",
+        "name": "claimed_by_user_id",
+        "notNull": false,
+        "position": 7,
+        "relation": "midao_request_claims",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "uuid",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_request_claims",
+          "expires_at"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "timestamp with time zone",
+        "generated": "",
+        "identity": "",
+        "name": "expires_at",
+        "notNull": true,
+        "position": 4,
+        "relation": "midao_request_claims",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "timestamptz",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_request_claims",
+          "issued_at"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": "now()",
+        "formattedType": "timestamp with time zone",
+        "generated": "",
+        "identity": "",
+        "name": "issued_at",
+        "notNull": true,
+        "position": 3,
+        "relation": "midao_request_claims",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "timestamptz",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_request_claims",
+          "revoked_at"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "timestamp with time zone",
+        "generated": "",
+        "identity": "",
+        "name": "revoked_at",
+        "notNull": false,
+        "position": 5,
+        "relation": "midao_request_claims",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "timestamptz",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_request_claims",
+          "source_request_id"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "uuid",
+        "generated": "",
+        "identity": "",
+        "name": "source_request_id",
+        "notNull": true,
+        "position": 1,
+        "relation": "midao_request_claims",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "uuid",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_request_claims",
+          "token_hash"
+        ],
+        "collationName": "default",
+        "collationSchema": "pg_catalog",
+        "compression": "",
+        "default": null,
+        "formattedType": "text",
+        "generated": "",
+        "identity": "",
+        "name": "token_hash",
+        "notNull": true,
+        "position": 2,
+        "relation": "midao_request_claims",
+        "schema": "public",
+        "storage": "x",
+        "typeName": "text",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_request_inquiry_mappings",
+          "claimed_by_user_id"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "uuid",
+        "generated": "",
+        "identity": "",
+        "name": "claimed_by_user_id",
+        "notNull": true,
+        "position": 3,
+        "relation": "midao_request_inquiry_mappings",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "uuid",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_request_inquiry_mappings",
+          "correlation_id"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": "gen_random_uuid()",
+        "formattedType": "uuid",
+        "generated": "",
+        "identity": "",
+        "name": "correlation_id",
+        "notNull": true,
+        "position": 5,
+        "relation": "midao_request_inquiry_mappings",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "uuid",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_request_inquiry_mappings",
+          "created_at"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": "now()",
+        "formattedType": "timestamp with time zone",
+        "generated": "",
+        "identity": "",
+        "name": "created_at",
+        "notNull": true,
+        "position": 6,
+        "relation": "midao_request_inquiry_mappings",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "timestamptz",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_request_inquiry_mappings",
+          "guide_inquiry_id"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "uuid",
+        "generated": "",
+        "identity": "",
+        "name": "guide_inquiry_id",
+        "notNull": true,
+        "position": 2,
+        "relation": "midao_request_inquiry_mappings",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "uuid",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_request_inquiry_mappings",
+          "payload_hash"
+        ],
+        "collationName": "default",
+        "collationSchema": "pg_catalog",
+        "compression": "",
+        "default": null,
+        "formattedType": "text",
+        "generated": "",
+        "identity": "",
+        "name": "payload_hash",
+        "notNull": true,
+        "position": 4,
+        "relation": "midao_request_inquiry_mappings",
+        "schema": "public",
+        "storage": "x",
+        "typeName": "text",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
+          "midao_request_inquiry_mappings",
+          "source_request_id"
+        ],
+        "collationName": null,
+        "collationSchema": null,
+        "compression": "",
+        "default": null,
+        "formattedType": "uuid",
+        "generated": "",
+        "identity": "",
+        "name": "source_request_id",
+        "notNull": true,
+        "position": 1,
+        "relation": "midao_request_inquiry_mappings",
+        "schema": "public",
+        "storage": "p",
+        "typeName": "uuid",
+        "typeSchema": "pg_catalog"
+      },
+      {
+        "aclIsNull": true,
+        "canonicalKey": [
+          "column",
+          "public",
           "midao_requests",
           "activity_id"
         ],
@@ -31797,6 +32151,240 @@
           "constraint",
           "relation",
           "public",
+          "midao_request_claims",
+          "midao_request_claims_claimant_time_check"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (claimed_by_user_id IS NULL AND claimed_at IS NULL OR claimed_by_user_id IS NOT NULL AND claimed_at IS NOT NULL)",
+        "name": "midao_request_claims_claimant_time_check",
+        "relation": "midao_request_claims",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "midao_request_claims_claimed_by_user_id_fkey"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "FOREIGN KEY (claimed_by_user_id) REFERENCES auth.users(id) ON DELETE RESTRICT",
+        "name": "midao_request_claims_claimed_by_user_id_fkey",
+        "relation": "midao_request_claims",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "f",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "midao_request_claims_expiry_check"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (expires_at > issued_at)",
+        "name": "midao_request_claims_expiry_check",
+        "relation": "midao_request_claims",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "midao_request_claims_pkey"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "PRIMARY KEY (source_request_id)",
+        "name": "midao_request_claims_pkey",
+        "relation": "midao_request_claims",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "p",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "midao_request_claims_source_request_id_fkey"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "FOREIGN KEY (source_request_id) REFERENCES public.midao_requests(id) ON DELETE RESTRICT",
+        "name": "midao_request_claims_source_request_id_fkey",
+        "relation": "midao_request_claims",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "f",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "midao_request_claims_token_hash_check"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (token_hash ~ '^[0-9a-f]{64}$'::text)",
+        "name": "midao_request_claims_token_hash_check",
+        "relation": "midao_request_claims",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "midao_request_claims_token_hash_key"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "UNIQUE (token_hash)",
+        "name": "midao_request_claims_token_hash_key",
+        "relation": "midao_request_claims",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "u",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "midao_request_inquiry_mappings_claimed_by_user_id_fkey"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "FOREIGN KEY (claimed_by_user_id) REFERENCES auth.users(id) ON DELETE RESTRICT",
+        "name": "midao_request_inquiry_mappings_claimed_by_user_id_fkey",
+        "relation": "midao_request_inquiry_mappings",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "f",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "midao_request_inquiry_mappings_guide_inquiry_id_fkey"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "FOREIGN KEY (guide_inquiry_id) REFERENCES public.guide_inquiries(id) ON DELETE RESTRICT",
+        "name": "midao_request_inquiry_mappings_guide_inquiry_id_fkey",
+        "relation": "midao_request_inquiry_mappings",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "f",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "midao_request_inquiry_mappings_guide_inquiry_id_key"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "UNIQUE (guide_inquiry_id)",
+        "name": "midao_request_inquiry_mappings_guide_inquiry_id_key",
+        "relation": "midao_request_inquiry_mappings",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "u",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "midao_request_inquiry_mappings_payload_hash_check"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (payload_hash ~ '^[0-9a-f]{64}$'::text)",
+        "name": "midao_request_inquiry_mappings_payload_hash_check",
+        "relation": "midao_request_inquiry_mappings",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "midao_request_inquiry_mappings_pkey"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "PRIMARY KEY (source_request_id)",
+        "name": "midao_request_inquiry_mappings_pkey",
+        "relation": "midao_request_inquiry_mappings",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "p",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "midao_request_inquiry_mappings_source_request_id_fkey"
+        ],
+        "deferrable": false,
+        "deferred": false,
+        "definition": "FOREIGN KEY (source_request_id) REFERENCES public.midao_requests(id) ON DELETE RESTRICT",
+        "name": "midao_request_inquiry_mappings_source_request_id_fkey",
+        "relation": "midao_request_inquiry_mappings",
+        "schema": "public",
+        "targetKind": "relation",
+        "type": "f",
+        "validated": true
+      },
+      {
+        "canonicalKey": [
+          "constraint",
+          "relation",
+          "public",
           "midao_requests",
           "midao_requests_activity_id_fkey"
         ],
@@ -37381,6 +37969,66 @@
         "canonicalKey": [
           "index",
           "public",
+          "midao_request_claims_pkey"
+        ],
+        "definition": "CREATE UNIQUE INDEX midao_request_claims_pkey ON public.midao_request_claims USING btree (source_request_id)",
+        "name": "midao_request_claims_pkey",
+        "primary": true,
+        "relation": "midao_request_claims",
+        "replicaIdentity": false,
+        "schema": "public",
+        "unique": true,
+        "valid": true
+      },
+      {
+        "canonicalKey": [
+          "index",
+          "public",
+          "midao_request_claims_token_hash_key"
+        ],
+        "definition": "CREATE UNIQUE INDEX midao_request_claims_token_hash_key ON public.midao_request_claims USING btree (token_hash)",
+        "name": "midao_request_claims_token_hash_key",
+        "primary": false,
+        "relation": "midao_request_claims",
+        "replicaIdentity": false,
+        "schema": "public",
+        "unique": true,
+        "valid": true
+      },
+      {
+        "canonicalKey": [
+          "index",
+          "public",
+          "midao_request_inquiry_mappings_guide_inquiry_id_key"
+        ],
+        "definition": "CREATE UNIQUE INDEX midao_request_inquiry_mappings_guide_inquiry_id_key ON public.midao_request_inquiry_mappings USING btree (guide_inquiry_id)",
+        "name": "midao_request_inquiry_mappings_guide_inquiry_id_key",
+        "primary": false,
+        "relation": "midao_request_inquiry_mappings",
+        "replicaIdentity": false,
+        "schema": "public",
+        "unique": true,
+        "valid": true
+      },
+      {
+        "canonicalKey": [
+          "index",
+          "public",
+          "midao_request_inquiry_mappings_pkey"
+        ],
+        "definition": "CREATE UNIQUE INDEX midao_request_inquiry_mappings_pkey ON public.midao_request_inquiry_mappings USING btree (source_request_id)",
+        "name": "midao_request_inquiry_mappings_pkey",
+        "primary": true,
+        "relation": "midao_request_inquiry_mappings",
+        "replicaIdentity": false,
+        "schema": "public",
+        "unique": true,
+        "valid": true
+      },
+      {
+        "canonicalKey": [
+          "index",
+          "public",
           "midao_requests_pkey"
         ],
         "definition": "CREATE UNIQUE INDEX midao_requests_pkey ON public.midao_requests USING btree (id)",
@@ -40956,6 +41604,29 @@
         "volatility": "v"
       },
       {
+        "bodySha256": "c96403dc05fc4d3603909082306617b81cb4f4c8be118fd872fe1f268bc5ef6b",
+        "canonicalKey": [
+          "routine",
+          "public",
+          "midao_bridge_request_claim",
+          "p_claim_token_hash text, p_traveler_user_id uuid, p_idempotency_key text, p_request_hash text"
+        ],
+        "configuration": [
+          "search_path=pg_catalog"
+        ],
+        "identityArguments": "p_claim_token_hash text, p_traveler_user_id uuid, p_idempotency_key text, p_request_hash text",
+        "kind": "f",
+        "language": "plpgsql",
+        "leakProof": false,
+        "name": "midao_bridge_request_claim",
+        "parallel": "u",
+        "result": "jsonb",
+        "schema": "public",
+        "securityDefiner": true,
+        "strict": false,
+        "volatility": "v"
+      },
+      {
         "bodySha256": "8344d9617ef82bb7b8eb8bfb4363a58a8559003a166ec7f61aed9412a00739d2",
         "canonicalKey": [
           "routine",
@@ -41063,6 +41734,29 @@
         "language": "plpgsql",
         "leakProof": false,
         "name": "midao_expire_stale_confirmation_atomic",
+        "parallel": "u",
+        "result": "jsonb",
+        "schema": "public",
+        "securityDefiner": true,
+        "strict": false,
+        "volatility": "v"
+      },
+      {
+        "bodySha256": "fd26b22986d8c87be0a81e873c44e2b859a1f11fdc73abc0d6a9c3e8444aabce",
+        "canonicalKey": [
+          "routine",
+          "public",
+          "midao_issue_request_with_claim",
+          "p_request_no text, p_guide_id uuid, p_activity_id uuid, p_activity_title text, p_traveler_name text, p_traveler_line_id text, p_traveler_email text, p_preferred_date date, p_backup_date date, p_preferred_period text, p_start_time time without time zone, p_end_time time without time zone, p_participants_count integer, p_participants_note text, p_language text, p_need_pickup boolean, p_special_note text, p_answers jsonb, p_claim_token_hash text"
+        ],
+        "configuration": [
+          "search_path=pg_catalog"
+        ],
+        "identityArguments": "p_request_no text, p_guide_id uuid, p_activity_id uuid, p_activity_title text, p_traveler_name text, p_traveler_line_id text, p_traveler_email text, p_preferred_date date, p_backup_date date, p_preferred_period text, p_start_time time without time zone, p_end_time time without time zone, p_participants_count integer, p_participants_note text, p_language text, p_need_pickup boolean, p_special_note text, p_answers jsonb, p_claim_token_hash text",
+        "kind": "f",
+        "language": "plpgsql",
+        "leakProof": false,
+        "name": "midao_issue_request_with_claim",
         "parallel": "u",
         "result": "jsonb",
         "schema": "public",
@@ -42334,6 +43028,28 @@
         "enabled": true,
         "forced": true,
         "relation": "midao_notification_outbox",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "rls",
+          "public",
+          "midao_request_claims"
+        ],
+        "enabled": true,
+        "forced": true,
+        "relation": "midao_request_claims",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "rls",
+          "public",
+          "midao_request_inquiry_mappings"
+        ],
+        "enabled": true,
+        "forced": true,
+        "relation": "midao_request_inquiry_mappings",
         "schema": "public"
       },
       {
@@ -77607,6 +78323,966 @@
           "acl",
           "relation",
           "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "postgres",
+          "DELETE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "DELETE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "postgres",
+          "INSERT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "INSERT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "postgres",
+          "MAINTAIN",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "MAINTAIN",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "postgres",
+          "REFERENCES",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "REFERENCES",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "postgres",
+          "SELECT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "SELECT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "postgres",
+          "TRIGGER",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "TRIGGER",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "postgres",
+          "TRUNCATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "TRUNCATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "postgres",
+          "UPDATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "UPDATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "service_role",
+          "DELETE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "DELETE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "service_role",
+          "INSERT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "INSERT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "service_role",
+          "MAINTAIN",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "MAINTAIN",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "service_role",
+          "REFERENCES",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "REFERENCES",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "service_role",
+          "SELECT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "SELECT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "service_role",
+          "TRIGGER",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "TRIGGER",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "service_role",
+          "TRUNCATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "TRUNCATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "service_role",
+          "UPDATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "UPDATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "supabase_admin",
+          "DELETE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "DELETE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "supabase_admin",
+          "INSERT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "INSERT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "supabase_admin",
+          "MAINTAIN",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "MAINTAIN",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "supabase_admin",
+          "REFERENCES",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "REFERENCES",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "supabase_admin",
+          "SELECT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "SELECT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "supabase_admin",
+          "TRIGGER",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "TRIGGER",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "supabase_admin",
+          "TRUNCATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "TRUNCATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_claims",
+          "supabase_admin",
+          "supabase_admin",
+          "UPDATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "privilege": "UPDATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "postgres",
+          "DELETE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "DELETE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "postgres",
+          "INSERT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "INSERT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "postgres",
+          "MAINTAIN",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "MAINTAIN",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "postgres",
+          "REFERENCES",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "REFERENCES",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "postgres",
+          "SELECT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "SELECT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "postgres",
+          "TRIGGER",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "TRIGGER",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "postgres",
+          "TRUNCATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "TRUNCATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "postgres",
+          "UPDATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "UPDATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "service_role",
+          "DELETE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "DELETE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "service_role",
+          "INSERT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "INSERT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "service_role",
+          "MAINTAIN",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "MAINTAIN",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "service_role",
+          "REFERENCES",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "REFERENCES",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "service_role",
+          "SELECT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "SELECT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "service_role",
+          "TRIGGER",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "TRIGGER",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "service_role",
+          "TRUNCATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "TRUNCATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "service_role",
+          "UPDATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "UPDATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "supabase_admin",
+          "DELETE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "DELETE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "supabase_admin",
+          "INSERT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "INSERT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "supabase_admin",
+          "MAINTAIN",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "MAINTAIN",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "supabase_admin",
+          "REFERENCES",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "REFERENCES",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "supabase_admin",
+          "SELECT",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "SELECT",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "supabase_admin",
+          "TRIGGER",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "TRIGGER",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "supabase_admin",
+          "TRUNCATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "TRUNCATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings",
+          "supabase_admin",
+          "supabase_admin",
+          "UPDATE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "privilege": "UPDATE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "relation",
+          "public",
           "midao_requests",
           "postgres",
           "anon",
@@ -111487,6 +113163,66 @@
           "acl",
           "routine",
           "public",
+          "midao_bridge_request_claim(p_claim_token_hash text, p_traveler_user_id uuid, p_idempotency_key text, p_request_hash text)",
+          "supabase_admin",
+          "postgres",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_bridge_request_claim(p_claim_token_hash text, p_traveler_user_id uuid, p_idempotency_key text, p_request_hash text)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "midao_bridge_request_claim(p_claim_token_hash text, p_traveler_user_id uuid, p_idempotency_key text, p_request_hash text)",
+          "supabase_admin",
+          "service_role",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_bridge_request_claim(p_claim_token_hash text, p_traveler_user_id uuid, p_idempotency_key text, p_request_hash text)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "midao_bridge_request_claim(p_claim_token_hash text, p_traveler_user_id uuid, p_idempotency_key text, p_request_hash text)",
+          "supabase_admin",
+          "supabase_admin",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_bridge_request_claim(p_claim_token_hash text, p_traveler_user_id uuid, p_idempotency_key text, p_request_hash text)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
           "midao_convert_inquiry_to_booking(p_guide_id uuid, p_actor_type text, p_actor_id text, p_inquiry_id uuid, p_activity_plan_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_participants integer, p_quoted_total_twd integer, p_guide_note text, p_confirmation_ttl_hours integer, p_confirmation_token_hash text, p_contact_name text, p_contact_phone text, p_contact_email text, p_idempotency_key text, p_request_hash text)",
           "supabase_admin",
           "postgres",
@@ -111757,6 +113493,66 @@
         "grantee": "supabase_admin",
         "grantor": "supabase_admin",
         "object": "midao_expire_stale_confirmation_atomic(p_booking_id uuid, p_now timestamp with time zone)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "midao_issue_request_with_claim(p_request_no text, p_guide_id uuid, p_activity_id uuid, p_activity_title text, p_traveler_name text, p_traveler_line_id text, p_traveler_email text, p_preferred_date date, p_backup_date date, p_preferred_period text, p_start_time time without time zone, p_end_time time without time zone, p_participants_count integer, p_participants_note text, p_language text, p_need_pickup boolean, p_special_note text, p_answers jsonb, p_claim_token_hash text)",
+          "supabase_admin",
+          "postgres",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "midao_issue_request_with_claim(p_request_no text, p_guide_id uuid, p_activity_id uuid, p_activity_title text, p_traveler_name text, p_traveler_line_id text, p_traveler_email text, p_preferred_date date, p_backup_date date, p_preferred_period text, p_start_time time without time zone, p_end_time time without time zone, p_participants_count integer, p_participants_note text, p_language text, p_need_pickup boolean, p_special_note text, p_answers jsonb, p_claim_token_hash text)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "midao_issue_request_with_claim(p_request_no text, p_guide_id uuid, p_activity_id uuid, p_activity_title text, p_traveler_name text, p_traveler_line_id text, p_traveler_email text, p_preferred_date date, p_backup_date date, p_preferred_period text, p_start_time time without time zone, p_end_time time without time zone, p_participants_count integer, p_participants_note text, p_language text, p_need_pickup boolean, p_special_note text, p_answers jsonb, p_claim_token_hash text)",
+          "supabase_admin",
+          "service_role",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "midao_issue_request_with_claim(p_request_no text, p_guide_id uuid, p_activity_id uuid, p_activity_title text, p_traveler_name text, p_traveler_line_id text, p_traveler_email text, p_preferred_date date, p_backup_date date, p_preferred_period text, p_start_time time without time zone, p_end_time time without time zone, p_participants_count integer, p_participants_note text, p_language text, p_need_pickup boolean, p_special_note text, p_answers jsonb, p_claim_token_hash text)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "midao_issue_request_with_claim(p_request_no text, p_guide_id uuid, p_activity_id uuid, p_activity_title text, p_traveler_name text, p_traveler_line_id text, p_traveler_email text, p_preferred_date date, p_backup_date date, p_preferred_period text, p_start_time time without time zone, p_end_time time without time zone, p_participants_count integer, p_participants_note text, p_language text, p_need_pickup boolean, p_special_note text, p_answers jsonb, p_claim_token_hash text)",
+          "supabase_admin",
+          "supabase_admin",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "midao_issue_request_with_claim(p_request_no text, p_guide_id uuid, p_activity_id uuid, p_activity_title text, p_traveler_name text, p_traveler_line_id text, p_traveler_email text, p_preferred_date date, p_backup_date date, p_preferred_period text, p_start_time time without time zone, p_end_time time without time zone, p_participants_count integer, p_participants_note text, p_language text, p_need_pickup boolean, p_special_note text, p_answers jsonb, p_claim_token_hash text)",
         "objectType": "routine",
         "privilege": "EXECUTE",
         "schema": "public",
@@ -118157,6 +119953,30 @@
           "owner",
           "relation",
           "public",
+          "midao_request_claims"
+        ],
+        "object": "midao_request_claims",
+        "objectType": "relation",
+        "owner": "supabase_admin",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "owner",
+          "relation",
+          "public",
+          "midao_request_inquiry_mappings"
+        ],
+        "object": "midao_request_inquiry_mappings",
+        "objectType": "relation",
+        "owner": "supabase_admin",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "owner",
+          "relation",
+          "public",
           "midao_requests"
         ],
         "object": "midao_requests",
@@ -120035,6 +121855,19 @@
           "owner",
           "routine",
           "public",
+          "midao_bridge_request_claim",
+          "p_claim_token_hash text, p_traveler_user_id uuid, p_idempotency_key text, p_request_hash text"
+        ],
+        "object": "midao_bridge_request_claim(p_claim_token_hash text, p_traveler_user_id uuid, p_idempotency_key text, p_request_hash text)",
+        "objectType": "routine",
+        "owner": "supabase_admin",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "owner",
+          "routine",
+          "public",
           "midao_convert_inquiry_to_booking",
           "p_guide_id uuid, p_actor_type text, p_actor_id text, p_inquiry_id uuid, p_activity_plan_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_participants integer, p_quoted_total_twd integer, p_guide_note text, p_confirmation_ttl_hours integer, p_confirmation_token_hash text, p_contact_name text, p_contact_phone text, p_contact_email text, p_idempotency_key text, p_request_hash text"
         ],
@@ -120091,6 +121924,19 @@
           "p_booking_id uuid, p_now timestamp with time zone"
         ],
         "object": "midao_expire_stale_confirmation_atomic(p_booking_id uuid, p_now timestamp with time zone)",
+        "objectType": "routine",
+        "owner": "supabase_admin",
+        "schema": "public"
+      },
+      {
+        "canonicalKey": [
+          "owner",
+          "routine",
+          "public",
+          "midao_issue_request_with_claim",
+          "p_request_no text, p_guide_id uuid, p_activity_id uuid, p_activity_title text, p_traveler_name text, p_traveler_line_id text, p_traveler_email text, p_preferred_date date, p_backup_date date, p_preferred_period text, p_start_time time without time zone, p_end_time time without time zone, p_participants_count integer, p_participants_note text, p_language text, p_need_pickup boolean, p_special_note text, p_answers jsonb, p_claim_token_hash text"
+        ],
+        "object": "midao_issue_request_with_claim(p_request_no text, p_guide_id uuid, p_activity_id uuid, p_activity_title text, p_traveler_name text, p_traveler_line_id text, p_traveler_email text, p_preferred_date date, p_backup_date date, p_preferred_period text, p_start_time time without time zone, p_end_time time without time zone, p_participants_count integer, p_participants_note text, p_language text, p_need_pickup boolean, p_special_note text, p_answers jsonb, p_claim_token_hash text)",
         "objectType": "routine",
         "owner": "supabase_admin",
         "schema": "public"
