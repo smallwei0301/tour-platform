@@ -231,7 +231,7 @@ export async function getMidaoRequestCanonicalInquiryProjectionDb(guideId, reque
   try {
     inquiry = await getMidaoInquiryRequestDb({ guideId, inquiryId });
   } catch (error) {
-    if (error?.message?.startsWith('INQUIRY_NOT_FOUND:')) return null;
+    if (error instanceof Error && error.message.startsWith('INQUIRY_NOT_FOUND:')) return null;
     throw error;
   }
 

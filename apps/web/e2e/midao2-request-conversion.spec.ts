@@ -5,8 +5,9 @@ const REQUEST_ID = 'mreq-canonical-e2e';
 const INQUIRY_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const PLAN_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 
+test.setTimeout(60_000);
+
 test('midao2 request conversion uses only the server-projected canonical command', async ({ page }) => {
-  test.setTimeout(60_000);
   await setGuideSession(page, GUIDE_ID);
   await page.context().addCookies([
     { name: 'tp_csrf', value: 'midao2-e2e-csrf', url: 'http://127.0.0.1:3333' },

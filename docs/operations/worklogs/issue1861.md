@@ -31,3 +31,11 @@ The current harness redacts the actionable failure. Do not claim DB/RLS/concurre
 - One authorized disposable loopback harness run completed with cleanup: `apps/web/tests/integration/midao-request-claim-postgres.test.mjs` passed 4/4 (same-user replay, concurrent one winner, revoked claim rollback, forced-RLS ACL probe).
 - Focused Node 22 unit/API suite passed 28/28; `.claude/hooks/run-checks.sh` recorded fresh green evidence for the same six focused test files. Docker query found no task-labelled containers, networks, or volumes after cleanup.
 - No Production SQL/data/metadata, GitHub, deployment, payment/LINE, or credential-value mutation occurred.
+
+## 2026-08-24 Phase 3 Builder — canonical inquiry conversion adapter
+
+- Worktree: `/root/.hermes/worktrees/tour-platform/issue-1861-phase3-midao2-guide-conversion`; branch: `builder/issue-1861-phase3-midao2-guide-conversion`.
+- Candidate commit `4b1e6338ee07808c96b57251cd8994dbc25b3cb9` adds the read-only mapped canonical-inquiry projection, session-derived route envelope, `/midao2` reuse of the sole convert command, unit/API contracts, disposable PostgreSQL bridge evidence, and browser spec.
+- Fresh verification: focused Node suite passed 41/41; disposable local PostgreSQL convergence passed 1/1; `git diff --check` passed before the final type narrowing fix.
+- `run-checks.sh --typecheck` initially exposed `TS2339` on the Phase 3 catch value. The builder narrowed it with `error instanceof Error`; the same hook runner then passed focused 41/41 plus `tsc --noEmit`.
+- Browser verification used only `scripts/testing/with-midao-local-supabase.mjs --playwright` and `/usr/bin/chromium`. It reached the real `/midao2/requests/[id]` compilation, but Next dev repeatedly timed out its local requests and Playwright reported a detached frame at `page.goto`; mark `NOT_AUTOMATABLE_LOCAL_WATCHERS` for the browser evidence. No plain dev server, production resource, credential, GitHub, payment, or LINE mutation was performed.
