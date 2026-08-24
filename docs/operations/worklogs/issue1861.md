@@ -46,3 +46,10 @@ The current harness redacts the actionable failure. Do not claim DB/RLS/concurre
 - 先新增 Playwright 409 → reload → 第二次 GET 的回歸情境，再將 request GET/state 更新抽為穩定、可 await 的 `load` callback；初始 effect、error retry 與 sheet `onReload` 共用它。第二次 canonical projection 回傳 converted booking 後，UI 顯示 `midao2-canonical-converted` 並移除轉單 action；spec 同時鎖定沒有 CRM `closed_won` 或直接 booking/order write。
 - Fresh evidence: pinned Node `v22.23.1` focused suite 41/41 PASS; `npm run typecheck -w @tour/web` PASS; `.claude/hooks/run-checks.sh --typecheck` refreshed green 41/41; disposable local Supabase convergence passed 5/5 with `ready → complete → cleanup`; `git diff --check` PASS.
 - Browser runner was not rerun because the card explicitly prohibits retrying the known local watcher/Chromium failure. Keep `NOT_AUTOMATABLE_LOCAL_WATCHERS` as residual risk; no production, GitHub, credential, payment, LINE, deployment, or other external mutation occurred.
+
+## 2026-08-24 Phase 3 Builder rework — GitHub E2E smoke inclusion
+
+- Rita identified that the existing `test:e2e:smoke` GitHub-hosted Chromium lane did not select `e2e/midao2-request-conversion.spec.ts`; local Chromium/watcher evidence remains unavailable by policy.
+- RED evidence: pinned Node v22.23.1 parsed `apps/web/package.json` and failed because the exact Phase 3 spec was absent from `test:e2e:smoke`.
+- Added only `e2e/midao2-request-conversion.spec.ts` to that smoke command; its four existing specs remain in their original order and no product writer/RPC/migration behavior changed.
+- A remote execution still requires explicit Owner authorization for push/PR/workflow dispatch. Until then this browser AC is `HOLD_AWAITING_REMOTE_CI_AUTHORIZATION`; no GitHub, production, credential, deployment, payment, or LINE mutation was performed.
