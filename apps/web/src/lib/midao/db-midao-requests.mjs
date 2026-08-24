@@ -5,6 +5,7 @@
  * 狀態機：new → pending_reply → replied → closed_won → closed_done；允許回退、不可回到 new。
  */
 import { hasSupabaseEnv, getSupabase } from '../db.mjs';
+import { canTransitionInquiryState } from './inquiry-state-machine.mjs';
 
 export const MIDAO_REQUEST_STATUSES = ['new', 'pending_reply', 'replied', 'closed_won', 'closed_done'];
 const PERIODS = ['morning', 'afternoon', 'evening'];
@@ -17,6 +18,14 @@ let _memSeq = 0;
 export function __resetMemMidaoRequests() { _mem.length = 0; _memSeq = 0; }
 /** @param {any[]} rows */
 export function __seedMemMidaoRequests(rows) { _mem.push(...rows); }
+
+/** P2-C request → canonical inquiry mapping 的 in-memory test seam。 */
+const _memInquiryMappings = new Map();
+export function __resetMemMidaoRequestInquiryMappings() { _memInquiryMappings.clear(); }
+/** @param {{sourceRequestId:string, guideInquiryId:string}[]} rows */
+export function __seedMemMidaoRequestInquiryMappings(rows) {
+  for (const row of rows) _memInquiryMappings.set(row.sourceRequestId, row.guideInquiryId);
+}
 
 /** @param {string} from @param {string} to */
 export function isValidRequestTransition(from, to) {
@@ -191,6 +200,58 @@ export async function getMidaoRequestDb(guideId, id) {
   const { data } = await supabase.from('midao_requests').select(SELECT_COLS)
     .eq('id', id).eq('guide_id', guideId).maybeSingle();
   return data ? shape(data) : null;
+}
+
+/**
+ * 供 guide 的 midao2 詳情頁使用的唯讀 canonical inquiry projection。
+ * CRM request 與 canonical inquiry 都必須由 server-derived guideId 個別驗證歸屬。
+ * @param {string} guideId @param {string} requestId
+ */
+export async function getMidaoRequestCanonicalInquiryProjectionDb(guideId, requestId) {
+  const request = await getMidaoRequestDb(guideId, requestId);
+  if (!request) return null;
+
+  let inquiryId = null;
+  if (!hasSupabaseEnv()) {
+    inquiryId = _memInquiryMappings.get(requestId) ?? null;
+  } else {
+    const supabase = await getSupabase();
+    const { data, error } = await supabase
+      .from('midao_request_inquiry_mappings')
+      .select('guide_inquiry_id')
+      .eq('source_request_id', requestId)
+      .maybeSingle();
+    if (error) throw new Error('MIDAO_REQUESTS_BACKEND_ERROR: inquiry mapping query failed');
+    inquiryId = typeof data?.guide_inquiry_id === 'string' ? data.guide_inquiry_id : null;
+  }
+  if (!inquiryId) return null;
+
+  const { getMidaoInquiryRequestDb } = await import('./db-requests.mjs');
+  let inquiry;
+  try {
+    inquiry = await getMidaoInquiryRequestDb({ guideId, inquiryId });
+  } catch (error) {
+    if (error?.message?.startsWith('INQUIRY_NOT_FOUND:')) return null;
+    throw error;
+  }
+
+  const plan = inquiry.plan;
+  return {
+    inquiryId: inquiry.inquiryId,
+    status: inquiry.inquiryStatus,
+    convertedBookingId: inquiry.convertedBookingId,
+    plan,
+    defaults: {
+      preferredDate: inquiry.request.preferredDate,
+      startTimeLocal: inquiry.request.startTimeLocal,
+      participants: inquiry.request.partySize,
+    },
+    canConvert: canTransitionInquiryState(inquiry.inquiryStatus, 'converted') === true
+      && inquiry.convertedBookingId === null
+      && plan !== null
+      && plan.status === 'active'
+      && plan.bookingType === 'request',
+  };
 }
 
 /**
