@@ -13,6 +13,8 @@ jobs:
       # CI build runs with NODE_ENV=production; provide strong non-default test secrets
       GUIDE_SESSION_SECRET: ci-guide-session-secret-0123456789abcdef
       ADMIN_ACCESS_TOKEN: ci-admin-token-0123456789abcdef
+      # Public deterministic CI-only fixture; never a runtime/Production credential.
+      MIDAO_REQUEST_CLAIM_PEPPER: Zbes8k78swTKyk7YI6DhFZv6A0WgHfFmEXwdXmK2zTw
     steps:
       - name: Checkout
         uses: actions/checkout@v4

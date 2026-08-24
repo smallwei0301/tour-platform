@@ -77,3 +77,11 @@ The current harness redacts the actionable failure. Do not claim DB/RLS/concurre
 - GREEN evidence: full Web suite under Node `v22.23.1` passed `5,800/5,800` (0 failures); baseline targeted suite passed `22/22`; `.claude/hooks/run-checks.sh --typecheck` passed `57/57` plus `tsc --noEmit`, with fresh commit-gate evidence at `2026-08-25 00:23:10 CST`; `git diff --check` passed.
 - Local Node-22 lint is `NOT_VERIFIED`: direct `npm run lint` ran host Node 24 and correctly failed its Node-version guard; the formal Node wrapper intentionally allowlists only test/typecheck, and a direct canonical npm invocation was blocked by the gateway command safety policy. This is a tooling capability constraint, not a source lint result.
 - No Production SQL/data/metadata, GitHub, deployment, payment/LINE, or credential-value mutation occurred.
+
+## 2026-08-25 PR #1865 CI build pepper follow-up
+
+- Starting commit: `4d8218dc73a95277503915ee900eca77b0ed7985`; dedicated non-primary worktree: `/root/.hermes/worktrees/tour-platform/issue-1861-pr-ci-convergence`.
+- RED evidence was the exact GitHub CI run `32752943304`: the production Next build rejected a missing `MIDAO_REQUEST_CLAIM_PEPPER`. The follow-up adds one public deterministic, canonical unpadded 32-byte base64url CI-only fixture to the primary CI environment and the isolated build wrapper; application startup/security guards remain unchanged.
+- Focused GREEN evidence on the candidate: `.claude/hooks/run-checks.sh --typecheck apps/web/tests/api/midao-requests-read-migration.test.mjs apps/web/tests/unit/midao-ci-command-runner.test.mjs` passed `31/31` and `tsc --noEmit` under pinned Node `v22.23.1`; pinned Node 22 lint exited `0` with the pre-existing `RootDocument.tsx` warning only; `git diff --check` passed.
+- Local production build is `PARTIAL_PASS`: Canary's bounded CI-equivalent Node 22 build passed startup validation and optimized compilation, then timed out during Next lint/typecheck on the constrained host. It emitted no pepper/startup/compile/lint error. Exact-head GitHub `ci` must pass before any merge decision.
+- No Production SQL/data/metadata, GitHub, deployment, payment/LINE, or credential-value mutation occurred in this follow-up.

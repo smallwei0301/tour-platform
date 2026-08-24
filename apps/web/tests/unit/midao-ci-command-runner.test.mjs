@@ -115,6 +115,8 @@ test('strict child env never spreads hostile parent values', () => {
   assert.equal(build.NODE_ENV, 'production');
   assert.ok(build.GUIDE_SESSION_SECRET.length >= 32);
   assert.ok(build.ADMIN_ACCESS_TOKEN.length >= 32);
+  assert.equal(Buffer.from(build.MIDAO_REQUEST_CLAIM_PEPPER, 'base64url').length, 32);
+  assert.equal(Buffer.from(build.MIDAO_REQUEST_CLAIM_PEPPER, 'base64url').toString('base64url'), build.MIDAO_REQUEST_CLAIM_PEPPER);
   assert.notEqual(build.GUIDE_SESSION_SECRET, build.ADMIN_ACCESS_TOKEN);
 });
 
@@ -473,9 +475,11 @@ test('build secrets exist only in child env, not wrapper argv, log, or evidence'
   const result = await runCiCommand({ argv: ['build'], adapters });
   assert.ok(captured.GUIDE_SESSION_SECRET.length >= 32);
   assert.ok(captured.ADMIN_ACCESS_TOKEN.length >= 32);
+  assert.equal(Buffer.from(captured.MIDAO_REQUEST_CLAIM_PEPPER, 'base64url').length, 32);
   const serialized = JSON.stringify(result);
   assert.doesNotMatch(serialized, new RegExp(captured.GUIDE_SESSION_SECRET));
   assert.doesNotMatch(serialized, new RegExp(captured.ADMIN_ACCESS_TOKEN));
+  assert.doesNotMatch(serialized, new RegExp(captured.MIDAO_REQUEST_CLAIM_PEPPER));
   assert.deepEqual(result.wrapperArgv, [NODE22, 'scripts/testing/run-midao-ci-command.mjs', 'build']);
 });
 
