@@ -8,10 +8,16 @@ const BUCKET_LABELS: Readonly<Record<string, string>> = {
   completed: '已完成',
 };
 
-export function RequestCard({ request }: { request: RequestListItem }) {
+export function RequestCard({
+  request,
+  detailBasePath = '/midao/requests',
+}: {
+  request: RequestListItem;
+  detailBasePath?: string;
+}) {
   const bucketLabel = BUCKET_LABELS[request.bucket] || '需求';
   return (
-    <Link className="midao-request-card" href={`/midao/requests/${encodeURIComponent(request.requestRef)}`}>
+    <Link className="midao-request-card" href={`${detailBasePath}/${encodeURIComponent(request.requestRef)}`}>
       <div className="midao-request-card__topline">
         <span className="midao-request-card__status">{bucketLabel}</span>
         <span className="midao-request-card__date">{formatDateTime(request.request.startAt, request.request.timezone)}</span>

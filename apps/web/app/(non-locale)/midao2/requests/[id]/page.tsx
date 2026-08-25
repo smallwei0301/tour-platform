@@ -1,4 +1,4 @@
-import { RequestDetailScreen } from '../../../../../../src/features/midao/requests/RequestDetailScreen';
+import { RequestDetailScreen } from '../../../../../src/features/midao/requests/RequestDetailScreen';
 
 type Midao2RequestDetailPageProps = {
   params: Promise<{ id: string }>;

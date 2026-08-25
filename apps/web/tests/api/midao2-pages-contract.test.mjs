@@ -7,19 +7,27 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const read = (p) => readFile(path.join(ROOT, p), 'utf8');
 
-test('midao2 首頁：summary 串接＋統計卡導轉＋複製回覆', async () => {
+test('midao2 首頁：summary 只供導覽 canonical 清單，沒有 legacy 複製回覆', async () => {
   const src = await read('app/(non-locale)/midao2/page.tsx');
   assert.match(src, /\/api\/v2\/guide\/midao\/summary/);
-  assert.match(src, /status=new/);
-  assert.match(src, /status=pending_reply/);
-  assert.match(src, /buildLineReplyText/);
+  assert.match(src, /bucket=new/);
+  assert.match(src, /bucket=needs_reply/);
+  assert.match(src, /系統只準備文案或開啟 LINE；不保證送達，也不會自動重送。/);
+  assert.match(src, /router\.push\('\/midao2\/requests'\)/);
+  assert.doesNotMatch(src, /buildLineReplyText|copyToClipboard|midao2-top-copy|status=pending_reply/);
   assert.match(src, /midao2-top-view/);
   assert.match(src, /midao2-share-cta/);
 });
 
 test('midao2 需求列表：只重用 canonical request projection，不再讀 legacy CRM API', async () => {
   const src = await read('app/(non-locale)/midao2/requests/page.tsx');
+  const listScreen = await read('src/features/midao/requests/RequestListScreen.tsx');
+  const requestCard = await read('src/features/midao/requests/RequestCard.tsx');
   assert.match(src, /RequestListScreen/);
+  assert.match(src, /detailBasePath="\/midao2\/requests"/);
+  assert.match(listScreen, /detailBasePath = '\/midao\/requests'/);
+  assert.match(listScreen, /<RequestCard[^>]+detailBasePath=\{detailBasePath\}/);
+  assert.match(requestCard, /href=\{`\$\{detailBasePath\}\/\$\{encodeURIComponent\(request\.requestRef\)\}`\}/);
   assert.doesNotMatch(src, /\/api\/v2\/guide\/midao\/requests/);
   assert.doesNotMatch(src, /requestNo|pending_reply|unreplied_first/);
 });

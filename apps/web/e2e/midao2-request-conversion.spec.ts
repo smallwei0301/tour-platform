@@ -62,7 +62,7 @@ test('midao2 request list consumes canonical request projections', async ({ page
   await setGuideSession(page, GUIDE_ID);
   await mockMidaoGuideSummary(page);
   const reads: string[] = [];
-  await page.route('**/api/v2/guide/requests?**', async (route) => {
+  await page.route('**/api/v2/guide/requests**', async (route) => {
     reads.push(new URL(route.request().url()).pathname);
     await route.fulfill({
       contentType: 'application/json',
@@ -91,14 +91,23 @@ test('midao2 request list consumes canonical request projections', async ({ page
 
   await page.goto('/midao2/requests');
   await expect(page.getByTestId('midao-request-list')).toBeVisible();
-  await expect(page.getByRole('link', { name: /測試行程/ })).toHaveAttribute('href', `/midao/requests/booking_${GUIDE_ID}`);
+  await expect(page.getByRole('link', { name: /測試行程/ })).toHaveAttribute('href', `/midao2/requests/booking_${GUIDE_ID}`);
   expect(reads).toEqual(['/api/v2/guide/requests']);
 });
 
 test('midao2 LINE copy is manual, uses the safe template, and does not mutate CRM state', async ({ page }) => {
   await setGuideSession(page, GUIDE_ID);
   await mockMidaoGuideSummary(page);
-  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://127.0.0.1:3333' });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async () => {
+          throw new Error('CLIPBOARD_UNAVAILABLE');
+        },
+      },
+    });
+  });
   await page.context().addCookies([
     { name: 'tp_csrf', value: 'midao2-e2e-csrf', url: 'http://127.0.0.1:3333' },
   ]);
@@ -130,7 +139,7 @@ test('midao2 LINE copy is manual, uses the safe template, and does not mutate CR
   await page.getByRole('button', { name: '產生文案' }).click();
   await expect(page.getByTestId('midao-line-reply-text')).toHaveValue('您好，\n\n我已收到您的需求。');
   await page.getByRole('button', { name: '複製文案' }).click();
-  await expect(page.getByRole('status')).toContainText('文案已複製');
+  await expect(page.getByText('請手動複製上方文案後貼到 LINE')).toBeVisible();
   await expect(page.getByTestId('midao-line-share-link')).toHaveAttribute('href', 'https://line.me/R/share?text=%E6%82%A8%E5%A5%BD');
   expect(writes).toEqual([`/api/v2/guide/requests/${REQUEST_REF}/reply-template`]);
 });
