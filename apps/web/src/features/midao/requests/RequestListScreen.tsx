@@ -137,7 +137,7 @@ function parseSort(value: string | null): RequestSort {
   return value === 'updated_desc' || value === 'service_asc' ? value : 'priority';
 }
 
-export function RequestListScreen() {
+export function RequestListScreen({ detailBasePath = '/midao/requests' }: { detailBasePath?: string }) {
   const searchParams = useSearchParams();
   const urlBucket = parseBucket(searchParams.get('bucket'));
   const urlSort = parseSort(searchParams.get('sort'));
@@ -215,7 +215,11 @@ export function RequestListScreen() {
     if (nextBucket === bucket) return;
     setBucket(nextBucket);
     setState({ items: [], nextCursor: null, loading: true, loadingMore: false, error: false });
-    window.history.replaceState(null, '', nextBucket === 'all' ? '/midao/requests' : `/midao/requests?bucket=${nextBucket}`);
+    window.history.replaceState(
+      null,
+      '',
+      nextBucket === 'all' ? detailBasePath : `${detailBasePath}?bucket=${nextBucket}`,
+    );
     void load({ bucket: nextBucket, sort, cursor: null, append: false });
   };
 
@@ -276,7 +280,7 @@ export function RequestListScreen() {
         ) : null}
         {state.items.length > 0 ? (
           <div className="midao-request-list" data-testid="midao-request-list">
-            {state.items.map((item) => <RequestCard key={item.requestRef} request={item} />)}
+            {state.items.map((item) => <RequestCard key={item.requestRef} request={item} detailBasePath={detailBasePath} />)}
           </div>
         ) : null}
         {state.loadingMore ? <LoadingSkeleton label="下一頁需求載入中" /> : null}

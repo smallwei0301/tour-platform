@@ -4,8 +4,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { C, Card, Badge, Btn, Spinner, EmptyState, ErrorState, copyToClipboard, apiGet, Icon } from './ui';
-import { buildLineReplyText } from '../../../src/lib/midao/midao-copy-templates.mjs';
+import { C, Card, Badge, Btn, Spinner, EmptyState, ErrorState, apiGet, Icon } from './ui';
 
 type MidaoRequest = {
   id: string;
@@ -47,7 +46,7 @@ export default function Midao2HomePage() {
   const [data, setData] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+
 
   const load = () => {
     setLoading(true);
@@ -68,15 +67,6 @@ export default function Midao2HomePage() {
 
   const { guideName, counts, topRequest, recentRequests } = data;
 
-  const handleCopy = async () => {
-    if (!topRequest) return;
-    const ok = await copyToClipboard(buildLineReplyText(topRequest, guideName));
-    if (ok) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
@@ -89,7 +79,7 @@ export default function Midao2HomePage() {
       <div style={{ display: 'flex', gap: 12 }}>
         <Card
           style={{ flex: 1, background: C.ACCENT_SOFT }}
-          onClick={() => router.push('/midao2/requests?status=new')}
+          onClick={() => router.push('/midao2/requests?bucket=new')}
           data-testid="midao2-stat-new"
         >
           <div style={{ width: 44, height: 44, borderRadius: 999, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8, color: C.ACCENT }}>
@@ -100,7 +90,7 @@ export default function Midao2HomePage() {
         </Card>
         <Card
           style={{ flex: 1, background: C.ORANGE_SOFT }}
-          onClick={() => router.push('/midao2/requests?status=pending_reply')}
+          onClick={() => router.push('/midao2/requests?bucket=needs_reply')}
           data-testid="midao2-stat-pending"
         >
           <div style={{ width: 44, height: 44, borderRadius: 999, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8, color: C.ORANGE }}>
@@ -110,6 +100,10 @@ export default function Midao2HomePage() {
           <div style={{ fontSize: 13, color: C.MUTED }}>筆待回覆</div>
         </Card>
       </div>
+
+      <p data-testid="midao2-manual-line-disclosure" role="status" style={{ fontSize: 13, color: C.MUTED, margin: 0 }}>
+        系統只準備文案或開啟 LINE；不保證送達，也不會自動重送。
+      </p>
 
       {topRequest && (
         <div>
@@ -152,14 +146,12 @@ export default function Midao2HomePage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
               <Btn
                 kind="primary"
-                onClick={() => router.push(`/midao2/requests/${topRequest.id}`)}
+                onClick={() => router.push('/midao2/requests')}
                 data-testid="midao2-top-view"
               >
                 查看需求
               </Btn>
-              <Btn kind="secondary" onClick={handleCopy} data-testid="midao2-top-copy">
-                {copied ? '已複製 ✓' : '複製回覆'}
-              </Btn>
+
             </div>
           </Card>
         </div>
@@ -174,7 +166,7 @@ export default function Midao2HomePage() {
             recentRequests.map((r, index) => (
               <div
                 key={r.id}
-                onClick={() => router.push(`/midao2/requests/${r.id}`)}
+                onClick={() => router.push('/midao2/requests')}
                 data-testid={`midao2-recent-${index}`}
                 style={{
                   display: 'flex',

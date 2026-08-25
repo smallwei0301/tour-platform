@@ -7,36 +7,44 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const read = (p) => readFile(path.join(ROOT, p), 'utf8');
 
-test('midao2 首頁：summary 串接＋統計卡導轉＋複製回覆', async () => {
+test('midao2 首頁：summary 只供導覽 canonical 清單，沒有 legacy 複製回覆', async () => {
   const src = await read('app/(non-locale)/midao2/page.tsx');
   assert.match(src, /\/api\/v2\/guide\/midao\/summary/);
-  assert.match(src, /status=new/);
-  assert.match(src, /status=pending_reply/);
-  assert.match(src, /buildLineReplyText/);
+  assert.match(src, /bucket=new/);
+  assert.match(src, /bucket=needs_reply/);
+  assert.match(src, /系統只準備文案或開啟 LINE；不保證送達，也不會自動重送。/);
+  assert.match(src, /router\.push\('\/midao2\/requests'\)/);
+  assert.doesNotMatch(src, /buildLineReplyText|copyToClipboard|midao2-top-copy|status=pending_reply/);
   assert.match(src, /midao2-top-view/);
   assert.match(src, /midao2-share-cta/);
 });
 
-test('midao2 需求列表：tab 對映＋排序＋卡片導轉', async () => {
+test('midao2 需求列表：只重用 canonical request projection，不再讀 legacy CRM API', async () => {
   const src = await read('app/(non-locale)/midao2/requests/page.tsx');
-  assert.match(src, /\/api\/v2\/guide\/midao\/requests\?status=/);
-  for (const s of ['all', 'new', 'pending_reply', 'replied', 'closed']) assert.match(src, new RegExp(`['"]${s}['"]`));
-  assert.match(src, /unreplied_first/);
-  assert.match(src, /tabCounts/);
-  assert.match(src, /midao2-req-sort/);
-  assert.match(src, /VALID_STATUSES|includes\(rawStatus/);
+  const listScreen = await read('src/features/midao/requests/RequestListScreen.tsx');
+  const requestCard = await read('src/features/midao/requests/RequestCard.tsx');
+  assert.match(src, /RequestListScreen/);
+  assert.match(src, /detailBasePath="\/midao2\/requests"/);
+  assert.match(listScreen, /detailBasePath = '\/midao\/requests'/);
+  assert.match(listScreen, /<RequestCard[^>]+detailBasePath=\{detailBasePath\}/);
+  assert.match(requestCard, /href=\{`\$\{detailBasePath\}\/\$\{encodeURIComponent\(request\.requestRef\)\}`\}/);
+  assert.doesNotMatch(src, /\/api\/v2\/guide\/midao\/requests/);
+  assert.doesNotMatch(src, /requestNo|pending_reply|unreplied_first/);
 });
 
-test('midao2 需求詳情：自動轉待回覆＋radio 兩態＋複製回覆帶轉確認中', async () => {
+test('midao2 需求詳情：只重用 canonical projection，含人工 LINE 送達揭露且沒有 legacy copy/CRM PATCH', async () => {
   const src = await read('app/(non-locale)/midao2/requests/[id]/page.tsx');
-  assert.match(src, /pending_reply/);
-  assert.match(src, /buildRequestSummaryText/);
-  assert.match(src, /buildLineReplyText/);
-  assert.match(src, /line\.me\/R\/ti\/p\/~/);
-  for (const v of ['replied', 'closed_done']) assert.match(src, new RegExp(`midao2-status-${v}`));
-  assert.match(src, /midao2-detail-copy-reply/);
-  assert.match(src, /planTitle/);                           // 服務列有方案時顯示 {activityTitle}（{planTitle}）
-  assert.match(src, /request\.activityTitle.*（.*request\.planTitle.*）/);
+  assert.match(src, /RequestDetailScreen/);
+  assert.match(src, /系統只準備文案或開啟 LINE；不保證送達，也不會自動重送。/);
+  assert.doesNotMatch(src, /buildRequestSummaryText|buildLineReplyText|line\.me\/R\/ti\/p\/~|apiSend|\/api\/v2\/guide\/midao\/requests/);
+});
+
+test('midao2 瀏覽器驗證使用登入後輪替的 CSRF，不可寫死測試值', async () => {
+  const spec = await read('e2e/midao2-request-conversion.spec.ts');
+  assert.match(spec, /page\.context\(\)\.cookies\(\)/);
+  assert.match(spec, /find\(\(cookie\) => cookie\.name === 'tp_csrf'\)/);
+  assert.match(spec, /MIDAO2_E2E_CSRF_MISSING/);
+  assert.doesNotMatch(spec, /midao2-e2e-csrf/);
 });
 
 test('midao2 行事曆：月格/點色/三格開關/週預設 modal', async () => {

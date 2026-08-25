@@ -344,6 +344,10 @@ test('public standard-runner browser lane executes the real confirmation-chain s
     workflow,
     /- name: Run Phase 4 real-auth traveler confirmation browser gate[\s\S]*MIDAO_DB_HEALTH_TIMEOUT_SECONDS=600[\s\S]*run-midao-e2e\.sh[\s\S]*apps\/web\/e2e\/midao-inquiry-conversion-chain\.spec\.ts/u,
   );
+  assert.match(
+    workflow,
+    /- name: Run Phase 5A manual LINE reply browser gate[\s\S]*MIDAO_DB_HEALTH_TIMEOUT_SECONDS=600[\s\S]*run-midao-e2e\.sh[\s\S]*apps\/web\/e2e\/midao2-request-conversion\.spec\.ts/u,
+  );
 });
 
 test('real-auth guide login returns the CSRF token rotated by session creation', async () => {

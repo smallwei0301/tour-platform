@@ -7,7 +7,7 @@ export function periodLabel(p) { return PERIODS[/** @type {'morning'} */ (p)] ??
 
 /** @param {any} r */
 export function buildRequestSummaryText(r) {
-  const lines = [`【需求摘要】#${r.requestNo}`, `稱呼：${r.travelerName}`];
+  const lines = ['【需求摘要】', `稱呼：${r.travelerName}`];
   if (r.activityTitle) {
     lines.push(r.planTitle ? `服務：${r.activityTitle}（${r.planTitle}）` : `服務：${r.activityTitle}`);
   }
@@ -15,17 +15,9 @@ export function buildRequestSummaryText(r) {
   if (r.backupDate) dateLine += `（備用 ${r.backupDate}）`;
   if (r.preferredPeriod) dateLine += `・${periodLabel(r.preferredPeriod)}`;
   lines.push(dateLine);
-  let pax = `人數：${r.participantsCount} 位`;
-  if (r.participantsNote) pax += `・${r.participantsNote}`;
-  lines.push(pax);
+  lines.push(`人數：${r.participantsCount} 位`);
   if (r.language) lines.push(`語言：${r.language}`);
   lines.push(`接送：${r.needPickup ? '需要' : '不需要接送'}`);
-  if (r.specialNote) lines.push(`特殊需求：${r.specialNote}`);
-  for (const a of r.answers ?? []) {
-    if (a?.label) lines.push(`${a.label}：${a.answer ?? ''}`);
-  }
-  if (r.travelerLineId) lines.push(`LINE ID：${r.travelerLineId}`);
-  if (r.travelerEmail) lines.push(`Email：${r.travelerEmail}`);
   return lines.join('\n');
 }
 
@@ -36,8 +28,7 @@ export function buildLineReplyText(r, guideName) {
   const service = r.activityTitle ? `「${serviceName}」` : '行程';
   return [
     `${r.travelerName} 您好，我是導遊 ${guideName}。`,
-    `已收到您的需求（#${r.requestNo}）：${service}，${date}，${r.participantsCount} 位。`,
-    r.specialNote ? `您提到「${r.specialNote}」，我會先確認路線安排再回覆您。` : null,
+    `已收到您的需求：${service}，${date}，${r.participantsCount} 位。`,
     `我確認檔期後儘快回覆，有任何問題直接在這裡說。`,
   ].filter(Boolean).join('\n');
 }
