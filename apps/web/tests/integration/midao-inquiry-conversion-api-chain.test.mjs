@@ -42,6 +42,33 @@ async function jsonRequest(url, options = {}) {
   return { response, status: response.status, body };
 }
 
+async function serviceRoleRead(supabaseUrl, path) {
+  const key = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
+  const result = await jsonRequest(new URL(`/rest/v1/${path}`, supabaseUrl), {
+    headers: { apikey: key, authorization: `Bearer ${key}` },
+  });
+  assert.equal(result.status, 200, 'local service-role cardinality readback must succeed');
+  assert.ok(Array.isArray(result.body));
+  return result.body;
+}
+
+async function serviceRolePatch(supabaseUrl, path, body) {
+  const key = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
+  const result = await jsonRequest(new URL(`/rest/v1/${path}`, supabaseUrl), {
+    method: 'PATCH',
+    headers: {
+      apikey: key,
+      authorization: `Bearer ${key}`,
+      'content-type': 'application/json',
+      prefer: 'return=representation',
+    },
+    body: JSON.stringify(body),
+  });
+  assert.equal(result.status, 200, 'local fixture expiry update must succeed');
+  assert.ok(Array.isArray(result.body));
+  return result.body;
+}
+
 function apiUrl(baseUrl, path) {
   return new URL(path, baseUrl).toString();
 }
@@ -189,6 +216,26 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
   assert.equal(wrongTravelerAccept.status, 404);
   assert.equal(wrongTravelerAccept.body?.error?.code, 'NOT_FOUND');
 
+  const past = new Date(Date.now() - 60_000).toISOString();
+  const future = new Date(Date.now() + 86_400_000).toISOString();
+  assert.equal((await serviceRolePatch(
+    supabaseUrl, `booking_confirmation_tokens?booking_id=eq.${bookingId}`, { expires_at: past },
+  )).length, 1);
+  assert.equal((await serviceRolePatch(
+    supabaseUrl, `bookings?id=eq.${bookingId}`, { traveler_confirmation_expires_at: past },
+  )).length, 1);
+  const expiredAccept = await jsonRequest(apiUrl(apiBaseUrl, `/api/v2/me/booking-confirmations/${confirmationToken}/accept`), {
+    method: 'POST', headers: commandHeaders(traveler, `midao-api-chain-expired-${bookingId}`), body: '{}',
+  });
+  assert.equal(expiredAccept.status, 410);
+  assert.equal(expiredAccept.body?.error?.code, 'CONFIRMATION_TOKEN_EXPIRED');
+  assert.equal((await serviceRolePatch(
+    supabaseUrl, `booking_confirmation_tokens?booking_id=eq.${bookingId}`, { expires_at: future },
+  )).length, 1);
+  assert.equal((await serviceRolePatch(
+    supabaseUrl, `bookings?id=eq.${bookingId}`, { traveler_confirmation_expires_at: future },
+  )).length, 1);
+
   const concurrentAccepts = await Promise.all([
     jsonRequest(apiUrl(apiBaseUrl, `/api/v2/me/booking-confirmations/${confirmationToken}/accept`), {
       method: 'POST', headers: commandHeaders(traveler, `midao-api-chain-accept-a-${bookingId}`), body: '{}',
@@ -219,4 +266,18 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
   assert.equal(afterAcceptance.body?.success, true);
   assert.equal(afterAcceptance.body?.data?.provider, 'transfer');
   assert.equal(afterAcceptance.body?.data?.awaitingManualPayment, true);
+
+  const [bookings, orders, tokens, confirmationLogs] = await Promise.all([
+    serviceRoleRead(supabaseUrl, `bookings?select=id,source_inquiry_id,traveler_confirmation_status&source_inquiry_id=eq.${inquiryId}`),
+    serviceRoleRead(supabaseUrl, `orders?select=id,booking_id&booking_id=eq.${bookingId}`),
+    serviceRoleRead(supabaseUrl, `booking_confirmation_tokens?select=booking_id,consumed_at&booking_id=eq.${bookingId}`),
+    serviceRoleRead(supabaseUrl, `booking_status_logs?select=booking_id,reason&booking_id=eq.${bookingId}&reason=eq.traveler_confirmation_accepted`),
+  ]);
+  assert.deepEqual(bookings, [{ id: bookingId, source_inquiry_id: inquiryId, traveler_confirmation_status: 'confirmed' }]);
+  assert.equal(orders.length, 1);
+  assert.equal(orders[0].booking_id, bookingId);
+  assert.equal(tokens.length, 1);
+  assert.equal(tokens[0].booking_id, bookingId);
+  assert.ok(Date.parse(tokens[0].consumed_at) > 0);
+  assert.deepEqual(confirmationLogs, [{ booking_id: bookingId, reason: 'traveler_confirmation_accepted' }]);
 });
