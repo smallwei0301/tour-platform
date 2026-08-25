@@ -39,6 +39,14 @@ test('midao2 需求詳情：只重用 canonical projection，含人工 LINE 送�
   assert.doesNotMatch(src, /buildRequestSummaryText|buildLineReplyText|line\.me\/R\/ti\/p\/~|apiSend|\/api\/v2\/guide\/midao\/requests/);
 });
 
+test('midao2 瀏覽器驗證使用登入後輪替的 CSRF，不可寫死測試值', async () => {
+  const spec = await read('e2e/midao2-request-conversion.spec.ts');
+  assert.match(spec, /page\.context\(\)\.cookies\(\)/);
+  assert.match(spec, /find\(\(cookie\) => cookie\.name === 'tp_csrf'\)/);
+  assert.match(spec, /MIDAO2_E2E_CSRF_MISSING/);
+  assert.doesNotMatch(spec, /midao2-e2e-csrf/);
+});
+
 test('midao2 行事曆：月格/點色/三格開關/週預設 modal', async () => {
   const src = await read('app/(non-locale)/midao2/calendar/page.tsx');
   assert.match(src, /\/api\/v2\/guide\/midao\/calendar\?month=/);

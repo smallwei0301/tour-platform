@@ -108,10 +108,8 @@ test('midao2 LINE copy is manual, uses the safe template, and does not mutate CR
       },
     });
   });
-  await page.context().addCookies([
-    { name: 'tp_csrf', value: 'midao2-e2e-csrf', url: 'http://127.0.0.1:3333' },
-  ]);
 
+  let expectedCsrf = '';
   const writes: string[] = [];
   await page.route(`**/api/v2/guide/requests/${REQUEST_REF}`, async (route) => {
     if (route.request().method() !== 'GET') writes.push(new URL(route.request().url()).pathname);
@@ -120,7 +118,7 @@ test('midao2 LINE copy is manual, uses the safe template, and does not mutate CR
   await page.route(`**/api/v2/guide/requests/${REQUEST_REF}/reply-template`, async (route) => {
     writes.push(new URL(route.request().url()).pathname);
     expect(route.request().method()).toBe('POST');
-    expect(route.request().headers()['x-csrf-token']).toBe('midao2-e2e-csrf');
+    expect(route.request().headers()['x-csrf-token']).toBe(expectedCsrf);
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
@@ -136,6 +134,12 @@ test('midao2 LINE copy is manual, uses the safe template, and does not mutate CR
 
   await page.goto(`/midao2/requests/${REQUEST_REF}`);
   await expect(page.getByTestId('midao2-manual-line-disclosure')).toHaveText('系統只準備文案或開啟 LINE；不保證送達，也不會自動重送。');
+  await expect.poll(async () => (
+    (await page.context().cookies()).find((cookie) => cookie.name === 'tp_csrf')?.value ?? ''
+  )).not.toBe('');
+  const sessionCsrf = (await page.context().cookies()).find((cookie) => cookie.name === 'tp_csrf');
+  if (!sessionCsrf?.value) throw new Error('MIDAO2_E2E_CSRF_MISSING');
+  expectedCsrf = sessionCsrf.value;
   await page.getByRole('button', { name: '產生文案' }).click();
   await expect(page.getByTestId('midao-line-reply-text')).toHaveValue('您好，\n\n我已收到您的需求。');
   await page.getByRole('button', { name: '複製文案' }).click();
