@@ -322,6 +322,13 @@ jobs:
           apps/web/e2e/midao-inquiry-conversion.spec.ts
           apps/web/e2e/issue1814-checkout-idempotency.spec.ts
 
+      - name: Run Phase 4 real-auth traveler confirmation browser gate
+        run: >-
+          timeout --signal=TERM --kill-after=30s 1200s
+          env MIDAO_DB_HEALTH_TIMEOUT_SECONDS=600
+          bash scripts/testing/run-midao-e2e.sh
+          apps/web/e2e/midao-inquiry-conversion-chain.spec.ts
+
       - name: Run Package 4 real-HTTP API chain gate (public inquiry to checkout, no mocks)
         run: >-
           timeout --signal=TERM --kill-after=30s 1200s

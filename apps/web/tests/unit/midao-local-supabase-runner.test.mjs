@@ -186,6 +186,36 @@ test('runner failure formatter retains redacted Supabase full-service startup di
   assert.doesNotMatch(formatted, /service-secret/u);
 });
 
+test('runner failure formatter exposes a safe overlay seed failure class without secrets', () => {
+  const formatted = formatMidaoRunnerFailure(
+    new Error('MIDAO_E2E_SEED_FAILED: psql failed with service-secret at postgresql://postgres:***@127.0.0.1:54322/postgres'),
+    ['service-secret'],
+  );
+  assert.doesNotMatch(formatted, /\[REDACTED_ERROR\]/u);
+  assert.match(formatted, /^MIDAO_E2E_SEED_FAILED:/u);
+  assert.doesNotMatch(formatted, /service-secret|postgresql:\/\//u);
+});
+
+test('runner failure formatter exposes a safe baseline seed failure class without secrets', () => {
+  const formatted = formatMidaoRunnerFailure(
+    new Error('MIDAO_SEED_FAILED: psql failed with service-secret at postgresql://postgres:***@127.0.0.1:54322/postgres'),
+    ['service-secret'],
+  );
+  assert.doesNotMatch(formatted, /\[REDACTED_ERROR\]/u);
+  assert.match(formatted, /^MIDAO_SEED_FAILED:/u);
+  assert.doesNotMatch(formatted, /service-secret|postgresql:\/\//u);
+});
+
+test('runner failure formatter exposes a redacted database-ready probe class', () => {
+  const formatted = formatMidaoRunnerFailure(
+    new Error('DATABASE_NOT_READY: exit=1 service-secret at postgresql://postgres:***@127.0.0.1:54322/postgres'),
+    ['service-secret'],
+  );
+  assert.doesNotMatch(formatted, /\[REDACTED_ERROR\]/u);
+  assert.match(formatted, /^DATABASE_NOT_READY: exit=1/u);
+  assert.doesNotMatch(formatted, /service-secret|postgresql:\/\//u);
+});
+
 test('DB health timeout is configurable in positive whole seconds and defaults to the existing three minutes', () => {
   assert.equal(resolveMidaoDatabaseHealthTimeoutSeconds(), 180);
   assert.equal(resolveMidaoDatabaseHealthTimeoutSeconds('600'), 600);
@@ -275,12 +305,53 @@ test('real-auth lanes use an isolated full-service seed with direct GoTrue-only 
   assert.match(source, /\/auth\/v1\/admin\/users/u);
 });
 
+test('real-auth fixture provisions a second deterministic traveler through GoTrue before its FK-safe profile', async () => {
+  const source = await readFile(new URL('../../../../scripts/testing/with-midao-local-supabase.mjs', import.meta.url), 'utf8');
+  const seed = await readFile(new URL('../../../../scripts/testing/midao-api-real-auth-seed.sql', import.meta.url), 'utf8');
+  assert.match(source, /MIDAO_E2E_SECOND_TRAVELER_ID/u);
+  assert.match(source, /MIDAO_E2E_SECOND_TRAVELER_EMAIL/u);
+  assert.match(source, /MIDAO_E2E_SECOND_TRAVELER_PASSWORD/u);
+  const secondTravelerId = source.match(/const MIDAO_E2E_SECOND_TRAVELER_ID = '([^']+)'/u)?.[1];
+  assert.equal(typeof secondTravelerId, 'string');
+  assert.equal(seed.includes(secondTravelerId), false, 'second traveler auth ID must not collide with a baseline seed identity');
+  assert.match(source, /async function createOrUpdateMidaoTravelerAuthUser/u);
+  assert.match(source, /traveler, supabaseUrl, serviceRoleKey, signal/u);
+  assert.match(source, /public\.users\.id has a FK onto auth\.users\(id\); insert it only after/u);
+  assert.match(source, /for \(const traveler of MIDAO_E2E_TRAVELERS\)/u);
+  assert.match(source, /MIDAO_E2E_SECOND_TRAVELER_EMAIL:/u);
+  assert.match(source, /MIDAO_E2E_SECOND_TRAVELER_PASSWORD:/u);
+  assert.match(source, /childSecrets = Object\.values\(e2eEnv\)/u);
+  assert.match(source, /reportStage\('real-auth-overlay-ready'\)/u);
+  assert.match(source, /reportStage\('real-auth-traveler-fixtures-ready'\)/u);
+});
+
 test('API real-auth runner keeps durable redacted output separate from the browser lane', async () => {
   const source = await readFile(new URL('../../../../scripts/testing/run-midao-e2e.sh', import.meta.url), 'utf8');
   assert.match(source, /apps\/web\/tests\/integration\/midao-inquiry-conversion-api-chain\.test\.mjs/u);
   assert.match(source, /MODE='--api-real-auth'/u);
   assert.match(source, /midao-inquiry-conversion-api-chain\.log/u);
   assert.doesNotMatch(source, /playwright.*api-chain|api-chain.*playwright/iu);
+});
+
+test('public standard-runner browser lane executes the real confirmation-chain spec', async () => {
+  const workflow = await readFile(new URL('../../../../.github/workflows/midao-baseline-e2e.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /runs-on:\s*ubuntu-latest/u);
+  assert.match(workflow, /Install Playwright Chromium[\s\S]*playwright install --with-deps chromium/u);
+  const broadGate = workflow.match(/- name: Run baseline-backed Midao browser gate(?<body>[\s\S]*?)(?=\n      - name:)/u)?.groups?.body;
+  assert.equal(typeof broadGate, 'string');
+  assert.doesNotMatch(broadGate, /midao-inquiry-conversion-chain\.spec\.ts/u);
+  assert.match(
+    workflow,
+    /- name: Run Phase 4 real-auth traveler confirmation browser gate[\s\S]*MIDAO_DB_HEALTH_TIMEOUT_SECONDS=600[\s\S]*run-midao-e2e\.sh[\s\S]*apps\/web\/e2e\/midao-inquiry-conversion-chain\.spec\.ts/u,
+  );
+});
+
+test('real-auth guide login returns the CSRF token rotated by session creation', async () => {
+  const spec = await readFile(new URL('../../e2e/midao-inquiry-conversion-chain.spec.ts', import.meta.url), 'utf8');
+  assert.match(spec, /await page\.context\(\)\.cookies\(requireEnv\('NEXT_PUBLIC_BASE_URL'\)\)/u);
+  assert.match(spec, /find\(\(cookie\) => cookie\.name === 'tp_csrf'\)/u);
+  assert.match(spec, /MIDAO_E2E_GUIDE_CSRF_MISSING/u);
+  assert.match(spec, /return sessionCsrf\.value/u);
 });
 
 test('status classifier accepts only pinned exact two-line CRLF-aware missing fixture', () => {

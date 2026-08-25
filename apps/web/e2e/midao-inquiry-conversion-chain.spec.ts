@@ -44,7 +44,10 @@ async function loginGuide(page: import('@playwright/test').Page) {
     failOnStatusCode: false,
   });
   expect(login.status()).toBe(200);
-  return csrfToken;
+  const cookies = await page.context().cookies(requireEnv('NEXT_PUBLIC_BASE_URL'));
+  const sessionCsrf = cookies.find((cookie) => cookie.name === 'tp_csrf');
+  if (!sessionCsrf?.value) throw new Error('MIDAO_E2E_GUIDE_CSRF_MISSING');
+  return sessionCsrf.value;
 }
 
 test('real-auth inquiry → guide conversion → traveler confirmation → transfer checkout', async ({ page }) => {
@@ -97,17 +100,24 @@ test('real-auth inquiry → guide conversion → traveler confirmation → trans
   expect(bookingId).toMatch(/^[0-9a-f-]{36}$/u);
 
   await loginTraveler(page);
-  const preview = await page.request.get(`/api/v2/me/booking-confirmations/${confirmationToken}`, { failOnStatusCode: false });
-  expect(preview.status()).toBe(200);
-  expect((await preview.json()).data.status).toBe('pending');
-
-  const accepted = await page.request.post(`/api/v2/me/booking-confirmations/${confirmationToken}/accept`, {
-    headers: { 'x-csrf-token': travelerCsrf, 'idempotency-key': `real-auth-accept-${bookingId}` },
-    data: {},
+  const beforeConfirmationCheckout = await page.request.post(`/api/v2/bookings/${bookingId}/checkout`, {
+    headers: { 'x-csrf-token': travelerCsrf, 'idempotency-key': `real-auth-checkout-before-${bookingId}` },
+    data: { provider: 'transfer' },
     failOnStatusCode: false,
   });
-  expect(accepted.status()).toBe(200);
-  expect((await accepted.json()).data.bookingStatus).toBe('confirmed');
+  expect(beforeConfirmationCheckout.status()).toBe(409);
+  expect((await beforeConfirmationCheckout.json()).error.code).toBe('TRAVELER_CONFIRMATION_REQUIRED');
+
+  await page.goto(`/booking/confirm/${confirmationToken}`);
+  await expect(page.getByTestId('booking-confirm-card')).toBeVisible();
+  await expect(page.getByTestId('booking-confirm-service')).toBeVisible();
+  const acceptResponse = page.waitForResponse((response) =>
+    response.request().method() === 'POST'
+      && response.url().includes(`/api/v2/me/booking-confirmations/${confirmationToken}/accept`),
+  );
+  await page.getByTestId('booking-confirm-accept').click();
+  expect((await acceptResponse).status()).toBe(200);
+  await page.waitForURL(/\/order\/pay\?orderId=/u);
 
   const checkout = await page.request.post(`/api/v2/bookings/${bookingId}/checkout`, {
     headers: { 'x-csrf-token': travelerCsrf, 'idempotency-key': `real-auth-checkout-${bookingId}` },

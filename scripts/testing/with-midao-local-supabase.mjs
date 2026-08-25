@@ -895,6 +895,9 @@ const SAFE_RUNNER_DIAGNOSTIC_PREFIX_CODES = Object.freeze([
   'STATUS_PROJECT_ID_NOT_NORMALIZED',
   'MIDAO_E2E_TRAVELER_ADMIN_USER_FAILED',
   'MIDAO_E2E_TRAVELER_PROFILE_FAILED',
+  'MIDAO_E2E_SEED_FAILED',
+  'MIDAO_SEED_FAILED',
+  'DATABASE_NOT_READY',
 ]);
 
 export function formatMidaoRunnerFailure(error, secrets = []) {
@@ -1505,7 +1508,8 @@ export function createActualAdapter({
         lastError = result;
         await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
       }
-      throw new Error(`DATABASE_NOT_READY_${lastError?.exitCode ?? 'unknown'}`);
+      const diagnostic = redactSupabaseOutput(lastError?.stderr ?? '').slice(-4000).trim();
+      throw new Error(`DATABASE_NOT_READY: exit=${lastError?.exitCode ?? 'unknown'}${diagnostic ? ` ${diagnostic}` : ''}`);
     },
     child: async (paths, env) => {
       const result = await commandRunner(nodeBin, ['--test', '--test-concurrency=1', ...paths], {
@@ -1589,18 +1593,26 @@ export function parseMidaoRunnerInvocation(args) {
 const MIDAO_E2E_TRAVELER_ID = '55555555-5555-4555-8555-555555555555';
 const MIDAO_E2E_TRAVELER_EMAIL = 'midao-e2e-traveler@example.invalid';
 const MIDAO_E2E_TRAVELER_PASSWORD = 'midao-e2e-traveler-local-only';
+const MIDAO_E2E_SECOND_TRAVELER_ID = '44444444-4444-4444-8444-444444444444';
+const MIDAO_E2E_SECOND_TRAVELER_EMAIL = 'midao-e2e-second-traveler@example.invalid';
+const MIDAO_E2E_SECOND_TRAVELER_PASSWORD = 'midao-e2e-second-traveler-local-only';
+const MIDAO_E2E_TRAVELERS = Object.freeze([
+  Object.freeze({ id: MIDAO_E2E_TRAVELER_ID, email: MIDAO_E2E_TRAVELER_EMAIL, password: MIDAO_E2E_TRAVELER_PASSWORD }),
+  Object.freeze({ id: MIDAO_E2E_SECOND_TRAVELER_ID, email: MIDAO_E2E_SECOND_TRAVELER_EMAIL, password: MIDAO_E2E_SECOND_TRAVELER_PASSWORD }),
+]);
 
-async function createOrUpdateMidaoTravelerAuthUser({ supabaseUrl, serviceRoleKey, signal }) {
+async function createOrUpdateMidaoTravelerAuthUser({ traveler, supabaseUrl, serviceRoleKey, signal }) {
   try {
-    const endpoint = new URL(`/auth/v1/admin/users/${MIDAO_E2E_TRAVELER_ID}`, supabaseUrl);
+    if (!MIDAO_E2E_TRAVELERS.includes(traveler)) throw new Error('MIDAO_E2E_TRAVELER_INVALID');
+    const endpoint = new URL(`/auth/v1/admin/users/${traveler.id}`, supabaseUrl);
     const headers = {
       apikey: serviceRoleKey,
       authorization: `Bearer ${serviceRoleKey}`,
       'content-type': 'application/json',
     };
     const body = JSON.stringify({
-      email: MIDAO_E2E_TRAVELER_EMAIL,
-      password: MIDAO_E2E_TRAVELER_PASSWORD,
+      email: traveler.email,
+      password: traveler.password,
       email_confirm: true,
       user_metadata: { full_name: 'Midao E2E Traveler', role: 'traveler' },
     });
@@ -1612,7 +1624,7 @@ async function createOrUpdateMidaoTravelerAuthUser({ supabaseUrl, serviceRoleKey
       response = await fetch(createEndpoint, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ id: MIDAO_E2E_TRAVELER_ID, ...JSON.parse(body) }),
+        body: JSON.stringify({ id: traveler.id, ...JSON.parse(body) }),
         signal: combinedSignal,
       });
     }
@@ -1710,28 +1722,35 @@ async function main() {
             cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
           });
           if (overlay.exitCode !== 0 || overlay.signal !== null) throw new Error(`MIDAO_E2E_SEED_FAILED: ${redactSupabaseOutput(overlay.stderr).slice(-4000).trim()}`);
+          reportStage('real-auth-overlay-ready');
           for (const name of ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
             if (typeof localEnv[name] !== 'string' || !localEnv[name]) throw new Error(`MIDAO_E2E_LOCAL_ENV_MISSING:${name}`);
           }
-          await createOrUpdateMidaoTravelerAuthUser({
-            supabaseUrl: localEnv.SUPABASE_URL,
-            serviceRoleKey: localEnv.SUPABASE_SERVICE_ROLE_KEY,
-            signal: controller.signal,
-          });
           // public.users.id has a FK onto auth.users(id); insert it only after
-          // the Admin API has created the traveler auth user above.
-          const travelerProfile = await runCommand('/usr/bin/psql', [
-            '-X', '--set=ON_ERROR_STOP=1', '--quiet', '-c',
-            "insert into public.users (id, role) values ('55555555-5555-4555-8555-555555555555', 'traveler') on conflict (id) do update set role = excluded.role;",
-          ], {
-            cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
-          });
-          if (travelerProfile.exitCode !== 0 || travelerProfile.signal !== null) throw new Error(`MIDAO_E2E_TRAVELER_PROFILE_FAILED: ${redactSupabaseOutput(travelerProfile.stderr).slice(-4000).trim()}`);
+          // the GoTrue Admin API has created each fixed local traveler above.
+          for (const traveler of MIDAO_E2E_TRAVELERS) {
+            await createOrUpdateMidaoTravelerAuthUser({
+              traveler,
+              supabaseUrl: localEnv.SUPABASE_URL,
+              serviceRoleKey: localEnv.SUPABASE_SERVICE_ROLE_KEY,
+              signal: controller.signal,
+            });
+            const travelerProfile = await runCommand('/usr/bin/psql', [
+              '-X', '--set=ON_ERROR_STOP=1', '--quiet', '-c',
+              `insert into public.users (id, role) values ('${traveler.id}', 'traveler') on conflict (id) do update set role = excluded.role;`,
+            ], {
+              cwd: repoRoot, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
+            });
+            if (travelerProfile.exitCode !== 0 || travelerProfile.signal !== null) throw new Error(`MIDAO_E2E_TRAVELER_PROFILE_FAILED: ${redactSupabaseOutput(travelerProfile.stderr).slice(-4000).trim()}`);
+          }
+          reportStage('real-auth-traveler-fixtures-ready');
           reportStage('real-auth-runtime-fixture-ready');
           const e2eEnv = {
             ...buildMidaoPlaywrightEnvironment({ localEnv }),
-            MIDAO_E2E_TRAVELER_EMAIL: 'midao-e2e-traveler@example.invalid',
-            MIDAO_E2E_TRAVELER_PASSWORD: 'midao-e2e-traveler-local-only',
+            MIDAO_E2E_TRAVELER_EMAIL: MIDAO_E2E_TRAVELER_EMAIL,
+            MIDAO_E2E_TRAVELER_PASSWORD: MIDAO_E2E_TRAVELER_PASSWORD,
+            MIDAO_E2E_SECOND_TRAVELER_EMAIL: MIDAO_E2E_SECOND_TRAVELER_EMAIL,
+            MIDAO_E2E_SECOND_TRAVELER_PASSWORD: MIDAO_E2E_SECOND_TRAVELER_PASSWORD,
             NEXT_PUBLIC_TRANSFER_PAYMENT_ENABLED: '1',
           };
           childSecrets = Object.values(e2eEnv);

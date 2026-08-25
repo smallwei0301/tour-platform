@@ -42,21 +42,48 @@ async function jsonRequest(url, options = {}) {
   return { response, status: response.status, body };
 }
 
+async function serviceRoleRead(supabaseUrl, path) {
+  const key = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
+  const result = await jsonRequest(new URL(`/rest/v1/${path}`, supabaseUrl), {
+    headers: { apikey: key, authorization: `Bearer ${key}` },
+  });
+  assert.equal(result.status, 200, 'local service-role cardinality readback must succeed');
+  assert.ok(Array.isArray(result.body));
+  return result.body;
+}
+
+async function serviceRolePatch(supabaseUrl, path, body) {
+  const key = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
+  const result = await jsonRequest(new URL(`/rest/v1/${path}`, supabaseUrl), {
+    method: 'PATCH',
+    headers: {
+      apikey: key,
+      authorization: `Bearer ${key}`,
+      'content-type': 'application/json',
+      prefer: 'return=representation',
+    },
+    body: JSON.stringify(body),
+  });
+  assert.equal(result.status, 200, 'local fixture expiry update must succeed');
+  assert.ok(Array.isArray(result.body));
+  return result.body;
+}
+
 function apiUrl(baseUrl, path) {
   return new URL(path, baseUrl).toString();
 }
 
-async function loginTraveler({ apiBaseUrl, supabaseUrl, anonKey }) {
+async function loginTraveler({ supabaseUrl, anonKey, emailEnv = 'MIDAO_E2E_TRAVELER_EMAIL', passwordEnv = 'MIDAO_E2E_TRAVELER_PASSWORD', expectedId = '55555555-5555-4555-8555-555555555555' }) {
   const login = await jsonRequest(new URL('/auth/v1/token?grant_type=password', supabaseUrl), {
     method: 'POST',
     headers: { apikey: anonKey, 'content-type': 'application/json' },
     body: JSON.stringify({
-      email: requireEnv('MIDAO_E2E_TRAVELER_EMAIL'),
-      password: requireEnv('MIDAO_E2E_TRAVELER_PASSWORD'),
+      email: requireEnv(emailEnv),
+      password: requireEnv(passwordEnv),
     }),
   });
   assert.equal(login.status, 200, 'traveler password login must use the local GoTrue endpoint');
-  assert.equal(login.body?.user?.id, '55555555-5555-4555-8555-555555555555');
+  assert.equal(login.body?.user?.id, expectedId);
 
   const jar = createHttpCookieJar();
   const projectRef = supabaseUrl.hostname.split('.', 1)[0];
@@ -109,7 +136,6 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
   const apiBaseUrl = requireLoopbackUrl('MIDAO_API_BASE_URL');
   const supabaseUrl = requireLoopbackUrl('SUPABASE_URL');
   const traveler = await loginTraveler({
-    apiBaseUrl,
     supabaseUrl,
     anonKey: requireEnv('SUPABASE_ANON_KEY'),
   });
@@ -175,15 +201,61 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
   assert.equal(beforeAcceptance.status, 409);
   assert.equal(beforeAcceptance.body?.error?.code, 'TRAVELER_CONFIRMATION_REQUIRED');
 
-  const accepted = await jsonRequest(apiUrl(apiBaseUrl, `/api/v2/me/booking-confirmations/${confirmationToken}/accept`), {
+  const wrongTraveler = await loginTraveler({
+    supabaseUrl,
+    anonKey: requireEnv('SUPABASE_ANON_KEY'),
+    emailEnv: 'MIDAO_E2E_SECOND_TRAVELER_EMAIL',
+    passwordEnv: 'MIDAO_E2E_SECOND_TRAVELER_PASSWORD',
+    expectedId: '44444444-4444-4444-8444-444444444444',
+  });
+  const wrongTravelerAccept = await jsonRequest(apiUrl(apiBaseUrl, `/api/v2/me/booking-confirmations/${confirmationToken}/accept`), {
     method: 'POST',
-    headers: commandHeaders(traveler, `midao-api-chain-accept-${bookingId}`),
+    headers: commandHeaders(wrongTraveler, `midao-api-chain-wrong-traveler-${bookingId}`),
     body: '{}',
   });
-  assert.equal(accepted.status, 200);
-  assert.equal(accepted.body?.success, true);
-  assert.equal(accepted.body?.data?.bookingStatus, 'draft');
-  assert.equal(accepted.body?.data?.travelerConfirmationStatus, 'confirmed');
+  assert.equal(wrongTravelerAccept.status, 404);
+  assert.equal(wrongTravelerAccept.body?.error?.code, 'NOT_FOUND');
+
+  const past = new Date(Date.now() - 60_000).toISOString();
+  const future = new Date(Date.now() + 86_400_000).toISOString();
+  assert.equal((await serviceRolePatch(
+    supabaseUrl, `booking_confirmation_tokens?booking_id=eq.${bookingId}`, { expires_at: past },
+  )).length, 1);
+  assert.equal((await serviceRolePatch(
+    supabaseUrl, `bookings?id=eq.${bookingId}`, { traveler_confirmation_expires_at: past },
+  )).length, 1);
+  const expiredAccept = await jsonRequest(apiUrl(apiBaseUrl, `/api/v2/me/booking-confirmations/${confirmationToken}/accept`), {
+    method: 'POST', headers: commandHeaders(traveler, `midao-api-chain-expired-${bookingId}`), body: '{}',
+  });
+  assert.equal(expiredAccept.status, 410);
+  assert.equal(expiredAccept.body?.error?.code, 'CONFIRMATION_TOKEN_EXPIRED');
+  assert.equal((await serviceRolePatch(
+    supabaseUrl, `booking_confirmation_tokens?booking_id=eq.${bookingId}`, { expires_at: future },
+  )).length, 1);
+  assert.equal((await serviceRolePatch(
+    supabaseUrl, `bookings?id=eq.${bookingId}`, { traveler_confirmation_expires_at: future },
+  )).length, 1);
+
+  const concurrentAccepts = await Promise.all([
+    jsonRequest(apiUrl(apiBaseUrl, `/api/v2/me/booking-confirmations/${confirmationToken}/accept`), {
+      method: 'POST', headers: commandHeaders(traveler, `midao-api-chain-accept-a-${bookingId}`), body: '{}',
+    }),
+    jsonRequest(apiUrl(apiBaseUrl, `/api/v2/me/booking-confirmations/${confirmationToken}/accept`), {
+      method: 'POST', headers: commandHeaders(traveler, `midao-api-chain-accept-b-${bookingId}`), body: '{}',
+    }),
+  ]);
+  assert.deepEqual(concurrentAccepts.map(({ status }) => status).sort(), [200, 409]);
+  const accepted = concurrentAccepts.find(({ status }) => status === 200);
+  assert.equal(accepted?.body?.success, true);
+  assert.equal(accepted?.body?.data?.bookingStatus, 'draft');
+  assert.equal(accepted?.body?.data?.travelerConfirmationStatus, 'confirmed');
+  const alreadyConsumed = await jsonRequest(apiUrl(apiBaseUrl, `/api/v2/me/booking-confirmations/${confirmationToken}/accept`), {
+    method: 'POST',
+    headers: commandHeaders(traveler, `midao-api-chain-consumed-${bookingId}`),
+    body: '{}',
+  });
+  assert.equal(alreadyConsumed.status, 409);
+  assert.equal(alreadyConsumed.body?.error?.code, 'CONFIRMATION_TOKEN_ALREADY_CONSUMED');
 
   const afterAcceptance = await jsonRequest(apiUrl(apiBaseUrl, `/api/v2/bookings/${bookingId}/checkout`), {
     method: 'POST',
@@ -194,4 +266,18 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
   assert.equal(afterAcceptance.body?.success, true);
   assert.equal(afterAcceptance.body?.data?.provider, 'transfer');
   assert.equal(afterAcceptance.body?.data?.awaitingManualPayment, true);
+
+  const [bookings, orders, tokens, confirmationLogs] = await Promise.all([
+    serviceRoleRead(supabaseUrl, `bookings?select=id,source_inquiry_id,traveler_confirmation_status&source_inquiry_id=eq.${inquiryId}`),
+    serviceRoleRead(supabaseUrl, `orders?select=id,booking_id&booking_id=eq.${bookingId}`),
+    serviceRoleRead(supabaseUrl, `booking_confirmation_tokens?select=booking_id,consumed_at&booking_id=eq.${bookingId}`),
+    serviceRoleRead(supabaseUrl, `booking_status_logs?select=booking_id,reason&booking_id=eq.${bookingId}&reason=eq.traveler_confirmation_accepted`),
+  ]);
+  assert.deepEqual(bookings, [{ id: bookingId, source_inquiry_id: inquiryId, traveler_confirmation_status: 'confirmed' }]);
+  assert.equal(orders.length, 1);
+  assert.equal(orders[0].booking_id, bookingId);
+  assert.equal(tokens.length, 1);
+  assert.equal(tokens[0].booking_id, bookingId);
+  assert.ok(Date.parse(tokens[0].consumed_at) > 0);
+  assert.deepEqual(confirmationLogs, [{ booking_id: bookingId, reason: 'traveler_confirmation_accepted' }]);
 });
