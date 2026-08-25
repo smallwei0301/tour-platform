@@ -337,7 +337,13 @@ test('public standard-runner browser lane executes the real confirmation-chain s
   const workflow = await readFile(new URL('../../../../.github/workflows/midao-baseline-e2e.yml', import.meta.url), 'utf8');
   assert.match(workflow, /runs-on:\s*ubuntu-latest/u);
   assert.match(workflow, /Install Playwright Chromium[\s\S]*playwright install --with-deps chromium/u);
-  assert.match(workflow, /Run baseline-backed Midao browser gate[\s\S]*apps\/web\/e2e\/midao-inquiry-conversion-chain\.spec\.ts/u);
+  const broadGate = workflow.match(/- name: Run baseline-backed Midao browser gate(?<body>[\s\S]*?)(?=\n      - name:)/u)?.groups?.body;
+  assert.equal(typeof broadGate, 'string');
+  assert.doesNotMatch(broadGate, /midao-inquiry-conversion-chain\.spec\.ts/u);
+  assert.match(
+    workflow,
+    /- name: Run Phase 4 real-auth traveler confirmation browser gate[\s\S]*MIDAO_DB_HEALTH_TIMEOUT_SECONDS=600[\s\S]*run-midao-e2e\.sh[\s\S]*apps\/web\/e2e\/midao-inquiry-conversion-chain\.spec\.ts/u,
+  );
 });
 
 test('status classifier accepts only pinned exact two-line CRLF-aware missing fixture', () => {
