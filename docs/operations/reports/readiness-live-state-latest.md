@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-08-24T05:14:32.121Z -->
+<!-- query_timestamp: 2026-08-25T05:10:56.767Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-24T05:14:32.121Z  
-**Commit SHA:** `d8f4edf5ccbfb97ba7a92c695dd28b19e9a11039`
+**Query timestamp:** 2026-08-25T05:10:56.767Z  
+**Commit SHA:** `0e542c74d4017dbd6f3aecba26d1524bd36fdae1`
 
 ---
 
@@ -124,6 +124,7 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1865 | [feat(midao2): 串接 canonical inquiry 轉單流程 (#1861 Phase 3)](https://github.com/smallwei0301/tour-platform/pull/1865) | 2026-08-24 |
 | #1864 | [feat(midao): integrate #1763 release candidate with canonical calendar](https://github.com/smallwei0301/tour-platform/pull/1864) | 2026-08-23 |
 | #1858 | [docs(ops): #1855 migration SOP 第 1 步補 Free-plan（無 PITR）替代 backup 分支](https://github.com/smallwei0301/tour-platform/pull/1858) | 2026-08-19 |
 | #1856 | [fix(db): #1855 修復 midao 原子函式誤用 pg_catalog.nullif（production 已套用 + ledger）](https://github.com/smallwei0301/tour-platform/pull/1856) | 2026-08-19 |
@@ -133,7 +134,6 @@
 | #1849 | [fix(admin): #1825 accept structural UUIDs in plan routes](https://github.com/smallwei0301/tour-platform/pull/1849) | 2026-08-18 |
 | #1846 | [feat(midao): #1825 啟用 legacy draft materialization（master flag + guide allowlist）](https://github.com/smallwei0301/tour-platform/pull/1846) | 2026-08-17 |
 | #1843 | [docs(ledger): record #1825 legacy Midao draft materialization verified apply](https://github.com/smallwei0301/tour-platform/pull/1843) | 2026-08-17 |
-| #1840 | [feat(availability): wire traveler dynamic canonical selector](https://github.com/smallwei0301/tour-platform/pull/1840) | 2026-08-16 |
 
 ---
 
