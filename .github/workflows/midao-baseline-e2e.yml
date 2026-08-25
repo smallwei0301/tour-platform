@@ -320,6 +320,7 @@ jobs:
           apps/web/e2e/midao-services.spec.ts
           apps/web/e2e/midao-me-capabilities.spec.ts
           apps/web/e2e/midao-inquiry-conversion.spec.ts
+          apps/web/e2e/midao-inquiry-conversion-chain.spec.ts
           apps/web/e2e/issue1814-checkout-idempotency.spec.ts
 
       - name: Run Package 4 real-HTTP API chain gate (public inquiry to checkout, no mocks)

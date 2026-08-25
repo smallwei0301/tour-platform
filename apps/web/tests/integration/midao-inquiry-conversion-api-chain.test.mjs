@@ -46,17 +46,17 @@ function apiUrl(baseUrl, path) {
   return new URL(path, baseUrl).toString();
 }
 
-async function loginTraveler({ apiBaseUrl, supabaseUrl, anonKey }) {
+async function loginTraveler({ supabaseUrl, anonKey, emailEnv = 'MIDAO_E2E_TRAVELER_EMAIL', passwordEnv = 'MIDAO_E2E_TRAVELER_PASSWORD', expectedId = '55555555-5555-4555-8555-555555555555' }) {
   const login = await jsonRequest(new URL('/auth/v1/token?grant_type=password', supabaseUrl), {
     method: 'POST',
     headers: { apikey: anonKey, 'content-type': 'application/json' },
     body: JSON.stringify({
-      email: requireEnv('MIDAO_E2E_TRAVELER_EMAIL'),
-      password: requireEnv('MIDAO_E2E_TRAVELER_PASSWORD'),
+      email: requireEnv(emailEnv),
+      password: requireEnv(passwordEnv),
     }),
   });
   assert.equal(login.status, 200, 'traveler password login must use the local GoTrue endpoint');
-  assert.equal(login.body?.user?.id, '55555555-5555-4555-8555-555555555555');
+  assert.equal(login.body?.user?.id, expectedId);
 
   const jar = createHttpCookieJar();
   const projectRef = supabaseUrl.hostname.split('.', 1)[0];
@@ -109,7 +109,6 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
   const apiBaseUrl = requireLoopbackUrl('MIDAO_API_BASE_URL');
   const supabaseUrl = requireLoopbackUrl('SUPABASE_URL');
   const traveler = await loginTraveler({
-    apiBaseUrl,
     supabaseUrl,
     anonKey: requireEnv('SUPABASE_ANON_KEY'),
   });
@@ -175,15 +174,41 @@ test('API-only real HTTP chain gates checkout until traveler confirmation is acc
   assert.equal(beforeAcceptance.status, 409);
   assert.equal(beforeAcceptance.body?.error?.code, 'TRAVELER_CONFIRMATION_REQUIRED');
 
-  const accepted = await jsonRequest(apiUrl(apiBaseUrl, `/api/v2/me/booking-confirmations/${confirmationToken}/accept`), {
+  const wrongTraveler = await loginTraveler({
+    supabaseUrl,
+    anonKey: requireEnv('SUPABASE_ANON_KEY'),
+    emailEnv: 'MIDAO_E2E_SECOND_TRAVELER_EMAIL',
+    passwordEnv: 'MIDAO_E2E_SECOND_TRAVELER_PASSWORD',
+    expectedId: '44444444-4444-4444-8444-444444444444',
+  });
+  const wrongTravelerAccept = await jsonRequest(apiUrl(apiBaseUrl, `/api/v2/me/booking-confirmations/${confirmationToken}/accept`), {
     method: 'POST',
-    headers: commandHeaders(traveler, `midao-api-chain-accept-${bookingId}`),
+    headers: commandHeaders(wrongTraveler, `midao-api-chain-wrong-traveler-${bookingId}`),
     body: '{}',
   });
-  assert.equal(accepted.status, 200);
-  assert.equal(accepted.body?.success, true);
-  assert.equal(accepted.body?.data?.bookingStatus, 'draft');
-  assert.equal(accepted.body?.data?.travelerConfirmationStatus, 'confirmed');
+  assert.equal(wrongTravelerAccept.status, 404);
+  assert.equal(wrongTravelerAccept.body?.error?.code, 'NOT_FOUND');
+
+  const concurrentAccepts = await Promise.all([
+    jsonRequest(apiUrl(apiBaseUrl, `/api/v2/me/booking-confirmations/${confirmationToken}/accept`), {
+      method: 'POST', headers: commandHeaders(traveler, `midao-api-chain-accept-a-${bookingId}`), body: '{}',
+    }),
+    jsonRequest(apiUrl(apiBaseUrl, `/api/v2/me/booking-confirmations/${confirmationToken}/accept`), {
+      method: 'POST', headers: commandHeaders(traveler, `midao-api-chain-accept-b-${bookingId}`), body: '{}',
+    }),
+  ]);
+  assert.deepEqual(concurrentAccepts.map(({ status }) => status).sort(), [200, 409]);
+  const accepted = concurrentAccepts.find(({ status }) => status === 200);
+  assert.equal(accepted?.body?.success, true);
+  assert.equal(accepted?.body?.data?.bookingStatus, 'draft');
+  assert.equal(accepted?.body?.data?.travelerConfirmationStatus, 'confirmed');
+  const alreadyConsumed = await jsonRequest(apiUrl(apiBaseUrl, `/api/v2/me/booking-confirmations/${confirmationToken}/accept`), {
+    method: 'POST',
+    headers: commandHeaders(traveler, `midao-api-chain-consumed-${bookingId}`),
+    body: '{}',
+  });
+  assert.equal(alreadyConsumed.status, 409);
+  assert.equal(alreadyConsumed.body?.error?.code, 'CONFIRMATION_TOKEN_ALREADY_CONSUMED');
 
   const afterAcceptance = await jsonRequest(apiUrl(apiBaseUrl, `/api/v2/bookings/${bookingId}/checkout`), {
     method: 'POST',
