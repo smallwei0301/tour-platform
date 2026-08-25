@@ -44,7 +44,10 @@ async function loginGuide(page: import('@playwright/test').Page) {
     failOnStatusCode: false,
   });
   expect(login.status()).toBe(200);
-  return csrfToken;
+  const cookies = await page.context().cookies(requireEnv('NEXT_PUBLIC_BASE_URL'));
+  const sessionCsrf = cookies.find((cookie) => cookie.name === 'tp_csrf');
+  if (!sessionCsrf?.value) throw new Error('MIDAO_E2E_GUIDE_CSRF_MISSING');
+  return sessionCsrf.value;
 }
 
 test('real-auth inquiry → guide conversion → traveler confirmation → transfer checkout', async ({ page }) => {

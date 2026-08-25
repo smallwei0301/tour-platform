@@ -346,6 +346,14 @@ test('public standard-runner browser lane executes the real confirmation-chain s
   );
 });
 
+test('real-auth guide login returns the CSRF token rotated by session creation', async () => {
+  const spec = await readFile(new URL('../../e2e/midao-inquiry-conversion-chain.spec.ts', import.meta.url), 'utf8');
+  assert.match(spec, /await page\.context\(\)\.cookies\(requireEnv\('NEXT_PUBLIC_BASE_URL'\)\)/u);
+  assert.match(spec, /find\(\(cookie\) => cookie\.name === 'tp_csrf'\)/u);
+  assert.match(spec, /MIDAO_E2E_GUIDE_CSRF_MISSING/u);
+  assert.match(spec, /return sessionCsrf\.value/u);
+});
+
 test('status classifier accepts only pinned exact two-line CRLF-aware missing fixture', () => {
   for (const separator of ['\n', '\r\n']) {
     assert.equal(classifySupabaseStatus({
