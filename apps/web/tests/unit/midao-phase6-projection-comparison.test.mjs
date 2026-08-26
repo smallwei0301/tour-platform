@@ -63,6 +63,44 @@ test('fails closed for unknown manual LINE labels and malformed projection rows'
   assert.equal(comparison.complete, false);
 });
 
+test('summary fails closed when callers supply an unknown manual LINE label', () => {
+  const summary = summarizeObservation([{
+    category: 'match',
+    manualLineMetric: 'sent',
+    preConfirmationCheckoutCount: 0,
+  }], {
+    measurementStatus: 'complete',
+    sourcePagesComplete: true,
+    commandExitCode: 0,
+    maskingCheck: 'pass',
+  });
+
+  assert.equal(summary.categoryCounts.match, 0);
+  assert.equal(summary.categoryCounts.unresolvable_key, 1);
+  assert.equal(summary.measurementStatus, 'incomplete');
+  assert.equal(summary.pass, false);
+});
+
+test('summary reports comparator unresolvable-only input as incomplete', () => {
+  const malformedComparison = compareProjectionRows([{
+    joinKey: 'not-a-surrogate-key',
+    state: 'open',
+    observedAt: fixedClock,
+    preConfirmationCheckoutCount: 0,
+  }], [], { now: fixedClock });
+  const summary = summarizeObservation(malformedComparison.rows, {
+    measurementStatus: 'complete',
+    sourcePagesComplete: true,
+    commandExitCode: 0,
+    maskingCheck: 'pass',
+  });
+
+  assert.equal(summary.eligible, 0);
+  assert.equal(summary.categoryCounts.unresolvable_key, 1);
+  assert.equal(summary.measurementStatus, 'incomplete');
+  assert.equal(summary.pass, false);
+});
+
 test('requires complete health, eligible observations, and zero pre-confirmation checkout', () => {
   const healthyMatch = compareProjectionRows([{
     joinKey: 'b'.repeat(64),

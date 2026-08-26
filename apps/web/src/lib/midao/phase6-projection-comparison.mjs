@@ -42,6 +42,14 @@ const ALLOWED_RECORD_FIELDS = new Set([
   'preConfirmationCheckoutCount',
   'manualLineMetric',
 ]);
+const ALLOWED_SUMMARY_ROW_FIELDS = new Set([
+  'category',
+  'surrogateKeyPrefix',
+  'preConfirmationCheckoutCount',
+  'manualLineMetric',
+  'leftState',
+  'rightState',
+]);
 
 function initialCategoryCounts() {
   return Object.fromEntries(CATEGORIES.map((category) => [category, 0]));
@@ -103,6 +111,31 @@ function makeRow(category, record = undefined, state = undefined, counterpartSta
 
 function isStale(record, nowMs, staleAfterMs) {
   return nowMs - record.observedAtMs > staleAfterMs;
+}
+
+function isSafeSummaryRow(row) {
+  if (!isObject(row)
+    || Object.keys(row).some((key) => !ALLOWED_SUMMARY_ROW_FIELDS.has(key))
+    || !CATEGORIES.includes(row.category)) {
+    return false;
+  }
+
+  const validPrefix = row.surrogateKeyPrefix === undefined
+    || row.surrogateKeyPrefix === null
+    || (typeof row.surrogateKeyPrefix === 'string' && /^[a-f0-9]{12}$/.test(row.surrogateKeyPrefix));
+  const validCheckoutCount = row.preConfirmationCheckoutCount === undefined
+    || (Number.isSafeInteger(row.preConfirmationCheckoutCount) && row.preConfirmationCheckoutCount >= 0);
+  const validManualLineMetric = row.manualLineMetric === undefined
+    || row.manualLineMetric === null
+    || row.manualLineMetric === 'prepared_or_opened_manually';
+  const validState = (state) => state === undefined
+    || (typeof state === 'string' && (OUTPUT_STATES.has(state) || state === 'withheld'));
+
+  return validPrefix
+    && validCheckoutCount
+    && validManualLineMetric
+    && validState(row.leftState)
+    && validState(row.rightState);
 }
 
 export function compareProjectionRows(left, right, options = {}) {
@@ -186,8 +219,8 @@ export function compareProjectionRows(left, right, options = {}) {
 
 export function summarizeObservation(rows, health) {
   const categoryCounts = initialCategoryCounts();
-  const safeRows = Array.isArray(rows) ? rows : [];
-  const validRows = safeRows.filter((row) => isObject(row) && CATEGORIES.includes(row.category));
+  const safeRows = Array.isArray(rows) ? rows : [undefined];
+  const validRows = safeRows.filter((row) => isSafeSummaryRow(row));
   const malformedRows = safeRows.length - validRows.length;
 
   for (const row of validRows) categoryCounts[row.category] += 1;
@@ -206,9 +239,9 @@ export function summarizeObservation(rows, health) {
     && health.sourcePagesComplete === true
     && health.commandExitCode === 0
     && health.maskingCheck === 'pass';
-  const measurementStatus = eligible === 0
-    ? 'no_eligible'
-    : healthComplete ? requestedStatus : 'incomplete';
+  const measurementStatus = categoryCounts.unresolvable_key > 0 || !healthComplete
+    ? 'incomplete'
+    : eligible === 0 ? 'no_eligible' : requestedStatus;
   const anomalyCount = Object.entries(categoryCounts)
     .filter(([category]) => category !== 'match')
     .reduce((total, [, count]) => total + count, 0);
