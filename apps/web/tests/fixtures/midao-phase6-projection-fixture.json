@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "phase6-fixture-v1",
+  "generatedAt": "2026-08-26T00:00:00.000Z",
+  "left": [
+    {"joinKey": "0000000000000000000000000000000000000000000000000000000000000001", "state": "open", "observedAt": "2026-08-26T00:00:00.000Z", "preConfirmationCheckoutCount": 0, "manualLineMetric": "prepared_or_opened_manually"},
+    {"joinKey": "0000000000000000000000000000000000000000000000000000000000000002", "state": "replied", "observedAt": "2026-08-26T00:00:00.000Z", "preConfirmationCheckoutCount": 0},
+    {"joinKey": "0000000000000000000000000000000000000000000000000000000000000004", "state": "open", "observedAt": "2026-08-26T00:00:00.000Z", "preConfirmationCheckoutCount": 0},
+    {"joinKey": "0000000000000000000000000000000000000000000000000000000000000005", "state": "open", "observedAt": "2026-08-26T00:00:00.000Z", "preConfirmationCheckoutCount": 0},
+    {"joinKey": "0000000000000000000000000000000000000000000000000000000000000005", "state": "open", "observedAt": "2026-08-26T00:00:00.000Z", "preConfirmationCheckoutCount": 0},
+    {"joinKey": "0000000000000000000000000000000000000000000000000000000000000006", "state": "open", "observedAt": "2026-08-26T00:00:00.000Z", "preConfirmationCheckoutCount": 0},
+    {"joinKey": "0000000000000000000000000000000000000000000000000000000000000007", "state": "open", "observedAt": "2026-08-01T00:00:00.000Z", "preConfirmationCheckoutCount": 0},
+    {"joinKey": null, "state": "open", "observedAt": "2026-08-26T00:00:00.000Z", "preConfirmationCheckoutCount": 0}
+  ],
+  "right": [
+    {"joinKey": "0000000000000000000000000000000000000000000000000000000000000001", "state": "open", "observedAt": "2026-08-26T00:00:00.000Z", "preConfirmationCheckoutCount": 0},
+    {"joinKey": "0000000000000000000000000000000000000000000000000000000000000003", "state": "replied", "observedAt": "2026-08-26T00:00:00.000Z", "preConfirmationCheckoutCount": 0},
+    {"joinKey": "0000000000000000000000000000000000000000000000000000000000000004", "state": "open", "observedAt": "2026-08-26T00:00:00.000Z", "preConfirmationCheckoutCount": 0},
+    {"joinKey": "0000000000000000000000000000000000000000000000000000000000000004", "state": "open", "observedAt": "2026-08-26T00:00:00.000Z", "preConfirmationCheckoutCount": 0},
+    {"joinKey": "0000000000000000000000000000000000000000000000000000000000000005", "state": "open", "observedAt": "2026-08-26T00:00:00.000Z", "preConfirmationCheckoutCount": 0},
+    {"joinKey": "0000000000000000000000000000000000000000000000000000000000000006", "state": "confirmed", "observedAt": "2026-08-26T00:00:00.000Z", "preConfirmationCheckoutCount": 0},
+    {"joinKey": "0000000000000000000000000000000000000000000000000000000000000007", "state": "open", "observedAt": "2026-08-26T00:00:00.000Z", "preConfirmationCheckoutCount": 0}
+  ]
+}
