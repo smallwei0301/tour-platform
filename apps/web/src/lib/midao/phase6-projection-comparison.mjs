@@ -137,15 +137,23 @@ function isSafeSummaryRow(row) {
     && row.preConfirmationCheckoutCount >= 0;
   const validManualLineMetric = row.manualLineMetric === null
     || row.manualLineMetric === 'prepared_or_opened_manually';
-  const validState = (state) => state === undefined
-    || (typeof state === 'string' && (OUTPUT_STATES.has(state) || state === 'withheld'));
+  const hasLeftState = Object.hasOwn(row, 'leftState');
+  const hasRightState = Object.hasOwn(row, 'rightState');
+  const isSafeOutputState = (state) => typeof state === 'string'
+    && (OUTPUT_STATES.has(state) || state === 'withheld');
+  const validCategoryStates = row.category === 'state_mismatch'
+    ? hasLeftState
+      && hasRightState
+      && isSafeOutputState(row.leftState)
+      && isSafeOutputState(row.rightState)
+      && row.leftState !== row.rightState
+    : !hasLeftState && !hasRightState;
 
   return hasRequiredFields
     && validPrefix
     && validCheckoutCount
     && validManualLineMetric
-    && validState(row.leftState)
-    && validState(row.rightState);
+    && validCategoryStates;
 }
 
 export function compareProjectionRows(left, right, options = {}) {

@@ -104,6 +104,47 @@ test('summary treats direct rows missing required measurement fields as unresolv
   }
 });
 
+test('summary rejects direct category/state conflicts as unresolvable', () => {
+  const health = {
+    measurementStatus: 'complete',
+    sourcePagesComplete: true,
+    commandExitCode: 0,
+    maskingCheck: 'pass',
+  };
+  const baseRow = {
+    surrogateKeyPrefix: 'e'.repeat(12),
+    preConfirmationCheckoutCount: 0,
+    manualLineMetric: null,
+  };
+  const forgedRows = [
+    {
+      ...baseRow,
+      category: 'match',
+      leftState: 'open',
+      rightState: 'confirmed',
+    },
+    {
+      ...baseRow,
+      category: 'state_mismatch',
+      leftState: 'open',
+      rightState: 'open',
+    },
+    {
+      ...baseRow,
+      category: 'state_mismatch',
+      leftState: 'open',
+    },
+  ];
+
+  for (const row of forgedRows) {
+    const summary = summarizeObservation([row], health);
+
+    assert.equal(summary.categoryCounts.unresolvable_key, 1);
+    assert.equal(summary.measurementStatus, 'incomplete');
+    assert.equal(summary.pass, false);
+  }
+});
+
 test('summary reports comparator unresolvable-only input as incomplete', () => {
   const malformedComparison = compareProjectionRows([{
     joinKey: 'not-a-surrogate-key',
