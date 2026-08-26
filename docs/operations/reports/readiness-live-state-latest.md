@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-08-25T05:10:56.767Z -->
+<!-- query_timestamp: 2026-08-26T05:10:27.032Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-25T05:10:56.767Z  
-**Commit SHA:** `0e542c74d4017dbd6f3aecba26d1524bd36fdae1`
+**Query timestamp:** 2026-08-26T05:10:27.032Z  
+**Commit SHA:** `485a453442829085ba4bf0892489836db95a17d8`
 
 ---
 
@@ -38,7 +38,7 @@
 | # | Title | Labels |
 |---|-------|--------|
 | #1863 | [[Midao Program] Execute #1763 release, canonical calendar, reliability convergence, then legacy retirement](https://github.com/smallwei0301/tour-platform/issues/1863) | triaged, type:feature, priority:P1, qa, guide-dashboard, agent:backlog, owner:mixed, status:blocked, traveler-booking, database, infra |
-| #1861 | [[Midao Convergence] Absorb inquiry-to-booking reliability into #1763 without duplicate truth](https://github.com/smallwei0301/tour-platform/issues/1861) | triaged, type:feature, priority:P1, qa, guide-dashboard, agent:backlog, owner:ai-agent, status:blocked, traveler-booking, database, notifications |
+| #1861 | [[Midao Convergence] Absorb inquiry-to-booking reliability into #1763 without duplicate truth](https://github.com/smallwei0301/tour-platform/issues/1861) | triaged, type:feature, priority:P1, qa, guide-dashboard, agent:now, owner:ai-agent, status:in-progress, traveler-booking, database, notifications |
 | #1848 | [[Guide Dashboard] Fix Andy Lee 公開商店首頁缺少可預約服務卡片](https://github.com/smallwei0301/tour-platform/issues/1848) | triaged, type:bug, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready |
 | #1847 | [[QA] Daily test checklist for recent merged PRs 2026-08-18](https://github.com/smallwei0301/tour-platform/issues/1847) | triaged, priority:P1, cron-followup, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, auth, database, docs, admin, post-merge |
 | #1845 | [[QA] Daily test checklist for recent merged PRs 2026-08-17](https://github.com/smallwei0301/tour-platform/issues/1845) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, auth, database, admin, post-merge |
@@ -124,6 +124,9 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1868 | [feat(midao): add Phase 6 masked projection comparison baseline](https://github.com/smallwei0301/tour-platform/pull/1868) | 2026-08-26 |
+| #1867 | [feat(midao2): keep LINE replies manual and safe](https://github.com/smallwei0301/tour-platform/pull/1867) | 2026-08-25 |
+| #1866 | [test(midao): verify traveler confirmation chain](https://github.com/smallwei0301/tour-platform/pull/1866) | 2026-08-25 |
 | #1865 | [feat(midao2): 串接 canonical inquiry 轉單流程 (#1861 Phase 3)](https://github.com/smallwei0301/tour-platform/pull/1865) | 2026-08-24 |
 | #1864 | [feat(midao): integrate #1763 release candidate with canonical calendar](https://github.com/smallwei0301/tour-platform/pull/1864) | 2026-08-23 |
 | #1858 | [docs(ops): #1855 migration SOP 第 1 步補 Free-plan（無 PITR）替代 backup 分支](https://github.com/smallwei0301/tour-platform/pull/1858) | 2026-08-19 |
@@ -131,9 +134,6 @@
 | #1854 | [chore(ops): #1825 補 migration-ledger production record 並更新 gate 測試期望值](https://github.com/smallwei0301/tour-platform/pull/1854) | 2026-08-19 |
 | #1852 | [fix(midao): #1825 native draft lazy ensure + unified lifecycle state](https://github.com/smallwei0301/tour-platform/pull/1852) | 2026-08-19 |
 | #1850 | [fix(midao): #1825 native published fallback in guide service list](https://github.com/smallwei0301/tour-platform/pull/1850) | 2026-08-18 |
-| #1849 | [fix(admin): #1825 accept structural UUIDs in plan routes](https://github.com/smallwei0301/tour-platform/pull/1849) | 2026-08-18 |
-| #1846 | [feat(midao): #1825 啟用 legacy draft materialization（master flag + guide allowlist）](https://github.com/smallwei0301/tour-platform/pull/1846) | 2026-08-17 |
-| #1843 | [docs(ledger): record #1825 legacy Midao draft materialization verified apply](https://github.com/smallwei0301/tour-platform/pull/1843) | 2026-08-17 |
 
 ---
 
