@@ -81,6 +81,29 @@ test('summary fails closed when callers supply an unknown manual LINE label', ()
   assert.equal(summary.pass, false);
 });
 
+test('summary treats direct rows missing required measurement fields as unresolvable', () => {
+  const health = {
+    measurementStatus: 'complete',
+    sourcePagesComplete: true,
+    commandExitCode: 0,
+    maskingCheck: 'pass',
+  };
+  const validPrefix = 'a'.repeat(12);
+
+  for (const row of [
+    { category: 'match' },
+    { category: 'match', preConfirmationCheckoutCount: 0, manualLineMetric: null },
+    { category: 'match', surrogateKeyPrefix: validPrefix, manualLineMetric: null },
+    { category: 'match', surrogateKeyPrefix: validPrefix, preConfirmationCheckoutCount: 0 },
+  ]) {
+    const summary = summarizeObservation([row], health);
+    assert.equal(summary.categoryCounts.match, 0);
+    assert.equal(summary.categoryCounts.unresolvable_key, 1);
+    assert.equal(summary.measurementStatus, 'incomplete');
+    assert.equal(summary.pass, false);
+  }
+});
+
 test('summary reports comparator unresolvable-only input as incomplete', () => {
   const malformedComparison = compareProjectionRows([{
     joinKey: 'not-a-surrogate-key',

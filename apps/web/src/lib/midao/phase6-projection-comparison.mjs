@@ -120,18 +120,22 @@ function isSafeSummaryRow(row) {
     return false;
   }
 
-  const validPrefix = row.surrogateKeyPrefix === undefined
-    || row.surrogateKeyPrefix === null
-    || (typeof row.surrogateKeyPrefix === 'string' && /^[a-f0-9]{12}$/.test(row.surrogateKeyPrefix));
-  const validCheckoutCount = row.preConfirmationCheckoutCount === undefined
-    || (Number.isSafeInteger(row.preConfirmationCheckoutCount) && row.preConfirmationCheckoutCount >= 0);
-  const validManualLineMetric = row.manualLineMetric === undefined
-    || row.manualLineMetric === null
+  const hasRequiredFields = Object.hasOwn(row, 'surrogateKeyPrefix')
+    && Object.hasOwn(row, 'preConfirmationCheckoutCount')
+    && Object.hasOwn(row, 'manualLineMetric');
+  const hasValidPrefix = typeof row.surrogateKeyPrefix === 'string'
+    && /^[a-f0-9]{12}$/.test(row.surrogateKeyPrefix);
+  const validPrefix = hasValidPrefix
+    || (row.category === 'unresolvable_key' && row.surrogateKeyPrefix === null);
+  const validCheckoutCount = Number.isSafeInteger(row.preConfirmationCheckoutCount)
+    && row.preConfirmationCheckoutCount >= 0;
+  const validManualLineMetric = row.manualLineMetric === null
     || row.manualLineMetric === 'prepared_or_opened_manually';
   const validState = (state) => state === undefined
     || (typeof state === 'string' && (OUTPUT_STATES.has(state) || state === 'withheld'));
 
-  return validPrefix
+  return hasRequiredFields
+    && validPrefix
     && validCheckoutCount
     && validManualLineMetric
     && validState(row.leftState)
