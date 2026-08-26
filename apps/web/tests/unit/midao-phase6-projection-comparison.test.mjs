@@ -175,6 +175,38 @@ test('requires complete health, eligible observations, and zero pre-confirmation
   }).pass, false);
 });
 
+test('pair checkout metric preserves the largest value from either projection', () => {
+  const health = {
+    measurementStatus: 'complete',
+    sourcePagesComplete: true,
+    commandExitCode: 0,
+    maskingCheck: 'pass',
+  };
+
+  for (const { leftCheckoutCount, rightCheckoutCount, expectedCount } of [
+    { leftCheckoutCount: 0, rightCheckoutCount: 1, expectedCount: 1 },
+    { leftCheckoutCount: 1, rightCheckoutCount: 0, expectedCount: 1 },
+    { leftCheckoutCount: 2, rightCheckoutCount: 1, expectedCount: 2 },
+  ]) {
+    const comparison = compareProjectionRows([{
+      joinKey: 'd'.repeat(64),
+      state: 'open',
+      observedAt: fixedClock,
+      preConfirmationCheckoutCount: leftCheckoutCount,
+    }], [{
+      joinKey: 'd'.repeat(64),
+      state: 'open',
+      observedAt: fixedClock,
+      preConfirmationCheckoutCount: rightCheckoutCount,
+    }], { now: fixedClock });
+    const summary = summarizeObservation(comparison.rows, health);
+
+    assert.equal(comparison.categoryCounts.match, 1);
+    assert.equal(summary.preConfirmationCheckoutCount, expectedCount);
+    assert.equal(summary.pass, false);
+  }
+});
+
 test('CLI emits only the masked allowlist and removes its local report residue', async (t) => {
   await rm(reportPath, { force: true });
   t.after(() => rm(reportPath, { force: true }));

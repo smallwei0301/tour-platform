@@ -96,12 +96,18 @@ function normalizeRecord(record) {
   };
 }
 
-function makeRow(category, record = undefined, state = undefined, counterpartState = undefined) {
+function makeRow(category, records = [], state = undefined, counterpartState = undefined) {
+  const comparableRecords = Array.isArray(records) ? records : [records];
+  const representative = comparableRecords[0];
   const row = {
     category,
-    surrogateKeyPrefix: record?.joinKey?.slice(0, 12) ?? null,
-    preConfirmationCheckoutCount: record?.preConfirmationCheckoutCount ?? 0,
-    manualLineMetric: record?.manualLineMetric ?? null,
+    surrogateKeyPrefix: representative?.joinKey?.slice(0, 12) ?? null,
+    preConfirmationCheckoutCount: Math.max(0, ...comparableRecords.map((record) => (
+      record?.preConfirmationCheckoutCount ?? 0
+    ))),
+    manualLineMetric: comparableRecords.some((record) => (
+      record?.manualLineMetric === 'prepared_or_opened_manually'
+    )) ? 'prepared_or_opened_manually' : null,
   };
 
   if (state !== undefined) row.leftState = toOutputState(state);
@@ -178,37 +184,37 @@ export function compareProjectionRows(left, right, options = {}) {
   for (const key of keys) {
     const leftRows = leftGroups.get(key) ?? [];
     const rightRows = rightGroups.get(key) ?? [];
-    const representative = leftRows[0] ?? rightRows[0];
+    const comparableRows = [...leftRows, ...rightRows];
 
     if (leftRows.length === 0) {
-      rows.push(makeRow('missing_left', representative));
+      rows.push(makeRow('missing_left', comparableRows));
       continue;
     }
     if (rightRows.length === 0) {
-      rows.push(makeRow('missing_right', representative));
+      rows.push(makeRow('missing_right', comparableRows));
       continue;
     }
     if (leftRows.length === 1 && rightRows.length > 1) {
-      rows.push(makeRow('one_to_many', representative));
+      rows.push(makeRow('one_to_many', comparableRows));
       continue;
     }
     if (leftRows.length > 1 && rightRows.length === 1) {
-      rows.push(makeRow('many_to_one', representative));
+      rows.push(makeRow('many_to_one', comparableRows));
       continue;
     }
     if (leftRows.length !== 1 || rightRows.length !== 1) {
-      rows.push(makeRow('unresolvable_key', representative));
+      rows.push(makeRow('unresolvable_key', comparableRows));
       continue;
     }
 
     const [leftRecord] = leftRows;
     const [rightRecord] = rightRows;
     if (isStale(leftRecord, nowMs, staleAfterMs) || isStale(rightRecord, nowMs, staleAfterMs)) {
-      rows.push(makeRow('stale_projection', representative));
+      rows.push(makeRow('stale_projection', comparableRows));
     } else if (leftRecord.state !== rightRecord.state) {
-      rows.push(makeRow('state_mismatch', representative, leftRecord.state, rightRecord.state));
+      rows.push(makeRow('state_mismatch', comparableRows, leftRecord.state, rightRecord.state));
     } else {
-      rows.push(makeRow('match', representative));
+      rows.push(makeRow('match', comparableRows));
     }
   }
 
