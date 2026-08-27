@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-08-26T05:10:27.032Z -->
+<!-- query_timestamp: 2026-08-27T07:31:26.671Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-26T05:10:27.032Z  
-**Commit SHA:** `485a453442829085ba4bf0892489836db95a17d8`
+**Query timestamp:** 2026-08-27T07:31:26.671Z  
+**Commit SHA:** `2f2454052a85ce5e221f269323c811220a2ab993`
 
 ---
 
@@ -33,12 +33,11 @@
 |---|-------|--------|
 | #1777 | [[Payments][P0] 修正結算／部分退款／出款非原子鏈，避免漏帳、重扣與錯誤撥款](https://github.com/smallwei0301/tour-platform/issues/1777) | triaged, type:bug, priority:P0, agent:backlog, owner:ai-agent, status:ready, payments, orders, database |
 
-### P1 (36)
+### P1 (35)
 
 | # | Title | Labels |
 |---|-------|--------|
 | #1863 | [[Midao Program] Execute #1763 release, canonical calendar, reliability convergence, then legacy retirement](https://github.com/smallwei0301/tour-platform/issues/1863) | triaged, type:feature, priority:P1, qa, guide-dashboard, agent:backlog, owner:mixed, status:blocked, traveler-booking, database, infra |
-| #1861 | [[Midao Convergence] Absorb inquiry-to-booking reliability into #1763 without duplicate truth](https://github.com/smallwei0301/tour-platform/issues/1861) | triaged, type:feature, priority:P1, qa, guide-dashboard, agent:now, owner:ai-agent, status:in-progress, traveler-booking, database, notifications |
 | #1848 | [[Guide Dashboard] Fix Andy Lee 公開商店首頁缺少可預約服務卡片](https://github.com/smallwei0301/tour-platform/issues/1848) | triaged, type:bug, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready |
 | #1847 | [[QA] Daily test checklist for recent merged PRs 2026-08-18](https://github.com/smallwei0301/tour-platform/issues/1847) | triaged, priority:P1, cron-followup, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, auth, database, docs, admin, post-merge |
 | #1845 | [[QA] Daily test checklist for recent merged PRs 2026-08-17](https://github.com/smallwei0301/tour-platform/issues/1845) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, auth, database, admin, post-merge |
@@ -74,10 +73,11 @@
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (16)
+### P2 (17)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1869 | [[Midao] Event-based observation and verified legacy retirement after #1861](https://github.com/smallwei0301/tour-platform/issues/1869) | triaged, type:investigation, priority:P2, agent:backlog, owner:ai-agent, status:blocked, database, infra, launch:post-first-payment, data-hygiene |
 | #1844 | [補記 6 支既有 migration 的 verified ledger record（#1811/#1812/#1813/#1814/#1760 相關，release gate 現 HOLD）](https://github.com/smallwei0301/tour-platform/issues/1844) | type:investigation, priority:P2, owner:ai-agent, status:ready, database |
 | #1817 | [[Payments] Deepen refund provider-success result materialization and repair seam](https://github.com/smallwei0301/tour-platform/issues/1817) | triaged, type:optimization, priority:P2, agent:backlog, owner:ai-agent, status:blocked, payments, orders, database |
 | #1816 | [[Midao] Harden shared confirmation runtime behind a private adapter seam](https://github.com/smallwei0301/tour-platform/issues/1816) | triaged, type:optimization, priority:P2, agent:backlog, owner:ai-agent, status:blocked, traveler-booking, database |
