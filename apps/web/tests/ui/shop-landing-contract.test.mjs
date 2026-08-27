@@ -48,6 +48,23 @@ test('版面（對齊 Midao mockup 圖3）：hero＋引路人卡＋預約三步�
   assert.match(pageSource, /替我留一個位置/, 'CTA 文案對齊 mockup');
 });
 
+test('公開可預約行程：完整展開既有 activitiesByRegion，卡片深連結保持同一 activity＋plan', () => {
+  assert.match(
+    pageSource,
+    /shop\.activitiesByRegion\s+as\s+PublicShopRegion\[\]\)\.flatMap\(\(\{ region, activities \}\)\s*=>[\s\S]*?activities\.flatMap\(\(activity\)\s*=>[\s\S]*?activity\.plans\.map\(\(plan\)\s*=>\s*\(\{ region, activity, plan \}\)/,
+    '須從既有公開投影依 region → activity → plan 完整產生卡片資料，不得只取第一個 plan',
+  );
+  assert.match(pageSource, /publicPlans\.length > 0/, '公開投影非空才顯示行程區，空集合不可造假卡片');
+  assert.match(pageSource, /className="sib-plan-list"/, '行程區須重用既有卡片列表樣式');
+  assert.match(pageSource, /className="sib-plan-card"/, '每張行程卡須使用既有卡片樣式');
+  assert.match(pageSource, /data-testid="shop-public-plan-card"/, '每張公開行程卡須提供穩定測試識別');
+  assert.match(pageSource, /activityId=\$\{encodeURIComponent\(activity\.id\)\}/, '深連結 activityId 必須 encode');
+  assert.match(pageSource, /planId=\$\{encodeURIComponent\(plan\.id\)\}/, '深連結 planId 必須 encode');
+  assert.match(pageSource, /\{activity\.title\}/, '卡片標題須使用公開 activity.title');
+  assert.match(pageSource, /\{plan\.name\}/, '卡片須呈現同一筆 plan 名稱');
+  assert.match(pageSource, /plan\.duration/, '卡片須呈現同一筆 plan 時長');
+});
+
 test('三步驟圖示使用附件真實資產（step-trip/date/contact）', () => {
   const iconsSource = readFileSync(path.join(shopDir, 'sib-icons.tsx'), 'utf8');
   assert.match(iconsSource, /step-trip\.png/);

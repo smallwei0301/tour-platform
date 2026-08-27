@@ -39,6 +39,25 @@ const STEPS = [
   { n: 3, Ico: StepClipboard, t: '填寫聯絡資料', d: ['留下聯絡方式', '完成預約申請'] },
 ];
 
+type PublicShopPlan = {
+  id: string;
+  name: string;
+  duration: string;
+  basePrice: number | null;
+  priceType: 'per_person' | 'per_group';
+};
+
+type PublicShopActivity = {
+  id: string;
+  title: string;
+  plans: PublicShopPlan[];
+};
+
+type PublicShopRegion = {
+  region: string;
+  activities: PublicShopActivity[];
+};
+
 export default async function GuideShopPage({ params }: { params: Promise<{ slug: string }> }) {
   if (!isGuideShopEnabled()) return notFound();
   const { slug } = await params;
@@ -48,6 +67,9 @@ export default async function GuideShopPage({ params }: { params: Promise<{ slug
   const { guide } = shop;
   const bio = String(guide.bio || '土生土長的在地人，用在地的眼睛，帶你看見祕境也看見生活。').trim();
   const shortName = String(guide.displayName || '').replace(/[（(].*?[）)]/g, '').trim();
+  const publicPlans = (shop.activitiesByRegion as PublicShopRegion[]).flatMap(({ region, activities }) =>
+    activities.flatMap((activity) => activity.plans.map((plan) => ({ region, activity, plan })))
+  );
 
   return (
     <main className="sib">
@@ -85,6 +107,38 @@ export default async function GuideShopPage({ params }: { params: Promise<{ slug
           }}>{bio}</p>
         </div>
       </section>
+
+      {publicPlans.length > 0 && (
+        <section aria-labelledby="public-plans-heading">
+          <div className="sib-section-title">
+            <span className="sib-orn sib-orn--l" />
+            <span id="public-plans-heading">可預約行程</span>
+            <span className="sib-orn sib-orn--r" />
+          </div>
+          <div className="sib-plan-list">
+            {publicPlans.map(({ region, activity, plan }) => (
+              <Link
+                key={`${activity.id}-${plan.id}`}
+                className="sib-plan-card"
+                data-testid="shop-public-plan-card"
+                href={`/guides/${slug}/shop/book?activityId=${encodeURIComponent(activity.id)}&planId=${encodeURIComponent(plan.id)}`}
+              >
+                <p className="sib-plan-region">{region}</p>
+                <h2 className="sib-plan-t">{activity.title}</h2>
+                <p className="sib-plan-meta">
+                  <span data-testid="shop-public-plan-name">{plan.name}</span>
+                  {plan.duration ? ` · 約 ${plan.duration.replace(/^約\s*/, '')}` : ''}
+                </p>
+                {plan.basePrice != null && (
+                  <p className="sib-plan-price">
+                    NT${plan.basePrice.toLocaleString('zh-TW')} 起／{plan.priceType === 'per_group' ? '組' : '人'}
+                  </p>
+                )}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 預約三步驟 */}
       <div className="sib-section-title">
