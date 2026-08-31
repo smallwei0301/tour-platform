@@ -1,4 +1,4 @@
-export type MidaoNavId = 'home' | 'requests' | 'calendar' | 'services' | 'me';
+export type MidaoNavId = 'home' | 'requests' | 'orders' | 'calendar' | 'services' | 'me';
 
 export type MidaoNavItem = Readonly<{
   id: MidaoNavId;
@@ -10,6 +10,7 @@ export type MidaoNavItem = Readonly<{
 export const MIDAO_NAV_ITEMS: readonly MidaoNavItem[] = Object.freeze([
   { id: 'home', label: '首頁', href: '/midao', icon: 'home' },
   { id: 'requests', label: '需求', href: '/midao/requests', icon: 'inbox' },
+  { id: 'orders', label: '訂單', href: '/midao/orders', icon: 'briefcase' },
   { id: 'calendar', label: '行事曆', href: '/midao/calendar', icon: 'calendar' },
   { id: 'services', label: '服務', href: '/midao/services', icon: 'briefcase' },
   { id: 'me', label: '我的頁面', href: '/midao/me', icon: 'person' },
