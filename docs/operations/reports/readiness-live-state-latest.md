@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-08-31T05:05:23.954Z -->
+<!-- query_timestamp: 2026-09-01T05:05:15.519Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-08-31T05:05:23.954Z  
-**Commit SHA:** `bcf5db0e537b7545fb5704aa03e0ae085806ea18`
+**Query timestamp:** 2026-09-01T05:05:15.519Z  
+**Commit SHA:** `5d1226ad93f2f6d8f19314a97f6c3b479fdb2ce7`
 
 ---
 
@@ -124,6 +124,7 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1871 | [feat(midao): 新增唯讀訂單工作台](https://github.com/smallwei0301/tour-platform/pull/1871) | 2026-09-01 |
 | #1870 | [fix(shop): restore public bookable service cards](https://github.com/smallwei0301/tour-platform/pull/1870) | 2026-08-28 |
 | #1868 | [feat(midao): add Phase 6 masked projection comparison baseline](https://github.com/smallwei0301/tour-platform/pull/1868) | 2026-08-26 |
 | #1867 | [feat(midao2): keep LINE replies manual and safe](https://github.com/smallwei0301/tour-platform/pull/1867) | 2026-08-25 |
@@ -133,7 +134,6 @@
 | #1858 | [docs(ops): #1855 migration SOP 第 1 步補 Free-plan（無 PITR）替代 backup 分支](https://github.com/smallwei0301/tour-platform/pull/1858) | 2026-08-19 |
 | #1856 | [fix(db): #1855 修復 midao 原子函式誤用 pg_catalog.nullif（production 已套用 + ledger）](https://github.com/smallwei0301/tour-platform/pull/1856) | 2026-08-19 |
 | #1854 | [chore(ops): #1825 補 migration-ledger production record 並更新 gate 測試期望值](https://github.com/smallwei0301/tour-platform/pull/1854) | 2026-08-19 |
-| #1852 | [fix(midao): #1825 native draft lazy ensure + unified lifecycle state](https://github.com/smallwei0301/tour-platform/pull/1852) | 2026-08-19 |
 
 ---
 
