@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MIDAO_NAV_ITEMS, activeMidaoNavId, type MidaoNavId } from './nav-items';
+import { MIDAO_NAV_ITEMS, activeMidaoNavId, type MidaoNavItem } from './nav-items';
 
-const NAV_ICONS: Readonly<Record<MidaoNavId, string>> = {
+const NAV_ICONS: Readonly<Record<MidaoNavItem['icon'], string>> = {
   home: '⌂',
-  requests: '✉',
+  inbox: '✉',
   calendar: '▦',
-  services: '◇',
-  me: '○',
+  briefcase: '◇',
+  person: '○',
 };
 
 export function MidaoBottomNav() {
@@ -25,7 +25,7 @@ export function MidaoBottomNav() {
           className="midao-bottom-nav__item"
           aria-current={activeId === item.id ? 'page' : undefined}
         >
-          <span className="midao-bottom-nav__icon" aria-hidden="true">{NAV_ICONS[item.id]}</span>
+          <span className="midao-bottom-nav__icon" aria-hidden="true">{NAV_ICONS[item.icon]}</span>
           <span>{item.label}</span>
         </Link>
       ))}
