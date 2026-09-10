@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, PageHeader } from '../../../../../src/components/admin/ui';
 import { csrfHeaders, ensureCsrfToken } from '../../../../../src/lib/csrf-client';
 import { resolveGuideLoginRedirect } from '../../../../../src/lib/midao/login-redirect';
+import { getVibeaiAdminBaseUrl } from '../../../../../src/config/feature-flags.mjs';
 import {
   canSwitchAdminGuideBackendMode,
   executeAdminBackendModeSwitch,
@@ -93,6 +94,8 @@ export default function AdminGuideDetailPage() {
   const isSuspended = guide?.verification_status === 'suspended';
   const canImpersonate =
     guide?.kind !== 'application' && guide?.verification_status === 'approved';
+  // 未設定（或不是合法 http(s) 絕對網址）時回空字串 → 整顆入口不渲染。
+  const vibeaiAdminUrl = getVibeaiAdminBaseUrl();
 
   async function handleEnterGuideBackend(target: string = '/guide/dashboard') {
     if (!guide || impersonating) return;
@@ -484,6 +487,21 @@ export default function AdminGuideDetailPage() {
                   >
                     {impersonating ? '進入中…' : '✨ 進入 midao2 後台'}
                   </button>
+                )}
+                {canImpersonate && vibeaiAdminUrl && (
+                  <a
+                    data-testid="admin-enter-vibeai-admin"
+                    href={`${vibeaiAdminUrl}/tenant/impersonate?guide=${encodeURIComponent(guide.id)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: '9px 16px', borderRadius: 8, border: '1px solid #0ea5e9',
+                      background: '#f0f9ff', color: '#0369a1', fontSize: 13, fontWeight: 600,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    🏪 進入 vibeaico 後台
+                  </a>
                 )}
               </div>
               {modeSwitchError && (
