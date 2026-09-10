@@ -1,19 +1,20 @@
-<!-- query_timestamp: 2026-09-09T05:05:02.659Z -->
+<!-- query_timestamp: 2026-09-10T05:04:59.469Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-09-09T05:05:02.659Z  
-**Commit SHA:** `3bc82723d9267af15fb2cfdbcb58bbdb54aeabd9`
+**Query timestamp:** 2026-09-10T05:04:59.469Z  
+**Commit SHA:** `159d95661ec1ad34d5c41104c6ff03d570edeec0`
 
 ---
 
-## Open PRs (10)
+## Open PRs (11)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1872 | [feat(admin)：導遊詳情頁加入「進入 vibeaico 後台」代管入口](https://github.com/smallwei0301/tour-platform/pull/1872) _(draft)_ | `claude/vibeai-admin-impersonate-entry` |
 | #1776 | [feat(shop): 完成導遊商店匯款 beta 文案與 SOP（#1607）](https://github.com/smallwei0301/tour-platform/pull/1776) _(draft)_ | `fix/issue-1607-guide-shop-beta` |
 | #1690 | [docs(security): 建立「已接受安全風險」定案清單](https://github.com/smallwei0301/tour-platform/pull/1690) | `claude/code-workflow-architecture-mmm4ba` |
 | #1687 | [修正排程管理的持久稽核機制](https://github.com/smallwei0301/tour-platform/pull/1687) | `kanban/issue-1686-durable-audit` |
