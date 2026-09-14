@@ -25,6 +25,8 @@
 - 2026-09-14 13:27 CST 已由 pinned Supabase CLI `2.87.2` 產生 append-only migration `supabase/migrations/20260914052608_issue1796_expire_unpaid_order_ambiguous_column_fix.sql`；僅把既有 de-dup predicate 改為 `booking_status_logs.booking_id = v_booking.id`，保留 RPC signature、七個 output fields、鎖序及狀態轉移。
 - 2026-09-14 13:27 CST `NODE22_BIN=/root/.hermes/toolchains/node/22.23.1/bin/node node --test apps/web/tests/api/issue1493-expire-unpaid-contract.test.mjs`：7/7 PASS。`run-checks.sh` 同時帶入 integration test 在未由 hosted runner 注入 `DATABASE_URL` 時如預期 exit 1；這不是 PostgreSQL verdict，且第三次本機 Supabase runner 已禁止。
 
+- 2026-09-14 hosted exact-head `393fd70be84e53a1b70f76d5247f5c44d523e1cb` run `34815505811` / job `103885216237` completed fixture and all preceding database setup successfully, then failed only in `Run #1796 unpaid-expiry PostgreSQL runtime contract` with PostgreSQL `42702` at integration line 85. The prior migration had qualified the de-dup predicate but the function still exposes `RETURNS TABLE booking_id`, so this forward-only replacement compiles the function with `#variable_conflict use_column` and aliases the log read as `booking_log`; no existing migration is changed.
+
 ## 下一步
 - 在資源 gate 允許下執行 source contract 的 `run-checks.sh --typecheck`，再以唯一正常 commit 推送此 branch/PR；等待 PR 的 hosted #1796 PostgreSQL runtime contract GREEN。不得執行第三次 local PostgreSQL/Supabase attempt。
 

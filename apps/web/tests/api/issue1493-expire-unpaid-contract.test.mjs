@@ -66,6 +66,15 @@ test('expire RPC 鎖序 orders→bookings→activity_schedules + 冪等守門', 
   assert.match(sql, /WHERE NOT EXISTS/);
 });
 
+test('Issue #1796 forward migration compiles the expiry RPC with column-precedence and qualified log reads', () => {
+  const sql = read('../../supabase/migrations/20260914073000_issue1796_expire_unpaid_order_variable_conflict_fix.sql');
+  assert.match(sql, /CREATE OR REPLACE FUNCTION fn_expire_unpaid_order_atomic/);
+  assert.match(sql, /#variable_conflict use_column/);
+  assert.match(sql, /booking_status_logs AS booking_log/);
+  assert.match(sql, /booking_log\.booking_id = v_booking\.id/);
+  assert.match(sql, /RETURNS TABLE \([\s\S]*booking_id uuid/);
+});
+
 test('sweep route：x-internal-token 授權 + 呼叫 expireUnpaidOrdersDb', () => {
   const src = read('app/api/internal/bookings/unpaid-expiry-sweep/route.ts');
   assert.match(src, /x-internal-token/);
