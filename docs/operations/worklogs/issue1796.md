@@ -1,5 +1,5 @@
 # issue1796 — 修復未付款逾期原子取消 RPC 的 42702
-> 最後更新：2026-09-14 15:28 CST｜負責 session：Ava / gpt-5.6-terra
+> 最後更新：2026-09-14 15:30 CST｜負責 session：Ava / gpt-5.6-terra
 
 ## 目標
 以 append-only migration 修正 `fn_expire_unpaid_order_atomic(uuid,timestamptz)` 的 `booking_id` 欄位歧義，保留既有 RPC 契約與原子狀態轉移。
@@ -28,9 +28,10 @@
 - 2026-09-14 hosted exact-head `393fd70be84e53a1b70f76d5247f5c44d523e1cb` run `34815505811` / job `103885216237` completed fixture and all preceding database setup successfully, then failed only in `Run #1796 unpaid-expiry PostgreSQL runtime contract` with PostgreSQL `42702` at integration line 85. The prior migration had qualified the de-dup predicate but the function still exposes `RETURNS TABLE booking_id`, so this forward-only replacement compiles the function with `#variable_conflict use_column` and aliases the log read as `booking_log`; no existing migration is changed.
 - 2026-09-14 15:28 CST 修復既有 test consumers：#1293 closed expected migration list 加入 `20260914073000_issue1796_expire_unpaid_order_variable_conflict_fix.sql`；#1796 disposable loopback integration client 連線後明確讀取並執行該 migration，保留 `127.0.0.1:54322/postgres` assertions。#1493 source-contract 鎖定 migration path 與「connect 後、RPC 前」套用順序，避免 published foundation baseline 造成舊函式假 GREEN。
 - 2026-09-14 15:28 CST Node 22 focused tests：`issue1493-expire-unpaid-contract.test.mjs` 9/9 PASS、`issue1293-migration-ledger-gate.test.mjs` 14/14 PASS；三個變更 `.mjs` 均 `node --check` exit 0，`git diff --check` exit 0。未啟動 local Supabase/PostgreSQL，未觸及 Production。
+- 2026-09-14 15:30 CST 已 commit 並推送 `76b97da76860249685466b49ef591e0c044f6353`（`test(#1796): wire expiry migration into runtime contract`）至既有 PR #1876 branch；remote read-back 與 local HEAD 相符。GitHub GraphQL check readback 因 API rate limit 無法取得，未宣稱 hosted runtime GREEN。
 
 ## 下一步
-- commit 並 push consumer wiring，確認 PR #1876 的 hosted #1796 PostgreSQL runtime contract 使用新 migration；不得執行 local PostgreSQL/Supabase attempt。
+- 等待 PR #1876 hosted #1796 PostgreSQL runtime contract 使用新 migration 執行；不得執行 local PostgreSQL/Supabase attempt。
 
 ## 絕不重做（Do-NOT-redo）
 - 不修改既有 migration、`db.mjs`、payment/API 凍結區、runner 或 fixture；均不在本卡 allowed mutations。
