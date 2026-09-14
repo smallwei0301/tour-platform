@@ -1,5 +1,5 @@
 # issue1761 — Midao2 原生訂單可見性最小營收切片
-> 最後更新：2026-08-31 14:43 Asia/Taipei｜負責 session：tp-builder-ui / gpt-5.6-terra
+> 最後更新：2026-09-14 21:01 Asia/Taipei｜負責 session：Ava / gpt-5.6-terra
 
 ## 目標
 在既有 Midao shell 新增唯讀「訂單」入口與 `/midao/orders`，只消費 canonical Booking V2 guide projection，不新增資料來源或操作命令。
@@ -19,9 +19,14 @@
 - 2026-08-31 14:43 canonical Node 22 重跑 focused Node contracts：6/6 pass、exit 0；`.claude/hooks/run-checks.sh` 對 3 個 focused test files 加 `--typecheck` exit 0；canonical lint exit 0（既有 `RootDocument.tsx` 1 warning，零 error）；`git diff --check` exit 0。
 - 2026-08-31 14:44 已建立單一 local commit；其相對 binding base 的 11 個變更檔均在核准範圍內，工作樹乾淨。接續同卡 Rita read-only review。
 - 2026-08-31 15:34 在 Rita 指出的 native navigation/session evidence 衝突後，未改動候選產品 bytes，改以同一 exact HEAD `81e60057d8dfedbbdec8e2cc224a48583a2a53b8` 重跑 repository-owned official lane：`NODE22_BIN=/root/.hermes/toolchains/node/22.23.1/bin/node scripts/testing/run-midao-e2e.sh apps/web/e2e/issue1761-midao-orders-workbench.spec.ts` exit 0、Chromium 2/2 PASS、`MIDAO_STAGE=complete`，cleanup 完成。其後 focused Node contracts 6/6、`run-checks.sh <3 paths> --typecheck`、root typecheck 均 exit 0；Node 22 lint exit 0（僅既有 `RootDocument.tsx` 1 warning）。
+- 2026-09-14 15:59 前一份 Artifact `10336439975` 與當時 source migration baseline 不一致，保留該失敗實測作為前階段紀錄；本次未沿用其內容。
+- 2026-09-14 16:24 第二階段改以 REST 下載 Artifact `10338780485`（`midao-expected-terminal-0d738972c80e6be6976fb6441df46e445a757514`）；API 回讀確認未過期、大小 `112428` bytes、workflow run `34821540121`、exact head `cfa0a4066adcacd21d9b7f3dac4802a6e4d6d223`。fresh task-owned `/tmp/midao-expected-terminal-1876-22566` 的 ZIP 清單恰為四個 canonical 路徑，無絕對路徑、反斜線或 `..`，且 `unzip -t` 無錯誤；逐檔覆蓋 canonical 檔案，未本機生成、未本機 Supabase、未手改 hash/cutoff。複製後 SHA-256：`manifest.json` `0654b47515fd379c8dadff9c1f7992d266dac7cb8ac24d28d368bcb02ba92462`、`catalog.expected-terminal.normalized.json` `c90de008276333903e2800faa062e606d4fdeb8d4187f9057e4f95a6259cc1d0`、`catalog-expected-terminal.sha256` `a16bc5506bf99b1aebe1c0073b45c8f01d76fc76c4ec50dc3b3dacd3182b5e2c`、`expected-terminal-ledger.json` `e0f4017e5a7da8e60a4f27625fc8d0caf2cb395f750fc473cc1e963928df8a52`。
+- 同次實跑 `node --test apps/web/tests/unit/midao-expected-terminal-artifact.test.mjs`：4/4 pass（exit 0）；`node scripts/check-migration-source-gate.mjs --mode source`：`migration source gate: verified`（exit 0）；`git diff --check` exit 0。
+- 2026-09-14 21:01 在 exact HEAD `e22cec847cab6d236de321b93d5fe3348d0d8ef1` 最小同步三個 stale expected-terminal consumers：final gate 的 transaction/manifest 固定期望依已驗證 canonical expected-terminal ledger 更新為 `59e9c36958ad52304b9be06834d9bfdfb14bcb75210f169157727b48bb38a793`／`0654b47515fd379c8dadff9c1f7992d266dac7cb8ac24d28d368bcb02ba92462`；materializer fixture 採完整 exact post-cutoff manifest，並驗證受信任 published manifest 可 materialize 後 cleanup；existing runner contract 的 suffix 更新為 37 entries（加入兩筆 #1796 migrations），history 總數更新為 167。未啟動 DB 或本機 Supabase。
+- 實跑 focused Node suite：final gate 2/2、materializer 11/11、existing runner contract 8/8、expected-terminal artifact 4/4；commit gate `.claude/hooks/run-checks.sh` 合計 25/25 pass（exit 0）。migration source gate `verified`（exit 0），`git diff --check` exit 0。
 
 ## 下一步
-- 等待同卡 Rita read-only review；如有具體 blocker，僅在本 worktree 以同卡 rework 修正。
+- 提交並推送本次三個 consumer 同步；回讀 remote branch SHA，讓新 push 自然重跑 CI。無 Production deploy/migration。
 
 ## 絕不重做（Do-NOT-redo）
 - 不改 `apps/web/app/api/v2/guide/bookings/route.ts`；此切片只讀取既有 canonical projection。

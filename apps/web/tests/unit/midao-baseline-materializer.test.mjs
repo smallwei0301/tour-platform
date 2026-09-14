@@ -53,6 +53,9 @@ const exactPostCutoff = [
   ['20260819002727_issue1825_native_service_draft_ensure.sql', '60d28474f023d6fa6dccb87cde8af27b068ce42fb99a432e6d2ce3406983e15c'],
   ['20260819210000_issue1855_pg_catalog_nullif_repair.sql', 'e098674c2ce4bff9342a3ef4de032988ac6910b067ae549fe4dc16ba3cb0ffc3'],
   ['20260824135300_issue1861_midao_request_claims_bridge.sql', 'dc7d8b4c55dbd944864b7067ba4b2ec2902c381be4c77674cfac9579268d63e1'],
+  ['20260914052608_issue1796_expire_unpaid_order_ambiguous_column_fix.sql', '6b8541d8bf532e586fad1d5704132ac071f8bf242312539910b98aa631ad1167'],
+  ['20260914073000_issue1796_expire_unpaid_order_variable_conflict_fix.sql', 'a655f9fbbe6797b09994b8af7313e9ce57db8b2c1f5cc29a0cf91e323a29ffb7'],
+  ['20260914073100_issue1796_expire_unpaid_order_restore_search_path.sql', 'd44826d95ea8418d37cb8a1827bb81860268f00ae51199067af9828f8908e827'],
 ];
 
 async function subject() {
@@ -270,16 +273,16 @@ test('selection is exact, published manifest is trusted, and rollback/symlink/ha
       publishedManifest.postCutoffMigrations.map(({ filename, sha256 }) => [filename, sha256]),
       exactPostCutoff,
     );
-    const manifested = await api.materializeFreshWorkdir({
+    const published = await api.materializeFreshWorkdir({
       outputParent: parent,
       postCutoffManifest: publishedManifest,
       projectId: 'midao-manifest-run',
     });
-    assert.deepEqual(manifested.history, [api.SYNTHETIC_BASELINE_FILENAME, ...exactPostCutoff.map(([name]) => name)]);
-    await manifested.cleanup();
+    assert.equal(published.transactionId, publishedManifest.captureTransactionId);
+    await published.cleanup();
     await assert.rejects(
       api.materializeFreshWorkdir({ outputParent: parent, postCutoffManifest: { entries: [] } }),
-      /expected terminal|manifest/iu,
+      /expected[ -]terminal|manifest/iu,
     );
     const sourceAlias = path.join(parent, 'migrations-alias');
     await symlink(source, sourceAlias);

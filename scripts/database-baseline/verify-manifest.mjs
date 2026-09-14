@@ -150,7 +150,8 @@ const EXPECTED_TERMINAL_HISTORY = Object.freeze([
   '20260804113000', '20260806090000', '20260806091000', '20260806120000',
   '20260810033421', '20260812150000', '20260812160000', '20260812213000',
   '20260813085910', '20260814130000', '20260814130100', '20260819002727',
-  '20260819210000', '20260824135300',
+  '20260819210000', '20260824135300', '20260914052608', '20260914073000',
+  '20260914073100',
 ]);
 const EXPECTED_TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: '20260723000000_midao_backend_mode.sql', sha256: 'fe108aa5ca68f135f49e22cbb5074941ce8ff5464a6d91a56f9f4cbdae437b17' }),
@@ -188,6 +189,9 @@ const EXPECTED_TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: '20260819002727_issue1825_native_service_draft_ensure.sql', sha256: '60d28474f023d6fa6dccb87cde8af27b068ce42fb99a432e6d2ce3406983e15c' }),
   Object.freeze({ filename: '20260819210000_issue1855_pg_catalog_nullif_repair.sql', sha256: 'e098674c2ce4bff9342a3ef4de032988ac6910b067ae549fe4dc16ba3cb0ffc3' }),
   Object.freeze({ filename: '20260824135300_issue1861_midao_request_claims_bridge.sql', sha256: 'dc7d8b4c55dbd944864b7067ba4b2ec2902c381be4c77674cfac9579268d63e1' }),
+  Object.freeze({ filename: '20260914052608_issue1796_expire_unpaid_order_ambiguous_column_fix.sql', sha256: '6b8541d8bf532e586fad1d5704132ac071f8bf242312539910b98aa631ad1167' }),
+  Object.freeze({ filename: '20260914073000_issue1796_expire_unpaid_order_variable_conflict_fix.sql', sha256: 'a655f9fbbe6797b09994b8af7313e9ce57db8b2c1f5cc29a0cf91e323a29ffb7' }),
+  Object.freeze({ filename: '20260914073100_issue1796_expire_unpaid_order_restore_search_path.sql', sha256: 'd44826d95ea8418d37cb8a1827bb81860268f00ae51199067af9828f8908e827' }),
 ]);
 
 export function validateExpectedTerminalManifest(manifest) {
