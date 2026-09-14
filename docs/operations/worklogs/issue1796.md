@@ -29,6 +29,7 @@
 - 2026-09-14 15:28 CST 修復既有 test consumers：#1293 closed expected migration list 加入 `20260914073000_issue1796_expire_unpaid_order_variable_conflict_fix.sql`；#1796 disposable loopback integration client 連線後明確讀取並執行該 migration，保留 `127.0.0.1:54322/postgres` assertions。#1493 source-contract 鎖定 migration path 與「connect 後、RPC 前」套用順序，避免 published foundation baseline 造成舊函式假 GREEN。
 - 2026-09-14 15:28 CST Node 22 focused tests：`issue1493-expire-unpaid-contract.test.mjs` 9/9 PASS、`issue1293-migration-ledger-gate.test.mjs` 14/14 PASS；三個變更 `.mjs` 均 `node --check` exit 0，`git diff --check` exit 0。未啟動 local Supabase/PostgreSQL，未觸及 Production。
 - 2026-09-14 15:30 CST 已 commit 並推送 `76b97da76860249685466b49ef591e0c044f6353`（`test(#1796): wire expiry migration into runtime contract`）至既有 PR #1876 branch；remote read-back 與 local HEAD 相符。GitHub GraphQL check readback 因 API rate limit 無法取得，未宣稱 hosted runtime GREEN。
+- 2026-09-14 16:06 CST PR #1876 第二階段：只更新 expected-terminal identity allowlist 與其 exact history/count consumers，加入 `20260914052608`、`20260914073000` 及已驗證 SHA-256。committed expected-terminal artifact 仍是舊 identity，因此 artifact verifier 的短測試預期暫時失敗；push 後 CI Step 9 會用正式流程產生包含兩個 migration 的新 artifact，未在本機執行 generator 或手改 artifact hash。
 
 ## 下一步
 - 等待 PR #1876 hosted #1796 PostgreSQL runtime contract 使用新 migration 執行；不得執行 local PostgreSQL/Supabase attempt。
