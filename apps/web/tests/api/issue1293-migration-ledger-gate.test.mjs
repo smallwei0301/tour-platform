@@ -257,6 +257,7 @@ describe('issue #1758 — repo現況verified release gate維持fail-closed', () 
       '20260824135300_issue1861_midao_request_claims_bridge.sql',
       '20260914052608_issue1796_expire_unpaid_order_ambiguous_column_fix.sql',
       '20260914073000_issue1796_expire_unpaid_order_variable_conflict_fix.sql',
+      '20260914073100_issue1796_expire_unpaid_order_restore_search_path.sql',
     ]);
     assert.deepEqual(result.unverified, []);
 

@@ -53,6 +53,7 @@ const exactMigrations = [
   ['20260824135300_issue1861_midao_request_claims_bridge.sql', 'dc7d8b4c55dbd944864b7067ba4b2ec2902c381be4c77674cfac9579268d63e1'],
   ['20260914052608_issue1796_expire_unpaid_order_ambiguous_column_fix.sql', '6b8541d8bf532e586fad1d5704132ac071f8bf242312539910b98aa631ad1167'],
   ['20260914073000_issue1796_expire_unpaid_order_variable_conflict_fix.sql', 'a655f9fbbe6797b09994b8af7313e9ce57db8b2c1f5cc29a0cf91e323a29ffb7'],
+  ['20260914073100_issue1796_expire_unpaid_order_restore_search_path.sql', 'd44826d95ea8418d37cb8a1827bb81860268f00ae51199067af9828f8908e827'],
 ];
 const historyVersions = ['00000000000001', ...exactMigrations.map(([name]) => name.slice(0, 14))];
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');

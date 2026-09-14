@@ -75,16 +75,18 @@ test('Issue #1796 forward migration compiles the expiry RPC with column-preceden
   assert.match(sql, /RETURNS TABLE \([\s\S]*booking_id uuid/);
 });
 
-test('Issue #1796 PostgreSQL integration contract explicitly applies the latest expiry migration after loopback connect', () => {
+test('Issue #1796 PostgreSQL integration contract explicitly applies the latest expiry migrations after loopback connect', () => {
   const integration = read('tests/integration/midao-issue1796-expire-unpaid-postgres.test.mjs');
   assert.match(
     integration,
-    /const LATEST_EXPIRY_MIGRATION_PATH = path\.join\([\s\S]*20260914073000_issue1796_expire_unpaid_order_variable_conflict_fix\.sql/,
+    /const EXPIRY_MIGRATION_PATHS = \[[\s\S]*20260914073000_issue1796_expire_unpaid_order_variable_conflict_fix\.sql[\s\S]*20260914073100_issue1796_expire_unpaid_order_restore_search_path\.sql/,
   );
   const connectedAt = integration.indexOf('await client.connect();');
-  const migrationAppliedAt = integration.indexOf("await client.query(readFileSync(LATEST_EXPIRY_MIGRATION_PATH, 'utf8'));");
+  const migrationAppliedAt = integration.indexOf("await client.query(readFileSync(migrationPath, 'utf8'));");
+  const searchPathCatalogAt = integration.indexOf("'public.fn_expire_unpaid_order_atomic(uuid, timestamptz)'::regprocedure");
   const rpcTestAt = integration.indexOf("test('Issue #1796: expired pending-payment order");
-  assert.ok(connectedAt > -1 && migrationAppliedAt > connectedAt && rpcTestAt > migrationAppliedAt);
+  assert.ok(connectedAt > -1 && migrationAppliedAt > connectedAt && searchPathCatalogAt > migrationAppliedAt && rpcTestAt > searchPathCatalogAt);
+  assert.match(integration, /proconfig: \['search_path=pg_catalog, public, pg_temp'\]/);
 });
 
 test('sweep route：x-internal-token 授權 + 呼叫 expireUnpaidOrdersDb', () => {

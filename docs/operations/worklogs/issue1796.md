@@ -30,9 +30,10 @@
 - 2026-09-14 15:28 CST Node 22 focused tests：`issue1493-expire-unpaid-contract.test.mjs` 9/9 PASS、`issue1293-migration-ledger-gate.test.mjs` 14/14 PASS；三個變更 `.mjs` 均 `node --check` exit 0，`git diff --check` exit 0。未啟動 local Supabase/PostgreSQL，未觸及 Production。
 - 2026-09-14 15:30 CST 已 commit 並推送 `76b97da76860249685466b49ef591e0c044f6353`（`test(#1796): wire expiry migration into runtime contract`）至既有 PR #1876 branch；remote read-back 與 local HEAD 相符。GitHub GraphQL check readback 因 API rate limit 無法取得，未宣稱 hosted runtime GREEN。
 - 2026-09-14 16:06 CST PR #1876 第二階段：只更新 expected-terminal identity allowlist 與其 exact history/count consumers，加入 `20260914052608`、`20260914073000` 及已驗證 SHA-256。committed expected-terminal artifact 仍是舊 identity，因此 artifact verifier 的短測試預期暫時失敗；push 後 CI Step 9 會用正式流程產生包含兩個 migration 的新 artifact，未在本機執行 generator 或手改 artifact hash。
+- 2026-09-14 21:42 CST Rita exact-head review 發現 replacement migration 清除了既有 function-level `search_path=pg_catalog, public, pg_temp`。新增 forward-only `20260914073100_issue1796_expire_unpaid_order_restore_search_path.sql`，僅對精確 RPC signature 恢復 search_path；hosted integration contract 同步套用兩個修復 migration 並驗證 `pg_proc.proconfig`。第一階段 source/builder identity tests `21/21 PASS`；canonical expected-terminal artifact 仍須由 exact-head CI 重生後匯入，未執行本機 Supabase 或 Production migration。
 
 ## 下一步
-- 等待 PR #1876 hosted #1796 PostgreSQL runtime contract 使用新 migration 執行；不得執行 local PostgreSQL/Supabase attempt。
+- push search_path restoration 第一階段，等待 exact-head CI 產生新版 expected-terminal artifact；匯入四個canonical檔後重跑CI與Rita narrow re-review。
 
 ## 絕不重做（Do-NOT-redo）
 - 不修改既有 migration、`db.mjs`、payment/API 凍結區、runner 或 fixture；均不在本卡 allowed mutations。
