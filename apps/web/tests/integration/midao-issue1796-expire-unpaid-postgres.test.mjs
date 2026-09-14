@@ -67,7 +67,16 @@ after(async () => {
 });
 
 beforeEach(async () => {
-  await client.query(readFileSync(SEED_PATH, 'utf8'));
+  // The current schema mirrors auth.users into public.users via a trigger, while
+  // this historical disposable seed also inserts the same public.users rows.
+  // Disable triggers only while loading the fully explicit fixture; restore
+  // them before exercising the RPC so production behavior remains covered.
+  await client.query("SET session_replication_role = 'replica'");
+  try {
+    await client.query(readFileSync(SEED_PATH, 'utf8'));
+  } finally {
+    await client.query("SET session_replication_role = 'origin'");
+  }
 });
 
 test('Issue #1796: expired pending-payment order cancels booking exactly once and repeat is a noop', async () => {
