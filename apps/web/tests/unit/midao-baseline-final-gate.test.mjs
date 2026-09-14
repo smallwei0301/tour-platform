@@ -23,8 +23,9 @@ const expectedJournalPath = resolveExpectedTerminalPublicationPaths().journalPat
 
 const CAPTURE_TRANSACTION = 'c90dfe6ce32f77010354615795df95c085f16f53f8a830ac8553196b5d178e13';
 const CAPTURE_MANIFEST = '9834579fba9bd13cf4d0d35bfb6498ce1661f04a1d80ae8bfd5b29ea3cbe0cfd';
-const EXPECTED_TRANSACTION = '712213b71bde2909be20bf9ae115f5650c62ac8358afbf39fa961ed4c02df7ad';
-const EXPECTED_MANIFEST = '3b297c908fa004d7a6adf145a7a15612fe67e3fc5763493a00d9a093d127029f';
+// Exact values are derived from the verified canonical expected-terminal ledger.
+const EXPECTED_TRANSACTION = '59e9c36958ad52304b9be06834d9bfdfb14bcb75210f169157727b48bb38a793';
+const EXPECTED_MANIFEST = '0654b47515fd379c8dadff9c1f7992d266dac7cb8ac24d28d368bcb02ba92462';
 const CODE_EVIDENCE_SHA = '54cee346b2797a89cd6c1cf6b15b5a22c218c6f7';
 
 async function verifyTransactionsThenReadEvidence({

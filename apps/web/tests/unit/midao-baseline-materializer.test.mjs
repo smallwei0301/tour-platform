@@ -270,16 +270,15 @@ test('selection is exact, published manifest is trusted, and rollback/symlink/ha
     const publishedManifest = JSON.parse(await readFile(path.join(baselineDir, 'manifest.json'), 'utf8'));
     assert.deepEqual(
       publishedManifest.postCutoffMigrations.map(({ filename, sha256 }) => [filename, sha256]),
-      exactPostCutoff.slice(0, -2),
+      exactPostCutoff,
     );
-    await assert.rejects(
-      api.materializeFreshWorkdir({
-        outputParent: parent,
-        postCutoffManifest: publishedManifest,
-        projectId: 'midao-manifest-run',
-      }),
-      /expected[ -]terminal|manifest/iu,
-    );
+    const published = await api.materializeFreshWorkdir({
+      outputParent: parent,
+      postCutoffManifest: publishedManifest,
+      projectId: 'midao-manifest-run',
+    });
+    assert.equal(published.transactionId, publishedManifest.captureTransactionId);
+    await published.cleanup();
     await assert.rejects(
       api.materializeFreshWorkdir({ outputParent: parent, postCutoffManifest: { entries: [] } }),
       /expected[ -]terminal|manifest/iu,
