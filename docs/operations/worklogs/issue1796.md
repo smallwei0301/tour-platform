@@ -1,5 +1,5 @@
 # issue1796 — 修復未付款逾期原子取消 RPC 的 42702
-> 最後更新：2026-09-14 11:27 CST｜負責 session：tp-builder-api / gpt-5.6-terra
+> 最後更新：2026-09-14 15:28 CST｜負責 session：Ava / gpt-5.6-terra
 
 ## 目標
 以 append-only migration 修正 `fn_expire_unpaid_order_atomic(uuid,timestamptz)` 的 `booking_id` 欄位歧義，保留既有 RPC 契約與原子狀態轉移。
@@ -7,8 +7,8 @@
 ## AC 清單
 - [ ] 已記錄 RED：過期 `pending_payment` 訂單取消 booking 時，修正前會出現 PostgreSQL `42702`。
 - [ ] append-only migration 僅限定 qualification 修正，保留 signature、output、鎖序、狀態轉移與 security/grants。
-- [ ] 整合回歸驗證 booking/order 終態、唯一 `payment_deadline_expired` log 與 repeat noop。
-- [ ] focused contracts、`run-checks.sh --typecheck` 與 diff hygiene 有 exact-HEAD 證據。
+- [ ] hosted 整合回歸驗證 booking/order 終態、唯一 `payment_deadline_expired` log 與 repeat noop。
+- [x] source-contract、ledger gate、Node syntax 與 diff hygiene 有 exact-HEAD 證據。
 
 ## 已完成（附證據）
 - 2026-09-12 已在綁定非 primary worktree 確認 branch=`builder/issue-1761-stage5b-expiry-42702-348bea78`、HEAD=`348bea78bba627f16fe4e6cb0e9d2a1ee3912dfc`；接續 run 再驗證 Planner repair binding #1714 所列的兩個 dirty path SHA-256 完全相符。
@@ -26,9 +26,11 @@
 - 2026-09-14 13:27 CST `NODE22_BIN=/root/.hermes/toolchains/node/22.23.1/bin/node node --test apps/web/tests/api/issue1493-expire-unpaid-contract.test.mjs`：7/7 PASS。`run-checks.sh` 同時帶入 integration test 在未由 hosted runner 注入 `DATABASE_URL` 時如預期 exit 1；這不是 PostgreSQL verdict，且第三次本機 Supabase runner 已禁止。
 
 - 2026-09-14 hosted exact-head `393fd70be84e53a1b70f76d5247f5c44d523e1cb` run `34815505811` / job `103885216237` completed fixture and all preceding database setup successfully, then failed only in `Run #1796 unpaid-expiry PostgreSQL runtime contract` with PostgreSQL `42702` at integration line 85. The prior migration had qualified the de-dup predicate but the function still exposes `RETURNS TABLE booking_id`, so this forward-only replacement compiles the function with `#variable_conflict use_column` and aliases the log read as `booking_log`; no existing migration is changed.
+- 2026-09-14 15:28 CST 修復既有 test consumers：#1293 closed expected migration list 加入 `20260914073000_issue1796_expire_unpaid_order_variable_conflict_fix.sql`；#1796 disposable loopback integration client 連線後明確讀取並執行該 migration，保留 `127.0.0.1:54322/postgres` assertions。#1493 source-contract 鎖定 migration path 與「connect 後、RPC 前」套用順序，避免 published foundation baseline 造成舊函式假 GREEN。
+- 2026-09-14 15:28 CST Node 22 focused tests：`issue1493-expire-unpaid-contract.test.mjs` 9/9 PASS、`issue1293-migration-ledger-gate.test.mjs` 14/14 PASS；三個變更 `.mjs` 均 `node --check` exit 0，`git diff --check` exit 0。未啟動 local Supabase/PostgreSQL，未觸及 Production。
 
 ## 下一步
-- 在資源 gate 允許下執行 source contract 的 `run-checks.sh --typecheck`，再以唯一正常 commit 推送此 branch/PR；等待 PR 的 hosted #1796 PostgreSQL runtime contract GREEN。不得執行第三次 local PostgreSQL/Supabase attempt。
+- commit 並 push consumer wiring，確認 PR #1876 的 hosted #1796 PostgreSQL runtime contract 使用新 migration；不得執行 local PostgreSQL/Supabase attempt。
 
 ## 絕不重做（Do-NOT-redo）
 - 不修改既有 migration、`db.mjs`、payment/API 凍結區、runner 或 fixture；均不在本卡 allowed mutations。

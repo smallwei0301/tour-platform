@@ -75,6 +75,18 @@ test('Issue #1796 forward migration compiles the expiry RPC with column-preceden
   assert.match(sql, /RETURNS TABLE \([\s\S]*booking_id uuid/);
 });
 
+test('Issue #1796 PostgreSQL integration contract explicitly applies the latest expiry migration after loopback connect', () => {
+  const integration = read('tests/integration/midao-issue1796-expire-unpaid-postgres.test.mjs');
+  assert.match(
+    integration,
+    /const LATEST_EXPIRY_MIGRATION_PATH = path\.join\([\s\S]*20260914073000_issue1796_expire_unpaid_order_variable_conflict_fix\.sql/,
+  );
+  const connectedAt = integration.indexOf('await client.connect();');
+  const migrationAppliedAt = integration.indexOf("await client.query(readFileSync(LATEST_EXPIRY_MIGRATION_PATH, 'utf8'));");
+  const rpcTestAt = integration.indexOf("test('Issue #1796: expired pending-payment order");
+  assert.ok(connectedAt > -1 && migrationAppliedAt > connectedAt && rpcTestAt > migrationAppliedAt);
+});
+
 test('sweep route：x-internal-token 授權 + 呼叫 expireUnpaidOrdersDb', () => {
   const src = read('app/api/internal/bookings/unpaid-expiry-sweep/route.ts');
   assert.match(src, /x-internal-token/);

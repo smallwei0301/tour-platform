@@ -16,6 +16,10 @@ assert.equal(localDatabaseUrl.pathname, '/postgres', 'Issue #1796 integration te
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SEED_PATH = path.join(HERE, '../api/fixtures/midao-task38-seed.sql');
+const LATEST_EXPIRY_MIGRATION_PATH = path.join(
+  HERE,
+  '../../../../supabase/migrations/20260914073000_issue1796_expire_unpaid_order_variable_conflict_fix.sql',
+);
 
 const GUIDE_ID = '22222222-0000-0000-0000-000000000001';
 const PLAN_ID = '44444444-0000-0000-0000-000000000001';
@@ -58,6 +62,7 @@ let client;
 before(async () => {
   client = new pg.Client({ connectionString: databaseUrl });
   await client.connect();
+  await client.query(readFileSync(LATEST_EXPIRY_MIGRATION_PATH, 'utf8'));
   await client.query("SET lock_timeout = '5s'");
   await client.query("SET statement_timeout = '30s'");
 });
