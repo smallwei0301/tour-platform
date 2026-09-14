@@ -31,9 +31,10 @@
 - 2026-09-14 15:30 CST 已 commit 並推送 `76b97da76860249685466b49ef591e0c044f6353`（`test(#1796): wire expiry migration into runtime contract`）至既有 PR #1876 branch；remote read-back 與 local HEAD 相符。GitHub GraphQL check readback 因 API rate limit 無法取得，未宣稱 hosted runtime GREEN。
 - 2026-09-14 16:06 CST PR #1876 第二階段：只更新 expected-terminal identity allowlist 與其 exact history/count consumers，加入 `20260914052608`、`20260914073000` 及已驗證 SHA-256。committed expected-terminal artifact 仍是舊 identity，因此 artifact verifier 的短測試預期暫時失敗；push 後 CI Step 9 會用正式流程產生包含兩個 migration 的新 artifact，未在本機執行 generator 或手改 artifact hash。
 - 2026-09-14 21:42 CST Rita exact-head review 發現 replacement migration 清除了既有 function-level `search_path=pg_catalog, public, pg_temp`。新增 forward-only `20260914073100_issue1796_expire_unpaid_order_restore_search_path.sql`，僅對精確 RPC signature 恢復 search_path；hosted integration contract 同步套用兩個修復 migration 並驗證 `pg_proc.proconfig`。第一階段 source/builder identity tests `21/21 PASS`；canonical expected-terminal artifact 仍須由 exact-head CI 重生後匯入，未執行本機 Supabase 或 Production migration。
+- 2026-09-14 21:49 CST 已匯入exact-head `d629d611` GitHub run `34851435800`產生的artifact `10351252542`；ZIP路徑安全且恰為四個canonical expected-terminal檔。catalog readback確認RPC configuration精確為`search_path=pg_catalog, public, pg_temp`；相關source、ledger、materializer、builder、artifact、final-gate與existing-runner集合`60/60 PASS`，`git diff --check` PASS。未手改generated hash、未啟動本機Supabase、未碰Production。
 
 ## 下一步
-- push search_path restoration 第一階段，等待 exact-head CI 產生新版 expected-terminal artifact；匯入四個canonical檔後重跑CI與Rita narrow re-review。
+- push第二階段artifact commit，等待exact-head CI全綠後交Rita做唯一search_path blocker的narrow re-review。
 
 ## 絕不重做（Do-NOT-redo）
 - 不修改既有 migration、`db.mjs`、payment/API 凍結區、runner 或 fixture；均不在本卡 allowed mutations。

@@ -41282,14 +41282,16 @@
         "volatility": "v"
       },
       {
-        "bodySha256": "4873320df75cc01d148996bda9bdc947fda708d95543bfe07396a7b3d770c916",
+        "bodySha256": "4e652c1f72adbe5922d7d86fdb02721a2eb404045c18957fa9c13ce0f176d6a0",
         "canonicalKey": [
           "routine",
           "public",
           "fn_expire_unpaid_order_atomic",
           "p_order_id uuid, p_now timestamp with time zone"
         ],
-        "configuration": [],
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
         "identityArguments": "p_order_id uuid, p_now timestamp with time zone",
         "kind": "f",
         "language": "plpgsql",
