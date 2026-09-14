@@ -1,5 +1,5 @@
 # issue1761 — Midao2 原生訂單可見性最小營收切片
-> 最後更新：2026-08-31 14:43 Asia/Taipei｜負責 session：tp-builder-ui / gpt-5.6-terra
+> 最後更新：2026-09-14 15:59 Asia/Taipei｜負責 session：Ava / gpt-5.6-terra
 
 ## 目標
 在既有 Midao shell 新增唯讀「訂單」入口與 `/midao/orders`，只消費 canonical Booking V2 guide projection，不新增資料來源或操作命令。
@@ -19,9 +19,11 @@
 - 2026-08-31 14:43 canonical Node 22 重跑 focused Node contracts：6/6 pass、exit 0；`.claude/hooks/run-checks.sh` 對 3 個 focused test files 加 `--typecheck` exit 0；canonical lint exit 0（既有 `RootDocument.tsx` 1 warning，零 error）；`git diff --check` exit 0。
 - 2026-08-31 14:44 已建立單一 local commit；其相對 binding base 的 11 個變更檔均在核准範圍內，工作樹乾淨。接續同卡 Rita read-only review。
 - 2026-08-31 15:34 在 Rita 指出的 native navigation/session evidence 衝突後，未改動候選產品 bytes，改以同一 exact HEAD `81e60057d8dfedbbdec8e2cc224a48583a2a53b8` 重跑 repository-owned official lane：`NODE22_BIN=/root/.hermes/toolchains/node/22.23.1/bin/node scripts/testing/run-midao-e2e.sh apps/web/e2e/issue1761-midao-orders-workbench.spec.ts` exit 0、Chromium 2/2 PASS、`MIDAO_STAGE=complete`，cleanup 完成。其後 focused Node contracts 6/6、`run-checks.sh <3 paths> --typecheck`、root typecheck 均 exit 0；Node 22 lint exit 0（僅既有 `RootDocument.tsx` 1 warning）。
+- 2026-09-14 15:59 以 REST 下載 Artifact `10336439975`（`midao-expected-terminal-f9b372002b8a3f52d82ee6dc0bddff515412c718`）；API 回讀確認未過期、workflow run `34818212451`、exact head `c44008ecd83c4b6e355d4b9b2004183b45a7910f`。ZIP 僅含四個允許路徑，已驗證無絕對／反斜線／`..` 路徑後逐檔複製並以 SHA-256 read-back 確認來源相同：`manifest.json` `3b297c908fa004d7a6adf145a7a15612fe67e3fc5763493a00d9a093d127029f`、`catalog.expected-terminal.normalized.json` `62370a096f10acbbb8c9a260c570e2991654eb9990cc1a640bd6130b6e1b1d90`、`catalog-expected-terminal.sha256` `2ab4528fa4e0305257061364ec8b86cd41709f992afb0226a25b8199fb1fff77`、`expected-terminal-ledger.json` `a956f5784e5300dad8012a7e5bd9872bc85bd776d0c51d9bff4e1171983254fa`。未本機生成、未本機 Supabase、未手改 hash/cutoff。
+- 同次執行 `node --test apps/web/tests/unit/midao-expected-terminal-artifact.test.mjs`：3/4 pass、1 fail。已匯入的 artifact manifest 最後 migration 為 `20260824135300_issue1861_midao_request_claims_bridge.sql`，但此 exact HEAD 的 source 還有兩個 #1796 migrations（`20260914052608...`、`20260914073000...`）；因此 artifact consumer test 的 stale assertion 仍失敗。此差異已由匯入後的實測證明，未以本機 generator 或手改 manifest 規避。
 
 ## 下一步
-- 等待同卡 Rita read-only review；如有具體 blocker，僅在本 worktree 以同卡 rework 修正。
+- 提交並推送這個 deterministic artifact import，讓新 exact-head CI 回報 artifact 與 forward-migration manifest 的差異；不做 Production deploy/migration。
 
 ## 絕不重做（Do-NOT-redo）
 - 不改 `apps/web/app/api/v2/guide/bookings/route.ts`；此切片只讀取既有 canonical projection。
