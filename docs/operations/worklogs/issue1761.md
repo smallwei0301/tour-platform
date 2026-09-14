@@ -24,7 +24,7 @@
 - 同次實跑 `node --test apps/web/tests/unit/midao-expected-terminal-artifact.test.mjs`：4/4 pass（exit 0）；`node scripts/check-migration-source-gate.mjs --mode source`：`migration source gate: verified`（exit 0）；`git diff --check` exit 0。
 
 ## 下一步
-- 提交並推送本次 deterministic artifact import；新 SHA 的 CI 由 push 自動觸發，不重跑舊 head CI，且不做 Production deploy/migration。
+- 已提交並推送 deterministic artifact import：`cbfd6d266d926e94ff4a31a43670397702af020a`；remote branch read-back 與 local HEAD 一致。新 SHA 的 CI 由 push 自動觸發，不重跑舊 head CI，且不做 Production deploy/migration。
 
 ## 絕不重做（Do-NOT-redo）
 - 不改 `apps/web/app/api/v2/guide/bookings/route.ts`；此切片只讀取既有 canonical projection。
