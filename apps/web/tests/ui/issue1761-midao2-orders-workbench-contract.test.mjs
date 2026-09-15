@@ -39,6 +39,14 @@ test('Midao2 訂單工作台只讀取 canonical projection 並處理登入與讀
   assert.match(page, /data-testid="midao2-orders-list"/u);
   assert.match(page, /tourTitle|scheduleDate|partySize|status|paymentStatus|totalTwd|createdAt/u);
 
+  assert.match(
+    page,
+    /function projectOrder\(value: OrderProjection\): OrderProjection \{\s*return \{\s*id: value\.id,\s*tourTitle: value\.tourTitle,\s*scheduleDate: value\.scheduleDate,\s*partySize: value\.partySize,\s*status: value\.status,\s*paymentStatus: value\.paymentStatus,\s*totalTwd: value\.totalTwd,\s*createdAt: value\.createdAt,\s*\};\s*\}/u,
+    'validated canonical records must be copied into the explicit safe presentation subset before React state receives them',
+  );
+  assert.match(page, /const orders = payload\.data\.map\(projectOrder\);\s*setState\(\{ kind: 'ready', orders \}\)/u);
+  assert.doesNotMatch(page, /orders:\s*payload\.data/u);
+
   assert.doesNotMatch(page, /guideId|supabase|guestName|guestPhone|maskedEmail|scheduleId|planId|hasConflictOverride|admin_note|contact|token|\.message/u);
   assert.doesNotMatch(page, /method:\s*['"](?:POST|PUT|PATCH|DELETE)/u);
   assert.doesNotMatch(page, /href=|router\.|onClick=\{[^}]*push/u);

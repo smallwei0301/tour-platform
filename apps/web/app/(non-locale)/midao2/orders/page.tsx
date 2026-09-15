@@ -44,6 +44,19 @@ function isOrdersEnvelope(value: unknown): value is { ok: true; data: OrderProje
     && value.data.every(isOrderProjection);
 }
 
+function projectOrder(value: OrderProjection): OrderProjection {
+  return {
+    id: value.id,
+    tourTitle: value.tourTitle,
+    scheduleDate: value.scheduleDate,
+    partySize: value.partySize,
+    status: value.status,
+    paymentStatus: value.paymentStatus,
+    totalTwd: value.totalTwd,
+    createdAt: value.createdAt,
+  };
+}
+
 function formatDateTime(value: string | null): string {
   if (!value) return '尚未排定';
   const date = new Date(value);
@@ -82,7 +95,8 @@ export default function Midao2OrdersPage() {
       }
       const payload: unknown = await response.json().catch(() => null);
       if (!response.ok || !isOrdersEnvelope(payload)) throw new Error('MIDAO2_ORDERS_LOAD_FAILED');
-      setState({ kind: 'ready', orders: payload.data });
+      const orders = payload.data.map(projectOrder);
+      setState({ kind: 'ready', orders });
     } catch {
       setState({ kind: 'error' });
     }
