@@ -41,7 +41,11 @@ export default function Midao2Layout({ children }: { children: React.ReactNode }
     fetch('/api/v2/guide/midao/summary')
       .then((res) => {
         if (res.status === 401) {
-          window.location.assign('/guide/login?next=/midao2');
+          window.location.assign(
+            window.location.pathname === '/midao2/orders'
+              ? '/guide/login?next=/midao2/orders'
+              : '/guide/login?next=/midao2',
+          );
         }
       })
       .catch(() => {

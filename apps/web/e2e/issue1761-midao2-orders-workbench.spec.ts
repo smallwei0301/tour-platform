@@ -1,4 +1,5 @@
 import { test, expect, setGuideSession } from './helpers';
+import type { Route } from '@playwright/test';
 
 const guideId = '99999999-9999-4999-8999-999999999999';
 const unsafeOrder = {
@@ -98,18 +99,43 @@ test.describe('Midao2 read-only orders workbench', () => {
     await testInfo.attach('midao2-orders-mobile-empty', { path: screenshotPath, contentType: 'image/png' });
   });
 
-  test('401 on the canonical read redirects to the exact guide login return path', async ({ page }) => {
+  test('concurrent summary and canonical-read 401 responses preserve the exact guide login return path', async ({ page }) => {
     test.setTimeout(180_000);
     const methods: string[] = [];
-    await prepareMidao2Shell(page);
-    await page.route('**/api/v2/guide/bookings', async (route) => {
+    const arrivals = new Set<string>();
+    const navigationPaths: string[] = [];
+    let releaseBarrier = () => {};
+    const both401Arrived = new Promise<void>((resolve) => {
+      releaseBarrier = resolve;
+    });
+
+    await setGuideSession(page, guideId);
+    await page.route('**/api/guide/auth/csrf', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+    });
+    const respondAfterBoth401Arrive = async (route: Route) => {
       methods.push(route.request().method());
+      arrivals.add(route.request().url());
+      await both401Arrived;
       await route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ ok: false }) });
+    };
+    await page.route('**/api/v2/guide/midao/summary', respondAfterBoth401Arrive);
+    await page.route('**/api/v2/guide/bookings', async (route) => {
+      await respondAfterBoth401Arrive(route);
     });
 
     await page.goto('/midao2/orders', { waitUntil: 'domcontentloaded', timeout: 120_000 });
-    await expect.poll(() => methods.length, { timeout: 30_000 }).toBe(1);
-    expect(methods).toEqual(['GET']);
-    await page.waitForURL(/\/guide\/login\?next=\/midao2\/orders$/u, { waitUntil: 'commit', timeout: 120_000 });
+    await expect.poll(() => arrivals.size, { timeout: 30_000 }).toBe(2);
+    expect(methods).toEqual(['GET', 'GET']);
+    expect(new URL(page.url()).pathname).toBe('/midao2/orders');
+    page.on('request', (request) => {
+      if (request.isNavigationRequest()) {
+        const url = new URL(request.url());
+        navigationPaths.push(`${url.pathname}${url.search}`);
+      }
+    });
+    releaseBarrier();
+    await expect.poll(() => navigationPaths, { timeout: 30_000 }).toContain('/guide/login?next=/midao2/orders');
+    expect(navigationPaths).not.toContain('/guide/login?next=/midao2');
   });
 });

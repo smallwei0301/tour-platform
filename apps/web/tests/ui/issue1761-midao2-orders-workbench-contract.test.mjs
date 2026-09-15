@@ -15,6 +15,15 @@ test('Midao2 訂單入口在既有 shell 中維持 active navigation', async () 
   assert.match(layout, /pathname\.startsWith\(tab\.href\)/u);
 });
 
+test('Midao2 orders 的 layout 401 導轉依目前路徑保留訂單登入返回網址', async () => {
+  const layout = await read('app/(non-locale)/midao2/layout.tsx');
+
+  assert.match(
+    layout,
+    /window\.location\.assign\(\s*window\.location\.pathname === '\/midao2\/orders'\s*\? '\/guide\/login\?next=\/midao2\/orders'\s*:\s*'\/guide\/login\?next=\/midao2',?\s*\)/u,
+  );
+});
+
 test('Midao2 訂單工作台只讀取 canonical projection 並處理登入與讀取狀態', async () => {
   const page = await read('app/(non-locale)/midao2/orders/page.tsx');
 
