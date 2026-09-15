@@ -28,6 +28,25 @@
 ## 下一步
 - 提交並推送本次三個 consumer 同步；回讀 remote branch SHA，讓新 push 自然重跑 CI。無 Production deploy/migration。
 
+## 2026-09-15 下一個受控切片：Midao2 唯讀訂單工作台
+
+### 已核定的規劃與不可變綁定
+- fresh `git fetch origin main` 後，`origin/main` 與本規劃 worktree HEAD 均為 `9c1e7b2efaf17b475022fa44b05b8fbf35426075`；worktree 為非 primary 的 `/root/.hermes/worktrees/tour-platform/plan-1761-midao-orders-v1`，branch 為 `planner/issue-1761-midao2-orders-v1`，且開工時乾淨。
+- #1761 最新 capability matrix（issue comment `5674384323`）確認：legacy `/midao/orders` 已 covered；`/midao2/orders` 缺失，為唯一選定的 open gap。這不是 legacy 退役授權；legacy `/midao/orders` 必須保留為安全 fallback。
+- 現有 `GET /api/v2/guide/bookings`（`apps/web/app/api/v2/guide/bookings/route.ts`）已以 `verifyGuideSession(req)` 與 `activities.guide_id = session.guideId` 決定所有權，且回傳 `{ ok: true, data }`。本切片只讀取該投影，不新增或修改 API、資料庫、schema、RLS、ACL、migration、cache/store 或 client guide-id filter。
+- Midao2 通用 `apiGet()` 只接受 `{ success: true, data }`，不能直接用於此既有 `{ ok: true, data }` contract；新頁面必須在自己的 read-only loader 明確驗證既有 `ok` envelope，不能藉此擴大或改寫全域 API helper。
+
+### Builder 的精確變更面與順序
+1. 先新增 RED source-contract：`apps/web/tests/ui/issue1761-midao2-orders-workbench-contract.test.mjs`，鎖住 `/midao2/orders` route、Midao2 shell 訂單入口、既有 `/api/v2/guide/bookings` 的 GET/no-store/`ok` envelope、只呈現 `tourTitle`、`scheduleDate`、`partySize`、`status`、`paymentStatus`、`totalTwd`，以及禁止 `guideId`、Supabase、PII 欄位與任何 POST/PUT/PATCH/DELETE。
+2. 先新增 RED browser spec：`apps/web/e2e/issue1761-midao2-orders-workbench.spec.ts`。以 `setGuideSession()`、summary/CSRF mock 與 bookings route mock 驗證：Midao2 nav 進入新路由、390x844 與 desktop 都可見安全清單並附 screenshot、資料列不顯示旅客姓名/電話/email、bookings 僅 GET；409/read failure 顯示安全錯誤且重試只再 GET，空結果顯示 empty state。
+3. 最小 GREEN：新增 `apps/web/app/(non-locale)/midao2/orders/page.tsx`。僅用既有 `C`、`Card`、`Spinner`、`EmptyState`、`ErrorState`、`Icon` 與 browser `fetch('/api/v2/guide/bookings', { cache: 'no-store' })`；頁內 local type guard 對安全 subset 與 `{ ok: true, data }` 做驗證。401 導至 `/guide/login?next=/midao2/orders`；其他不安全/失敗 envelope 只顯示通用錯誤，retry 只重送 GET。不得建立 item click、detail route 或任何 mutation，因現有 list projection 沒有已核定的 safe detail contract。
+4. 修改 `apps/web/app/(non-locale)/midao2/layout.tsx` 的既有 `TABS`：增加 `href: '/midao2/orders'`、label `訂單`、既有 sprite icon `file-text`，沿用 pathname active rule、fixed navigation 與 responsive container。不得改 auth probe、CSRF、impersonation 邏輯或其他 tab destination。
+
+### 驗收與回復邊界
+- focused RED 預期新 Node contract 與新 Playwright 先失敗，原因只能是 route/nav/畫面尚不存在；GREEN 後兩者 pass，既有 legacy `apps/web/tests/ui/issue1761-midao-orders-workbench-contract.test.mjs` 與 `apps/web/e2e/issue1761-midao-orders-workbench.spec.ts` 亦保持綠燈，證明 `/midao/orders` fallback 未受影響。
+- Builder 必跑 `.claude/hooks/run-checks.sh apps/web/tests/ui/issue1761-midao2-orders-workbench-contract.test.mjs apps/web/tests/ui/issue1761-midao-orders-workbench-contract.test.mjs apps/web/tests/api/issue1761-midao-guide-bookings-read-contract.test.mjs --typecheck`、repository-owned Midao local E2E runner 的新 spec、`npm run lint`、`npm run typecheck`、`git diff --check`；提交前 worktree 必須乾淨且 tested HEAD=current HEAD。
+- 回復只移除新 Midao2 route/nav/test bytes；既有 `/midao/orders`、既有 guide-bookings route 與資料模型完全不變。無 Production migration、deploy、DML、payment、notification 或 legacy retirement。
+
 ## 絕不重做（Do-NOT-redo）
 - 不改 `apps/web/app/api/v2/guide/bookings/route.ts`；此切片只讀取既有 canonical projection。
 - pending request 的決策與轉換仍留在 `/midao/requests/[requestRef]`；不新增付款、訊息、redeem、reschedule、review 操作。
