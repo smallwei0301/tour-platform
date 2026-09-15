@@ -11,6 +11,7 @@ import { C, Icon } from './ui';
 
 const TABS = [
   { href: '/midao2', label: '首頁', icon: 'home' },
+  { href: '/midao2/orders', label: '訂單', icon: 'file-text' },
   { href: '/midao2/requests', label: '需求', icon: 'requests' },
   { href: '/midao2/calendar', label: '行事曆', icon: 'calendar' },
   { href: '/midao2/services', label: '服務', icon: 'services' },
@@ -40,7 +41,11 @@ export default function Midao2Layout({ children }: { children: React.ReactNode }
     fetch('/api/v2/guide/midao/summary')
       .then((res) => {
         if (res.status === 401) {
-          window.location.assign('/guide/login?next=/midao2');
+          window.location.assign(
+            window.location.pathname === '/midao2/orders'
+              ? '/guide/login?next=/midao2/orders'
+              : '/guide/login?next=/midao2',
+          );
         }
       })
       .catch(() => {
