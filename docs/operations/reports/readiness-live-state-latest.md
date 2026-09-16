@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-09-15T05:05:25.405Z -->
+<!-- query_timestamp: 2026-09-16T05:05:12.587Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-09-15T05:05:25.405Z  
-**Commit SHA:** `9c1e7b2efaf17b475022fa44b05b8fbf35426075`
+**Query timestamp:** 2026-09-16T05:05:12.587Z  
+**Commit SHA:** `a782d926f2f3d23710cd013a1162ef37aea3e05e`
 
 ---
 
@@ -123,6 +123,7 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1878 | [[#1761][Midao2 P0] 唯讀 orders 工作台](https://github.com/smallwei0301/tour-platform/pull/1878) | 2026-09-15 |
 | #1877 | [fix(#1761): remove receipt witness triage gates](https://github.com/smallwei0301/tour-platform/pull/1877) | 2026-09-14 |
 | #1876 | [fix(#1796): qualify unpaid expiry booking log column](https://github.com/smallwei0301/tour-platform/pull/1876) | 2026-09-14 |
 | #1874 | [fix(#1761): require causal witness for triage recovery](https://github.com/smallwei0301/tour-platform/pull/1874) | 2026-09-14 |
@@ -132,7 +133,6 @@
 | #1868 | [feat(midao): add Phase 6 masked projection comparison baseline](https://github.com/smallwei0301/tour-platform/pull/1868) | 2026-08-26 |
 | #1867 | [feat(midao2): keep LINE replies manual and safe](https://github.com/smallwei0301/tour-platform/pull/1867) | 2026-08-25 |
 | #1866 | [test(midao): verify traveler confirmation chain](https://github.com/smallwei0301/tour-platform/pull/1866) | 2026-08-25 |
-| #1865 | [feat(midao2): 串接 canonical inquiry 轉單流程 (#1861 Phase 3)](https://github.com/smallwei0301/tour-platform/pull/1865) | 2026-08-24 |
 
 ---
 
