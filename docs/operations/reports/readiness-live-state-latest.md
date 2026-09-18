@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-09-17T05:05:40.366Z -->
+<!-- query_timestamp: 2026-09-18T05:04:44.500Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-09-17T05:05:40.366Z  
-**Commit SHA:** `61946ac88abe55d44c20667aed0d3e7fa8461537`
+**Query timestamp:** 2026-09-18T05:04:44.500Z  
+**Commit SHA:** `397d457e295f51457cc13613d65a2d59401ba3a4`
 
 ---
 
@@ -26,7 +26,7 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (64 total)
+## Open Issues (65 total)
 
 ### P0 (1)
 
@@ -73,10 +73,11 @@
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (17)
+### P2 (18)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1879 | [[Frontend Daily Check] E2E activities listing navigation timeout](https://github.com/smallwei0301/tour-platform/issues/1879) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:ready, traveler-booking |
 | #1869 | [[Midao] Event-based observation and verified legacy retirement after #1861](https://github.com/smallwei0301/tour-platform/issues/1869) | triaged, type:investigation, priority:P2, agent:backlog, owner:ai-agent, status:blocked, database, infra, launch:post-first-payment, data-hygiene |
 | #1844 | [補記 6 支既有 migration 的 verified ledger record（#1811/#1812/#1813/#1814/#1760 相關，release gate 現 HOLD）](https://github.com/smallwei0301/tour-platform/issues/1844) | type:investigation, priority:P2, owner:ai-agent, status:ready, database |
 | #1817 | [[Payments] Deepen refund provider-success result materialization and repair seam](https://github.com/smallwei0301/tour-platform/issues/1817) | triaged, type:optimization, priority:P2, agent:backlog, owner:ai-agent, status:blocked, payments, orders, database |
