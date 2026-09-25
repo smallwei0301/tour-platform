@@ -135,6 +135,27 @@ export function isMidaoLegacyDraftMaterializationEnabledForGuide(guideId, env = 
   return new Set(guideIds.map((id) => id.toLowerCase())).has(guideId.trim().toLowerCase());
 }
 
+/**
+ * vibeaico 新後台（vibeaico-admin-rebuild）的 base URL。
+ *
+ * 用途：admin 導遊詳情頁的「進入 vibeaico 後台」入口要組出
+ * `<base>/tenant/impersonate?guide=<id>`。刻意走 env 而非寫死——dev／preview／
+ * production 網址不同，日後換自有網域也只改 Vercel。
+ *
+ * 空值即「功能關閉」：入口整顆不渲染，而不是產生 `undefined/tenant/...` 的死連結。
+ * 值必須是 http(s) 絕對網址，否則一律視為未設定（fail closed）。
+ *
+ * 注意：`NEXT_PUBLIC_*` 在 build 時被內聯進 client bundle，所以無參數呼叫時必須
+ * 寫成字面的 `process.env.NEXT_PUBLIC_VIBEAI_ADMIN_URL`；`env` 參數只給測試用。
+ * 這也代表此值必為公開資訊——它就是一個公開網址，不帶 token、不帶身分。
+ */
+export function getVibeaiAdminBaseUrl(env) {
+  const raw = env ? env.NEXT_PUBLIC_VIBEAI_ADMIN_URL : process.env.NEXT_PUBLIC_VIBEAI_ADMIN_URL;
+  const value = String(raw || '').trim().replace(/\/+$/u, '');
+  if (!/^https?:\/\/[^\s]+$/u.test(value)) return '';
+  return value;
+}
+
 /** Local-only Midao E2E diagnostics gate. Default OFF. */
 export function isMidaoE2ELocal(env = process.env) {
   return isTruthy(env.MIDAO_E2E_LOCAL);
