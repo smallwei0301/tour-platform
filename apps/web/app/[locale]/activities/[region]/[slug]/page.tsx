@@ -22,7 +22,7 @@ import { SectionAnchorNav } from '../../../../../src/components/activity/Section
 import { ImageCarousel } from '../../../../../src/components/activity/ImageCarousel';
 import { ActivityReviewsPanel } from '../../../../../src/components/activity/ActivityReviewsPanel';
 import { inferPlanIdForBookingUrl, resolveBookingEntryHref, resolvePlanBookingHref } from '../../../../../src/lib/booking-entry.mjs';
-import { selectUpcomingSchedules } from '../../../../../src/lib/upcoming-schedules.mjs';
+import { selectUpcomingSchedules } from '../../../../../src/lib/activity/upcoming-schedules.mjs';
 import { resolveDatePlanPresentation } from '../../../../../src/lib/date-plan-source.mjs';
 import { resolveActivityPriceUnit } from '../../../../../src/lib/activity-price-unit.mjs';
 import { ActivityQASection } from '../../../../../src/components/activity/ActivityQASection';

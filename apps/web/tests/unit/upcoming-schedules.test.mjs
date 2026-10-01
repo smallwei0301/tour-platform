@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { selectUpcomingSchedules } from '../../src/lib/upcoming-schedules.mjs';
+import { selectUpcomingSchedules } from '../../src/lib/activity/upcoming-schedules.mjs';
 import { inferPlanIdForBookingUrl, resolveBookingEntryHref, resolvePlanBookingHref } from '../../src/lib/booking-entry.mjs';
 
 const now = Date.parse('2026-10-01T04:00:00Z');
