@@ -1,6 +1,6 @@
 # Tour Agent 執行與模型路由
 
-Owner 2026-10-01 決策：OpenAI Terra 施工角色改用 `gpt-6.1-sol`。
+Owner 2026-10-01 最新決策：OpenAI Product Builder 可選 `gpt-6.1-sol` 或 `gpt-6-luna`。
 本文件是 Tour 模型路由的正式入口；機器可讀映射由
 `scripts/agents/model-routing.json` 維護。開工順序、安全限制、重試上限與
 驗收仍依 `CLAUDE.md`、`.cursor/harness/00_INDEX.md` 與
@@ -16,8 +16,15 @@ provider-first、requested/actual 如實記錄與獨立 review 協議；此 repo
 | 角色 | OpenAI | Claude |
 |---|---|---|
 | scout／窄盤點 | `gpt-6-luna` | 沿用 harness 的 `haiku` |
-| build／Terra 施工 | `gpt-6.1-sol` | 沿用 harness 的 `sonnet` |
+| build／Product Builder（Terra 施工角色） | `gpt-6.1-sol` 或 `gpt-6-luna` | 沿用 harness 的 `sonnet` |
 | audit／驗收 | `gpt-6.1-sol` | 沿用 harness 的 `opus` |
+
+Commander 依 complexity 選 Builder：簡單、明確且小 scope 通常選 Luna；複雜或跨模組通常選 Sol。
+每次 OpenAI build 必填 `buildSelection={complexity,reason}`，complexity 為 simple／complex，
+reason 說明實際選擇。Owner 指定時另填 ownerModel，優先於 complexity，且 model 必須
+與 ownerModel 一致；Owner 也只能指定上述兩款。models.build 保留 Sol 為預設映射，
+不取代必填選擇。角色不是型號：Luna 可擔任 Scout 或 Builder，但 role／actor 要明確，
+不能用 Builder 選擇繞過 audit 的獨立驗收。
 
 正常 Reviewer 使用 Sol；只有明確高風險分類、有成本理由且通過下列單次成本
 gate 的 OpenAI audit 才能要求 `gpt-6-astra`。本輪不實際派送 Astra。
@@ -33,13 +40,28 @@ build 與 audit 即使用同一型號，也必須使用不同、`fork_turns=none
 
 ## Dispatch 前後檢查
 
-指揮官在每次新 dispatch 前明填 role/provider/model/fork_turns，執行
+指揮官在每次新 dispatch 前明填 role/provider/model/fork_turns、runId 與
+beforeRecordPath（caller 管理的本機唯一紀錄路徑），執行
 `node scripts/agents/dispatch-preflight.mjs <input.json>`；只有 exit 0 才呼叫
-派工工具。Tour repo 掃描、規劃先取得 Scout 窄盤點產出，再派 build/audit；
+派工工具。before 成功後 CLI 以 exclusive wx 保存 status=PASS、generatedAt、
+runId 與 dispatch 綁定紀錄；已存在、不可寫或驗證失敗即拒絕，不覆寫舊紀錄。
+receipt 不能建立紀錄，必須回讀同一 beforeRecordPath 並核對 runId、scope、taskId、
+role、provider、model、fork_turns、task、buildSelection、exactDiff 等派工欄位；
+另必填原始工具來源的 dispatchedAt（UTC ISO）與 dispatchEvidenceRef，要求
+before.generatedAt < dispatchedAt <= 現在。缺 before、明示非 PASS 狀態（含 MISSED 說明文字）、事後補跑、綁定變更、
+未來時間都拒絕；工具未提供可信時間且無下述 tool-order 證據時 SEQUENCE_NOT_VERIFIED，不能宣稱完整驗收。
+controller 仍須按 before 成功 → 真實工具 dispatch → receipt 的順序操作；CLI
+不能直接呼叫官方 collaboration。generatedAt 是 CLI 成功保存紀錄的本機時間，
+不是 runtime 模型身分或證據未偽造的保證；caller 可偽造檔案／時間，主 Agent
+仍須回讀原始工具證據，不能以猜測時間、mtime 或 Date.now 代填 runtime dispatch。
+Tour repo 掃描、規劃先取得 Scout 窄盤點產出，再派 build/audit；
 多步驟實作要獨立 builder，但只有包含掃描／規劃（requiresDiscovery=true）
 才需 Scout 前置產出；requiresDiscovery=false 可直接派 builder。
+需要前置 Scout 時，CLI 也回讀 scoutReceipt 的 beforeRecordPath，依完整 receipt
+規則檢查其 runId、task、dispatch 時間與證據引用；不能僅以 inline identity 繞過
+漏跑 before 的缺口。主 Agent 仍須核对 Scout 原始工具回執。
 Scout 自身派工不要求先有 Scout。本輪 CLI 自足派工約定所有角色 fork_turns=none。
-這是 §1 工作觸發的本輪前置檢查，不把所有 general-purpose 施工改派 Luna，
+這是 §1 工作觸發的本輪前置檢查，Builder 仍依選擇理由與 complexity 派工，
 也不把 Vibe Product Scout 前提套到所有 MODEL_GOVERNANCE 或非 repo 工作。
 單一事實查證、≤2 檔小修改可以不派 Scout，但必填例外 reason；治理工作
 仍按實際 scan/plan/multi-step 分類，不能用 governance 名稱繞過觸發。
@@ -93,3 +115,23 @@ premium 適用上述更嚴格單次上限。
 禁止 force-push 等規則照舊。模型替換不授權資料庫、部署、發布、修改
 安全 gate 或擴大工作範圍。VibeAI 的 Product Final Risk 前提與容量不移植，
 Tour 採用的單次 premium 成本規則與既有風險／驗收 gate 共同生效。
+
+
+## 無 UTC 工具回執的本機順序證據
+
+UTC 模式維持原規則。工具回執沒有 dispatch UTC 時，receipt 可明填
+`dispatchSequence={kind:'tool-order',beforeEvidenceRef,dispatchEvidenceRef,beforeRecordSHA256,relation:'before'}`，
+不填猜測的 dispatchedAt。beforeEvidenceRef 指向真實 before CLI 成功的工具 response
+chunk，dispatchEvidenceRef 指向後續原始 spawn task_name／工具 trace，並與頂層
+同名欄位一致。CLI 回讀 beforeRecordPath 原始 bytes 計算 SHA-256，必須與
+beforeRecordSHA256 相等；兩個引用必須非空、不同，relation 只能是 before。
+runId、完整 dispatch 綁定、持久 before PASS 與所有其他 gate 照常檢查；
+缺 before 或 MISSED 不能藉此通過，nested Scout receipt 同樣適用。
+
+若提供 dispatchedAt，即使同時填 tool-order，也仍須通過 UTC 檢查，無效、
+未來或不晚於 before 的時間不能 fallback。工具順序模式回傳
+`sequenceStatus=TOOL_ORDER_EVIDENCE_RECORDED_NOT_PLATFORM_VERIFIED`；UTC 模式為
+`UTC_EVIDENCE_RECORDED_NOT_PLATFORM_VERIFIED`，都不是 runtime 身分驗證。
+CLI 不能驗外部引用真偽或平台全域順序；controller 必須回讀原始 tool trace，
+確認引用的 before 成功輸出確實在 spawn 呼叫之前。這項原始工具核對仍由主 Agent
+負責，caller 可偽造檔案／引用的限制不變，actual=unknown 如實保留。

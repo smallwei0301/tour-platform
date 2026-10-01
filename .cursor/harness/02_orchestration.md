@@ -4,7 +4,9 @@
 > 原則：**指揮官的 context 是最稀缺資源**——它一被垃圾填滿，判斷力就跟著死。整份守則都在保護它。
 > 治理等級：🔒 鎖定檔（`05_maintenance.md`）。
 
-> Owner 2026-10-01 模型決策：OpenAI Terra 施工角色改用 `gpt-6.1-sol`。
+> Owner 2026-10-01 最新模型決策：OpenAI Product Builder 可選 `gpt-6.1-sol` 或 `gpt-6-luna`；
+> Commander 依 complexity（簡單明確小 scope 建議 Luna、複雜跨模組建議 Sol）選擇並明填理由，
+> Owner 指定允許型號優先。角色與 actor 必須明確，實作者不得自我驗收。
 > 正式執行入口與 provider 路由見 `docs/AGENT-EXECUTION.md`；機器映射見
 > `scripts/agents/model-routing.json`。本文件的 Claude 選擇、Tour 獨立容量、
 > 重試上限、fresh-context 驗收與風險 gate 維持不變；歷史模型證據不改寫。

@@ -1,5 +1,5 @@
 {
-  "modelMappingVersion": "2026-10-01.2",
+  "modelMappingVersion": "2026-10-01.3",
   "project": "tour-platform",
   "ownerDecision": "docs/AGENT-EXECUTION.md",
   "models": {
@@ -19,7 +19,10 @@
   },
   "premium": {
     "maxPerLineage": 1,
-    "sharedModels": ["gpt-6-astra", "fable"],
+    "sharedModels": [
+      "gpt-6-astra",
+      "fable"
+    ],
     "startTimeoutSeconds": 300,
     "fallbackModel": "gpt-6.1-sol"
   },
@@ -33,5 +36,17 @@
     "requestedIsNotActual": true,
     "unknownActual": "unknown",
     "rewriteHistoricalEvidence": false
+  },
+  "build": {
+    "allowedModels": [
+      "gpt-6.1-sol",
+      "gpt-6-luna"
+    ],
+    "complexityRecommendations": {
+      "simple": "gpt-6-luna",
+      "complex": "gpt-6.1-sol"
+    },
+    "ownerSelectionTakesPrecedence": true,
+    "selectionReasonRequired": true
   }
 }

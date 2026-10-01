@@ -1,12 +1,15 @@
 import { readFile, open } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { pathToFileURL } from 'node:url';
 
 const policy = JSON.parse(await readFile(new URL('./model-routing.json', import.meta.url), 'utf8'));
 const present = (value) => typeof value === 'string' && value.trim().length > 0;
 
 // Input validation only: callers retain responsibility for truthful tool receipts.
-export function validateDispatch(input, { ledger, now = Date.now() } = {}) {
+export function validateDispatch(input, { ledger, beforeRecord, beforeRecordSHA256, scoutCheck, now = Date.now() } = {}) {
   const errors = [];
+  let sequenceStatus = 'NOT_VERIFIED';
   const require = (ok, code) => { if (!ok) errors.push(code); };
   require(['before', 'receipt'].includes(input.phase), 'PHASE_REQUIRED');
   require(['tour-platform', 'other'].includes(input.scope), 'SCOPE_REQUIRED');
@@ -15,7 +18,17 @@ export function validateDispatch(input, { ledger, now = Date.now() } = {}) {
   require(present(input.model), 'EXPLICIT_MODEL_REQUIRED');
   const mapping = input.provider === 'claude' ? policy.claudeSelectors : policy.models;
   const premium = input.provider === 'openai' && input.model === policy.review.highRiskModel;
-  require(input.model === mapping[input.role] || (premium && input.role === 'audit'), 'ROLE_MODEL_MISMATCH');
+  const selectableBuild = input.provider === 'openai' && input.role === 'build';
+  require(selectableBuild ? policy.build.allowedModels.includes(input.model) : input.model === mapping[input.role] || (premium && input.role === 'audit'), 'ROLE_MODEL_MISMATCH');
+  if (selectableBuild) {
+    const selection = input.buildSelection ?? {};
+    require(present(selection.reason), 'BUILD_SELECTION_REASON_REQUIRED');
+    require(typeof selection.complexity === 'string' && Object.hasOwn(policy.build.complexityRecommendations, selection.complexity), 'BUILD_COMPLEXITY_REQUIRED');
+    if (selection.ownerModel !== undefined) {
+      require(policy.build.allowedModels.includes(selection.ownerModel), 'OWNER_BUILD_MODEL_NOT_ALLOWED');
+      require(input.model === selection.ownerModel, 'OWNER_BUILD_MODEL_CONFLICT');
+    }
+  }
   if (premium) {
     require(input.risk === 'high' && present(input.costReason), 'HIGH_RISK_COST_REASON_REQUIRED');
     require(present(input.ledgerPath) && ledger !== undefined, 'PERSISTENT_LEDGER_REQUIRED');
@@ -24,6 +37,8 @@ export function validateDispatch(input, { ledger, now = Date.now() } = {}) {
   if (input.fallback !== undefined) validateFallback(input, now, require);
   require(input.fork_turns === 'none', 'FRESH_CONTEXT_REQUIRED');
   require(present(input.taskId), 'TASK_ID_REQUIRED');
+  require(present(input.runId), 'RUN_ID_REQUIRED');
+  require(present(input.beforeRecordPath), 'BEFORE_RECORD_PATH_REQUIRED');
   const task = input.task ?? {};
   const kinds = ['scan', 'plan', 'multi-step', 'small-edit', 'single-fact'];
   require(kinds.includes(task.kind), 'TASK_KIND_REQUIRED');
@@ -40,6 +55,7 @@ export function validateDispatch(input, { ledger, now = Date.now() } = {}) {
     require(scout.taskId === input.taskId, 'SCOUT_TASK_MISMATCH');
     require(present(scout.agentId) && present(scout.output), 'SCOUT_AGENT_OUTPUT_REQUIRED');
     validateIdentity(scout, require);
+    require(scoutCheck?.ok === true, 'SCOUT_SEQUENCE_NOT_VERIFIED');
   }
   if (input.role === 'audit') {
     require(present(input.agentId) && present(input.implementerAgentId) && input.agentId !== input.implementerAgentId, 'INDEPENDENT_AUDITOR_REQUIRED');
@@ -48,13 +64,37 @@ export function validateDispatch(input, { ledger, now = Date.now() } = {}) {
   if (input.phase === 'receipt') {
     require(present(input.agentId) && present(input.output), 'AGENT_OUTPUT_REQUIRED');
     validateIdentity(input, require);
+    require(input.beforePreflight === undefined || input.beforePreflight === 'PASS', 'BEFORE_PREFLIGHT_MISSED');
+    require(beforeRecord?.status === 'PASS', 'BEFORE_RECORD_REQUIRED');
+    require(beforeRecord?.runId === input.runId, 'BEFORE_RUN_MISMATCH');
+    require(isDeepStrictEqual(beforeRecord?.dispatch, boundDispatch(input)), 'BEFORE_DISPATCH_BINDING_MISMATCH');
+    const generated = timestamp(beforeRecord?.generatedAt);
+    const dispatched = timestamp(input.dispatchedAt);
+    const sequence = input.dispatchSequence;
+    const toolOrder = sequence?.kind === 'tool-order';
+    require(present(input.dispatchEvidenceRef), 'SEQUENCE_NOT_VERIFIED');
+    // Supplied timestamps remain authoritative; tool order cannot hide invalid UTC.
+    if (input.dispatchedAt !== undefined || !toolOrder) {
+      require(Number.isFinite(dispatched), 'SEQUENCE_NOT_VERIFIED');
+      require(Number.isFinite(generated) && generated < dispatched && dispatched <= now, 'BEFORE_DISPATCH_SEQUENCE_INVALID');
+    }
+    if (sequence !== undefined) {
+      require(toolOrder, 'DISPATCH_SEQUENCE_KIND_INVALID');
+      require(present(sequence.beforeEvidenceRef) && present(sequence.dispatchEvidenceRef), 'TOOL_ORDER_REFS_REQUIRED');
+      require(sequence.beforeEvidenceRef !== sequence.dispatchEvidenceRef, 'TOOL_ORDER_DISTINCT_REFS_REQUIRED');
+      require(sequence.dispatchEvidenceRef === input.dispatchEvidenceRef, 'TOOL_ORDER_DISPATCH_REF_MISMATCH');
+      require(sequence.relation === 'before', 'TOOL_ORDER_RELATION_INVALID');
+      require(typeof beforeRecordSHA256 === 'string' && sequence.beforeRecordSHA256 === beforeRecordSHA256, 'TOOL_ORDER_BEFORE_DIGEST_MISMATCH');
+      require(Number.isFinite(generated) && generated <= now, 'BEFORE_RECORD_TIME_INVALID');
+    }
+    if (errors.length === 0) sequenceStatus = toolOrder ? 'TOOL_ORDER_EVIDENCE_RECORDED_NOT_PLATFORM_VERIFIED' : 'UTC_EVIDENCE_RECORDED_NOT_PLATFORM_VERIFIED';
     if (input.role === 'audit') {
       require(['PASS', 'FIX_REQUIRED', 'FAILED'].includes(input.verdict), 'REVIEW_VERDICT_REQUIRED');
       require(Number.isInteger(input.unresolvedFindingCount) && input.unresolvedFindingCount >= 0, 'FINDING_COUNT_REQUIRED');
       require(input.verdict !== 'PASS' || input.unresolvedFindingCount === 0, 'UNRESOLVED_FINDINGS_BLOCK_PASS');
     }
   }
-  return { ok: errors.length === 0, errors, needsScout, independentDispatchRequired: input.scope === 'tour-platform' && ['scan', 'plan', 'multi-step'].includes(task.kind) || input.role === 'audit', identityStatus: input.phase === 'receipt' && input.actual !== 'unknown' && present(input.actual) && present(input.identityEvidence) ? 'EVIDENCE_RECORDED_NOT_RUNTIME_VERIFIED' : 'NOT_VERIFIED' };
+  return { ok: errors.length === 0, errors, sequenceStatus, needsScout, independentDispatchRequired: input.scope === 'tour-platform' && ['scan', 'plan', 'multi-step'].includes(task.kind) || input.role === 'audit', identityStatus: input.phase === 'receipt' && input.actual !== 'unknown' && present(input.actual) && present(input.identityEvidence) ? 'EVIDENCE_RECORDED_NOT_RUNTIME_VERIFIED' : 'NOT_VERIFIED' };
 }
 
 const timestamp = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value) ? Date.parse(value) : NaN;
@@ -96,23 +136,57 @@ function validateFallback(input, now, require) {
   }
 }
 
-// Read caller-owned durable state, then atomically consume this reservation.
-// A successful claim stays consumed even if the subsequent tool dispatch fails.
+// Bind dispatch intent, excluding receipt fields that only exist after execution.
+function boundDispatch(input) {
+  const keys = ['beforeRecordPath', 'scope', 'taskId', 'role', 'provider', 'model', 'fork_turns', 'task', 'buildSelection', 'exactDiff', 'agentId', 'implementerAgentId', 'scoutReceipt', 'risk', 'costReason', 'reviewLineage', 'requestedAt', 'executionRef', 'attempt', 'ledgerPath', 'fallback'];
+  // Builder/Scout actor identity is supplied by the runtime only after dispatch.
+  return JSON.parse(JSON.stringify(Object.fromEntries(keys.filter(key => input[key] !== undefined && (key !== 'agentId' || input.role === 'audit')).map(key => [key, input[key]]))));
+}
+
+// Only this entry point persists before proof. Receipt never creates or overwrites it.
 export async function preflight(input, options = {}) {
   let ledger;
+  let beforeRecord;
+  let beforeRecordSHA256;
   if (input.model === policy.review.highRiskModel) {
     try { ledger = JSON.parse(await readFile(input.ledgerPath, 'utf8')); }
     catch { return { ok: false, errors: ['PERSISTENT_LEDGER_UNREADABLE'] }; }
   }
-  const result = validateDispatch(input, { ...options, ledger });
-  if (result.ok && input.phase === 'before' && input.model === policy.review.highRiskModel) {
+  if (input.phase === 'receipt') {
     try {
-      const claim = await open(`${input.ledgerPath}.claim`, 'wx', 0o600);
-      try { await claim.writeFile(JSON.stringify({ reviewLineage: input.reviewLineage, executionRef: input.executionRef, requestedAt: input.requestedAt })); }
-      finally { await claim.close(); }
-    } catch { return { ...result, ok: false, errors: ['PREMIUM_ALREADY_CLAIMED_OR_CLAIM_FAILED'] }; }
+      const bytes = await readFile(input.beforeRecordPath);
+      beforeRecordSHA256 = createHash('sha256').update(bytes).digest('hex');
+      beforeRecord = JSON.parse(bytes.toString('utf8'));
+    }
+    catch { return { ok: false, errors: ['BEFORE_RECORD_UNREADABLE', ...(input.beforePreflight !== undefined && input.beforePreflight !== 'PASS' ? ['BEFORE_PREFLIGHT_MISSED'] : [])] }; }
   }
-  return result;
+  const needsScout = input.scope === 'tour-platform' && input.role !== 'scout' && (['scan', 'plan'].includes(input.task?.kind) || (input.task?.kind === 'multi-step' && input.task.requiresDiscovery === true));
+  let scoutCheck;
+  if (needsScout && input.scoutReceipt?.role === 'scout') {
+    // Scout role terminates nesting; completed discovery must have its own before proof.
+    scoutCheck = await preflight({ ...input.scoutReceipt, phase: 'receipt' }, options);
+  }
+  const result = validateDispatch(input, { ...options, ledger, beforeRecord, beforeRecordSHA256, scoutCheck });
+  if (scoutCheck && !scoutCheck.ok) result.errors.push(...scoutCheck.errors.map(code => `SCOUT_${code}`));
+  if (!result.ok || input.phase !== 'before') return result;
+  let record;
+  try { record = await open(input.beforeRecordPath, 'wx', 0o600); }
+  catch { return { ...result, ok: false, errors: ['BEFORE_RECORD_EXISTS_OR_CREATE_FAILED'] }; }
+  try {
+    // Validate and reserve the proof path before consuming premium budget.
+    if (input.model === policy.review.highRiskModel) {
+      try {
+        const claim = await open(`${input.ledgerPath}.claim`, 'wx', 0o600);
+        try { await claim.writeFile(JSON.stringify({ reviewLineage: input.reviewLineage, executionRef: input.executionRef, requestedAt: input.requestedAt })); }
+        finally { await claim.close(); }
+      } catch { return { ...result, ok: false, errors: ['PREMIUM_ALREADY_CLAIMED_OR_CLAIM_FAILED'] }; }
+    }
+    const proof = { status: 'PASS', runId: input.runId, generatedAt: new Date().toISOString(), dispatch: boundDispatch(input) };
+    await record.writeFile(JSON.stringify(proof, null, 2) + '\n');
+    await record.sync();
+    return { ...result, beforeRecordPath: input.beforeRecordPath, generatedAt: proof.generatedAt };
+  } catch { return { ...result, ok: false, errors: ['BEFORE_RECORD_WRITE_FAILED'] }; }
+  finally { await record.close(); }
 }
 
 function validateIdentity(receipt, require) {
