@@ -86,3 +86,33 @@ test('snake aliases, original order/objects and injected clock are preserved wit
   assert.deepEqual(selectUpcomingSchedules(input, Date.parse('2026-10-03T04:00:00.001Z')), []);
   assert.deepEqual(input, [later, earlier]);
 });
+
+test('Taipei midnight moves the displayed list and direct CTA together across frozen clocks', () => {
+  const lastMillisecond = Object.freeze({ id: 'before-midnight', planId: 'night-plan', status: 'open', startAt: '2026-10-01T23:59:59.999+08:00' });
+  const midnight = Object.freeze({ id: 'at-midnight', planId: 'morning-plan', status: 'open', startAt: '2026-10-02T00:00:00.000+08:00' });
+  const nextMillisecond = Object.freeze({ id: 'after-midnight', planId: 'morning-plan', status: 'open', startAt: '2026-10-02T00:00:00.001+08:00' });
+  const schedules = Object.freeze([lastMillisecond, midnight, nextMillisecond]);
+  const cases = [
+    { clock: '2026-10-01T23:59:59.999+08:00', visible: [lastMillisecond, midnight, nextMillisecond], candidate: lastMillisecond, date: '2026-10-01' },
+    { clock: '2026-10-02T00:00:00.000+08:00', visible: [midnight, nextMillisecond], candidate: midnight, date: '2026-10-02' },
+    { clock: '2026-10-02T00:00:00.001+08:00', visible: [nextMillisecond], candidate: nextMillisecond, date: '2026-10-02' },
+    { clock: '2026-10-02T00:00:00.002+08:00', visible: [], candidate: undefined },
+  ];
+  for (const { clock, visible, candidate, date } of cases) {
+    const view = detailView(schedules, Date.parse(clock));
+    assert.deepEqual(view.displayedSchedules, visible, clock);
+    assert.equal(view.selected, candidate, clock);
+    assert.equal(view.href, candidate
+      ? `/booking/island-walk?plan=${candidate.planId}&date=${date}&scheduleId=${candidate.id}`
+      : '/booking/island-walk', clock);
+  }
+});
+
+test('UTC and Taipei timestamps share the midnight inclusion boundary by instant', () => {
+  const taipei = Object.freeze({ startAt: '2026-10-02T00:00:00.000+08:00' });
+  const utc = Object.freeze({ startAt: '2026-10-01T16:00:00.000Z' });
+  const schedules = Object.freeze([taipei, utc]);
+  assert.deepEqual(selectUpcomingSchedules(schedules, Date.parse('2026-10-01T23:59:59.999+08:00')), [taipei, utc]);
+  assert.deepEqual(selectUpcomingSchedules(schedules, Date.parse('2026-10-02T00:00:00.000+08:00')), [taipei, utc]);
+  assert.deepEqual(selectUpcomingSchedules(schedules, Date.parse('2026-10-02T00:00:00.001+08:00')), []);
+});
