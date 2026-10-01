@@ -1,19 +1,21 @@
-<!-- query_timestamp: 2026-09-30T05:05:28.078Z -->
+<!-- query_timestamp: 2026-10-01T05:05:08.735Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-09-30T05:05:28.078Z  
-**Commit SHA:** `3f988abf01ddb35cd4b9df624f802a7ef920e2ff`
+**Query timestamp:** 2026-10-01T05:05:08.735Z  
+**Commit SHA:** `ce45cb7a0539ca5e6314ae4c7ef2d021eca075d5`
 
 ---
 
-## Open PRs (11)
+## Open PRs (13)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1881 | [建立模型路由與派工防漏治理](https://github.com/smallwei0301/tour-platform/pull/1881) _(draft)_ | `codex/tour-model-routing-dispatch-prevention` |
+| #1880 | [修正 Node22 雲端工具鏈與正式證據契約](https://github.com/smallwei0301/tour-platform/pull/1880) _(draft)_ | `codex/tour-cloud-node22` |
 | #1872 | [feat(admin)：導遊詳情頁加入「進入 vibeaico 後台」代管入口](https://github.com/smallwei0301/tour-platform/pull/1872) | `claude/vibeai-admin-impersonate-entry` |
 | #1776 | [feat(shop): 完成導遊商店匯款 beta 文案與 SOP（#1607）](https://github.com/smallwei0301/tour-platform/pull/1776) _(draft)_ | `fix/issue-1607-guide-shop-beta` |
 | #1690 | [docs(security): 建立「已接受安全風險」定案清單](https://github.com/smallwei0301/tour-platform/pull/1690) | `claude/code-workflow-architecture-mmm4ba` |
