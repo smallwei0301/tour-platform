@@ -65,7 +65,7 @@ scripts/toolchain/tp-node22.sh -- npm run test:e2e -w @tour/web -- e2e/issue1882
 scripts/toolchain/tp-node22.sh --preflight-e2e -- npm run test:e2e -w @tour/web -- e2e/issue1882-upcoming-schedules.spec.ts
 ```
 
-第二行只讀預檢共用第一行全部官方 artifact、runtime 與 E2E 驗證，成功後不啟動 npm/browser。
+第二行只讀預檢共用第一行全部官方 artifact、runtime 與 E2E 驗證，會執行原 canonical Node/npm/npx 版本與 execPath 自檢，並以實際 E2E child env 做唯讀 npm --version/config startup；不執行 requested E2E、Playwright 或 browser。
 執行須位於 canonical repo root；spec/config/package 不准 symlink，e2e 目錄必須 canonical。
 spec SHA-256 固定 `973f5c390e1b566cb66f1eb9243379b0e5dfa953a1a739fb31d1dc94d43832de`；
 config 固定 `5ed491b3fb5575672a98ac4e20d9cc235a8883e9f1c11cc33bc03157b3e9eba5`。
@@ -77,7 +77,9 @@ JSON package contract 要求 tour-platform、apps/* workspace、@tour/web 與精
 root/app pre/posttest:e2e（含裸 pre/post）lifecycle 及 root/apps/app .npmrc 一律拒絕。
 child 經 env -i，只保留 canonical Node:/usr/bin:/bin PATH、固定本機 /usr/bin/chromium、
 停用 webServer/download/telemetry、npm offline/noaudit/nofund/no提示/ignore-scripts、
-/dev/null user/global config、固定 /bin/sh 與 owned 暫存 npm cache；結束後清理 cache。
+owned 暫存目錄內兩個不同的空白 user/global .npmrc、固定 /bin/sh 與 owned npm cache；
+預檢與正式執行共用相同配置與唯讀 npm startup 檢查，結束後清理整個 owned 暫存目錄。
+不使用同一 /dev/null 作兩種 config（npm 會拒絕雙載入），不寫 HOME、系統或本機帳戶設定。
 caller CI、NODE_OPTIONS、npm_config、自訂 shell、DB/Supabase/MIDAO credentials 均不傳入。
 Chromium 必須現存、可執行且 realpath 等於 /usr/bin/chromium，不下載安裝。
 父 session 的環境不變。舊 node/npm/npx shapes 與 host-bound/ordinary 分區維持原規則。

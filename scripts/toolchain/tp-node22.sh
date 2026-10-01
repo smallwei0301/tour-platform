@@ -76,13 +76,29 @@ if (root.name !== 'tour-platform' || JSON.stringify(root.workspaces) !== '["apps
     [root, app].some(p => Object.keys(p.scripts || {}).some(k => /^(?:(?:pre|post)test:e2e|pre|post)$/.test(k)))) process.exit(1);
 JS
   [[ -x /usr/bin/chromium && "$(realpath -e /usr/bin/chromium)" == /usr/bin/chromium ]] || fail 'canonical local Chromium required'
+}
+
+prepare_e2e_environment() {
+  cache=$(mktemp -d /tmp/tp-node22-e2e.XXXXXXXX) || fail 'cannot create owned npm cache'
+  trap 'rm -rf -- "$cache"' EXIT
+  user_config="$cache/user.npmrc"
+  global_config="$cache/global.npmrc"
+  : > "$user_config"
+  : > "$global_config"
+  [[ "$user_config" != "$global_config" && -f "$user_config" && -f "$global_config" &&
+    ! -s "$user_config" && ! -s "$global_config" &&
+    "$(realpath -e "$user_config")" == "$user_config" &&
+    "$(realpath -e "$global_config")" == "$global_config" ]] || fail 'distinct owned empty npm configs required'
   # Shared fixed child environment: no caller secrets, npm config, NODE_OPTIONS or custom shell.
   e2e_env=(/usr/bin/env -i PATH="$canonical_root/bin:/usr/bin:/bin"
     PLAYWRIGHT_NO_WEBSERVER=1 PW_EXECUTABLE_PATH=/usr/bin/chromium
     PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 NEXT_TELEMETRY_DISABLED=1
     npm_config_offline=true npm_config_audit=false npm_config_fund=false
     npm_config_update_notifier=false npm_config_yes=false npm_config_ignore_scripts=true
-    npm_config_userconfig=/dev/null npm_config_globalconfig=/dev/null npm_config_script_shell=/bin/sh)
+    npm_config_userconfig="$user_config" npm_config_globalconfig="$global_config"
+    npm_config_cache="$cache" npm_config_script_shell=/bin/sh)
+  # Exercise actual npm startup/config parsing with the very same env used for E2E.
+  "${e2e_env[@]}" "$npm_bin" --version >/dev/null || fail 'sanitized E2E npm startup rejected'
 }
 
 preflight_e2e=0
@@ -107,13 +123,12 @@ case "${1:-}" in
       npm)
         if (( preflight_e2e )) || [[ "${3:-}" == test:e2e ]]; then
           validate_e2e "$@"
+          prepare_e2e_environment
           if (( preflight_e2e )); then
-            echo 'tp-node22 E2E preflight passed (no execution; sanitized environment)'
+            echo 'tp-node22 E2E preflight passed (no E2E execution; sanitized environment; distinct empty npm configs; npm startup verified)'
             exit 0
           fi
-          cache=$(mktemp -d /tmp/tp-node22-e2e.XXXXXXXX) || fail 'cannot create owned npm cache'
-          trap 'rm -rf -- "$cache"' EXIT
-          "${e2e_env[@]}" npm_config_cache="$cache" "$npm_bin" "${@:2}"
+          "${e2e_env[@]}" "$npm_bin" "${@:2}"
           exit $?
         fi
         if [[ $# -eq 2 && ( "$2" == '--version' || "$2" == 'test' ) ]] ||

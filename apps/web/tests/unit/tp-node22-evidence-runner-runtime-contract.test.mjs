@@ -84,13 +84,13 @@ function preflight(root, args = e2eArgs, hostile = {}) {
     cwd: root, encoding: 'utf8', timeout: 30_000, env: { ...process.env, ...hostile },
   })
 }
-test('exact reviewed E2E preflight passes without starting npm or browser and discards hostile caller environment', () => {
+test('exact reviewed E2E preflight verifies distinct empty configs and safe npm startup without E2E/browser, discarding hostile caller environment', () => {
   const root = e2eFixture()
   try {
     const result = preflight(root, e2eArgs, { NODE_OPTIONS: '--require=/missing-hostile-module', npm_config_script_shell: '/missing-shell', npm_config_userconfig: '/missing-config', CI: '1', SUPABASE_SERVICE_ROLE_KEY: 'sentinel-secret' })
     assert.equal(result.error, undefined)
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /no execution; sanitized environment/)
+    assert.match(result.stdout, /no E2E execution; sanitized environment; distinct empty npm configs; npm startup verified/)
     assert.doesNotMatch(`${result.stdout}${result.stderr}`, /sentinel-secret/)
   } finally { rmSync(root, { recursive: true, force: true }) }
 })
@@ -141,7 +141,7 @@ test('E2E entry ignores BASH_ENV startup and caller PATH interpreter replacement
     const result = preflight(root, e2eArgs, { BASH_ENV: startup, PATH: `${fakeBin}:/usr/bin:/bin` })
     assert.equal(result.error, undefined)
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /no execution; sanitized environment/)
+    assert.match(result.stdout, /no E2E execution; sanitized environment; distinct empty npm configs; npm startup verified/)
     assert.equal(existsSync(startupMarker), false, 'caller BASH_ENV must not run before validation')
     assert.equal(existsSync(interpreterMarker), false, 'caller PATH must not choose the interpreter')
   } finally { rmSync(root, { recursive: true, force: true }) }
