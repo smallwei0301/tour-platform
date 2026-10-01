@@ -61,6 +61,7 @@ test('portable and exact-host infrastructure partitions are complete and disjoin
     'tests/unit/midao-ci-command-runner.test.mjs',
     'tests/unit/midao-expected-terminal-publisher.test.mjs',
     'tests/unit/midao-production-catalog-capture.test.mjs',
+    'tests/unit/tp-node22-cloud-contract.test.mjs',
     runtimeContract,
   ]);
   assert.equal(runner.listOrdinaryTests().includes(runtimeContract), false);
