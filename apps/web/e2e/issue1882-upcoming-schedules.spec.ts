@@ -40,7 +40,7 @@ test.afterAll(async () => {
   }
   if (temporary) await rm(temporary, { recursive: true });
 });
-async function fixture(page: Page, schedules: object[] = []) {
+async function fixture(page: Page, schedules: object[] = [], browserClock = clock) {
   const diagnostics: { console: object[]; pageErrors: string[]; blocked: object[]; mocks: string[] } = { console: [], pageErrors: [], blocked: [], mocks: [] };
   page.on('console', msg => diagnostics.console.push({ type: msg.type(), text: msg.text(), url: msg.location().url }));
   page.on('pageerror', error => diagnostics.pageErrors.push(String(error)));
@@ -57,7 +57,7 @@ async function fixture(page: Page, schedules: object[] = []) {
     if (url.pathname.startsWith('/api/')) { diagnostics.blocked.push({ url: req.url(), reason: 'unneeded-api' }); return route.abort(); }
     return route.continue();
   });
-  await page.clock.setFixedTime(clock);
+  await page.clock.setFixedTime(browserClock);
   const response = await page.goto(path, { waitUntil: 'networkidle' });
   expect(response?.status()).toBe(200);
   const html = await response!.text();
@@ -185,3 +185,63 @@ test('CalendarModal keeps same external CTA and traps normal Tab; calendar date 
     await page.keyboard.press('Escape');
   } finally { await evidence(diagnostics); }
 });
+
+// The server selector retains its April SSR clock; these browser cases use explicit October local clocks.
+const civilSchedules = ['2026-09-30', '2026-10-01', '2026-10-05'].map(date => ({
+  id: `civil-${date}`, startAt: `${date}T01:00:00Z`, capacity: 8, bookedCount: 0, status: 'open', planId: null,
+}));
+for (const timezoneId of ['America/Los_Angeles', 'Asia/Taipei']) {
+  test.describe(`civil date ${timezoneId}`, () => {
+    test.use({ timezoneId });
+    test('October weekdays, today availability, calendar summary and exact query key', async ({ page }) => {
+      const diagnostics = await fixture(page, civilSchedules, new Date(timezoneId === 'America/Los_Angeles' ? '2026-10-01T19:00:00Z' : '2026-10-01T04:00:00Z'));
+      try {
+        const timezone = await page.evaluate(() => ({ zone: Intl.DateTimeFormat().resolvedOptions().timeZone, local: [new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()] }));
+        expect(timezone).toEqual({ zone: timezoneId, local: [2026, 10, 1] });
+        await test.info().attach('browser-timezone', { body: JSON.stringify(timezone), contentType: 'application/json' });
+        await select(page, diagnostics);
+        for (const [date, weekday] of [['10/1', '四'], ['10/5', '一']]) {
+          const pill = picker(page).locator('.tp-date-pill').filter({ has: page.locator('.tp-date-pill-month', { hasText: new RegExp(`^${date}$`) }) });
+          await expect(pill).toBeEnabled(); await expect(pill.locator('.tp-date-pill-week')).toHaveText(`週${weekday}`);
+        }
+        await picker(page).locator('.kkd-more-dates-btn').click();
+        const modal = page.locator('.kkd-cal-modal');
+        await expect(modal.locator('#calendar-title')).toHaveText('2026 年 10月');
+        const today = modal.getByRole('button', { name: /^2026年10月1日，可預約/ });
+        await expect(today).toBeEnabled(); // LA local today must not be treated as past.
+        expect(await today.evaluate(el => Array.from(el.parentElement!.children).indexOf(el) % 7)).toBe(4);
+        const oct5 = modal.getByRole('button', { name: /^2026年10月5日，可預約/ });
+        expect(await oct5.evaluate(el => Array.from(el.parentElement!.children).indexOf(el) % 7)).toBe(1);
+        await expect(oct5).not.toHaveClass(/\b(?:sun|sat)\b/);
+        await oct5.click();
+        await query(page, '2026-10-05', 'civil-2026-10-05');
+        await picker(page).locator('.kkd-more-dates-btn').click();
+        await expect(modal.locator('.kkd-cal-selected-summary')).toHaveText('已選：10/05（一）');
+        await expect(modal.locator('.kkd-cal-day.selected')).not.toHaveClass(/\b(?:sun|sat)\b/);
+        await page.keyboard.press('Escape');
+      } finally { await evidence(diagnostics); }
+    });
+    test('fresh browser documents on both sides of local midnight keep display and availability keys aligned', async ({ page }) => {
+      const instants = timezoneId === 'America/Los_Angeles'
+        ? ['2026-10-01T06:59:59Z', '2026-10-01T07:00:01Z']
+        : ['2026-09-30T15:59:59Z', '2026-09-30T16:00:01Z'];
+      for (const [index, instant] of instants.entries()) {
+        // A new page isolates the mounted useMemo across the boundary; no claim of live rollover.
+        const fresh = await page.context().newPage();
+        const diagnostics = await fixture(fresh, civilSchedules, new Date(instant));
+        try {
+          const observed = await fresh.evaluate(() => ({ zone: Intl.DateTimeFormat().resolvedOptions().timeZone, month: new Date().getMonth() + 1, day: new Date().getDate() }));
+          expect(observed).toEqual({ zone: timezoneId, month: index === 0 ? 9 : 10, day: index === 0 ? 30 : 1 });
+          await select(fresh, diagnostics);
+          const first = picker(fresh).locator('.tp-date-pill').first();
+          await expect(first.locator('.tp-date-pill-month')).toHaveText(index === 0 ? '9/30' : '10/1');
+          await expect(first.locator('.tp-date-pill-week')).toHaveText(index === 0 ? '週三' : '週四');
+          await expect(first).toBeEnabled(); await first.click();
+          const date = index === 0 ? '2026-09-30' : '2026-10-01';
+          await query(fresh, date, `civil-${date}`);
+          await test.info().attach(`midnight-${index}`, { body: JSON.stringify({ instant, timezoneId, date, html: await picker(fresh).innerHTML() }), contentType: 'application/json' });
+        } finally { await evidence(diagnostics); await fresh.close(); await page.context().unrouteAll({ behavior: 'wait' }); }
+      }
+    });
+  });
+}

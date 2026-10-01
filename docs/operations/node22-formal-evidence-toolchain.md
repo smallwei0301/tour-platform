@@ -67,7 +67,7 @@ scripts/toolchain/tp-node22.sh --preflight-e2e -- npm run test:e2e -w @tour/web 
 
 第二行只讀預檢共用第一行全部官方 artifact、runtime 與 E2E 驗證，會執行原 canonical Node/npm/npx 版本與 execPath 自檢，並以實際 E2E child env 做唯讀 npm --version/config startup；不執行 requested E2E、Playwright 或 browser。
 執行須位於 canonical repo root；spec/config/package 不准 symlink，e2e 目錄必須 canonical。
-spec SHA-256 固定 `973f5c390e1b566cb66f1eb9243379b0e5dfa953a1a739fb31d1dc94d43832de`；
+spec SHA-256 固定 `9177569bea8512a72df3e4c627dd564e974d2a73823eb57b68180b7380fcc435`；
 config 固定 `5ed491b3fb5575672a98ac4e20d9cc235a8883e9f1c11cc33bc03157b3e9eba5`。
 reviewed config 的 testDir 是 e2e、唯一 Chromium project，PLAYWRIGHT_NO_WEBSERVER 停用 webServer；
 reviewed spec 自管 localhost:3108 server、GET/HEAD/network/mock/mutation guard，不執行 Production。
