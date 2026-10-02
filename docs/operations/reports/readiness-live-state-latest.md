@@ -1,19 +1,21 @@
-<!-- query_timestamp: 2026-10-01T05:05:08.735Z -->
+<!-- query_timestamp: 2026-10-02T05:04:57.591Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-10-01T05:05:08.735Z  
-**Commit SHA:** `ce45cb7a0539ca5e6314ae4c7ef2d021eca075d5`
+**Query timestamp:** 2026-10-02T05:04:57.591Z  
+**Commit SHA:** `edc0a40c993a02291e0120bc8a3d412c91407c97`
 
 ---
 
-## Open PRs (13)
+## Open PRs (15)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1886 | [支援指定詳頁 E2E 的正式 Node22 工具鏈入口](https://github.com/smallwei0301/tour-platform/pull/1886) _(draft)_ | `codex/tour-canonical-e2e-1882` |
+| #1883 | [修正行程詳情過期場次與立即預約入口（#1882）](https://github.com/smallwei0301/tour-platform/pull/1883) _(draft)_ | `codex/tour-detail-upcoming-local` |
 | #1881 | [建立模型路由與派工防漏治理](https://github.com/smallwei0301/tour-platform/pull/1881) _(draft)_ | `codex/tour-model-routing-dispatch-prevention` |
 | #1880 | [修正 Node22 雲端工具鏈與正式證據契約](https://github.com/smallwei0301/tour-platform/pull/1880) _(draft)_ | `codex/tour-cloud-node22` |
 | #1872 | [feat(admin)：導遊詳情頁加入「進入 vibeaico 後台」代管入口](https://github.com/smallwei0301/tour-platform/pull/1872) | `claude/vibeai-admin-impersonate-entry` |
@@ -28,7 +30,7 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (65 total)
+## Open Issues (68 total)
 
 ### P0 (1)
 
@@ -104,10 +106,13 @@
 |---|-------|--------|
 | #1647 | [[Payments] Decide and verify post-#1637 historical paid-order / payout reconciliation](https://github.com/smallwei0301/tour-platform/issues/1647) | triaged, priority:P1, owner:human-decision, status:needs-decision, type:decision, payments, orders |
 
-### Other (11)
+### Other (14)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1885 | [[QA] 公開服務條款與隱私政策仍標示草案且內容僅簡短摘要](https://github.com/smallwei0301/tour-platform/issues/1885) | — |
+| #1884 | [[QA] 公開客服頁電話仍為 0800-XXX-XXX，與緊急支援說明不一致](https://github.com/smallwei0301/tour-platform/issues/1884) | — |
+| #1882 | [[Bug] 公開行程詳情仍列出過期場次，立即預約帶入過去日期](https://github.com/smallwei0301/tour-platform/issues/1882) | — |
 | #1857 | [#1825 回滾 precondition 指紋已對今天的 Production 失效（#1855 修復後）](https://github.com/smallwei0301/tour-platform/issues/1857) | — |
 | #1851 | [[Midao] 「我的服務」需區分「已發布到 Midao 前台」與「僅商店頁展示」兩種狀態](https://github.com/smallwei0301/tour-platform/issues/1851) | — |
 | #1819 | [[Docs] 建立正式測試分層規範（unit / integration real-HTTP / mock E2E / real-data E2E + CI enforcement）](https://github.com/smallwei0301/tour-platform/issues/1819) | — |
