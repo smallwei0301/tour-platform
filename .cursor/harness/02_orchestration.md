@@ -4,6 +4,13 @@
 > 原則：**指揮官的 context 是最稀缺資源**——它一被垃圾填滿，判斷力就跟著死。整份守則都在保護它。
 > 治理等級：🔒 鎖定檔（`05_maintenance.md`）。
 
+> Owner 2026-10-01 最新模型決策：OpenAI Product Builder 可選 `gpt-6.1-sol` 或 `gpt-6-luna`；
+> Commander 依 complexity（簡單明確小 scope 建議 Luna、複雜跨模組建議 Sol）選擇並明填理由，
+> Owner 指定允許型號優先。角色與 actor 必須明確，實作者不得自我驗收。
+> 正式執行入口與 provider 路由見 `docs/AGENT-EXECUTION.md`；機器映射見
+> `scripts/agents/model-routing.json`。本文件的 Claude 選擇、Tour 獨立容量、
+> 重試上限、fresh-context 驗收與風險 gate 維持不變；歷史模型證據不改寫。
+
 ## 1. 指揮官不下場（Commander stays on the hill）
 
 主對話模型只做四件事：**決策、拆解、驗收、對使用者說話**。以下工作一律派給 Subagent（Agent 工具），主對話只接收精簡結論：
@@ -23,7 +30,7 @@
 
 每一次 Agent 呼叫的 prompt 必須包含三個區塊（模板見 `04_templates.md`，直接套用）：
 
-1. **目標與背景（Context 引入）**：要達成什麼、為什麼、相關檔案的明確路徑、必讀的 harness/文件路徑。Subagent 是 fresh context——**它不知道任何你知道的事**，沒寫進 prompt 的背景等於不存在。
+1. **目標與背景（Context 引入）**：要達成什麼、為什麼、相關檔案的明確路徑、必讀的 harness/文件路徑。派工明確使用 `fork_turns=none` 才是 fresh context；**沒寫進 prompt 的背景等於不存在**。`fork_turns=all` 是繼承歷史，不得宣稱隔離。
 2. **驗收條件（AC）**：可機器判定的完成標準（「測試 X 綠燈」「檔案 Y 存在且含 Z」），不是「弄好它」。
 3. **回報格式限制**：規定回什麼（成果路徑＋關鍵行號＋一句話結論＋遇到的 blocker），**禁止噴大段代碼**（>20 行的引用一律改成 `path:line` 指位）。
 
@@ -39,7 +46,8 @@
 硬規則：
 - **升級必附錯誤軌跡**。沒有軌跡的升級 = 讓強模型從零猜，浪費它。
 - **同一件事最多重試兩輪**（一輪 = 一次派工＋一次修正）。第三輪只有兩個合法出口：換路徑（R1）或熔斷（R3）。
-- 模型選擇用 Agent 工具的 `model` 參數（`haiku`/`sonnet`/`opus`）；不確定時省略（繼承 session 模型）。
+- 模型選擇必須明填 Agent 工具的 `model` 參數，依 `docs/AGENT-EXECUTION.md` 的 provider/角色映射；不確定時記 blocker，不省略繼承。本條約束新 dispatch，不要求當前治理 session 切換模型。
+- 指揮官在 dispatch 前執行 `scripts/agents/dispatch-preflight.mjs`，回執後再做 receipt 檢查；輸入與限制見 `docs/operations/reports/agent-dispatch-playbook-20261001.md`。本機 CLI 不攔截 Agent 工具，也不證明實際執行或模型身分。
 
 ## 4. 記憶錨點協議（對抗語意迷航；Q3 拍板：issue＋repo 雙寫）
 
