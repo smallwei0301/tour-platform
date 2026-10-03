@@ -3,9 +3,33 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import ts from 'typescript';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
+
+// Selection-sync effects are valid; availability loading must remain event-driven.
+function assertNoEffectAvailabilityFetch(src) {
+  const source = ts.createSourceFile('DatePlanSection.tsx', src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  assert.equal(source.parseDiagnostics.length, 0, 'component must parse before checking effect intent');
+  const callName = node => ts.isIdentifier(node) ? node.text : ts.isPropertyAccessExpression(node) ? node.name.text : null;
+  function assertCallback(node) {
+    if (ts.isCallExpression(node)) {
+      assert.ok(!['fetch', 'ensureLiveAvailability'].includes(callName(node.expression)), 'availability fetch must not be called inside an effect');
+    }
+    ts.forEachChild(node, assertCallback);
+  }
+  function visit(node) {
+    if (ts.isCallExpression(node) && callName(node.expression) === 'useEffect') {
+      assert.ok(node.arguments[0], 'effect callback must be inspectable');
+      assert.ok(ts.isArrowFunction(node.arguments[0]) || ts.isFunctionExpression(node.arguments[0]), 'effect must have an inline inspectable callback');
+      assertCallback(node.arguments[0]);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+}
+
 
 async function readSource(relPath) {
   return readFile(path.join(ROOT, relPath), 'utf8');
@@ -14,8 +38,7 @@ async function readSource(relPath) {
 test('activity date-plan UI does not trigger mount-time live availability fetch', async () => {
   const src = await readSource('src/components/activity/DatePlanSection.tsx');
 
-  // No mount effect-driven fetch.
-  assert.doesNotMatch(src, /useEffect\s*\(/);
+  assertNoEffectAvailabilityFetch(src);
 
   // Live API fetch still exists for intent-driven refresh.
   assert.ok(

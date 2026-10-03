@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { DatePicker } from './DatePicker';
@@ -8,6 +8,7 @@ import { PlanDetailModal } from './PlanDetailModal';
 import { resolvePlanBookingHref } from '../../lib/booking-entry.mjs';
 import { getPlanScheduleForDate, filterSchedulesForPlan } from './plan-schedule-match';
 import { useSelectedPlan } from './SelectedPlanContext';
+import { resolveDatePlanAvailability } from './date-plan-availability';
 import { resolveDatePlanPresentation } from '../../lib/date-plan-source.mjs';
 
 interface Schedule {
@@ -137,7 +138,7 @@ interface DatePlanSectionProps {
 
 export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
   const t = useTranslations('datePlan');
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [requestedDate, setSelectedDate] = useState<string | null>(null);
   const [modalPlan, setModalPlan] = useState<PlanConfig | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const { setSelected: setSharedSelectedPlan } = useSelectedPlan();
@@ -193,7 +194,6 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
     }
   }
 
-  const effectiveSchedules = liveSchedules && liveSchedules.length > 0 ? liveSchedules : schedules;
 
   const { plans: resolvedPlans, showMissingCanonicalMessage } = resolveDatePlanPresentation({
     canonicalPlans: activity.plans,
@@ -202,6 +202,31 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
   // 全部方案都 render 進 DOM；手機收合時由 CSS 只顯示前 2 個（.kkd-plans-list:not(.show-all)），
   // 非手機則依螢幕寬度多欄並排、全部直接顯示（見 globals.css 的 .kkd-plans-list 響應式規則）。
   const KNOWN_PLAN_IDS: string[] = PLANS.map((p: PlanConfig) => p.id);
+  const currentPlan = planConfigState === 'no_active_plans' || planConfigState === 'no_plans'
+    ? undefined : PLANS.find((plan) => plan.id === selectedPlan);
+  const { effectiveSchedules, selectedDate, scheduleId } = resolveDatePlanAvailability({
+    schedules, liveSchedules, date: requestedDate,
+    planId: currentPlan?.id ?? null, knownPlanIds: KNOWN_PLAN_IDS,
+  });
+
+  // Refresh/render derives the current identity before rendering links; the
+  // shared bottom CTA then receives that same validated selection.
+  useEffect(() => {
+    if (requestedDate !== selectedDate) setSelectedDate(selectedDate);
+    if (!currentPlan) {
+      if (selectedPlan) setSharedSelectedPlan(null);
+      return;
+    }
+    setSharedSelectedPlan({
+      id: currentPlan.id,
+      label: currentPlan.label,
+      price: resolvePlanPrice(currentPlan, activity.priceTwd ?? activity.price ?? 0, 1),
+      priceType: currentPlan.priceType === 'per_group' ? 'per_group' : 'per_person',
+      date: selectedDate ?? undefined,
+      scheduleId,
+    });
+  }, [currentPlan, selectedPlan, requestedDate, selectedDate, scheduleId, activity.priceTwd, activity.price, setSharedSelectedPlan]);
+
 
   return (
   <>
@@ -287,7 +312,7 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                       price: planPrice,
                       priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',
                       date: selectedPlan === plan.id ? (selectedDate || undefined) : undefined,
-                      scheduleId: selectedPlan === plan.id ? (planAvail.schedule?.id || undefined) : undefined,
+                      scheduleId: selectedPlan === plan.id ? (scheduleId || undefined) : undefined,
                     });
                   }}
                 >
@@ -385,7 +410,7 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                             price: planPrice,
                             priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',
                             date,
-                            scheduleId: getPlanScheduleForDate(effectiveSchedules, date, plan.id, KNOWN_PLAN_IDS).schedule?.id || undefined,
+                            scheduleId: resolveDatePlanAvailability({ schedules, liveSchedules, date, planId: plan.id, knownPlanIds: KNOWN_PLAN_IDS }).scheduleId,
                           });
                         }}
                         price={planPrice}
@@ -419,7 +444,7 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                           activitySlug: activity.slug,
                           planId: plan.id,
                           date: dateChosen ? selectedDate! : undefined,
-                          scheduleId: dateChosen ? (planAvail.schedule?.id || undefined) : undefined,
+                          scheduleId: dateChosen ? (scheduleId || undefined) : undefined,
                         })}
                         className="tp-btn tp-btn-primary kkd-plan-select-btn"
                         onClick={() => {
@@ -433,7 +458,7 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                             price: planPrice,
                             priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',
                             date: dateChosen ? selectedDate! : undefined,
-                            scheduleId: dateChosen ? (planAvail.schedule?.id || undefined) : undefined,
+                            scheduleId: dateChosen ? (scheduleId || undefined) : undefined,
                           });
                         }}
                       >

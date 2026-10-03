@@ -39,12 +39,13 @@ test('expired open UUID and already-started sessions cannot become direct CTA ca
   assert.ok(!view.href.includes(oldId));
 });
 
-test('start equals now is included across offsets; one millisecond earlier is excluded', () => {
+test('start equals now is excluded across offsets; one millisecond later remains', () => {
   const utc = { startAt: '2026-10-01T04:00:00Z' };
   const taipei = { startAt: '2026-10-01T12:00:00+08:00' };
   const negative = { startAt: '2026-09-30T23:00:00-05:00' };
   const past = { startAt: '2026-10-01T11:59:59.999+08:00' };
-  assert.deepEqual(selectUpcomingSchedules([past, utc, taipei, negative], now), [utc, taipei, negative]);
+  const future = { startAt: '2026-10-01T04:00:00.001Z' };
+  assert.deepEqual(selectUpcomingSchedules([past, utc, taipei, negative, future], now), [future]);
 });
 
 test('future full, closed and capacity-filled sessions display but the available session supplies CTA', () => {
@@ -93,9 +94,9 @@ test('Taipei midnight moves the displayed list and direct CTA together across fr
   const nextMillisecond = Object.freeze({ id: 'after-midnight', planId: 'morning-plan', status: 'open', startAt: '2026-10-02T00:00:00.001+08:00' });
   const schedules = Object.freeze([lastMillisecond, midnight, nextMillisecond]);
   const cases = [
-    { clock: '2026-10-01T23:59:59.999+08:00', visible: [lastMillisecond, midnight, nextMillisecond], candidate: lastMillisecond, date: '2026-10-01' },
-    { clock: '2026-10-02T00:00:00.000+08:00', visible: [midnight, nextMillisecond], candidate: midnight, date: '2026-10-02' },
-    { clock: '2026-10-02T00:00:00.001+08:00', visible: [nextMillisecond], candidate: nextMillisecond, date: '2026-10-02' },
+    { clock: '2026-10-01T23:59:59.999+08:00', visible: [midnight, nextMillisecond], candidate: midnight, date: '2026-10-02' },
+    { clock: '2026-10-02T00:00:00.000+08:00', visible: [nextMillisecond], candidate: nextMillisecond, date: '2026-10-02' },
+    { clock: '2026-10-02T00:00:00.001+08:00', visible: [], candidate: undefined },
     { clock: '2026-10-02T00:00:00.002+08:00', visible: [], candidate: undefined },
   ];
   for (const { clock, visible, candidate, date } of cases) {
@@ -113,6 +114,6 @@ test('UTC and Taipei timestamps share the midnight inclusion boundary by instant
   const utc = Object.freeze({ startAt: '2026-10-01T16:00:00.000Z' });
   const schedules = Object.freeze([taipei, utc]);
   assert.deepEqual(selectUpcomingSchedules(schedules, Date.parse('2026-10-01T23:59:59.999+08:00')), [taipei, utc]);
-  assert.deepEqual(selectUpcomingSchedules(schedules, Date.parse('2026-10-02T00:00:00.000+08:00')), [taipei, utc]);
+  assert.deepEqual(selectUpcomingSchedules(schedules, Date.parse('2026-10-02T00:00:00.000+08:00')), []);
   assert.deepEqual(selectUpcomingSchedules(schedules, Date.parse('2026-10-02T00:00:00.001+08:00')), []);
 });
