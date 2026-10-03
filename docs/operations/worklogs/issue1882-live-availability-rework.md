@@ -89,3 +89,14 @@ Fresh獨立Sol audit新增5個負向純測試5/5 PASS，核對12檔hash及root b
 完整16檔aggregate重新獨立核對，source/test/runner14檔hash不變，沿用ordinary5860pass/0fail/3skip、typecheck、targeted33、canonicalE2E12、negative5。正式lint仍未執行：受支援npm allowlist沒有lint，不修改/繞過；Draft依D3已具ordinary綠燈，merge仍待CI lint/build/ISR/preflight與其餘適用gate。Docs-sync為exit0且無README Phase/Sprint可比對，spec/runner/document pin另以實際hash一致確認。
 
 目前main ea75b40fa6e2db145b79a7ecc5f3eb01fdd598db已正常fetch唯讀核對，尚無AGENT-EXECUTION/model-routing檔；沿用工作分支既有正式routing與Owner指示，單一施工者root、同reviewer獨立驗收。候選base仍455的#1886分支，不merge/reset/rebasemain。最終review與正常commit/push、remote SHA/blob核對記錄在runner-restored/result.md。PR與issue雙寫留待主對話App實際建立後處理；未gh PR調用、merge/deploy/DB/共享TEST/Production或設定變更。
+
+## Draft PR #1887 已建立：文件里程碑
+主對話已透過既有GitHub App建立並讀回Draft PR https://github.com/smallwei0301/tour-platform/pull/1887，draft=true、open。本輪App只讀再次核對一致，沒有PR/issue mutation或gh PR調用。PR建立時已核對的base為codex/tour-canonical-e2e-1882@455b2e0a38cbc970b2f35af6cab5ae5bfe13cb99；建立時head為rework/midao2-live-availability@709dd181a810e60d53caddb7f486acf2585a303b，當時16檔／3commits／+735 -40。709是建立時快照，不是本文件里程碑提交後的exact head；本次最終commit及remote證據只寫repo外pr1887-milestone/result.md，不為自指SHA再追加commit。
+
+既有455→709完整16檔獨立審查：/root/aggregate_review，requested gpt-6.1-sol／actual unknown，PASS-in-scope、未解finding0；aggregate patch SHA256 2ce210b20c0a3476f7d1dd88167966c87dfebe1058cc77ae77922ab40c919bb2。本輪僅worklog文件delta另審，不能稱重新完成全source review。產品／測試／runner14檔hash與runner-restored manifest等價，沿用ordinary5860pass／0fail／3skip、typecheck、targeted33/33、canonicalE2E12/12、negative5/5、正式helper5/5（wiring7情境）真實證據，不重跑未變全套。
+
+依主對話交接，CI已自動啟動，由主對話另查；本輪沒有驗證CI結論或build/ISR/preflight。Lint仍未執行，安全部署browser未驗，維持pending／merge HOLD，不以Draft或平台預覽狀態替代驗收。
+
+Issue #1882里程碑留言MCP呼叫返回「user cancelled MCP tool call」（依主對話原始回執交接），留言未完成。停止所有issue留言寫入，不重試、不換actor/API/入口；雙寫D7仍未完成，不宣稱整體任務完成。本輪只完成repo worklog側記錄，沒有任何issue/PR寫入。純文件commit適用bash-guard文件豁免，D7是完成定義缺項而非本次文件保存的前置commit gate。
+
+保留所有歷史取消、scope拒絕、default-root preflight失敗與後续修正；reviewer委派範圍由主對話擴充，不是使用者新增安全權限。App成功不代表gh GraphQL Forbidden恢復。維持唯一施工者root，base455／recoveryda9／patches／hashes／handoff不變；禁止force/reset/rebase/merge/deploy/DB/共享TEST/Production及憑證、網路或權限設定變更。
