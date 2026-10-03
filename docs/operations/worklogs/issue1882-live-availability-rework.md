@@ -69,3 +69,23 @@ Fresh獨立Sol audit新增5個負向純測試5/5 PASS，核對12檔hash及root b
 相同產品／spec／runner hashes 延續 canonical E2E12/12、exit0／cleanup PASS與獨立負向5/5；未無故重跑瀏覽器。Fresh publication review 比較da9確認 Link冒泡與缺少response ordering既存、沒有本次新增回歸，屬需後續追蹤的中度source風險，未mounted重現。pending plan-switch、錯誤retry、逆序response及持續掛載clock rollover覆蓋仍有限；本三AC fixture與純函式驗證成立，不宣稱消除所有並行風險。
 
 預設sandbox git ls-remote失敗：Failed to connect to proxy port 8080；同一正常HTTPS origin命令經標準核准exit0，工作分支尚不存在，未改proxy或傳輸路線。後續commit、push與remote exact SHA／blob證據由 publication/result.md保存。GitHub GraphQL read/create既有Forbidden不重試、不換接口；Draft PR、issue雙寫與後續CI仍是未完成gate。
+
+## Aggregate 文件修正與審查續作
+本輪重新核對 spec SHA256 為 fe504f49691b742148c541bd840de4bd3ae7b591ed5c39680d8a7ee8c1ff71d7，與runner固定值一致，僅同步正式工具鏈文件舊917756 digest。產品、測試與runner bytes不變；原15檔aggregate再加此文件，共16檔。完整aggregate重新交同一位獨立 /root/aggregate_review 審查，不以原12檔review代替。
+
+原helper非標準no-isolation兩次5cancelled／exit1，以及正式run-checks的automatic approval拒絕均保留，沒有改寫PASS。本輪主對話擴充 reviewer 委派範圍（解除原 review-doc-only 委派限制，並非使用者新增安全權限）：只准原兩個helper測試透過canonical run-checks正常更新既有last-checks收據，標準核准僅重試一次；仍拒絕就停止，不换actor/runner/環境。結果與完整命令保存在aggregate-refresh evidence。
+
+既有同bytes ordinary5860pass/0fail/3skip、typecheck、targeted33、canonicalE2E12與負向5 evidence按hash等價沿用，不重跑未變動全套。lint未執行：正式runner npm allowlist未包含lint，不編輯或繞過；依harness D3，Draft前ordinary gate已滿足，CI lint/build等仍是後續merge條件。docs checker結果只涵蓋README Phase/Sprint關鍵字，不冒稱全文件驗證。
+
+本輪只修文件並準備正常commit/push；不建立PR或寫issue。PR後雙寫由主對話依真實App回執補齊；Refs #1882，不宣稱部署browser AC完成。gh GraphQL讀取Forbidden仍有效，未呼叫gh PR。保留全部歷史patches/hashes/handoff及recovery da9。最終review、commit與remote exact證據見 /workspace/tour-rework-20261003/aggregate-refresh/result.md。
+
+本輪唯一正式helper重試已由標準require_escalated准許執行，exit1：realpath: /root/.hermes/toolchains/node/22.23.1: Permission denied；tp-node22 preflight failed: toolchain root is missing or unresolved。該原命令未指定既有workspace TP_NODE22_ROOT，落入預設root路徑；沒有TAP、測試未執行。這次不是auto-review拒絕，不推定產品測試失敗。last-checks紅燈保留；已用完本輪單次重試，不加env重跑、不換actor或入口。文件修正保留未提交，commit/push/publication HOLD，原a271與recovery不變。
+
+## Workspace canonical 配置補回與正式驗證
+先讀既有成功reproduce.md、runner原始TP_NODE22_ROOT選項與workspace路徑，canonical --check驗證完整官方artifact/symlink digest通過；實際v22.23.1、execPath=/workspace/tour-cloud/toolchains/node/22.23.1/bin/node。沒有讀取或修復被拒/root/.hermes。僅補回上一輪遺漏的TP_NODE22_ROOT=/workspace/tour-cloud/toolchains/node/22.23.1，非新工具鏈、持久權限或guard變更。
+
+同一reviewer /root/aggregate_review在主對話擴充reviewer委派範圍內，對原兩helper執行一次canonical run-checks、require_escalated正常准許：tool01fd19 exit0，TAP5pass/0fail/0cancelled/0skip，wiring涵蓋7個內部情境；last-checks正常更新綠燈。完整命令/參數/輸出保存runner-restored/helper-invocation.json與helper-test-output.log。前兩次no-isolation取消、最初scope拒絕及錯誤default root失敗保持原樣，不倒改歷史。
+
+完整16檔aggregate重新獨立核對，source/test/runner14檔hash不變，沿用ordinary5860pass/0fail/3skip、typecheck、targeted33、canonicalE2E12、negative5。正式lint仍未執行：受支援npm allowlist沒有lint，不修改/繞過；Draft依D3已具ordinary綠燈，merge仍待CI lint/build/ISR/preflight與其餘適用gate。Docs-sync為exit0且無README Phase/Sprint可比對，spec/runner/document pin另以實際hash一致確認。
+
+目前main ea75b40fa6e2db145b79a7ecc5f3eb01fdd598db已正常fetch唯讀核對，尚無AGENT-EXECUTION/model-routing檔；沿用工作分支既有正式routing與Owner指示，單一施工者root、同reviewer獨立驗收。候選base仍455的#1886分支，不merge/reset/rebasemain。最終review與正常commit/push、remote SHA/blob核對記錄在runner-restored/result.md。PR與issue雙寫留待主對話App實際建立後處理；未gh PR調用、merge/deploy/DB/共享TEST/Production或設定變更。
