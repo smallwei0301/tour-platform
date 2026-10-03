@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+import { observeFixtureChild } from '../../../scripts/testing/fixture-child-diagnostics.mjs';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -9,6 +11,9 @@ const clock = new Date('2026-04-07T04:00:00Z');
 // Same narrow selector clock and network guard as the verified local fixture.
 const guard = "import net from 'node:net';\nconst instant=Date.parse('2026-04-07T04:00:00Z'),realNow=Date.now.bind(Date);let logged=false;\nDate.now=function(){if(new Error().stack.includes('selectUpcomingSchedules')){if(!logged){console.log('[fixture-selector-clock]',JSON.stringify({pid:process.pid,now:instant,iso:new Date(instant).toISOString()}));logged=true;}return instant;}return realNow();};\nconsole.log('[fixture-preload]',JSON.stringify({pid:process.pid,envNames:Object.keys(process.env).sort()}));\nconst allowed=(host,port)=>['127.0.0.1','localhost','::1','[::1]'].includes(host)&&Number(port)===3108;\nconst connect=net.Socket.prototype.connect;\nconst normalizedTag=Object.getOwnPropertySymbols(net._normalizeArgs([])).find(symbol=>symbol.description==='normalizedArgs');\nnet.Socket.prototype.connect=function(...args){const first=args[0];const normalized=Array.isArray(first)&&normalizedTag&&first[normalizedTag]?first:net._normalizeArgs(args);const options=normalized[0];if(options.path||!allowed(options.host||'localhost',options.port)){console.error('[blocked-server-network]',JSON.stringify({host:options.host||'localhost',port:options.port}));throw new Error('Fixture server network blocked');}return connect.apply(this,args);};\nconst fetchOriginal=globalThis.fetch;\nglobalThis.fetch=function(input,...args){const u=new URL(typeof input==='string'?input:input.url||String(input));const method=String(args[0]?.method??(input instanceof Request?input.method:'GET')).toUpperCase();if(!['http:','https:'].includes(u.protocol)||!allowed(u.hostname,u.port)||!['GET','HEAD'].includes(method)){console.error('[blocked-server-fetch]',u.origin);return Promise.reject(new Error('Fixture server fetch blocked'));}return fetchOriginal(input,...args);};\n";
 let server: ChildProcess | undefined, temporary = '', serverLog = '';
+let observer: ReturnType<typeof observeFixtureChild> | undefined, disposeObserver: (() => void) | undefined;
+let exitObserved = false, closeObserved = false;
+let persistCleanupTimeout: (() => void) | undefined;
 test.use({ baseURL: origin, timezoneId: 'Asia/Taipei', locale: 'zh-TW', serviceWorkers: 'block' });
 test.setTimeout(120_000);
 test.beforeAll(async () => {
@@ -20,27 +25,73 @@ test.beforeAll(async () => {
   server = spawn(process.execPath, [resolve('../../node_modules/next/dist/bin/next'), 'dev', '--hostname', '127.0.0.1', '--port', '3108'], {
     cwd: process.cwd(), env: { PATH: `${resolve(process.execPath, '..')}:/usr/bin:/bin`, NODE_ENV: 'development', PORT: '3108', TZ: 'Asia/Taipei', NEXT_TELEMETRY_DISABLED: '1', NODE_OPTIONS: `--import=${preload}`, NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'playwright-local-anon' },
   });
+  // Fixed-size summary persists on every event, including failures before afterAll.
+  // Separate stderr tail remains available even when stdout uses the observer budget.
+  let stderrTail = Buffer.alloc(0);
+  const diagnostics: Record<string, unknown> = {};
+  const captureStderr = (chunk: Buffer | string) => {
+    stderrTail = Buffer.concat([stderrTail, Buffer.from(chunk).subarray(-2048)]).subarray(-2048);
+  };
+  server.stderr?.on('data', captureStderr);
+  let latest: Record<string, unknown> | undefined;
+  persistCleanupTimeout = () => {
+    diagnostics.cleanupTimeout = { ...latest, event: 'cleanup-timeout' };
+    writeFileSync('/tmp/tour-1882-loop-closure-child.json', JSON.stringify(diagnostics));
+  };
+  observer = observeFixtureChild(server, { maxBytes: 2048, record(snapshot: any) {
+    if (snapshot.exit || (snapshot.error && snapshot.pid == null)) exitObserved = true;
+    if (snapshot.close) closeObserved = true;
+    const bounded = { ...snapshot, stdout: { ...snapshot.stdout, text: snapshot.stdout.text.slice(-2048) },
+      stderr: { ...snapshot.stderr, text: stderrTail.toString('utf8') },
+      error: snapshot.error && { ...snapshot.error, message: snapshot.error.message.slice(0, 2048), name: snapshot.error.name.slice(0, 128), code: String(snapshot.error.code ?? '').slice(0, 128) || null } };
+    latest = bounded;
+    const key = ['attached', 'error', 'exit', 'close'].includes(snapshot.event) ? snapshot.event : 'streams';
+    if (key !== 'error' || !diagnostics.error) diagnostics[key] = bounded;
+    writeFileSync('/tmp/tour-1882-loop-closure-child.json', JSON.stringify(diagnostics));
+  } });
+  disposeObserver = () => { observer?.dispose(); server?.stderr?.removeListener('data', captureStderr); };
   server.stdout?.on('data', chunk => { serverLog += chunk.toString(); });
   server.stderr?.on('data', chunk => { serverLog += chunk.toString(); });
   await expect.poll(async () => {
-    if (server?.exitCode !== null) throw new Error(`Fixture server exited: ${serverLog}`);
+    if (exitObserved || closeObserved || server?.signalCode != null || server?.exitCode !== null) throw new Error(`Fixture server exited: ${serverLog}`);
     try { return (await fetch(`${origin}/images/placeholder-avatar.svg`)).status; } catch { return 0; }
   }, { timeout: 60_000 }).toBe(200);
 });
 test.afterAll(async () => {
-  await writeFile('/tmp/tour-1882-loop-closure-server.log', serverLog);
-  if (server && server.exitCode === null) {
-    const child = server;
-    await new Promise<void>((done, reject) => {
-      const force = setTimeout(() => child.kill('SIGKILL'), 5_000);
-      const limit = setTimeout(() => { clearTimeout(force); reject(new Error('Owned fixture child did not exit')); }, 10_000);
-      child.once('exit', () => { clearTimeout(force); clearTimeout(limit); done(); });
-      child.kill('SIGTERM');
-    });
+  try {
+    await writeFile('/tmp/tour-1882-loop-closure-server.log', serverLog);
+  } finally {
+    try {
+      if (server && !closeObserved) {
+        const child = server;
+        await new Promise<void>((done, reject) => {
+          const alive = () => !exitObserved && child.exitCode === null && child.signalCode === null;
+          const release = () => {
+            clearTimeout(force); clearTimeout(limit);
+            child.removeListener('exit', onExit); child.removeListener('close', onClose);
+          };
+          const onExit = () => { clearTimeout(force); };
+          const onClose = () => { release(); done(); };
+          const force = setTimeout(() => { if (alive()) child.kill('SIGKILL'); }, 5_000);
+          const limit = setTimeout(() => {
+            release();
+            let persistenceError: unknown;
+            try { persistCleanupTimeout?.(); }
+            catch (error) { persistenceError = error; }
+            finally { reject(new Error('Owned fixture child did not close', { cause: persistenceError })); }
+          }, 10_000);
+          child.once('exit', onExit);
+          child.once('close', onClose);
+          if (alive()) child.kill('SIGTERM');
+        });
+      }
+    } finally {
+      try { if (temporary) await rm(temporary, { recursive: true }); }
+      finally { disposeObserver?.(); }
+    }
   }
-  if (temporary) await rm(temporary, { recursive: true });
 });
-async function fixture(page: Page, schedules: object[] = [], browserClock = clock) {
+async function fixture(page: Page, schedules: object[] = [], browserClock = clock, availabilityGate?: Promise<void>) {
   const diagnostics: { console: object[]; pageErrors: string[]; blocked: object[]; mocks: string[] } = { console: [], pageErrors: [], blocked: [], mocks: [] };
   page.on('console', msg => diagnostics.console.push({ type: msg.type(), text: msg.text(), url: msg.location().url }));
   page.on('pageerror', error => diagnostics.pageErrors.push(String(error)));
@@ -53,7 +104,7 @@ async function fixture(page: Page, schedules: object[] = [], browserClock = cloc
     if (url.origin !== origin) { diagnostics.blocked.push({ url: req.url(), method: req.method() }); return route.abort(); }
     if (url.pathname === '/_next/image') return route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=', 'base64') });
     if (url.pathname === '/api/me/wishlist/ids') return route.fulfill({ json: { ok: true, data: { ids: [] } } });
-    if (url.pathname.endsWith('/availability')) { diagnostics.mocks.push(req.url()); return route.fulfill({ json: { ok: true, data: { schedules, source: 'v2' } } }); }
+    if (url.pathname.endsWith('/availability')) { diagnostics.mocks.push(req.url()); await availabilityGate; return route.fulfill({ json: { ok: true, data: { schedules, source: 'v2' } } }); }
     if (url.pathname.startsWith('/api/')) { diagnostics.blocked.push({ url: req.url(), reason: 'unneeded-api' }); return route.abort(); }
     return route.continue();
   });
@@ -78,6 +129,7 @@ async function fixture(page: Page, schedules: object[] = [], browserClock = cloc
   expect(direct.searchParams.get('date')).toBe('2026-04-10');
   expect(direct.searchParams.get('scheduleId')).toBe('kaohsiung-chaishan-cave-experience-schedule-2');
   await test.info().attach('SSR-sidebar-CTA', { body: JSON.stringify(ssr), contentType: 'application/json' });
+  expect(diagnostics.mocks).toHaveLength(0); // availability is requested only after traveler intent
   return diagnostics;
 }
 test.afterEach(async ({ page }, info) => {
@@ -110,7 +162,7 @@ async function evidence(diagnostics: Awaited<ReturnType<typeof fixture>>) {
   expect(diagnostics.pageErrors).toEqual([]);
   expect(classified.filter(entry => !entry.baseline && !entry.expectedBlockedResource)).toEqual([]);
 }
-test('expired SSR/sidebar and CTA agree; empty availability retains future fixture', async ({ page }) => {
+test('expired SSR/sidebar and CTA agree; successful empty live availability clears SSR dates', async ({ page }) => {
   const diagnostics = await fixture(page);
   try {
     const sidebar = await page.locator('.kkd-booking-schedules').innerText();
@@ -120,8 +172,11 @@ test('expired SSR/sidebar and CTA agree; empty availability retains future fixtu
     expect(links.join(' ')).not.toMatch(/2026-04-0[13]|schedule-[01](?:&|$)/);
     expect(links.some(href => href?.includes('date=2026-04-10'))).toBe(true);
     await select(page, diagnostics);
-    await picker(page).locator('.tp-date-pill').filter({ has: page.locator('.tp-date-pill-month', { hasText: /^4\/10$/ }) }).click();
-    await query(page, '2026-04-10', 'kaohsiung-chaishan-cave-experience-schedule-2');
+    await expect(picker(page).locator('.tp-date-pill').filter({ has: page.locator('.tp-date-pill-month', { hasText: /^4\/10$/ }) })).toBeDisabled();
+    const href = await card(page).locator('a.kkd-plan-select-btn').getAttribute('href');
+    const url = new URL(href!, origin);
+    expect(url.searchParams.get('date')).toBeNull();
+    expect(url.searchParams.get('scheduleId')).toBeNull();
   } finally { await evidence(diagnostics); }
 });
 test('nonempty availability capacity, selected query and mobile bottom CTA synchronize', async ({ page }) => {
@@ -136,8 +191,71 @@ test('nonempty availability capacity, selected query and mobile bottom CTA synch
     await expect(page.locator('a.tp-bottom-bar-cta')).toHaveAttribute('href', href!);
   } finally { await evidence(diagnostics); }
 });
+const aprilSchedules = [10, 15].map((day, index) => ({ id: `kaohsiung-chaishan-cave-experience-schedule-${index + 2}`, startAt: `2026-04-${day}T01:00:00Z`, capacity: 8, bookedCount: 0, status: 'open', planId: null }));
+// Hold the first live response so a traveler can select a visible SSR date,
+// then observe the same mounted component reconcile its booking identity.
+for (const mode of ['replacement', 'empty', 'other-plan', 'full'] as const) {
+  test(`live refresh ${mode} reconciles selected date and mobile booking identity`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const rows: object[] = [];
+    const diagnostics = await fixture(page, rows, clock, gate);
+    try {
+      await select(page, diagnostics);
+      const activePlan = (await picker(page).getAttribute('data-testid'))!.replace('plan-date-picker-', '');
+      const allPlans = await page.locator('[data-testid^="plan-date-picker-"]').count();
+      expect(allPlans).toBe(1); // only the selected card owns a picker
+      const selectedPill = picker(page).locator('.tp-date-pill').filter({ has: page.locator('.tp-date-pill-month', { hasText: /^4\/10$/ }) });
+      await selectedPill.click();
+      await query(page, '2026-04-10', 'kaohsiung-chaishan-cave-experience-schedule-2');
+      const base = { startAt: '2026-04-10T01:00:00Z', capacity: 8, bookedCount: 0, status: 'open', planId: activePlan };
+      if (mode === 'replacement') rows.push({ ...base, id: 'full-first', bookedCount: 8 }, { ...base, id: 'replacement-open' });
+      if (mode === 'full') rows.push({ ...base, id: 'full-only', bookedCount: 8 });
+      if (mode === 'other-plan') {
+        const otherCard = page.locator('.kkd-plan-card').nth(1);
+        await expect(otherCard).toBeVisible();
+        // Resolve the other canonical plan from its public booking link.
+        const otherHref = await otherCard.locator('a.kkd-plan-select-btn').getAttribute('href');
+        const otherPlan = new URL(otherHref!, origin).searchParams.get('plan');
+        expect(otherPlan).toBeTruthy(); expect(otherPlan).not.toBe(activePlan);
+        rows.push({ ...base, id: 'other-plan-live', planId: otherPlan });
+      }
+      release();
+      await expect(picker(page).getByRole('status')).toHaveCount(0);
+      if (mode === 'replacement') {
+        const href = await query(page, '2026-04-10', 'replacement-open');
+        await expect(page.locator('a.tp-bottom-bar-cta')).toHaveAttribute('href', href!);
+      } else {
+        await expect(selectedPill).toBeDisabled();
+        await expect(card(page).locator('.kkd-plan-date-tag')).toHaveCount(0);
+        for (const link of [card(page).locator('a.kkd-plan-select-btn'), page.locator('a.tp-bottom-bar-cta')]) {
+          const href = await link.getAttribute('href');
+          const url = new URL(href!, origin);
+          expect(url.searchParams.get('date')).toBeNull();
+          expect(url.searchParams.get('scheduleId')).toBeNull();
+        }
+      }
+    } finally { release(); await evidence(diagnostics); }
+  });
+}
+test('live dates exclude already-started and exactly-now sessions while retaining a future slot', async ({ page }) => {
+  const rows = [
+    { id: 'past', startAt: '2026-04-07T03:59:59Z' },
+    { id: 'exact-now', startAt: '2026-04-07T12:00:00+08:00' },
+    { id: 'future-today', startAt: '2026-04-07T04:00:00.001Z' },
+  ].map(row => ({ ...row, capacity: 8, bookedCount: 0, status: 'open', planId: null }));
+  const diagnostics = await fixture(page, rows);
+  try {
+    await select(page, diagnostics);
+    const today = picker(page).locator('.tp-date-pill').first();
+    await expect(today).toHaveAttribute('title', '剩餘 8 位');
+    await today.click();
+    await query(page, '2026-04-07', 'future-today');
+  } finally { await evidence(diagnostics); }
+});
 test('CalendarModal keeps same external CTA and traps normal Tab; calendar date parity', async ({ page }) => {
-  const diagnostics = await fixture(page);
+  const diagnostics = await fixture(page, aprilSchedules);
   try {
     await select(page, diagnostics);
     const cta = card(page).locator('a.kkd-plan-select-btn');
@@ -187,14 +305,14 @@ test('CalendarModal keeps same external CTA and traps normal Tab; calendar date 
 });
 
 // The server selector retains its April SSR clock; these browser cases use explicit October local clocks.
-const civilSchedules = ['2026-09-30', '2026-10-01', '2026-10-05'].map(date => ({
-  id: `civil-${date}`, startAt: `${date}T01:00:00Z`, capacity: 8, bookedCount: 0, status: 'open', planId: null,
+const civilSchedules = (timezoneId: string) => ['2026-09-30', '2026-10-01', '2026-10-05'].map(date => ({
+  id: `civil-${date}`, startAt: `${date}T23:59:59.999${timezoneId === 'America/Los_Angeles' ? '-07:00' : '+08:00'}`, capacity: 8, bookedCount: 0, status: 'open', planId: null,
 }));
 for (const timezoneId of ['America/Los_Angeles', 'Asia/Taipei']) {
   test.describe(`civil date ${timezoneId}`, () => {
     test.use({ timezoneId });
     test('October weekdays, today availability, calendar summary and exact query key', async ({ page }) => {
-      const diagnostics = await fixture(page, civilSchedules, new Date(timezoneId === 'America/Los_Angeles' ? '2026-10-01T19:00:00Z' : '2026-10-01T04:00:00Z'));
+      const diagnostics = await fixture(page, civilSchedules(timezoneId), new Date(timezoneId === 'America/Los_Angeles' ? '2026-10-01T19:00:00Z' : '2026-10-01T04:00:00Z'));
       try {
         const timezone = await page.evaluate(() => ({ zone: Intl.DateTimeFormat().resolvedOptions().timeZone, local: [new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()] }));
         expect(timezone).toEqual({ zone: timezoneId, local: [2026, 10, 1] });
@@ -228,7 +346,7 @@ for (const timezoneId of ['America/Los_Angeles', 'Asia/Taipei']) {
       for (const [index, instant] of instants.entries()) {
         // A new page isolates the mounted useMemo across the boundary; no claim of live rollover.
         const fresh = await page.context().newPage();
-        const diagnostics = await fixture(fresh, civilSchedules, new Date(instant));
+        const diagnostics = await fixture(fresh, civilSchedules(timezoneId), new Date(instant));
         try {
           const observed = await fresh.evaluate(() => ({ zone: Intl.DateTimeFormat().resolvedOptions().timeZone, month: new Date().getMonth() + 1, day: new Date().getDate() }));
           expect(observed).toEqual({ zone: timezoneId, month: index === 0 ? 9 : 10, day: index === 0 ? 30 : 1 });

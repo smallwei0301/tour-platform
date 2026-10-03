@@ -44,6 +44,8 @@ export interface V2AvailabilityResult {
 }
 
 interface QueryOptions {
+  /** Absolute cutoff captured once per request; injectable for deterministic callers. */
+  now: Date;
   timezone: string;
   dateFrom: string;
   dateTo: string;
@@ -212,8 +214,10 @@ export async function getV2ActivityAvailability(
   activityId: string,
   input: Partial<QueryOptions>
 ): Promise<V2AvailabilityResult> {
+  const now = input.now ?? new Date();
   const range = defaultDateRange();
   const options: QueryOptions = {
+    now,
     timezone: input.timezone ?? 'Asia/Taipei',
     dateFrom: input.dateFrom ?? range.dateFrom,
     dateTo: input.dateTo ?? range.dateTo,
@@ -309,6 +313,7 @@ export async function getV2ActivityAvailability(
       for (const rule of rulesForDay) {
         const candidates = buildCandidateSlotsForRule(rule, scopedBookings, plan.duration_minutes, date);
         for (const candidate of candidates) {
+          if (candidate.startAt.getTime() <= options.now.getTime()) continue;
           if (slotConflictsWithBlackout(candidate, blackouts)) continue;
 
           const bookedParticipants = sumBookedParticipants(candidate, scopedBookings);

@@ -14,6 +14,6 @@ export function selectUpcomingSchedules(schedules, now = Date.now()) {
     const calendarDay = new Date(`${start.slice(0, 10)}T00:00:00Z`);
     if (!Number.isFinite(calendarDay.getTime()) || calendarDay.toISOString().slice(0, 10) !== start.slice(0, 10)) return false;
     const startTime = Date.parse(start);
-    return Number.isFinite(startTime) && startTime >= now;
+    return Number.isFinite(startTime) && startTime > now;
   });
 }

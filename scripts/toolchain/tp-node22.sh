@@ -62,7 +62,7 @@ validate_e2e() {
     lexical="$repo_root/$reviewed"
     [[ -f "$lexical" && "$(realpath -e "$lexical")" == "$lexical" ]] || fail 'missing or noncanonical reviewed file'
   done
-  [[ "$(sha256sum "$e2e_dir/issue1882-upcoming-schedules.spec.ts" | cut -d ' ' -f 1)" == 9177569bea8512a72df3e4c627dd564e974d2a73823eb57b68180b7380fcc435 ]] || fail 'reviewed spec digest mismatch'
+  [[ "$(sha256sum "$e2e_dir/issue1882-upcoming-schedules.spec.ts" | cut -d ' ' -f 1)" == fe504f49691b742148c541bd840de4bd3ae7b591ed5c39680d8a7ee8c1ff71d7 ]] || fail 'reviewed spec digest mismatch'
   [[ "$(sha256sum "$repo_root/apps/web/playwright.config.ts" | cut -d ' ' -f 1)" == 5ed491b3fb5575672a98ac4e20d9cc235a8883e9f1c11cc33bc03157b3e9eba5 ]] || fail 'reviewed config digest mismatch'
   for directory in "$repo_root" "$repo_root/apps" "$repo_root/apps/web"; do
     [[ ! -e "$directory/.npmrc" && ! -L "$directory/.npmrc" ]] || fail 'repository npmrc forbidden'
