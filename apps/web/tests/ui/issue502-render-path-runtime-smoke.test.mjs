@@ -70,6 +70,7 @@ function loadCjsModule({ filePath, source, mockMap }) {
       if (specifier.startsWith('./') || specifier.startsWith('../')) {
         const resolved = path.resolve(dirname, specifier);
         if (mockMap[resolved]) return mockMap[resolved];
+        return require(resolved);
       }
       return require(specifier);
     },

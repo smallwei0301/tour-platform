@@ -22,6 +22,7 @@ import { SectionAnchorNav } from '../../../../../src/components/activity/Section
 import { ImageCarousel } from '../../../../../src/components/activity/ImageCarousel';
 import { ActivityReviewsPanel } from '../../../../../src/components/activity/ActivityReviewsPanel';
 import { inferPlanIdForBookingUrl, resolveBookingEntryHref, resolvePlanBookingHref } from '../../../../../src/lib/booking-entry.mjs';
+import { selectUpcomingSchedules } from '../../../../../src/lib/activity/upcoming-schedules.mjs';
 import { resolveDatePlanPresentation } from '../../../../../src/lib/date-plan-source.mjs';
 import { resolveActivityPriceUnit } from '../../../../../src/lib/activity-price-unit.mjs';
 import { ActivityQASection } from '../../../../../src/components/activity/ActivityQASection';
@@ -155,7 +156,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const reviewStats = resolveActivityReviewStats(activityData);
   // 社群口碑語錄正規化為 { author, rating, text }（相容舊純文字資料）
   const warmQuotes = normalizeSocialProofQuotes(activityData.socialProofQuotes);
-  const displayedSchedules = activity.schedules || [];
+  const displayedSchedules = selectUpcomingSchedules(activity.schedules || []);
   const firstSchedulableEntry = displayedSchedules.find((s: any) => {
     const status = String(s?.status || '').toLowerCase();
     const capacity = Number(s?.capacity ?? 0);
