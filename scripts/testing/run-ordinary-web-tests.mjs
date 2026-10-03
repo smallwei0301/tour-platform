@@ -31,6 +31,7 @@ export const INFRASTRUCTURE_TESTS = Object.freeze([
   'tests/unit/midao-production-catalog-capture.test.mjs',
   'tests/unit/midao-staged-evidence-verifier.test.mjs',
   'tests/unit/tp-node22-evidence-runner-runtime-contract.test.mjs',
+  'tests/unit/tp-node22-cloud-contract.test.mjs',
 ]);
 
 export const HOST_BOUND_INFRASTRUCTURE_TESTS = Object.freeze([
@@ -40,6 +41,7 @@ export const HOST_BOUND_INFRASTRUCTURE_TESTS = Object.freeze([
   'tests/unit/midao-expected-terminal-publisher.test.mjs',
   'tests/unit/midao-production-catalog-capture.test.mjs',
   'tests/unit/tp-node22-evidence-runner-runtime-contract.test.mjs',
+  'tests/unit/tp-node22-cloud-contract.test.mjs',
 ]);
 
 const hostBoundInfrastructure = new Set(HOST_BOUND_INFRASTRUCTURE_TESTS);
