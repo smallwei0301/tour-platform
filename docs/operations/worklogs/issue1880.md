@@ -1,6 +1,6 @@
 # PR #1880 — Node22 雲端工具鏈與正式證據工作紀錄
 
-> 狀態：source／有限本機 runtime PASS；整體 HOLD。既有 PR #1880 即正確 toolchain 工作錨點，其 Conversation 頂層 issue comment 可完成 D7 的外部留言部分，毋須另建 Issue。文件發布的 exact commit／remote 收據另由 executor 交接，D7 在父任務實際留言前仍 pending。
+> 狀態：source／有限本機 runtime PASS；整體 HOLD。既有 PR #1880 即正確 toolchain 工作錨點，其 Conversation 頂層 issue comment 可完成 D7 的外部留言部分，毋須另建 Issue。2026-10-04 收據更新：父任務已核對下述 merge snapshot CI SUCCESS，並已發送及讀回 #1880 留言；本次文件增量僅在本機準備，尚未 commit／push，整體不因此放行。
 
 ## 目標
 
@@ -11,8 +11,9 @@
 - [x] exact 五檔 source readback 與有限本機驗證有獨立收據。
 - [x] 原 FAIL 與 metadata 修復後 PASS 分開記錄。
 - [x] 歷史 CI anchor 與實際 checkout SHA 明確區分。
-- [ ] current merge 必要 CI success 與精確 run/job anchor。
-- [ ] 本文件正常發布，以及正確 toolchain task 的 D7 雙寫。
+- [x] 已核對 snapshot `c33bf33867b3572c695a36c4b80bfefa7a395674` 的成功 CI／baseline／secret anchors（父任務證據，見日期段落）。
+- [x] 既有 80 行文件已發布於 `957679312f1288af8f4a05d43d1e470d942be4a5`，父任務已發送並讀回 #1880 留言。
+- [ ] 本次 D6 收據文件增量尚待正常發布；不把本機準備視為已完成遠端同步。
 - [ ] ready／merge／Production 的必要授權與驗收；不由本機綠燈放行。
 
 ## 已完成（附證據）
@@ -63,12 +64,29 @@ scripts/toolchain/tp-node22.sh -- npm run typecheck
 
 [歷史 CI run 36811600426](https://github.com/smallwei0301/tour-platform/actions/runs/36811600426)／[job 110207638522](https://github.com/smallwei0301/tour-platform/actions/runs/36811600426/job/110207638522) success；migration source gate、lint、typecheck、unit、build、ISR、preflight 通過。原始 checkout 是 `7fd6ba1593c3b021fdfcbd703b5b2a20ed00fd27`，即 source 合入舊 base；不是目前 merge CI。
 
-fresh remote read：main `ea75b40fa6e2db145b79a7ecc5f3eb01fdd598db`、head `69c78c3a725fb6037c0c8a7703abdc8f34f73c67`、merge `0cd4f6f5f626757678df2e559acbf93996a27bcf`。main 相對舊 base 僅三個 readiness docs commits。current merge 的 workflow 查詢為空（API 僅 PR-triggered 第一頁）；既有 PR body 記錄 check-runs/statuses 為零。本輪無適用的新 run，保持 NOT RUN／pending，不把歷史或本機 PASS 替代 D6。
+歷史 remote read（保留當時結果）：main `ea75b40fa6e2db145b79a7ecc5f3eb01fdd598db`、head `69c78c3a725fb6037c0c8a7703abdc8f34f73c67`、merge `0cd4f6f5f626757678df2e559acbf93996a27bcf`。main 相對舊 base 僅三個 readiness docs commits。current merge 的 workflow 查詢為空（API 僅 PR-triggered 第一頁）；既有 PR body 記錄 check-runs/statuses 為零。當時無適用的新 run，保持 NOT RUN／pending；此為歷史狀態，不把歷史或本機 PASS 替代 D6。
+
+
+### 2026-10-04 D6／D7 成功收據補記（父任務查證來源）
+
+以下由父任務於本次 2026-10-04 交接提供，executor 僅落檔，未做 fresh API／網路查證；日期為本次收據補記日期，不臆測各 run 的完成時間。先前發布收據所記 CI／baseline `in_progress` 與 secret `success` 保留為歷史，後續完成結果如下：
+
+| 收據 | 父任務查證結果 | 適用 snapshot／範圍 |
+|---|---|---|
+| [CI 37141095755／job 111255517003](https://github.com/smallwei0301/tour-platform/actions/runs/37141095755/job/111255517003) | SUCCESS；ordinary 5817 PASS／3 SKIP | checkout `c33bf33867b3572c695a36c4b80bfefa7a395674` |
+| [baseline 37141095720／job 111255517169](https://github.com/smallwei0301/tour-platform/actions/runs/37141095720/job/111255517169) | SUCCESS；59 PASS、兩項預期 workflow step skip（不是兩個測試 skip） | checkout 同上；不把 step skip 計入測試數 |
+| [secret 37141095716](https://github.com/smallwei0301/tour-platform/actions/runs/37141095716) | SUCCESS | 父任務提供的此批檢查收據；未另宣稱其 checkout |
+
+上述 CI／baseline checkout 的 parents 為 main `ea75b40fa6e2db145b79a7ecc5f3eb01fdd598db` 與 PR head `957679312f1288af8f4a05d43d1e470d942be4a5`。D6 成功證據限定於此已核對 snapshot，不泛化為未執行的新 head／merge candidate CI。
+
+父任務已發送並讀回 [#1880 頂層 milestone comment 5975102898](https://github.com/smallwei0301/tour-platform/pull/1880#issuecomment-5975102898)，因此原「留言尚未發送」狀態已有後續結果；executor 本輪不新增或重送留言。既有文件發布＋此留言構成該里程碑的 D7 證據；本次新增收據尚未發布，不能宣稱此文件增量已遠端同步。
+
+本次只補收據，原 source／test／runner／workflow bytes 不變；不重跑既有測試。後續若發布此文件增量，其新 head／CI 狀態須另行據實核對，不能繼承成「新 CI 已 PASS」，也不為把文件自身最終 SHA 寫回同一文件製造遞迴 commits。本輪禁止 push、Ready、merge、部署及新留言。
 
 ## 下一步
 
-- D6：本文件補 repo-native 歷史 CI anchor；current merge 必要 CI success 仍須 exact run 證據，不因文件提交自動完成。不得 manual rerun 或為觸發 CI 建空 commit。
-- D7：本文件發布並核對 exact commit 後，由父任務自行在 #1880 Conversation 發送一次 toolchain milestone 頂層留言；發送前保持 HOLD。PR body 本身不能替代 issue comment。前輪「必須另有獨立 Issue」是過度解讀，已更正；不建立新 Issue，也不對 #1882 留言。
+- D6：上述已核對 snapshot 的成功 anchors 已補入本機文件；本次文件增量發布及其後續 exact head／CI 核對仍 pending。不得 manual rerun 或為觸發 CI 建空 commit。
+- D7：父任務已完成 #1880 留言並讀回，證據見上；本輪不再留言。本次文件收據增量尚待發布。PR body 本身不能替代 issue comment；不另建 Issue，也不對 #1882 留言。
 - 文件 branch-target gate 已補證：父任務於 2026-10-03 10:17 PDT（原始觀察時間 17:17 UTC）在[現行 Vercel Environments UI](https://vercel.com/smallwei0301s-projects/tour-platform/settings/environments) 唯讀核對 project `prj_KrrA4UrpyZtEfsQZeSHUJ5zaw4Re`：Production Branch Tracking=`main`、Preview=`All unassigned git branches`、Development=`CLI`、Custom Environments=0。結合既有 deployment `dpl_D9JbDZpGGoq8m2C3T3VgVSqMCZRP` 的 `source=git`、branch=`codex/tour-cloud-node22`、SHA=`69c78c3…`、`target=null`／Preview alias，本分支 normal push 落於 Preview，不推 main 或直接部署。這是父任務提供的現行 UI proof，不冒稱本 executor 成功取得 `get_project` response；先前 `INVALID_ARGUMENT: idOrName: expected string, received undefined` schema 故障保留，不重試。沒有修改設定或擴充 Production 授權。
 - #1881 base 是 `codex/tour-cloud-node22`。若日後 normal push 文件至此 branch，會改變 #1881 的 base tip／merge candidate，須重新檢查相依 diff／CI；不 rewrite 下游 #1881→#1883→#1886→#1887。
 - ready、merge、Production 授權保持 HOLD；歷史 ready 拒絕不重試。沒有宣稱 ready、merged、deployed 或全 gates PASS。
