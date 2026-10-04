@@ -1,23 +1,22 @@
-<!-- query_timestamp: 2026-10-03T05:04:44.302Z -->
+<!-- query_timestamp: 2026-10-04T06:51:42.678Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-10-03T05:04:44.302Z  
-**Commit SHA:** `43345bedef6f968d7733502533db45e8ad2c218b`
+**Query timestamp:** 2026-10-04T06:51:42.678Z  
+**Commit SHA:** `de89aca121dfc4d7b5904f0c5a6beea302b0cd59`
 
 ---
 
-## Open PRs (15)
+## Open PRs (14)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1887 | [fix(activity): 同步即時場次與報名識別，補齊 fixture 診斷](https://github.com/smallwei0301/tour-platform/pull/1887) _(draft)_ | `rework/midao2-live-availability` |
 | #1886 | [支援指定詳頁 E2E 的正式 Node22 工具鏈入口](https://github.com/smallwei0301/tour-platform/pull/1886) _(draft)_ | `codex/tour-canonical-e2e-1882` |
 | #1883 | [修正行程詳情過期場次與立即預約入口（#1882）](https://github.com/smallwei0301/tour-platform/pull/1883) _(draft)_ | `codex/tour-detail-upcoming-local` |
-| #1881 | [建立模型路由與派工防漏治理](https://github.com/smallwei0301/tour-platform/pull/1881) _(draft)_ | `codex/tour-model-routing-dispatch-prevention` |
-| #1880 | [修正 Node22 雲端工具鏈與正式證據契約](https://github.com/smallwei0301/tour-platform/pull/1880) _(draft)_ | `codex/tour-cloud-node22` |
 | #1872 | [feat(admin)：導遊詳情頁加入「進入 vibeaico 後台」代管入口](https://github.com/smallwei0301/tour-platform/pull/1872) | `claude/vibeai-admin-impersonate-entry` |
 | #1776 | [feat(shop): 完成導遊商店匯款 beta 文案與 SOP（#1607）](https://github.com/smallwei0301/tour-platform/pull/1776) _(draft)_ | `fix/issue-1607-guide-shop-beta` |
 | #1690 | [docs(security): 建立「已接受安全風險」定案清單](https://github.com/smallwei0301/tour-platform/pull/1690) | `claude/code-workflow-architecture-mmm4ba` |
@@ -131,6 +130,8 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1881 | [建立模型路由與派工防漏治理](https://github.com/smallwei0301/tour-platform/pull/1881) | 2026-10-04 |
+| #1880 | [修正 Node22 雲端工具鏈與正式證據契約](https://github.com/smallwei0301/tour-platform/pull/1880) | 2026-10-04 |
 | #1878 | [[#1761][Midao2 P0] 唯讀 orders 工作台](https://github.com/smallwei0301/tour-platform/pull/1878) | 2026-09-15 |
 | #1877 | [fix(#1761): remove receipt witness triage gates](https://github.com/smallwei0301/tour-platform/pull/1877) | 2026-09-14 |
 | #1876 | [fix(#1796): qualify unpaid expiry booking log column](https://github.com/smallwei0301/tour-platform/pull/1876) | 2026-09-14 |
@@ -139,8 +140,6 @@
 | #1871 | [feat(midao): 新增唯讀訂單工作台](https://github.com/smallwei0301/tour-platform/pull/1871) | 2026-09-01 |
 | #1870 | [fix(shop): restore public bookable service cards](https://github.com/smallwei0301/tour-platform/pull/1870) | 2026-08-28 |
 | #1868 | [feat(midao): add Phase 6 masked projection comparison baseline](https://github.com/smallwei0301/tour-platform/pull/1868) | 2026-08-26 |
-| #1867 | [feat(midao2): keep LINE replies manual and safe](https://github.com/smallwei0301/tour-platform/pull/1867) | 2026-08-25 |
-| #1866 | [test(midao): verify traveler confirmation chain](https://github.com/smallwei0301/tour-platform/pull/1866) | 2026-08-25 |
 
 ---
 
