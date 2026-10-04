@@ -41,6 +41,8 @@ export interface V2AvailabilityResult {
   plans: V2AvailabilityDayPlanRow[];
   /** Present when no active plans were found; signals the route layer to skip legacy fallback */
   planConfigState?: PlanConfigState;
+  /** Non-blackout candidates in this request window were removed by the strict now cutoff. */
+  hasCandidatesRemovedByNowCutoff?: boolean;
 }
 
 interface QueryOptions {
@@ -288,6 +290,7 @@ export async function getV2ActivityAvailability(
   const rules: AvailabilityRule[] = (rulesData ?? []).map(normalizeRuleRow);
   const blackouts: BlackoutWindow[] = (blackoutsData ?? []).map(normalizeBlackoutRow);
   const bookings: ExistingBooking[] = (bookingsData ?? []).map(normalizeBookingRow);
+  let hasCandidatesRemovedByNowCutoff = false;
 
   const planRows = plans.map((plan) => {
     const scopedRules = rules.filter(
@@ -313,8 +316,11 @@ export async function getV2ActivityAvailability(
       for (const rule of rulesForDay) {
         const candidates = buildCandidateSlotsForRule(rule, scopedBookings, plan.duration_minutes, date);
         for (const candidate of candidates) {
-          if (candidate.startAt.getTime() <= options.now.getTime()) continue;
           if (slotConflictsWithBlackout(candidate, blackouts)) continue;
+          if (candidate.startAt.getTime() <= options.now.getTime()) {
+            hasCandidatesRemovedByNowCutoff = true;
+            continue;
+          }
 
           const bookedParticipants = sumBookedParticipants(candidate, scopedBookings);
           const remaining = Math.max(0, plan.max_participants - bookedParticipants);
@@ -340,5 +346,6 @@ export async function getV2ActivityAvailability(
     timezone: options.timezone,
     plans: aggregateByDayAndPlan(planRows, options.timezone, options.dateFrom, options.dateTo),
     planConfigState: 'ok' as const,
+    hasCandidatesRemovedByNowCutoff,
   };
 }

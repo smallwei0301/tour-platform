@@ -177,7 +177,7 @@ export async function GET(req: Request, context: { params: Promise<{ slug: strin
         // status='full') and distinct from inactive plans (handled above).
         // Fall back to the legacy snapshot so traveler-facing availability is not
         // inadvertently grayed out. v2-no-generated-slots header enables observability.
-        if (!v2HasGeneratedSlots(v2.plans)) {
+        if (!v2HasGeneratedSlots(v2.plans) && !v2.hasCandidatesRemovedByNowCutoff) {
           try {
             const legacySchedules = await loadLegacySchedules(supabase, activityRow.id, slug);
             if (legacySchedules.length > 0) {
