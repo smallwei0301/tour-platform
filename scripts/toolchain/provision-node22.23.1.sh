@@ -6,8 +6,8 @@ readonly VERSION='22.23.1'
 readonly ARCHIVE="node-v${VERSION}-linux-x64.tar.xz"
 readonly URL="https://nodejs.org/dist/v${VERSION}/${ARCHIVE}"
 readonly EXPECTED_SHA256='9749e988f437343b7fa832c69ded82a312e41a03116d766797ac14f6f9eee578'
-readonly TOOLCHAIN_ROOT='/root/.hermes/toolchains/node/22.23.1'
-readonly TOOLCHAIN_PARENT='/root/.hermes/toolchains/node'
+readonly TOOLCHAIN_ROOT="${TP_NODE22_ROOT:-/root/.hermes/toolchains/node/22.23.1}"
+readonly TOOLCHAIN_PARENT="$(dirname "$TOOLCHAIN_ROOT")"
 
 fail() {
   echo "node22 provision failed: $*" >&2
@@ -19,6 +19,16 @@ fail() {
   exit 2
 }
 
+[[ "$TOOLCHAIN_ROOT" == /* && "$(realpath -m "$TOOLCHAIN_ROOT")" == "$TOOLCHAIN_ROOT" ]] || fail 'toolchain root must be an absolute canonical path'
+if [[ -n "${TP_NODE22_ROOT:-}" ]]; then
+  [[ "$TOOLCHAIN_ROOT" == /workspace/*/toolchains/node/22.23.1 ]] || fail 'workspace target must be a dedicated /workspace subtree ending in /toolchains/node/22.23.1'
+fi
+# Validate an existing target before creating staging files or moving anything.
+if [[ -e "$TOOLCHAIN_ROOT" || -L "$TOOLCHAIN_ROOT" ]]; then
+  TP_NODE22_ROOT="$TOOLCHAIN_ROOT" "$(dirname "$0")/tp-node22.sh" --check || fail 'existing target is not the approved official artifact'
+elif [[ -z "${TP_NODE22_ROOT:-}" ]]; then
+  fail "expected existing toolchain root is missing: $TOOLCHAIN_ROOT"
+fi
 mkdir -p "$TOOLCHAIN_PARENT"
 [[ "$(realpath -e "$TOOLCHAIN_PARENT")" == "$TOOLCHAIN_PARENT" ]] || fail 'toolchain parent is not canonical'
 
@@ -47,7 +57,11 @@ cleanup() {
 trap cleanup EXIT
 
 archive_path="$stage/$ARCHIVE"
-curl --fail --location --proto '=https' --tlsv1.2 --output "$archive_path" "$URL"
+if [[ -n "${TP_NODE22_ARCHIVE:-}" ]]; then
+  cp -- "$TP_NODE22_ARCHIVE" "$archive_path"
+else
+  curl --fail --location --proto '=https' --tlsv1.2 --output "$archive_path" "$URL"
+fi
 printf '%s  %s\n' "$EXPECTED_SHA256" "$archive_path" | sha256sum --check --status || fail 'SHA-256 mismatch'
 tar -xJf "$archive_path" -C "$stage"
 prepared="$stage/node-v${VERSION}-linux-x64"
@@ -59,10 +73,15 @@ for executable in bin/node bin/npm bin/npx; do
   [[ -x "$prepared/$executable" ]] || fail "archive executable is missing $executable"
 done
 
-[[ -e "$TOOLCHAIN_ROOT" ]] || fail "expected existing toolchain root is missing: $TOOLCHAIN_ROOT"
-backup="${TOOLCHAIN_ROOT}.backup.$(date -u +%Y%m%dT%H%M%SZ)"
-mv "$TOOLCHAIN_ROOT" "$backup"
-backup_moved=1
+if [[ -e "$TOOLCHAIN_ROOT" ]]; then
+  [[ "$(realpath -e "$TOOLCHAIN_ROOT")" == "$TOOLCHAIN_ROOT" ]] || fail 'existing root is not canonical'
+  backup="${TOOLCHAIN_ROOT}.backup.$(date -u +%Y%m%dT%H%M%SZ)"
+  [[ ! -e "$backup" ]] || fail 'backup already exists'
+  mv "$TOOLCHAIN_ROOT" "$backup"
+  backup_moved=1
+elif [[ -z "${TP_NODE22_ROOT:-}" ]]; then
+  fail "expected existing toolchain root is missing: $TOOLCHAIN_ROOT"
+fi
 mv "$prepared" "$TOOLCHAIN_ROOT"
 installed=1
 
@@ -73,6 +92,7 @@ PATH="$canonical_root/bin:$PATH"
 "$canonical_root/bin/npm" --version >/dev/null || fail 'npm self-check failed'
 "$canonical_root/bin/npx" --version >/dev/null || fail 'npx self-check failed'
 [[ "$($canonical_root/bin/node -p 'process.execPath')" == "$canonical_root/bin/node" ]] || fail 'node execPath self-check failed'
+TP_NODE22_ROOT="$canonical_root" "$(dirname "$0")/tp-node22.sh" --check || fail 'official artifact self-check failed'
 
 installed=0
 backup_moved=0
