@@ -1,0 +1,52 @@
+{
+  "modelMappingVersion": "2026-10-01.3",
+  "project": "tour-platform",
+  "ownerDecision": "docs/AGENT-EXECUTION.md",
+  "models": {
+    "scout": "gpt-6-luna",
+    "build": "gpt-6.1-sol",
+    "audit": "gpt-6.1-sol"
+  },
+  "claudeSelectors": {
+    "scout": "haiku",
+    "build": "sonnet",
+    "audit": "opus"
+  },
+  "review": {
+    "highRiskModel": "gpt-6-astra",
+    "freshContextRequired": true,
+    "implementerMaySelfApprove": false
+  },
+  "premium": {
+    "maxPerLineage": 1,
+    "sharedModels": [
+      "gpt-6-astra",
+      "fable"
+    ],
+    "startTimeoutSeconds": 300,
+    "fallbackModel": "gpt-6.1-sol"
+  },
+  "capacity": {
+    "scope": "tour-platform",
+    "source": ".cursor/harness/02_orchestration.md",
+    "sharedWithOtherProjects": false,
+    "importsVibeAiQuotas": false
+  },
+  "identity": {
+    "requestedIsNotActual": true,
+    "unknownActual": "unknown",
+    "rewriteHistoricalEvidence": false
+  },
+  "build": {
+    "allowedModels": [
+      "gpt-6.1-sol",
+      "gpt-6-luna"
+    ],
+    "complexityRecommendations": {
+      "simple": "gpt-6-luna",
+      "complex": "gpt-6.1-sol"
+    },
+    "ownerSelectionTakesPrecedence": true,
+    "selectionReasonRequired": true
+  }
+}
