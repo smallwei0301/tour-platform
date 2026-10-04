@@ -109,3 +109,20 @@ Canonical lint exit0（既有head警告1）；build exit1，production startup�
 增量全rawlogs／exits／舊產物備份／manifest／patch於 `/workspace/tour-transfer/policy-display/tooling-increment`。普通full／舊12E2E／最終contracts由本輪後續外部receipt報告，未跑的不聲稱PASS。nativeEdit工具absent，wiringNOT_VERIFIED。無install／commit／push／deploy／DB／sharedTEST／Production／GitHub訊息，D5/D6/D7與release仍HOLD。
 
 Fresh reviewer R1指出第二輪唯一devdiagnostic已正確abort而被strict blocked=[]判FAIL；父層批准窄分類整改，保留everyPOST abort與所有business/unknown/nonlocal拒絕，只精確loopback/query-free original-stack-frames已abort列為expected diagnostic。新helper與spec pins同步，負向bookingPOST／unknownPOST／remote同path／queryvariation等行為契約新增；原兩FAIL不改寫，browser須reviewer回讀corrected diff後才執行，非盲第三retry。ordinary-final5885/5882pass/0fail/3skip＋typecheckPASS；舊canonical12/12 PASS57.9s，child與完整產物保存在外部tooling-increment。
+
+## 2026-10-04 D6：#1887 政策／工具增量發布後收據
+
+以下 CI、GitHub candidate、Preview 與公開窄驗結果由父任務交接提供；本輪僅追加文件，沒有重新呼叫遠端 API、瀏覽器、build 或產品測試，不將交接證據冒稱為本 executor 的 fresh 查驗。前述未發布、FAIL、取消與 pending 均為當時歷史，原文完整保留。
+
+20 檔政策／工具增量已正常 fast-forward 發布：既有 base `9c9bb85b4e446e247128e36d13ef29302564a1af` → head `abdc1247b9798310f548776945cdc3bbb203988a`。GitHub candidate `2136925e64beaf3a1458613be5b2a8eb71b70d15` 的 tree `33f001f167fad81e4d5018f3098290434d84dae6` 精確匹配已審測內容；不將 source head 與 candidate SHA 混用。
+
+- [CI 37220043611](https://github.com/smallwei0301/tour-platform/actions/runs/37220043611)：SUCCESS，對應上述 exact candidate；ordinary 5885 total／5882 PASS／0 FAIL／3 SKIP，lint 0 errors／1 warning、typecheck、build（234/234）、ISR、preflight 成功。
+- [Smoke 37220043524](https://github.com/smallwei0301/tour-platform/actions/runs/37220043524)：11/11 首跑通過，無 flaky／retry。
+- [Secret scan 37220043583](https://github.com/smallwei0301/tour-platform/actions/runs/37220043583)：SUCCESS。
+- Preview `dpl_2BMsdJ6DyTSSAtkmnE92x3FdesF5`：READY，exact head `abdc1247b9798310f548776945cdc3bbb203988a`、target=null；[Preview URL](https://tour-platform-6hef454nq-smallwei0301s-projects.vercel.app)。這是已存在部署的父任務收據，本輪沒有執行部署。
+
+父任務於 2026-10-04 17:23–17:26 UTC 完成公開窄驗 PASS：正文、sticky、半日／全日 modal 的退款三階一致；舊 24h 與假免費取消文案消失；未選方案時沒有固定 3 天承諾；預覽另一方案後取消，保持已選半日方案與 10/5 日期。這些結果只覆蓋已列窄驗，不擴張為所有 live edge cases 通過。
+
+既有本機政策 browser 3/3 與舊場次 browser 12/12 PASS；政策 source 原 13 檔與工具增量 7 檔的審查／測試來源保存在 `/workspace/tour-transfer/policy-display/tooling-increment/result.md`、`review.md` 及原始收據。本機 build 的 `STARTUP_ENV_INVALID`／exit 1 仍為真實 FAIL；本次 CI build 成功是不同執行環境的後續證據，不回寫本機結果為 PASS，不宣稱曾填入 secret 或修改 startup guard。
+
+剩餘 gates：live positive／explicit 0 確認天數尚未驗證；R1 逆序回應競態尚未驗證；ledger 仍有 10 missing；Issue #1882 留言曾回傳 `user cancelled MCP tool call`，D7 仍未完成且維持 STOP，不重試、不換 actor／入口。上述 exact candidate 的 D6 CI anchors 已補入 worklog，但不代表所有完成條件成立；overall HOLD，未 merge／未執行 Production。本輪不 commit／push／留言／DB／部署，沒有產品、測試或 runner 修改。
