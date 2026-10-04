@@ -1,3 +1,5 @@
+import { publicRefundRules } from '../../../../../src/lib/public-policy/copy.mjs';
+import { SelectedPlanConfirmation } from '../../../../../src/components/activity/SelectedPlanConfirmation';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -377,10 +379,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               {participantSummaryLabel}
             </span>
             <span className="kkd-policy-divider" />
-            <span className="kkd-policy-item">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              {t('policyConfirm')}
-            </span>
+            <SelectedPlanConfirmation />
             <span className="kkd-policy-item">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
               {t('policyEvoucher')}
@@ -510,11 +509,11 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                 </div>
               )}
 
-              {activity.refundRules && activity.refundRules.length > 0 && (
+              {(
                 <div className="kkd-detail-block">
                   <h3 className="kkd-detail-subtitle">{t('policyRefund')}</h3>
                   <ul className="kkd-notice-list">
-                    {activity.refundRules.map((r: string, i: number) => (
+                    {publicRefundRules(locale).map((r: string, i: number) => (
                       <li key={i}>{r}</li>
                     ))}
                   </ul>
@@ -652,7 +651,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
               <div className="kkd-booking-trust">
                 <p>{t('trustPay')}</p>
-                <p>{t('trustRefundPrefix')}<a href="/legal/refund" style={{ color: 'inherit', textDecoration: 'underline' }}>{t('trustRefundLink')}</a></p>
+                <p>{publicRefundRules(locale).join(' ')}{' '}<a href="/legal/refund" style={{ color: 'inherit', textDecoration: 'underline' }}>{t('trustRefundLink')}</a></p>
                 <p>{t('trustHotline')}</p>
                 <p>{t('trustVerified')}</p>
               </div>

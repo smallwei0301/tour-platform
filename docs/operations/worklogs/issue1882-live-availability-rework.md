@@ -100,3 +100,12 @@ Fresh獨立Sol audit新增5個負向純測試5/5 PASS，核對12檔hash及root b
 Issue #1882里程碑留言MCP呼叫返回「user cancelled MCP tool call」（依主對話原始回執交接），留言未完成。停止所有issue留言寫入，不重試、不換actor/API/入口；雙寫D7仍未完成，不宣稱整體任務完成。本輪只完成repo worklog側記錄，沒有任何issue/PR寫入。純文件commit適用bash-guard文件豁免，D7是完成定義缺項而非本次文件保存的前置commit gate。
 
 保留所有歷史取消、scope拒絕、default-root preflight失敗與後续修正；reviewer委派範圍由主對話擴充，不是使用者新增安全權限。App成功不代表gh GraphQL Forbidden恢復。維持唯一施工者root，base455／recoveryda9／patches／hashes／handoff不變；禁止force/reset/rebase/merge/deploy/DB/共享TEST/Production及憑證、網路或權限設定變更。
+
+
+## 2026-10-04 policy-display 限定tooling增量（未發布）
+Owner14:32批准canonical lint/build與pinned policybrowser，唯一builder policy_tooling_builder、requestedSol／actualUNKNOWN；原3148leaves tree df3281460e8fc2ab7451ff22917051b3aed94a11與13政策檔保全。施工前>300行理由於source外 tooling-increment/plan.md。未修改harness／CI clean-tree gate／舊pinnedspec或config。
+CLI TDD首命令使用Node22不支援的flag失敗，不算行為RED；第二次direct canonical CLI真RED為hostile NODE_OPTIONS在新lane尚未sanitize時使npm自檢失敗。Formal run-checks GREEN7/7，擴充後contracts14/14＋typecheckPASS；後續helper小修須最終重驗。raw失敗不覆寫。
+Canonical lint exit0（既有head警告1）；build exit1，production startup要求三secrets，尚未到font/compiler，不新增credentials或弱化protectedguard。新policybrowser兩輪3/3FAIL：首fixtures未mock已知GET，第二輪只剩已abort dev POST original-stack-frames，finally blocked=[]仍失敗。AC段第二輪無primaryerror附件，不把runFAIL當browserPASS；停止同error第三輪，由freshreview核對exactcandidate。child exit/close0與ownedcleanup資料另保存，不代替browserAC。
+增量全rawlogs／exits／舊產物備份／manifest／patch於 `/workspace/tour-transfer/policy-display/tooling-increment`。普通full／舊12E2E／最終contracts由本輪後續外部receipt報告，未跑的不聲稱PASS。nativeEdit工具absent，wiringNOT_VERIFIED。無install／commit／push／deploy／DB／sharedTEST／Production／GitHub訊息，D5/D6/D7與release仍HOLD。
+
+Fresh reviewer R1指出第二輪唯一devdiagnostic已正確abort而被strict blocked=[]判FAIL；父層批准窄分類整改，保留everyPOST abort與所有business/unknown/nonlocal拒絕，只精確loopback/query-free original-stack-frames已abort列為expected diagnostic。新helper與spec pins同步，負向bookingPOST／unknownPOST／remote同path／queryvariation等行為契約新增；原兩FAIL不改寫，browser須reviewer回讀corrected diff後才執行，非盲第三retry。ordinary-final5885/5882pass/0fail/3skip＋typecheckPASS；舊canonical12/12 PASS57.9s，child與完整產物保存在外部tooling-increment。

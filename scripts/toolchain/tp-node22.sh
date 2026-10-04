@@ -12,7 +12,7 @@ fail() {
 
 # New E2E lane does not let caller environment affect even runtime self-checks.
 gate_env=()
-if [[ "${1:-}" == '--preflight-e2e' ]] || [[ "${3:-}" == 'run' && "${4:-}" == 'test:e2e' ]]; then
+if [[ "${1:-}" == '--preflight-ci' ]] || [[ "${4:-}" == lint || "${4:-}" == build ]] || [[ "${1:-}" == '--preflight-e2e' ]] || [[ "${3:-}" == 'run' && "${4:-}" == 'test:e2e' ]]; then
   PATH=/usr/bin:/bin
   export PATH
   gate_env=(/usr/bin/env -i PATH=/usr/bin:/bin)
@@ -53,16 +53,23 @@ export PATH
 validate_e2e() {
   [[ $# -eq 7 && "$1" == npm && "$2" == run && "$3" == test:e2e &&
     "$4" == -w && "$5" == @tour/web && "$6" == -- &&
-    "$7" == e2e/issue1882-upcoming-schedules.spec.ts ]] || fail 'unsupported E2E command'
+    ( "$7" == e2e/issue1882-upcoming-schedules.spec.ts || "$7" == e2e/issue1882-policy-display.spec.ts ) ]] || fail 'unsupported E2E command'
   repo_root=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")/../..") || fail 'missing repository'
   [[ "$(pwd -P)" == "$repo_root" ]] || fail 'E2E requires repository root cwd'
   e2e_dir="$repo_root/apps/web/e2e"
   [[ "$(realpath -e "$e2e_dir")" == "$e2e_dir" ]] || fail 'noncanonical E2E directory'
-  for reviewed in apps/web/e2e/issue1882-upcoming-schedules.spec.ts apps/web/playwright.config.ts package.json apps/web/package.json; do
+  for reviewed in "apps/web/$7" scripts/testing/fixture-child-diagnostics.mjs apps/web/e2e/issue1882-upcoming-schedules.spec.ts apps/web/playwright.config.ts package.json apps/web/package.json; do
     lexical="$repo_root/$reviewed"
     [[ -f "$lexical" && "$(realpath -e "$lexical")" == "$lexical" ]] || fail 'missing or noncanonical reviewed file'
   done
   [[ "$(sha256sum "$e2e_dir/issue1882-upcoming-schedules.spec.ts" | cut -d ' ' -f 1)" == fe504f49691b742148c541bd840de4bd3ae7b591ed5c39680d8a7ee8c1ff71d7 ]] || fail 'reviewed spec digest mismatch'
+  if [[ "$7" == e2e/issue1882-policy-display.spec.ts ]]; then
+    classification="$repo_root/scripts/testing/policy-fixture-network.mjs"
+    [[ -f "$classification" && "$(realpath -e "$classification")" == "$classification" ]] || fail 'policy network classifier noncanonical'
+    [[ "$(sha256sum "$classification" | cut -d ' ' -f 1)" == 4ff5249fea6a7127be513ab97a5ca4795c3167854c1140d50db42a6050a81aa3 ]] || fail 'policy network classifier digest mismatch'
+    [[ "$(sha256sum "$repo_root/apps/web/$7" | cut -d ' ' -f 1)" == 99fba043ec8c1eeed0177e2019157517cb76a0b416bb52874b93dd834b8ec806 ]] || fail 'reviewed policy spec digest mismatch'
+  fi
+  [[ "$(sha256sum "$repo_root/scripts/testing/fixture-child-diagnostics.mjs" | cut -d ' ' -f 1)" == e586c4349c72703fbc15df9455012fcd75677f07ffc42d252a29972dbce89b52 ]] || fail 'fixture diagnostic helper digest mismatch'
   [[ "$(sha256sum "$repo_root/apps/web/playwright.config.ts" | cut -d ' ' -f 1)" == 5ed491b3fb5575672a98ac4e20d9cc235a8883e9f1c11cc33bc03157b3e9eba5 ]] || fail 'reviewed config digest mismatch'
   for directory in "$repo_root" "$repo_root/apps" "$repo_root/apps/web"; do
     [[ ! -e "$directory/.npmrc" && ! -L "$directory/.npmrc" ]] || fail 'repository npmrc forbidden'
@@ -101,6 +108,42 @@ prepare_e2e_environment() {
   "${e2e_env[@]}" "$npm_bin" --version >/dev/null || fail 'sanitized E2E npm startup rejected'
 }
 
+validate_ci() {
+  [[ $# -eq 3 && "$1" == npm && "$2" == run && ( "$3" == lint || "$3" == build ) ]] || fail 'unsupported CI command'
+  repo_root=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")/../..") || fail 'missing repository'
+  [[ "$(pwd -P)" == "$repo_root" ]] || fail 'CI requires repository root cwd'
+  for reviewed in package.json apps/web/package.json scripts/check-lint-node.mjs scripts/toolchain/offline-node-guard.cjs; do
+    [[ -f "$repo_root/$reviewed" && "$(realpath -e "$repo_root/$reviewed")" == "$repo_root/$reviewed" ]] || fail 'missing or noncanonical CI file'
+  done
+  [[ "$(sha256sum "$repo_root/scripts/toolchain/offline-node-guard.cjs" | cut -d ' ' -f 1)" == 3a348e1262ba6bed6f74a46c2b4904a563ee3f9fee22abbd01c00a7a5815c2b6 ]] || fail 'offline guard digest mismatch'
+  [[ "$(sha256sum "$repo_root/scripts/check-lint-node.mjs" | cut -d ' ' -f 1)" == d857e6e20406f87676086aa2fe32a0c6c5c1a6ab81800916fafc9b8bf315f03a ]] || fail 'lint guard digest mismatch'
+  for directory in "$repo_root" "$repo_root/apps" "$repo_root/apps/web"; do
+    [[ "$(realpath -e "$directory")" == "$directory" && ! -e "$directory/.npmrc" && ! -L "$directory/.npmrc" ]] || fail 'CI directory or npmrc rejected'
+  done
+  /usr/bin/env -i PATH="$canonical_root/bin:/usr/bin:/bin" "$node_bin" --input-type=module - "$repo_root" <<'JS' || fail 'CI package contract rejected'
+import { readFileSync } from 'node:fs';
+const root = JSON.parse(readFileSync(`${process.argv[2]}/package.json`));
+const app = JSON.parse(readFileSync(`${process.argv[2]}/apps/web/package.json`));
+if (root.name !== 'tour-platform' || JSON.stringify(root.workspaces) !== '["apps/*"]' || app.name !== '@tour/web' ||
+ root.scripts?.lint !== 'npm run lint -w @tour/web' || root.scripts?.build !== 'npm run build -w @tour/web' ||
+ app.scripts?.build !== 'next build' || app.scripts?.lint !== "node ../../scripts/check-lint-node.mjs && ESLINT_USE_FLAT_CONFIG=false eslint app src --ignore-pattern '.next/**'" ||
+ [root, app].some(p => Object.keys(p.scripts || {}).some(k => /^(?:(?:pre|post)(?:lint|build)|pre|post)$/.test(k)))) process.exit(1);
+JS
+}
+prepare_ci_environment() {
+  prepare_e2e_environment
+  trap 'rm -rf -- "$cache" || { echo "tp-node22 CI cleanup failed" >&2; exit 1; }' EXIT
+  ci_env=(/usr/bin/env -i PATH="$canonical_root/bin:/usr/bin:/bin" HOME="$cache" TMPDIR="$cache"
+    NODE_OPTIONS="--require=$repo_root/scripts/toolchain/offline-node-guard.cjs" NEXT_TELEMETRY_DISABLED=1
+    npm_config_offline=true npm_config_audit=false npm_config_fund=false npm_config_update_notifier=false
+    npm_config_ignore_scripts=true npm_config_userconfig="$user_config" npm_config_globalconfig="$global_config"
+    npm_config_cache="$cache" npm_config_script_shell=/bin/sh)
+}
+preflight_ci=0
+if [[ "${1:-}" == '--preflight-ci' ]]; then
+  preflight_ci=1; shift
+  [[ "${1:-}" == -- ]] || fail 'preflight CI requires -- and exact command'
+fi
 preflight_e2e=0
 if [[ "${1:-}" == '--preflight-e2e' ]]; then
   preflight_e2e=1
@@ -116,11 +159,19 @@ case "${1:-}" in
     shift
     [[ $# -ge 1 ]] || fail 'missing command after --'
     if (( preflight_e2e )); then validate_e2e "$@"; fi
+    if (( preflight_ci )); then validate_ci "$@"; fi
     case "$1" in
       node)
         exec "$@"
         ;;
       npm)
+        if (( preflight_ci )) || [[ "${3:-}" == lint || "${3:-}" == build ]]; then
+          validate_ci "$@"
+          prepare_ci_environment
+          if (( preflight_ci )); then echo 'tp-node22 CI preflight passed (no execution; sanitized offline environment)'; exit 0; fi
+          "${ci_env[@]}" "$npm_bin" "${@:2}"
+          exit $?
+        fi
         if (( preflight_e2e )) || [[ "${3:-}" == test:e2e ]]; then
           validate_e2e "$@"
           prepare_e2e_environment

@@ -219,6 +219,7 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
     }
     setSharedSelectedPlan({
       id: currentPlan.id,
+      confirmByDays: currentPlan.confirmByDays,
       label: currentPlan.label,
       price: resolvePlanPrice(currentPlan, activity.priceTwd ?? activity.price ?? 0, 1),
       priceType: currentPlan.priceType === 'per_group' ? 'per_group' : 'per_person',
@@ -308,6 +309,7 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                     // #919: surface selection to the page-level bottom CTA
                     setSharedSelectedPlan({
                       id: plan.id,
+                      confirmByDays: plan.confirmByDays,
                       label: plan.label,
                       price: planPrice,
                       priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',
@@ -376,7 +378,10 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                     type="button"
                     className="kkd-link-sm"
                     style={{ display: 'inline-block', marginBottom: 14, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 700 }}
-                    onClick={() => setModalPlan(plan)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setModalPlan(plan);
+                    }}
                   >
                     {plan.detailsLinkText || t('viewPlanDetails')}
                   </button>
@@ -406,6 +411,7 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                           // keep the bottom CTA in sync with the chosen date
                           setSharedSelectedPlan({
                             id: plan.id,
+                            confirmByDays: plan.confirmByDays,
                             label: plan.label,
                             price: planPrice,
                             priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',
@@ -454,6 +460,7 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                           // #919: surface selection so the bottom CTA reflects it on quick re-entry
                           setSharedSelectedPlan({
                             id: plan.id,
+                            confirmByDays: plan.confirmByDays,
                             label: plan.label,
                             price: planPrice,
                             priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',

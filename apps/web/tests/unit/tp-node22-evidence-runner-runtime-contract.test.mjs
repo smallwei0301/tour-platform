@@ -1,3 +1,4 @@
+import { isExpectedAbortedDevDiagnostic } from '../../../../scripts/testing/policy-fixture-network.mjs'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { mkdtempSync, rmSync, mkdirSync, existsSync, chmodSync, copyFileSync, readFileSync, writeFileSync, symlinkSync, unlinkSync } from 'node:fs'
@@ -72,7 +73,7 @@ test('Node 22 evidence runner rejects runtime-replacement npm and npx forms befo
 const e2eArgs = ['npm', 'run', 'test:e2e', '-w', '@tour/web', '--', 'e2e/issue1882-upcoming-schedules.spec.ts']
 function e2eFixture() {
   const root = mkdtempSync(resolve(tmpdir(), 'tp-node22-e2e-contract-'))
-  for (const path of ['scripts/toolchain/tp-node22.sh', 'apps/web/playwright.config.ts', 'apps/web/e2e/issue1882-upcoming-schedules.spec.ts', 'package.json', 'apps/web/package.json']) {
+  for (const path of ['scripts/testing/policy-fixture-network.mjs', 'apps/web/e2e/issue1882-policy-display.spec.ts', 'scripts/testing/fixture-child-diagnostics.mjs', 'scripts/toolchain/offline-node-guard.cjs', 'scripts/check-lint-node.mjs', 'scripts/toolchain/tp-node22.sh', 'apps/web/playwright.config.ts', 'apps/web/e2e/issue1882-upcoming-schedules.spec.ts', 'package.json', 'apps/web/package.json']) {
     const destination = resolve(root, path)
     mkdirSync(resolve(destination, '..'), { recursive: true })
     copyFileSync(resolve(repoRoot, path), destination)
@@ -145,4 +146,102 @@ test('E2E entry ignores BASH_ENV startup and caller PATH interpreter replacement
     assert.equal(existsSync(startupMarker), false, 'caller BASH_ENV must not run before validation')
     assert.equal(existsSync(interpreterMarker), false, 'caller PATH must not choose the interpreter')
   } finally { rmSync(root, { recursive: true, force: true }) }
+})
+
+test('canonical lint/build preflight accepts exact scripts in sanitized offline environment', () => {
+  const root = e2eFixture()
+  try {
+    for (const target of ['lint', 'build']) {
+      const result = spawnSync(resolve(root, 'scripts/toolchain/tp-node22.sh'), ['--preflight-ci', '--', 'npm', 'run', target], {
+        cwd: root, encoding: 'utf8', timeout: 30_000,
+        env: { ...process.env, NODE_OPTIONS: '--require=/missing-hostile', SUPABASE_SERVICE_ROLE_KEY: 'sentinel-secret' },
+      })
+      assert.equal(result.status, 0, result.stderr)
+      assert.match(result.stdout, /CI preflight passed/)
+      assert.doesNotMatch(`${result.stdout}${result.stderr}`, /sentinel-secret/)
+    }
+  } finally { rmSync(root, { recursive: true, force: true }) }
+})
+
+const ciArgs = target => ['npm', 'run', target]
+function ciPreflight(root, args = ciArgs('build'), hostile = {}) {
+  return spawnSync(resolve(root, 'scripts/toolchain/tp-node22.sh'), ['--preflight-ci', '--', ...args], {
+    cwd: root, encoding: 'utf8', timeout: 30_000, env: { ...process.env, ...hostile },
+  })
+}
+test('CI rejects argv additions, workspace substitutions, package lifecycle/script drift and guard integrity drift', () => {
+  for (const args of [['npm', 'run', 'lint', '--'], ['npm', 'run', 'build', '-w', '@tour/web'], ['node', '--version'], ['npm', 'run', 'other']]) {
+    const root = e2eFixture()
+    try { assert.notEqual(ciPreflight(root, args).status, 0) } finally { rmSync(root, { recursive: true, force: true }) }
+  }
+  const changes = [
+    ...['prelint', 'postlint', 'prebuild', 'postbuild', 'pre', 'post', 'build', 'lint'].flatMap(key => ['package.json', 'apps/web/package.json'].map(path => root => {
+      const file = resolve(root, path), p = JSON.parse(readFileSync(file)); p.scripts[key] = 'node evil'; writeFileSync(file, JSON.stringify(p))
+    })),
+    ...['scripts/toolchain/offline-node-guard.cjs', 'scripts/check-lint-node.mjs'].flatMap(path => [
+      root => writeFileSync(resolve(root, path), 'tampered'),
+      root => { unlinkSync(resolve(root, path)); symlinkSync(resolve(repoRoot, path), resolve(root, path)) },
+    ]),
+    ...['.npmrc', 'apps/.npmrc', 'apps/web/.npmrc'].map(path => root => writeFileSync(resolve(root, path), 'offline=false')),
+  ]
+  for (const change of changes) {
+    const root = e2eFixture()
+    try { change(root); const r = ciPreflight(root); assert.notEqual(r.status, 0); assert.equal(r.stdout, '') } finally { rmSync(root, { recursive: true, force: true }) }
+  }
+})
+test('CI actual execution denies TCP/fetch/DNS/UDP and retains guard in empty-env child and empty-execArgv worker; temp configs are cleaned', () => {
+  const root = e2eFixture()
+  try {
+    const bin = resolve(root, 'apps/web/node_modules/.bin'); mkdirSync(bin, { recursive: true })
+    const next = resolve(bin, 'next')
+    writeFileSync(next, `#!/usr/bin/env node
+const assert = require('node:assert/strict');
+const net = require('node:net');
+for (const attempt of [() => net.connect(9, '127.0.0.1'), () => fetch('https://example.invalid'), () => require('node:dns').lookup('example.invalid', () => {}), () => require('node:dgram').createSocket('udp4')]) assert.throws(attempt, /offline outbound blocked/);
+assert.equal(process.env.SUPABASE_SERVICE_ROLE_KEY, undefined);
+const cp = require('node:child_process');
+const child = cp.spawnSync(process.execPath, ['-e', "try { require('node:net').connect(9,'127.0.0.1'); process.exit(7); } catch(e) { console.log(e.message); }"], { env: {}, encoding: 'utf8' });
+assert.equal(child.status, 0); assert.match(child.stdout, /offline outbound blocked/);
+const { Worker } = require('node:worker_threads');
+const worker = new Worker("const {parentPort}=require('node:worker_threads'); try { require('node:net').connect(9,'127.0.0.1'); parentPort.postMessage('ESCAPE'); } catch(e) { parentPort.postMessage(e.message); }", { eval: true, env: {}, execArgv: [] });
+worker.on('message', message => { assert.match(message, /offline outbound blocked/); console.log('NETWORK_GUARD_OK'); console.log('OWNED_TEMP=' + process.env.TMPDIR); });
+`)
+    chmodSync(next, 0o755)
+    const result = spawnSync(resolve(root, 'scripts/toolchain/tp-node22.sh'), ['--', ...ciArgs('build')], {
+      cwd: root, encoding: 'utf8', timeout: 30_000,
+      env: { ...process.env, NODE_OPTIONS: '--require=/missing-hostile', SUPABASE_SERVICE_ROLE_KEY: 'sentinel-secret', npm_config_script_shell: '/missing-shell' },
+    })
+    assert.equal(result.status, 0, `${result.stdout}${result.stderr}`)
+    assert.match(result.stdout, /NETWORK_GUARD_OK/)
+    assert.doesNotMatch(`${result.stdout}${result.stderr}`, /sentinel-secret/)
+    const temp = result.stdout.match(/OWNED_TEMP=(.*)/)?.[1]
+    assert.ok(temp); assert.equal(existsSync(temp), false)
+  } finally { rmSync(root, { recursive: true, force: true }) }
+})
+test('policy E2E pin accepts only exact new spec and rejects tampered or symlinked spec/diagnostic dependency', () => {
+  const args = e2eArgs.map(arg => arg.includes('upcoming-schedules') ? 'e2e/issue1882-policy-display.spec.ts' : arg)
+  const root = e2eFixture()
+  try { assert.equal(preflight(root, args).status, 0) } finally { rmSync(root, { recursive: true, force: true }) }
+  for (const path of ['scripts/testing/policy-fixture-network.mjs', 'apps/web/e2e/issue1882-policy-display.spec.ts', 'scripts/testing/fixture-child-diagnostics.mjs']) {
+    for (const symlink of [false, true]) {
+      const root = e2eFixture()
+      try {
+        if (symlink) { unlinkSync(resolve(root, path)); symlinkSync(resolve(repoRoot, path), resolve(root, path)) } else writeFileSync(resolve(root, path), 'tamper')
+        assert.notEqual(preflight(root, args).status, 0)
+      } finally { rmSync(root, { recursive: true, force: true }) }
+    }
+  }
+})
+
+test('only exact loopback query-free dev diagnostic POST is classified as expected aborted; business/remote/variant requests remain failures', () => {
+  const exact = 'http://127.0.0.1:3108/__nextjs_original-stack-frames'
+  assert.equal(isExpectedAbortedDevDiagnostic(exact, 'POST'), true)
+  for (const [url, method] of [
+    ['http://127.0.0.1:3108/booking/fixture', 'POST'],
+    ['http://127.0.0.1:3108/api/v2/bookings', 'POST'],
+    ['http://127.0.0.1:3108/unknown', 'POST'],
+    ['https://remote.invalid/__nextjs_original-stack-frames', 'POST'],
+    [exact + '?query=1', 'POST'], [exact + '#fragment', 'POST'],
+    [exact + '/', 'POST'], [exact, 'GET'], [exact, 'DELETE'], ['invalid', 'POST'],
+  ]) assert.equal(isExpectedAbortedDevDiagnostic(url, method), false, `${method} ${url}`)
 })

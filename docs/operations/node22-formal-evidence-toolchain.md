@@ -38,7 +38,7 @@ scripts/toolchain/tp-node22.sh -- npm --version
 scripts/toolchain/tp-node22.sh -- npx --version
 ```
 
-`npm` 與 `npx` 採完整命令 shape 的 fail-closed allowlist：僅允許 `npm --version`、`npm test`、`npm run typecheck` 與 `npx --version`，且不得追加其他參數。其餘 `npm`／`npx` 呼叫一律在 `exec` 前拒絕；這包括 `npx -y node@22 ...`、`npx --yes node@22 ...`、`npm exec --package=node@22 node ...` 與以分離 `--package node@22` 表示的等價形式。此限制防止 registry 套件下載或執行替代的 Node runtime。
+`npm` 與 `npx` 採完整命令 shape 的 fail-closed allowlist：允許 `npm --version`、`npm test`、`npm run typecheck`、限定 `npm run lint`／`npm run build` 與 `npx --version`，且不得追加其他參數。其餘 `npm`／`npx` 呼叫一律在 `exec` 前拒絕；這包括 `npx -y node@22 ...`、`npx --yes node@22 ...`、`npm exec --package=node@22 node ...` 與以分離 `--package node@22` 表示的等價形式。此限制防止 registry 套件下載或執行替代的 Node runtime。
 
 請勿直接以 host `node`、`npm` 或 `npx` 產生正式證據。`.claude/settings.json` 只允許這個固定入口與 `run-checks.sh` 作為 Agent 的正式測試通道。
 
@@ -56,7 +56,7 @@ scripts/toolchain/tp-node22.sh -- npx --version
 
 Repo rollback 僅 revert 本工具鏈卡片的六個受管檔案。外部 artifact 僅在 provision self-check 失敗時，由 provision script 還原 timestamped backup。不得以 system Node、CI workflow 或 `/tmp` fallback 維持綠燈；任何這類替代方案、或重新 provision，均需要 Ava/Amy 的明確決定。
 
-## #1882 唯一 canonical E2E shape
+## #1882 canonical E2E shapes（固定兩個 spec）
 
 Owner 已批准下列精確七 argv；不得追加參數、換 workspace/spec 或以 node npm-cli 代替：
 
@@ -91,3 +91,28 @@ Chromium 必須現存、可執行且 realpath 等於 /usr/bin/chromium，不下�
 此邊界適用文件中的直接執行入口；caller 另行用自訂 interpreter 解讀 script 不能當正式證據。
 owned/tmp marker runtime regression 實際注入 BASH_ENV 與 PATH 假 bash，要求預檢成功且兩 marker 都未建立。
 child 的 env-i、官方 artifact gates 與 exact argv/SHA 檢查仍維持不變。
+
+## 2026-10-04 已批准限定驗證增量
+
+Owner批准只擴充本canonical入口，不修改 `run-midao-ci-command.mjs` 的 clean-tree gate；不能以此替代正式CI／merge／release evidence。
+
+```bash
+scripts/toolchain/tp-node22.sh --preflight-ci -- npm run lint
+scripts/toolchain/tp-node22.sh --preflight-ci -- npm run build
+scripts/toolchain/tp-node22.sh -- npm run lint
+scripts/toolchain/tp-node22.sh -- npm run build
+scripts/toolchain/tp-node22.sh --preflight-e2e -- npm run test:e2e -w @tour/web -- e2e/issue1882-policy-display.spec.ts
+scripts/toolchain/tp-node22.sh -- npm run test:e2e -w @tour/web -- e2e/issue1882-policy-display.spec.ts
+```
+
+lint/build只准三argv，repo root cwd、canonical package/guard檔、精確root/app scripts、所有相關pre/post lifecycle拒絕、三層npmrc拒絕；不能加workspace、flags、替代shell或runtime。自檢先env-i，child只有fixed PATH、owned HOME/TMPDIR/cache/config、offline npm與pinned preload；cleanup失敗為FAIL。原ordinary/typecheck shapes不變。
+
+`offline-node-guard.cjs` deny TCP/TLS/fetch/DNS/UDP，Node spawn/exec/fork及Worker保留preload，即使child提供env={}或Worker execArgv=[]。這是已審本機Node tooling safeguard，不是OS/native網路隔離證明，也不授權外連、憑證或DB。原執行環境限制仍適用；npm offline不是整個build的網路隔離。guard與lint版本guard SHA固定於runner，不能caller override。產品fonts與startup guard不修改；真build失敗保留，不mock字型或注入憑證強制綠燈。
+
+新policy spec測三AC，使用owned temp真app副本，只在既有in-memory fixture data加入A0/B7/null（exactslug與plan數/IDs drift assertions），所有產品component/handler來自source原件。原source與舊spec/config bytes不改，copy略過.env、node_modules、.next與測試產物。GET booking僅route.fulfill安全文件；真booking mutation或DB永遠不執行。對真產品CTA href做document navigation並browserBack，復原或重設identity均驗confirmation一致。精確公開GET APIs/analytics/image mocks不continue外連；unknown API/nonlocal/mutation仍abort且blocked必為空。server原loopback preload、child exit/close observer與owned cleanup保留。
+
+新spec與既有 `scripts/testing/fixture-child-diagnostics.mjs` 均pinned；舊spec/config既有digest不變。pin只綁定列出的reviewed檔，不能宣稱所有transitive產品dependency被hash封印。新specdigest：99fba043ec8c1eeed0177e2019157517cb76a0b416bb52874b93dd834b8ec806；helperdigest：e586c4349c72703fbc15df9455012fcd75677f07ffc42d252a29972dbce89b52。
+
+本次browser執行仍FAIL：兩輪3/3均在finally blocked=[]失敗；第二輪只剩dev POST `/__nextjs_original-stack-frames`（被guard abort），不是booking mutation成功。第二輪AC段沒有primary-AC-error附件，但整體三AC不能標PASS；停止第三次重試，留待fresh獨立review提出有證據的窄修。NativeClaudeEdit hook wiring仍NOT_VERIFIED，手動guard不能替代。
+
+Fresh reviewer R1窄修（2026-10-04）：兩輪原FAIL全保留；新 `policy-fixture-network.mjs` 僅分類精確loopback、無query/hash的POST original-stack-frames為expected aborted devdiagnostic。依舊abort所有POST，booking／unknown／remote同path／queryvariant不豁免；console僅同一已abort diagnostic失敗資源可分類，pageErrors仍必為空。新classifier為pinned spec dependency，byte/symlink tamper拒絕，behavior negatives驗證狹窄邊界。不是盲目第三retry；必先由原fresh reviewer回讀修正exactdiff，才能再執行browser。
