@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { DatePicker } from './DatePicker';
@@ -148,9 +148,18 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
   const [availabilityFetching, setAvailabilityFetching] = useState(false);
   const [availabilityNotice, setAvailabilityNotice] = useState<string | null>(null);
   const [planConfigState, setPlanConfigState] = useState<'ok' | 'no_active_plans' | 'no_plans' | null>(null);
+  const availabilityRequest = useRef(0);
+
+  useEffect(() => () => {
+    // A pending response must not update state after leaving this component.
+    availabilityRequest.current += 1;
+  }, []);
 
   async function ensureLiveAvailability() {
     if (availabilityLoaded) return;
+    // A Link click can also bubble to its card before React commits state.
+    // Only the newest request owns data, notices, retry and loading state.
+    const requestId = ++availabilityRequest.current;
     setAvailabilityLoaded(true);
     setAvailabilityFetching(true);
     try {
@@ -158,6 +167,7 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
       const endpoint = `/api/activities/${encodeURIComponent(activity.slug)}/availability`;
       const res = await fetch(endpoint);
       const json = await res.json().catch((): null => null);
+      if (requestId !== availabilityRequest.current) return;
 
       // Handle explicit inactive-plan state from V2: planConfigState='no_active_plans'|'no_plans'
       // The API returns schedules:[] with an availabilityNotice — surface it directly.
@@ -187,10 +197,11 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
       setPlanConfigState(null);
       setLiveSchedules(json.data.schedules as Schedule[]);
     } catch {
+      if (requestId !== availabilityRequest.current) return;
       setAvailabilityLoaded(false);
       setAvailabilityNotice(t('availabilityNoticeV2LoadFail'));
     } finally {
-      setAvailabilityFetching(false);
+      if (requestId === availabilityRequest.current) setAvailabilityFetching(false);
     }
   }
 

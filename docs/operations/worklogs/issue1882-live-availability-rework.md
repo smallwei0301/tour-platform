@@ -126,3 +126,17 @@ Fresh reviewer R1指出第二輪唯一devdiagnostic已正確abort而被strict bl
 既有本機政策 browser 3/3 與舊場次 browser 12/12 PASS；政策 source 原 13 檔與工具增量 7 檔的審查／測試來源保存在 `/workspace/tour-transfer/policy-display/tooling-increment/result.md`、`review.md` 及原始收據。本機 build 的 `STARTUP_ENV_INVALID`／exit 1 仍為真實 FAIL；本次 CI build 成功是不同執行環境的後續證據，不回寫本機結果為 PASS，不宣稱曾填入 secret 或修改 startup guard。
 
 剩餘 gates：live positive／explicit 0 確認天數尚未驗證；R1 逆序回應競態尚未驗證；ledger 仍有 10 missing；Issue #1882 留言曾回傳 `user cancelled MCP tool call`，D7 仍未完成且維持 STOP，不重試、不換 actor／入口。上述 exact candidate 的 D6 CI anchors 已補入 worklog，但不代表所有完成條件成立；overall HOLD，未 merge／未執行 Production。本輪不 commit／push／留言／DB／部署，沒有產品、測試或 runner 修改。
+
+## 2026-10-05 R1：逆序 availability completion 隔離修正（尚待獨立驗收）
+
+- 本輪核對 `main=52686c0c5319f7fb123fc019da689db625624ff3`、已發布 head `2746b5e5de6a5102a6e2644f4061bf73a2b0cb2f`；在 GitHub 真實 merge candidate `c9dc64fb45d4ca7ae362bf38778389323daf9993`、tree `d02719edf59b1dba2e33f40b8aa5c5e1a1b7df21` 的 owned 雲端 checkout 施工，沒有重設既有 checkout。
+- 產品 delta 只有 `DatePlanSection.tsx`：以 request generation 讓最新請求擁有 data／notice／loaded／fetching 寫入權；JSON 解析後、catch、finally 皆核對 generation，unmount 使 pending completion 失效。既有 intent、成功快取、錯誤重試及政策文案保留；同一事件的重複 GET 尚未去重，不將這次修正說成請求去重或傳輸 abort。
+- 新增 `tests/ui/issue1882-availability-response-order.test.mjs`，抽取並執行正式 async handler／JSX callbacks／selection effect，使用 deferred responses 控制逆序。這是實際 handler 隔離驗證，**不是 mounted DOM 或 live DB 證據**。
+- 正式產品 RED：12/12 FAIL，包含新版成功空結果被舊 rows 復活、`stale` 覆蓋 `latest` booking id；保存原 source／test／assertion log。第一次 fixture 自身因 VM lexical declaration 衝突失敗，修正 fixture 後才得到上述產品 RED；原 fixture 失敗未刪除，也不算產品 RED。
+- 最小產品修正後同 12 案全部 GREEN；另併原 selection、intent、plan-first、policy tests **37/37 PASS**，typecheck PASS。覆蓋 delayed JSON、stale success/error/invalid JSON、loading ownership、retry、no-active/no-plans、future/full/other-plan、取消 preview、反覆切選與 unmount。
+- 正式 `run-checks.sh --all --typecheck`：**5897 total／5894 PASS／0 FAIL／3 既有 SKIP／0 cancelled**，typecheck PASS。canonical lint exit 0、0 errors／1 既有 RootDocument warning。測前／測後 3152 source blobs 與 modes 一致。
+- Local canonical build **FAIL／exit 1**：`STARTUP_ENV_INVALID`，缺 `GUIDE_SESSION_SECRET`、`ADMIN_ACCESS_TOKEN`、`MIDAO_REQUEST_CLAIM_PEPPER`。沒有填值、讀取 secrets、改 startup guard 或以 CI 結果覆寫此失敗。
+- 原 upcoming canonical E2E preflight PASS；實跑 **12 failed／exit 1**，全部停於 Chromium launch，`process_singleton_posix.cc:297 socket() failed: Operation not permitted`，另有 crashpad mkdir／database 錯誤。fixture server 已 Ready，產品 AC 未開始。原 policy 3 案暫未重跑，不以原先 PASS 充當本次證據；spec/config/runner/pins 未改。
+- 同一 canonical 命令後續透過標準 `require_escalated` 工具審核實際執行，仍 **12 failed／exit 1**，相同 Unix socket EPERM，另見 crashpad ptrace EPERM。此輪不是 reviewer 拒絕，也不是產品 assertion 失敗；兩輪 logs 保留，停止第三輪，沒有換 flags／browser／port、修改 guard 或持久網路／權限設定。Browser gate 維持 HOLD。
+- 依 fresh-container 既有指引 bootstrap dependencies，第一輪因預設 npm cache `/home/agent/.npm` 缺失失敗；改為 owned workspace cache 後成功，ignore-scripts 保持開啟，package-lock 未改、npm 副作用 yarn.lock 已還原。官方 Node 22.23.1 archive 原 pin `9749e988f437343b7fa832c69ded82a312e41a03116d766797ac14f6f9eee578` 與完整 artifact/symlink gate 均通過；所有正式測試仍使用原 canonical runner，不用 host Node 24。
+- 證據目錄：`/workspace/shared/tour-r1-evidence-20261005`，含 `response-order-product-red.log`、`targeted-green.log`、`fullchecks.log`、`lint.log`、`build.log`、`e2e-upcoming.log`。Native Edit hook wiring／runtime model identity 仍 NOT_VERIFIED；未補造 dispatch-before PASS。獨立 review、遠端發布、新 head CI 及 D7 由 controller 後續處理；本施工者沒有 commit/push/merge、issue 留言、DB／共享 TEST／Production／部署／權限變更。
