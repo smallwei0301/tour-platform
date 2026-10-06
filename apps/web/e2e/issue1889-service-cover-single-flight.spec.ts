@@ -12,6 +12,12 @@ const UPLOAD_PATH = `/api/guide/activities/${ACTIVITY_ID}/upload-image`;
 const COVER_OLD = '/__e2e_mock__/issue1889/cover-old.png';
 const COVER_A = '/__e2e_mock__/issue1889/cover-a.png';
 const COVER_B = '/__e2e_mock__/issue1889/cover-b.png';
+// RootDocument 的既有預設 telemetry，僅辨識精確 GET script 並封鎖，不載入或送資料。
+const BLOCKED_ANALYTICS_SCRIPTS = new Set([
+  'https://www.googletagmanager.com/gtag/js?id=G-26EYTQJ9RC',
+  'https://va.vercel-scripts.com/v1/script.debug.js',
+  'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js',
+]);
 // 可解碼的 1×1 PNG：走真實 Image／canvas compressImage，不用假影像字串。
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4AWP4z8DwHwAFAAH/e+m+7wAAAABJRU5ErkJggg==',
@@ -56,6 +62,7 @@ async function stubCoverApis(page: Page, options: MockOptions = {}) {
     uploads: [] as { contentType: string; multipart: string }[],
     coverPatches: [] as JsonBody[],
     fullSaves: [] as JsonBody[],
+    blockedAnalytics: [] as string[],
     unexpected: [] as string[],
   };
   let service = { ...SERVICE };
@@ -69,7 +76,11 @@ async function stubCoverApis(page: Page, options: MockOptions = {}) {
     const method = request.method();
     // 不讓外部 auth／Storage／分析或任何未知第三方請求漏到網路。
     if (url.origin !== origin) {
-      rec.unexpected.push(`${method} ${url.origin}${path}`);
+      if (BLOCKED_ANALYTICS_SCRIPTS.has(url.href) && method === 'GET' && request.resourceType() === 'script') {
+        rec.blockedAnalytics.push(url.href);
+      } else {
+        rec.unexpected.push(`${method} ${url.origin}${path}`);
+      }
       await route.abort('blockedbyclient');
       return;
     }
@@ -178,6 +189,7 @@ async function saveWithCover(page: Page, rec: Awaited<ReturnType<typeof stubCove
   expect(rec.fullSaves[0]).toMatchObject({ title: SERVICE.title, coverImageUrl: COVER_B });
   expect(rec.fullSaves[0]).not.toHaveProperty('plans');
   expect(rec.fullSaves[0]).not.toHaveProperty('planOptions');
+  expect(rec.blockedAnalytics.every((url) => BLOCKED_ANALYTICS_SCRIPTS.has(url))).toBe(true);
   expect(rec.unexpected).toEqual([]);
   for (const upload of rec.uploads) {
     expect(upload.contentType).toContain('multipart/form-data; boundary=');
