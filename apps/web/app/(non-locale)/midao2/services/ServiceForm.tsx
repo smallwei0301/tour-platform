@@ -4,7 +4,7 @@
 // 封面照片：create 模式僅暫存 File，交由父層在建立成功後上傳＋PATCH；
 // edit 模式選檔後立即 compressImage→upload-image→PATCH coverImageUrl。
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { C, Btn, Field, apiSend, Icon } from '../ui';
 import { compressImage } from '../../../../src/lib/client-image-compress';
 import { csrfHeaders } from '../../../../src/lib/csrf-client';
@@ -190,6 +190,7 @@ export default function ServiceForm({
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(initial?.coverImageUrl ?? null);
   const [coverUploading, setCoverUploading] = useState(false);
+  const coverUploadInFlight = useRef(false);
   const [coverError, setCoverError] = useState<string | null>(null);
   // 方案編輯狀態：'new' 代表新增表單，其餘為 planId。
   const [planEditingId, setPlanEditingId] = useState<string | null>(null);
@@ -212,6 +213,8 @@ export default function ServiceForm({
   }
 
   async function handleCoverFile(file: File) {
+    // State alone does not stop two events before React rerenders.
+    if (coverUploadInFlight.current) return;
     setCoverError(null);
     if (mode === 'create') {
       setCoverFile(file);
@@ -220,6 +223,7 @@ export default function ServiceForm({
     }
     const activityId = initial?.activityId;
     if (!activityId) return;
+    coverUploadInFlight.current = true;
     setCoverUploading(true);
     let uploadedUrl: string | null = null;
     try {
@@ -236,6 +240,7 @@ export default function ServiceForm({
       uploadedUrl = json.data.url;
     } catch (err: any) {
       setCoverError(err?.message || '封面上傳失敗');
+      coverUploadInFlight.current = false;
       setCoverUploading(false);
       return;
     }
@@ -246,8 +251,16 @@ export default function ServiceForm({
     } catch {
       setCoverError('封面已上傳但儲存失敗，請再試一次');
     } finally {
+      coverUploadInFlight.current = false;
       setCoverUploading(false);
     }
+  }
+
+  function submitService(publish: boolean | null) {
+    // Do not let a full-service save race the independent cover PATCH.
+    if (coverUploadInFlight.current) return;
+    if (mode === 'edit') onSubmit(form, publish);
+    else onSubmit(form, publish, coverFile);
   }
 
   function goStep2() {
@@ -604,6 +617,7 @@ export default function ServiceForm({
                 type="file"
                 accept="image/*"
                 style={{ display: 'none' }}
+                disabled={coverUploading || submitting}
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCoverFile(f); }}
               />
             </label>
@@ -736,15 +750,15 @@ export default function ServiceForm({
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             {mode === 'edit' ? (
-              <Btn kind="primary" disabled={submitting} onClick={() => onSubmit(form, null)} data-testid="midao2-form-save-edit">
+              <Btn kind="primary" disabled={submitting || coverUploading} onClick={() => submitService(null)} data-testid="midao2-form-save-edit">
                 儲存變更
               </Btn>
             ) : (
               <>
-                <Btn kind="secondary" disabled={submitting} onClick={() => onSubmit(form, false, coverFile)} data-testid="midao2-form-save-draft">
+                <Btn kind="secondary" disabled={submitting || coverUploading} onClick={() => submitService(false)} data-testid="midao2-form-save-draft">
                   儲存草稿
                 </Btn>
-                <Btn kind="primary" disabled={submitting} onClick={() => onSubmit(form, true, coverFile)} data-testid="midao2-form-publish">
+                <Btn kind="primary" disabled={submitting || coverUploading} onClick={() => submitService(true)} data-testid="midao2-form-publish">
                   發布到接案頁
                 </Btn>
               </>
