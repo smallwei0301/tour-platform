@@ -85,3 +85,59 @@ The current harness redacts the actionable failure. Do not claim DB/RLS/concurre
 - Focused GREEN evidence on the candidate: `.claude/hooks/run-checks.sh --typecheck apps/web/tests/api/midao-requests-read-migration.test.mjs apps/web/tests/unit/midao-ci-command-runner.test.mjs` passed `31/31` and `tsc --noEmit` under pinned Node `v22.23.1`; pinned Node 22 lint exited `0` with the pre-existing `RootDocument.tsx` warning only; `git diff --check` passed.
 - Local production build is `PARTIAL_PASS`: Canary's bounded CI-equivalent Node 22 build passed startup validation and optimized compilation, then timed out during Next lint/typecheck on the constrained host. It emitted no pepper/startup/compile/lint error. Exact-head GitHub `ci` must pass before any merge decision.
 - No Production SQL/data/metadata, GitHub, deployment, payment/LINE, or credential-value mutation occurred in this follow-up.
+
+## 2026-10-06 單筆歷史 ledger 回填例外 — 候選修正，release HOLD
+
+> 時間：Asia/Taipei 2026-10-06 13:13；分支 `fix/issue1861-historical-ledger-exception`；base `5037db04dbb5e326d6b30149ca422c2430c3b854`。尚未 commit／push／開 PR，不宣稱本次四檔獨立審查或完整 repo 驗收 PASS。
+
+### 目標
+
+僅為 `20260824135300_issue1861_midao_request_claims_bridge.sql` 補一筆誠實的歷史 production apply record，將 Owner 現在接受的歷史缺證風險明記為個案例外。其他九支缺少紀錄的 migration 與整體 release 繼續 HOLD，不由靜態 missing 倒推是否曾實際套用。
+
+### AC 清單
+
+- [x] 僅改 migration ledger、SOP 本個案例外、既有 #1293 gate 測試及本 worklog 四檔；ledger 只追加一筆六欄 record，不改 schema／verifier／harness／migrations／CI／baseline。
+- [x] `applied_at=2026-08-25T00:11:45Z` 只表示 first durable confirmation timestamp；actual exact historical apply time is unavailable。歷史操作者 unknown，Owner 只核可本次例外，不冒稱原操作者或當時授權。
+- [x] 明記 canonical source／current catalog SHA-256、有限 13 項查核、歷史 backup／schema/data recovery 缺證、runtime／真雙 backend 競態／bypass／依賴權限及額外 service_role ACL 限制。
+- [x] canonical Node 22 `run-checks.sh` focused tests 16/16 綠燈，verified CLI 精確 missing9/HOLD、source gate PASS；實跑證據如下。
+- [ ] 本次四檔 exact-diff fresh 獨立 read-back／重跑驗證、全套回歸或可用 CI 綠燈及公開里程碑錨點；交 Commander 接續。
+
+### 已完成（附證據）
+
+- Owner 於 `2026-10-06T05:06:23Z`（Asia/Taipei `13:06:23`）在說明 #1861 現有結構一致，但找不到當年備份與回復驗證證據、詢問是否接受歷史缺證風險並允許註明例外補登後回覆「接受」。本輪決策不等於歷史核可曾存在，亦不授權新增 DB／TEST／憑證／權限／部署操作。
+- [歷史收據](https://github.com/smallwei0301/tour-platform/issues/1861#issuecomment-5403187032) 於 `2026-08-25T00:11:45Z` 報告 exact canonical SQL 在一個 Production transaction 套用。此次重新計算現有 migration bytes 的 source SHA-256=`dc7d8b4c55dbd944864b7067ba4b2ec2902c381be4c77674cfac9579268d63e1`，與收據相同；沒有把今天日期倒填為 apply time。
+- 已有唯讀查核在 `2026-10-06T04:56:04.124139Z` 取得 Tour Production PostgreSQL 17.6 catalog metadata；catalog SHA-256=`41046574c88768728b0a13e2701cf0607302b52113e544bb928e2ca18557f003`，本次重算原始檔 bytes 一致。13 項離線比對涵蓋兩表 13 欄、13 constraints（2 PK／2 UNIQUE／5 RESTRICT FK／4 CHECK）、4 valid/ready unique indexes、RLS/FORCE RLS、無 policies/column ACL、三角色 schema USAGE、clients CRUD/EXECUTE denied、service_role CRUD/EXECUTE 及兩函式 signature/result/language/DEFINER/search_path；兩份 `prosrc` 與 canonical body 逐 byte 相同。未把此 metadata 結果稱為 runtime／backup／restore 驗證。
+- `2026-10-06T05:01Z` 的 fresh 獨立唯讀 recovery-scope 審查重算 source/catalog hashes、獨立抽取並逐字比較兩函式 body，判定 `OWNER_DECISION_READY`，**不是 SOP_COMPLETE 或 RELEASE_PASS**。此審查只涵蓋決策證據，不替代本次四檔候選的獨立 code review。
+- Ownership 由 Commander 對 14 個 live open PR 的完整 files 集合逐檔核對，四個目標檔案 overlap=0；#1844 的其他六筆 ledger 議題不屬本次 #1861 範圍。
+- RED 已實跑：`TP_NODE22_ROOT=/workspace/shared/tour-r1-tooling/toolchains/node/22.23.1 bash .claude/hooks/run-checks.sh apps/web/tests/api/issue1293-migration-ledger-gate.test.mjs`，16 tests／13 PASS／3 FAIL、exit 1。失敗分別證明尚缺 #1861 record、現況仍 missing10，以及移除單筆例外的預期還未成立。新增 tests 鎖定六欄／證據語義／狹義 SOP，並檢查刪除這一筆只讓 missing9→10，baseline 涵蓋數不變。
+- 最終 test／ledger／SOP 候選（含無同名 rollback companion 的真實限制）於 Asia/Taipei `13:12:48` 以相同 canonical `run-checks.sh` 指令實跑 GREEN：16/16 PASS、0 FAIL／SKIP、exit 0；工具產生的證據在 `.claude/state/last-checks.json`／完整 TAP log，未手寫測試回執。`git diff --check` PASS。
+- 以相同 Node 22 canonical wrapper 分別實跑 `node scripts/check-migration-source-gate.mjs --mode source --json`（exit 0，`status=verified`，frozenCount=130／postCutoffCount=38）與 `node scripts/check-migration-ledger.mjs --mode verified --json`（預期 exit 1，`status=hold`，total=168／verifiedCount=42／coveredByBaseline=117／missing=9／unverified=0／errors=0／warnings=0）。#1861 單筆回填已在本候選使 missing10→9，整體 release 仍 HOLD。
+- 本次 Builder dispatch 的 before CLI 已於真實派工前保存 PASS；requested model=`gpt-6.1-sol`，actual model 身分仍待可信 runtime receipt 核對，不把 requested 當 actual。receipt 與下一 fresh Reviewer 由 Commander 管理。
+
+### 尚未驗證的限制／gate
+
+- 歷史 pre-apply backup、完整 schema/data recovery／成功還原、原操作者／實際精確套用時間與當時結構性 DDL 風險核可仍不可恢復；此支無同名 rollback companion。Owner 現在接受缺證，不能因此改成歷史 PASS。
+- 沒有新 runtime／業務 RPC／DB／TEST。既有 race case 的兩個 bridge 共用同一 `pg.Client`，不能當真雙 backend 重疊競態證據；完整重送／失敗／rollback 矩陣、definer owner bypass 與完整依賴 ACL 仍未驗。這些不是本次單筆歷史例外新增的 runtime gate，也不被本次回填視為通過。
+- service_role 表 ACL 額外 `TRUNCATE/REFERENCES/TRIGGER/MAINTAIN` 的來源 unknown。canonical 只撤 PUBLIC／anon／authenticated，沒有撤 service_role 既有/default grants；額外權限不是已證實的 migration 執行不一致，不宣稱完整 least-privilege PASS，不自行撤權。
+- `.cursor/harness/00_INDEX.md` §0 要求用 Claude Code 原生 Edit 探針取得 `HARNESS BLOCK [file-guard]`，此 native OpenAI 工具鏈沒有該 Edit／PreToolUse hook 介面，故 `HARNESS_WIRING_NOT_VERIFIED`。腳本存在或手跑不能證明 wiring，未偽造探針成功、未改治理檔；本次依 Owner 明確四檔授權作有界候選修正，不把此工具 gate 列為 PASS。
+- 全套 `run-checks.sh --all`／lint／typecheck／build、exact-head CI、本次 fresh 獨立審查與 issue/PR 錨點尚未完成。其他 #754 重工作正在執行，本輪只跑小 focused tests，由 Commander 待資源 slot 接續適用完整回歸；不以本次 focused 綠燈代替完整驗收。
+
+### 下一步
+
+- 保存最終四檔 digest／完整 diff，另派 fresh Reviewer read-back 與重跑 focused tests，逐條核對例外不超過 Owner 批准範圍。
+- Commander 取得適用全套回歸／CI 與獨立審查證據後，依最新 repo 流程決定 commit／工作分支 push／Draft PR 與雙寫錨點；保留 unresolved tool gate，不繞過保護或宣稱完整 PASS。
+
+### 絕不重做（Do-NOT-redo）
+
+- 不為此歷史回填重套 SQL、重跑 Production／TEST 業務 RPC、建立假 seed／新角色／ACL／憑證，或觸發部署。
+- 不修改 frozen migration、baseline、verifier、harness 或 CI 來迫使 gate 綠燈；不擴大 baseline 或替其他九支補無證紀錄。
+- 保留以上舊 worklog 原樣及當時 4/4 收據，只在本節補充其 race/runtime 真實 scope；不把舊同-client 測試改稱真雙 session 證據。
+- 不編造歷史 operator／備份／rollback 成功，也不把當前 Owner 缺證核可倒填為當時授權。
+
+### 2026-10-06 13:25 Asia/Taipei — Commander 獨立審查與完整回歸補證
+
+- 四檔 candidate patch SHA-256 `47e1aaea72c4ced421c616d68b710e37874c23dbb52293d1858858ac07140dd4` 已由不同 actor、fresh context 的 Sol reviewer 獨立審查 PASS，blocking/unresolved findings=0；requested=`gpt-6.1-sol`、actual=`unknown`。Reviewer 重跑 canonical focused 16/16 PASS、source gate exit 0、verified gate預期 exit 1／missing9／errors0，並獨立核對原始 catalog、source hashes、兩函式 body bytes 與歷史收據。本段是審查後文件補證，另需文件 delta review，不宣稱原 review 已涵蓋尚未存在的文字。
+- 新獨立 worktree 複製既有相同 lockfile 的依賴，workspace `@tour/web` 解析至本 worktree，沒有指向其他 actor 的產品原始碼，未下載或新增 package。
+- 首次 canonical `run-checks.sh --all` 於 UTC `05:21:01–05:21:19` exit 1：5838 tests／5831 PASS／4 FAIL／3 SKIP。四個失敗均為既有 issue507 test 對 `stdout + stderr` 做 JSON.parse；獨立 no-DB diagnostic 證實 stdout 為合法 JSON，唯一 stderr 是 `UNDICI-EHPA` 環境警告，串接後才在 character 12009 失敗。此失敗保留，不改測試或吞其他 stderr。
+- 保留既有 `NODE_OPTIONS`，僅追加 `--disable-warning=UNDICI-EHPA` 後，canonical issue507 focused 7/7 PASS；再於 UTC `05:24:55–05:25:12` 實跑同一 `run-checks.sh --all`，exit 0：**5838 tests／5835 PASS／0 FAIL／3 既有 SKIP／0 cancelled**。這只過濾已確認的單一環境 warning，其他 warnings/errors 與所有 assertions 保留。
+- 適用完整 ordinary 回歸與本次四檔獨立審查已完成；lint／typecheck／build、exact-head hosted CI、公開 issue/PR 錨點與上述 HARNESS wiring 限制仍不冒稱通過。歷史 backup/recovery/runtime 缺口和整體 release HOLD 均不變；未做任何 DB／TEST／權限／部署操作。

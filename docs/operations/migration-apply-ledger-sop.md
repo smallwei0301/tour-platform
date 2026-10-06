@@ -80,6 +80,16 @@
 
 此例外只用於既有歷史回填；**不得用於任何新的 migration**。新 migration 仍必須記錄實際套用完成的精確 ISO 8601 時間、operator、備份與 post-apply 驗證證據。
 
+### #1861 單筆歷史缺證例外（Owner 2026-10-06 核可）
+
+本節**僅適用**既有 `20260824135300_issue1861_midao_request_claims_bridge.sql` 的一次性 production ledger 回填。Owner 於 `2026-10-06T05:06:23Z`（Asia/Taipei `13:06:23`）在明示歷史備份／完整復原證據缺失及不修改正式資料庫的決策請求後回覆「接受」。這是**現在核可歷史缺證風險**，不證明原操作者、當時結構性 DDL 風險核可或備份／成功還原曾存在；**不得援引為其他 migration 或任何新 migration 的豁免**，上列新 migration 四步驟與 Free plan 結構性 DDL 限制照常適用。
+
+- **既有套用來源**：[歷史收據](https://github.com/smallwei0301/tour-platform/issues/1861#issuecomment-5403187032) 於 `2026-08-25T00:11:45Z` 報告 exact canonical source 在一個 Production transaction 套用。`applied_at` 依上節記此 first durable confirmation timestamp；actual exact historical apply time is unavailable。`operator` 明記歷史操作者 unknown，Owner 僅為本次例外核可者，不能倒填為歷史操作者。
+- **有限現時驗證**：`2026-10-06T04:56:04.124139Z` PostgreSQL 17.6 catalog-only metadata 與 canonical source 完成 13 項離線比對，涵蓋兩表、13 欄、13 constraints、4 unique indexes、RLS/FORCE RLS、無 policies/column ACL、所列角色 CRUD/EXECUTE 及兩函式 signature/result/language/DEFINER/search_path；兩份 `prosrc` 與 canonical body 逐 byte 相同。獨立唯讀審查確認此 scope。source SHA-256=`dc7d8b4c55dbd944864b7067ba4b2ec2902c381be4c77674cfac9579268d63e1`；catalog SHA-256=`41046574c88768728b0a13e2701cf0607302b52113e544bb928e2ca18557f003`。遮蔽後的證據摘要與限制記入 [#1861 worklog](worklogs/issue1861.md)，raw metadata 不入 repo。
+- **未復原的歷史證據**：pre-apply backup、完整 schema/data recovery／成功還原及當時結構性 DDL 風險核可仍 `NOT_VERIFIED`，且此支無同名 rollback companion。現時查核或新備份無法補出歷史事實；`CREATE TABLE` 亦不符合 1-B 的純函式替代路徑。這一筆得以回填是 Owner 接受缺證的個案例外，不能稱四步驟全部完成。
+- **驗證限制**：沒有新 runtime／業務 RPC 測試；真雙 backend 競態、完整 replay／rollback 矩陣、definer owner bypass／完整依賴 ACL 未驗。既有同一 `pg.Client` 的 `Promise.all` case 不證明真雙 backend 競態。service_role 額外 `TRUNCATE/REFERENCES/TRIGGER/MAINTAIN` 來源 unknown；canonical 未撤其既有/default grants，不據此推定 migration 執行不一致，也不宣稱完整 least-privilege PASS。
+- **記錄與安全邊界**：只追加這一筆六欄 record，證據與例外寫入 `note`，不擴大 baseline、不改 verifier／schema／harness／migration／CI。不重套 migration、不操作 DB／TEST／憑證／權限／部署。此筆 `verified` 只表示在本個案例外下的既有套用與有限 catalog 核對，不代表 #1861 全功能或 recovery 驗收；其餘九支缺少 verified 紀錄及整體 release 仍 `HOLD`。
+
 ## Rollback 時
 
 1. 執行對應 `.rollback.sql`（先備份）。

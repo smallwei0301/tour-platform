@@ -6,7 +6,8 @@
  *   2. 每支 migration 都有 verified record（或被 baseline 涵蓋）→ verified，exit 0。
  *   3. pending record 不算 verified → HOLD 並列入 unverified 清單。
  *   4. baseline record 涵蓋「檔名排序 <= baseline filename」的全部歷史檔案。
- *   5. 對 repo 現況（實際 supabase/migrations/ + docs/operations/migration-ledger.json）→ verified。
+ *   5. 對 repo 現況 → 精確列出缺少紀錄的九支 migration，release 仍 HOLD。
+ *   6. #1861 僅依 Owner 單筆歷史缺證例外回填，不冒稱備份／復原／runtime 全驗收。
  *
  * 純靜態檢查（比對檔案 vs ledger JSON），不需 Supabase、不需任何 secrets。
  */
@@ -18,6 +19,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // apps/web/tests/api/ -> repo root 是 4 層上
@@ -242,9 +244,9 @@ it('verified gate rejects fake ledger identity and fabricated verified or baseli
 });
 
 describe('issue #1758 — repo現況verified release gate維持fail-closed', () => {
-  it('四支Midao migration 維持verified，未套用的 #1811–#1814、#1861 與 #1796 migration 使gate精確HOLD', () => {
+  it('四支Midao migration 與 #1861 歷史回填維持verified，其餘九支缺少verified紀錄使gate精確HOLD', () => {
     const cli = runCli({ migrationsDir: path.join(REPO_ROOT, 'supabase', 'migrations'), ledgerPath: LEDGER_PATH });
-    assert.equal(cli.status, 1, `repo verified gate應對未套用 migration fail closed\n${cli.stdout}\n${cli.stderr}`);
+    assert.equal(cli.status, 1, `repo verified gate應對缺少verified紀錄 fail closed\n${cli.stdout}\n${cli.stderr}`);
     const result = JSON.parse(cli.stdout);
     assert.equal(result.status, 'hold');
     assert.deepEqual(result.missing, [
@@ -254,7 +256,6 @@ describe('issue #1758 — repo現況verified release gate維持fail-closed', () 
       '20260812213000_issue1814_checkout_idempotency_atomic.sql',
       '20260814130000_issue1760_availability_scope_contract.sql',
       '20260814130100_issue1760_atomic_day_availability.sql',
-      '20260824135300_issue1861_midao_request_claims_bridge.sql',
       '20260914052608_issue1796_expire_unpaid_order_ambiguous_column_fix.sql',
       '20260914073000_issue1796_expire_unpaid_order_variable_conflict_fix.sql',
       '20260914073100_issue1796_expire_unpaid_order_restore_search_path.sql',
@@ -273,6 +274,59 @@ describe('issue #1758 — repo現況verified release gate維持fail-closed', () 
       issue1758Records.map(({ filename, environment, status }) => ({ filename, environment, status })),
       expectedFilenames.map((filename) => ({ filename, environment: 'production', status: 'verified' }))
     );
+  });
+});
+
+describe('issue #1861 — 僅一筆 Owner 核可的歷史缺證例外', () => {
+  const filename = '20260824135300_issue1861_midao_request_claims_bridge.sql';
+
+  it('精確綁定 source、歷史確認與現時catalog證據，保留缺口且不倒填operator', () => {
+    const ledger = JSON.parse(fs.readFileSync(LEDGER_PATH, 'utf8'));
+    const records = ledger.records.filter((entry) => entry.filename === filename);
+    assert.equal(records.length, 1, '#1861 只能新增一筆，不能擴大 baseline');
+    const entry = records[0];
+    assert.deepEqual(Object.keys(entry).sort(), ['applied_at', 'environment', 'filename', 'note', 'operator', 'status']);
+    assert.equal(entry.environment, 'production');
+    assert.equal(entry.status, 'verified');
+    assert.equal(entry.applied_at, '2026-08-25T00:11:45Z');
+    assert.match(entry.operator, /歷史操作者 unknown/u);
+    assert.match(entry.operator, /僅核可 2026-10-06 回填例外/u);
+    assert.match(entry.note, /first durable confirmation timestamp/u);
+    assert.match(entry.note, /actual exact historical apply time is unavailable/u);
+    assert.match(entry.note, /https:\/\/github\.com\/smallwei0301\/tour-platform\/issues\/1861#issuecomment-5403187032/u);
+    const sourceHash = createHash('sha256').update(fs.readFileSync(path.join(REPO_ROOT, 'supabase', 'migrations', filename))).digest('hex');
+    assert.equal(sourceHash, 'dc7d8b4c55dbd944864b7067ba4b2ec2902c381be4c77674cfac9579268d63e1');
+    assert.ok(entry.note.includes(`source SHA-256=${sourceHash}`));
+    assert.match(entry.note, /catalog SHA-256=41046574c88768728b0a13e2701cf0607302b52113e544bb928e2ca18557f003/u);
+    assert.match(entry.note, /2026-10-06T05:06:23Z.*「接受」/u);
+    assert.match(entry.note, /歷史 pre-apply backup、完整 schema\/data recovery 與當時結構性 DDL 風險核可仍 NOT_VERIFIED/u);
+    assert.equal(fs.existsSync(path.join(REPO_ROOT, 'supabase', 'migrations', filename.replace(/\.sql$/u, '.rollback.sql'))), false);
+    assert.match(entry.note, /無同名 rollback companion/u);
+    assert.match(entry.note, /runtime\/真雙 backend 競態、definer owner bypass 與完整依賴 ACL 未驗/u);
+    assert.match(entry.note, /service_role 額外 TRUNCATE\/REFERENCES\/TRIGGER\/MAINTAIN 來源 unknown/u);
+    assert.match(entry.note, /其餘九支與整體 release 仍 HOLD/u);
+    const sop = fs.readFileSync(path.join(REPO_ROOT, 'docs', 'operations', 'migration-apply-ledger-sop.md'), 'utf8');
+    assert.match(sop, /#1861 單筆歷史缺證例外/u);
+    assert.ok(sop.includes(filename));
+    assert.match(sop, /不得援引為其他 migration 或任何新 migration 的豁免/u);
+  });
+
+  it('移除這一筆只恢復 #1861 的missing，九支既有缺口仍HOLD', async () => {
+    const { checkMigrationLedger } = await import(CHECK_SCRIPT);
+    const ledger = JSON.parse(fs.readFileSync(LEDGER_PATH, 'utf8'));
+    const migrationsDir = path.join(REPO_ROOT, 'supabase', 'migrations');
+    const current = checkMigrationLedger({ migrationsDir, ledgerPath: LEDGER_PATH });
+    const fx = makeFixture({ migrations: [], ledger: { ...ledger, records: ledger.records.filter((entry) => entry.filename !== filename) } });
+    fixtures.push(fx);
+    const withoutException = checkMigrationLedger({ migrationsDir, ledgerPath: fx.ledgerPath });
+    assert.equal(current.status, 'hold');
+    assert.equal(withoutException.status, 'hold');
+    assert.deepEqual(withoutException.missing, [...current.missing, filename].sort());
+    assert.equal(current.missing.length, 9);
+    assert.equal(withoutException.missing.length, 10);
+    assert.equal(withoutException.coveredByBaseline, current.coveredByBaseline);
+    assert.equal(current.verifiedCount, withoutException.verifiedCount + 1);
+    assert.deepEqual(withoutException.errors, []);
   });
 });
 

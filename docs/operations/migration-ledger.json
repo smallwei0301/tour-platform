@@ -363,6 +363,14 @@
       "applied_at": "2026-07-27T14:20:00+08:00",
       "status": "verified",
       "note": "經 Supabase MCP apply_migration 套用（SQL-OVERRIDE 使用者於對話授權 2026-07-27）；status CHECK 擴 7 值＋preferred_period 擴 full_day＋kind 欄（NOT NULL DEFAULT，metadata-only）＋midao_slot_consumptions 表＋uq_midao_slot_active partial unique index＋RLS（service-role only）；套用前以 pg_constraint 驗證兩約束實名一致；套用後驗證＝7 值/4 值 CHECK、kind 欄、表＋2 索引＋RLS 全就位，既有 2 筆 midao_requests 零影響；backup: Supabase 每日自動備份；rollback: 同名 .rollback.sql（前置條件：超集值資料需先清理，見 sdd ledger Minor (v)）。（midao2 Plan 4，worklog issue-midao2）"
+    },
+    {
+      "filename": "20260824135300_issue1861_midao_request_claims_bridge.sql",
+      "environment": "production",
+      "operator": "歷史操作者 unknown；owner (smallwei0301) 僅核可 2026-10-06 回填例外；Ava 核對現時 catalog",
+      "applied_at": "2026-08-25T00:11:45Z",
+      "status": "verified",
+      "note": "#1861 單筆歷史缺證例外，依 migration-apply-ledger-sop.md 專節回填。applied_at 是 first durable confirmation timestamp；actual exact historical apply time is unavailable，非實際套用時間。歷史收據 https://github.com/smallwei0301/tour-platform/issues/1861#issuecomment-5403187032 報告 canonical source 以 Production transaction 套用；source SHA-256=dc7d8b4c55dbd944864b7067ba4b2ec2902c381be4c77674cfac9579268d63e1。現時 catalog-only 查核於 2026-10-06T04:56:04.124139Z 取得 PostgreSQL 17.6 metadata，catalog SHA-256=41046574c88768728b0a13e2701cf0607302b52113e544bb928e2ca18557f003；13 項離線比對核對兩表/13欄/13 constraints/4 unique indexes、RLS/FORCE RLS、無 policies/column ACL、client CRUD/EXECUTE denied、service_role CRUD/EXECUTE、兩函式 signature/result/language/DEFINER/search_path，兩份 prosrc 與 canonical body 逐 byte 相同；fresh 獨立唯讀審查確認此有限 scope。Owner 於 2026-10-06T05:06:23Z 回覆「接受」歷史備份／完整復原缺證風險，僅核可這一支回填，不倒填為原 operator 或當時授權。歷史 pre-apply backup、完整 schema/data recovery 與當時結構性 DDL 風險核可仍 NOT_VERIFIED；本次未重套 migration、未新增 DB/TEST/憑證/權限/部署操作。既有 runtime 收據只保留原 scope，同一 pg.Client 的 Promise.all 不構成真雙 backend 競態；runtime/真雙 backend 競態、definer owner bypass 與完整依賴 ACL 未驗。service_role 額外 TRUNCATE/REFERENCES/TRIGGER/MAINTAIN 來源 unknown，canonical 未撤其既有/default grants，非已證實的 migration 執行不一致；不宣稱 least-privilege 全驗收。無同名 rollback companion；歷史備份或 schema/data 還原仍未驗證，不能由 catalog 推定可還原。status verified 僅表示此已存在 migration 在 Owner 一次性缺證例外下完成有限 catalog 核對；其餘九支與整體 release 仍 HOLD。Refs #1861 #1293；完整限制見 docs/operations/worklogs/issue1861.md。"
     }
   ]
 }
