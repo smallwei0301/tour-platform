@@ -141,3 +141,11 @@ The current harness redacts the actionable failure. Do not claim DB/RLS/concurre
 - 首次 canonical `run-checks.sh --all` 於 UTC `05:21:01–05:21:19` exit 1：5838 tests／5831 PASS／4 FAIL／3 SKIP。四個失敗均為既有 issue507 test 對 `stdout + stderr` 做 JSON.parse；獨立 no-DB diagnostic 證實 stdout 為合法 JSON，唯一 stderr 是 `UNDICI-EHPA` 環境警告，串接後才在 character 12009 失敗。此失敗保留，不改測試或吞其他 stderr。
 - 保留既有 `NODE_OPTIONS`，僅追加 `--disable-warning=UNDICI-EHPA` 後，canonical issue507 focused 7/7 PASS；再於 UTC `05:24:55–05:25:12` 實跑同一 `run-checks.sh --all`，exit 0：**5838 tests／5835 PASS／0 FAIL／3 既有 SKIP／0 cancelled**。這只過濾已確認的單一環境 warning，其他 warnings/errors 與所有 assertions 保留。
 - 適用完整 ordinary 回歸與本次四檔獨立審查已完成；lint／typecheck／build、exact-head hosted CI、公開 issue/PR 錨點與上述 HARNESS wiring 限制仍不冒稱通過。歷史 backup/recovery/runtime 缺口和整體 release HOLD 均不變；未做任何 DB／TEST／權限／部署操作。
+
+### 2026-10-06 13:57 Asia/Taipei — PR #1888 公開 CI 與 Issue 收據
+
+- [PR #1888](https://github.com/smallwei0301/tour-platform/pull/1888) 的 head=`bd3ab7f36b01c57d81919119a109de1ae683bf6a`、base=`5037db04dbb5e326d6b30149ca422c2430c3b854`；四檔完整 tree=`a4a222e3808f1a637246c5f2191e649cd8f9c7de`，與已測／已審候選相同。
+- [CI 37419226636 / job112124606947](https://github.com/smallwei0301/tour-platform/actions/runs/37419226636/job/112124606947) **SUCCESS**：source gate、lint、typecheck、Web tests、build、ISR smoke、preflight 均成功；ordinary 5838 total／5835 PASS／0 FAIL／3 SKIP。Preflight 重跑同套 ordinary，不重複加總。
+- [PR migration source lane 37419226516](https://github.com/smallwei0301/tour-platform/actions/runs/37419226516) **SUCCESS**：34/34 source-contract tests 與 source gate 通過；PR event 不執行 production verified ledger gate／live drift，不能將其綠燈當作九筆缺口解除。[Secret scan 37419226626](https://github.com/smallwei0301/tour-platform/actions/runs/37419226626) **SUCCESS**。
+- Hosted job 真實 checkout 為 GitHub merge candidate `78a8513b1a8b629c7cb4d842cf03fc6827781d2e`，parents 為上述 base＋head，完整 tree 亦為 `a4a222e3808f1a637246c5f2191e649cd8f9c7de`。上述收據只綁此 head；本文件補證後的新 head 仍需 fresh CI readback。
+- [Issue #1861 證據留言](https://github.com/smallwei0301/tour-platform/issues/1861#issuecomment-6010171832) 於 UTC `05:44:11` 發布並回讀全文相同，D7 的 issue 錨點已補上。未更改 Issue 狀態；尚未 merge，歷史 backup/recovery/runtime 缺證與整體 release HOLD 保留，未做新 DB／TEST／權限／部署操作。
