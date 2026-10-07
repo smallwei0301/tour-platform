@@ -98,3 +98,37 @@ Owner 本輪只將 runner、對應測試與文件交由 Ava 接手；產品其�
 - 新增窄 contract test：核對兩步／原 pins／不碰 canonical、以 fake npm sentinel 實跑兩段 shell，驗無敏感環境外洩、非零 exit 與 cleanup、repo `.npmrc` 先拒絕。首次實跑發現 `set -e` 不能保證 `test A && test B` 在 for-loop 中提早停下，2/4 FAIL；修成 explicit if/exit，不放寬測試。原 RED log 保留。
 - Node22 canonical `run-checks.sh` 的新四案與既有 #1275 三案合計 7/7 PASS；YAML parse 與兩段 `bash -n` PASS。這些是 shell/source contract，沒有 launch 本機 Chromium，不是 15 案 browser PASS。本次仍待 fresh independent review、正常發布與新 exact candidate 自然 CI 回讀；未啟動 Work、Ready、手動 workflow、merge、部署或 DB。
 - #1890／#1894 最新 diff 的 workflow 修改位於 `midao-baseline-e2e.yml`，本次完全不動該檔。Source ownership 維持原 controller；D7、#1886 disposition、canonical 12＋3 NOT_VERIFIED-runtime、完整 acceptance／merge／release HOLD 原樣保留，ordinary CI 即使成功也不得清除此 HOLD。
+
+## 2026-10-07 20:18 Asia/Taipei：Owner 單次接受等效驗證與 D6 收據
+
+### 單次決定與未變的邊界
+
+- Owner 於 12:18:53 UTC（20:18:53 Asia/Taipei）對「是否僅這次接受這份 CI 證據作為等效驗證；原指定環境沒跑的事實保留，批准後仍完成收尾與剩餘發布檢查」明確回覆「接受」。範圍只含 #1887 本次已測的 ordinary CI upcoming12＋policy3，**不形成永久 runtime 豁免、不批准跳過其他 gates 或直接合併**。
+- 已接受的 source head=`c2539212b724e870c5676880958087bf1018b1e7`；自然 merge candidate=`0ebb3c4d81e3140352a885d0f78e545bf8c452ea`，parents=`8841776809e576fabf88bdc2046c70003c5a25dc`＋`c2539212…`，tested tree=`993b3bdba375af0070a33e1c5ad56e0747f1a003`。12:20 UTC 再回讀 main/head/candidate 未變。
+- ordinary browser 使用 Node22.23.3／npm10.9.9、Playwright Chromium v1208／Chrome145.0.7632.6；原 host 指定 Node22.23.1、官方 artifact／execPath 與 `/usr/bin/chromium`。managed browser來源、shell啟動邊界及每次preflight證據不同，如實保留。原 host 的 socket EPERM／SIGABRT FAIL／NOT_VERIFIED 不改寫為已執行或 PASS。
+- 原15個spec、Playwright config、canonical runner、helper/classifier pins與全域規則都沒因本決定修改；原mock、非GET/HEAD拒絕、network／cleanup guards維持。這次接受不涵蓋 DB／共享TEST／Production、憑證、網路或權限變更。
+
+### D6：上述 exact candidate 的四個自然 CI 全部 SUCCESS
+
+- [Source CI 37615310363](https://github.com/smallwei0301/tour-platform/actions/runs/37615310363)，job112772103351：5954 total／5951 PASS／0 FAIL／3 SKIP；lint、typecheck、build234/234、ISR、preflight成功。Preflight重跑同套ordinary，不重複加總。
+- [Smoke 37615310319](https://github.com/smallwei0301/tour-platform/actions/runs/37615310319)，job112772103303：原14 PASS；新增 upcoming12/12 PASS（51.8秒）、policy3/3 PASS（29.9秒），首跑、無failed／flaky／retry。兩個supplemental steps與既有spec都真正執行，非source-contract替代。
+- [Secret scan 37615310275](https://github.com/smallwei0301/tour-platform/actions/runs/37615310275)，job112772103754：SUCCESS。
+- [Baseline 37615310220](https://github.com/smallwei0301/tour-platform/actions/runs/37615310220)，job112772105200：infra190、browser53、manual LINE2、legacy login3 PASS；Phase4／Package4 step success。Redacted數字不猜，歷史1811 RED conditional SKIP與failure-artifact upload SKIP不算實跑。
+- 四份原始job log均核對actual checkout=`0ebb3c4…`；GitHub merge-ref再核tree一致。這是**已測c253／0ebb的D6**，不倒填保存本節的後續文件SHA已跑過CI。
+- 本次三檔ordinary CI增量有fresh獨立審查PASS-in-scope、blocking finding0，7/7 canonical targeted及獨立fake-npm28/28。此前完整44檔aggregate獨立審查在4865 head為PASS-in-scope、143/143有界檢查PASS；兩份審查範圍分列，不把增量審查冒稱重新實跑完整46檔。Requested Sol、actual unknown。
+- Local首輪full 5901 total／5894 PASS／4 FAIL／3 SKIP保留；四FAIL是既有#507將JSON stdout與UNDICI-EHPA stderr串接。只保留原環境並追加精確warning-code filter後，正式same-tree full5901／5898 PASS／0 FAIL／3 SKIP，後段4案＋typecheck exit0，staged check-only PASS。未改#507或壓制其他warning。長typecheck與首輪未事前宣告resource claim的限制保留，沒有倒稱事前獨占。
+
+### 五項 issue AC 與 fresh exact-Preview 範圍
+
+1. 過期／已開始列表和CTA一致排除：原upcoming spec與helper assertions已真PASS；沒有合格場次不復活SSR歷史場次。
+2. 未來方案、名額與URL：original 12-case browser已驗有值scheduleId／mobile booking identity及replacement、empty、other-plan、full刷新；公開Preview生成場次樣本只驗plan/date，兩者不混稱。
+3. Frozen clock、已開始／未來、LA／Taipei日界與空live：上述12案有實測；Owner已接受本次ordinary runtime證據。Fresh documents跨日不等於persistent-mounted-midnight，後者不新增為本issue強制gate。
+4. Client／ISR：成功空live取代SSR、有效方案／日期／名額resolver與handler ordering、V2 cutoff／fallback配對測試PASS；ISR build/start smoke成功。Legacy fallback未刪除，revalidate=60與已送出HTML／cache短暫過期邊界維持，不宣稱更強live保證。
+5. 安全部署browser：12:21–12:23 UTC（20:21–20:23 Asia/Taipei）實際開啟[exact c253 Preview溯溪詳情](https://tour-platform-6h58yc3bg-smallwei0301s-projects.vercel.app/activities/pingtung/hualien-river-trekking)，Vercel `dpl_61CebdGrnnUM5RyCEa4w4Pi1rtQh` READY、source=git、target=null。沒有April歷史列表；選10/12週一顯示剩8位，CTA帶正確plan和date=2026-10-12；預覽另一方案再關閉保留原日期。未進booking／登入／提交、未直接探API、未下單／付款或操作DB。
+
+### 依賴／收尾及 release HOLD
+
+- #1886 fresh仍為Draft、head455b2e0a38cbc970b2f35af6cab5ae5bfe13cb99。其3個tooling paths與1887重疊，原6個test-call bodies在新版14案中全部byte-for-byte保留，runner/document擴充經先前aggregate核對；4865→c253完全未改這3檔。Controller已確認此已證明吸收範圍的technical disposition為superseded-by1887；保留原branch／artifacts及open狀態至適當closure gates完成，不把舊3檔盲目merge回來。本段未關閉或合併1886。
+- D7目前尚待本次新milestone留言與repo記錄完成雙寫；不把舊取消動作重送或改寫成成功。保存本段的文件增量須獨立審查、正常發布並另查新exact-head CI。
+- **Release仍HOLD**：12:25 UTC於actual candidate0ebb的純靜態 `check-migration-ledger.mjs --mode verified --json` 真exit1：168 total、117 baseline-covered、42 verified、9 missing、0 unverified、0 errors。這是fresh結果，取代舊10 missing作為當前計數；沒有查詢／寫入DB或修改ledger。缺項是1811／1812／1813／1814、1760兩項、1796三項。
+- 唯讀Vercel核對main884已有READY production deployment（`dpl_8sJCCh4CHCDPxnBaXXJd4XySbQaU`）。Owner於2026-10-04已明確要求Tour正式發布；這份既有授權保留，不重問同一發布意願，但不豁免上項9-missing release gate，也不授權新增DB寫入／憑證／權限動作。Merge前仍須核exact head、完整review、未解finding、ownership／dependency及其Production影響；目前未Ready、未merge、未部署、不關閉1882。
