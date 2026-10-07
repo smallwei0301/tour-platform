@@ -59,3 +59,18 @@
 - 第一次 `--all` 實際 5917 total／5910 PASS／4 FAIL／3 SKIP；四個失敗皆為既有 #507 子程序 stdout/stderr 合併後，環境 `UNDICI-EHPA` warning 接在 JSON 後造成解析失敗。未改 source／測試，僅以 Node 支援的 `--disable-warning=UNDICI-EHPA` 精準過濾這一 warning 碼，#507 獨立重跑 7/7 PASS，再原完整 `run-checks.sh --all` 於 02:10 UTC exit 0：5917 total／5914 PASS／0 FAIL／3 既有 SKIP
 - 七個付款 source 檔逐 bytes 回比原 local commit `811f75f` 完全相同；獨立工作副本只增加上述 guard 修正、兩檔同內容改名與本 worklog。舊副本與 staged patch 原封保留
 - 本次沒有重跑 type／lint／app build；付款 source 未變，既有 type／lint 證據另列。真 app build／遠端 exact-head CI、付款 route 接線、DB runtime 仍待，不將 focused 或 source checks 稱完整驗收
+
+## 2026-10-07 expected-terminal 限定重建第一階段
+
+- Owner 03:42:59 UTC 原文「批准」，核准此支付款SQL對應的post-cutoff inventory、四個精確consumer測試及既有CI兩次PG17生成四份expected-terminal artifact；immutable cutoff/capture、舊migration、pins、shared TEST／Production不變
+- 已公開Draft #1894，head `6f3d0ab0bca418499f7241e3ffc18005875c4222`。主CI `37561262597` SUCCESS；baseline `37561262631` 187案186 PASS／1FAIL：published expected-terminal仍38支，缺本次新SQL。兩次builder雖SUCCESS但只重建舊38支，沒有驗到新付款SQL
+- 第一階段僅將新SQL精確hash `bcdf10cfdf5758e407dedadbe325c5fef006f5e7e5ed16d66b6acfa8e6eb1e5b` 加入materializer與verifier兩份清單，同步builder／existing兩個精確consumer；suffix38→39，fresh history39→40，existing130+39=169。原38項及immutable capture不變
+- 全部原scope source targeted初跑31案30PASS／1預期FAIL已保留：materializer consumer要讀真published新manifest，產物尚未生成所以正確FAIL。該consumer的精確增量保存在第二階段，不以手填manifest或放寬assertion變綠；final-gate兩digest亦等真產物後更新
+- 本commit只為觸發既有自然PR CI的兩次隔離PG17 builder，不代表總gate PASS。第一階段所有staged tests仍須原evidence verifier、canonical bash-guard與獨立審查通過；第二階段取得真四artifact，驗hash／transaction／history／cleanup，再提交其餘精確consumer並跑完整CI
+- 明列未完成：current published artifact freshness RED、完整新headCI、真新SQL replay、付款route接線及全部runtime／merge gates。不得把phase1 focused PASS稱完整驗收
+
+## 2026-10-07 staged evidence 格式相容修正
+
+- 04:06:18 UTC Owner 原文「批准，不要再問」，具體核准 verifier 三種普通指令格式對齊現行 Node22 wrapper／tap，並補正反測試；未授權放寬版本、30分鐘、exit、exact tree或完整coverage
+- main d12b9a9 的原 producer 已輸出 wrapper／tap，consumer 仍預期裸指令，第一階段20/20真測試後因此被拒；保留原拒絕，不改歷史證據
+- 本次僅兩行字串與單測精確 fixtures、拒舊裸命令／缺tap／錯wrapper反例。仍需修後正式 verifier實跑、exact staged tree獨立審查與原CI，不能以scratch38案通過代替

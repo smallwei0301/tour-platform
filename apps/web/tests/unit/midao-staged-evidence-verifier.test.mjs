@@ -17,7 +17,7 @@ import {
 const NOW = 2_000_000;
 const TEST = 'apps/web/tests/unit/midao-staged-evidence-verifier.test.mjs';
 const CHILD = ['.claude/hooks/run-checks.sh', '--typecheck', TEST];
-const CMD = `node --test ${TEST} && npm run typecheck`;
+const CMD = `scripts/toolchain/tp-node22.sh -- node --test --test-reporter=tap ${TEST} && scripts/toolchain/tp-node22.sh -- npm run typecheck`;
 const HEAVY = [...HEAVY_PREFIXES[0]];
 const FRESH_INTEGRATION = 'apps/web/tests/integration/midao-baseline-fresh-postgres.test.mjs';
 const FRESH_HEAVY = [
@@ -67,7 +67,7 @@ test('deriveExpectedEvidenceCmd mirrors frozen runner typecheck semantics', () =
   assert.equal(deriveExpectedEvidenceCmd(CHILD), CMD);
   assert.equal(
     deriveExpectedEvidenceCmd(['.claude/hooks/run-checks.sh', TEST]),
-    `node --test ${TEST}`,
+    `scripts/toolchain/tp-node22.sh -- node --test --test-reporter=tap ${TEST}`,
   );
 });
 
@@ -158,9 +158,9 @@ test('ordinary --all derives npm test and covers only tests selected by npm test
     actualChildArgv: childArgv,
     before: state,
     after: state,
-    evidence: { cmd: 'npm test', exit_code: 0, epoch: NOW - 1 },
+    evidence: { cmd: 'scripts/toolchain/tp-node22.sh -- npm test', exit_code: 0, epoch: NOW - 1 },
   });
-  assert.equal(deriveExpectedEvidenceCmd(childArgv), 'npm test');
+  assert.equal(deriveExpectedEvidenceCmd(childArgv), 'scripts/toolchain/tp-node22.sh -- npm test');
   assert.deepEqual(validateRun(input).coveredPaths, [TEST, selected]);
 });
 
@@ -178,14 +178,14 @@ test('hidden tests require literal targeted entries in the coverage union', () =
   const allArgv = ['.claude/hooks/run-checks.sh', '--all'];
   const allEntry = validateRun(validRun({
     childArgv: allArgv, actualChildArgv: allArgv, before: state, after: state,
-    evidence: { cmd: 'npm test', exit_code: 0, epoch: NOW - 2 },
+    evidence: { cmd: 'scripts/toolchain/tp-node22.sh -- npm test', exit_code: 0, epoch: NOW - 2 },
   }));
   assert.throws(
     () => validateBundle({ bundle: { schemaVersion: 1, tree: 'tree-a', entries: [allEntry] }, current: state, evidence: allEntry.evidence, now: NOW }),
     /cover every staged test/i,
   );
   const targetedArgv = ['.claude/hooks/run-checks.sh', hiddenDirectory, hiddenFile];
-  const targetedEvidence = { cmd: `node --test ${hiddenDirectory} ${hiddenFile}`, exit_code: 0, epoch: NOW - 1 };
+  const targetedEvidence = { cmd: `scripts/toolchain/tp-node22.sh -- node --test --test-reporter=tap ${hiddenDirectory} ${hiddenFile}`, exit_code: 0, epoch: NOW - 1 };
   const targetedEntry = validateRun(validRun({
     childArgv: targetedArgv, actualChildArgv: targetedArgv, before: state, after: state, evidence: targetedEvidence,
   }));
@@ -521,3 +521,13 @@ test('CLI never captures child streams and handles spawn errors or signals expli
   assert.throws(() => createVerifier(errorMocks.overrides).run(['--run-heavy', '--', ...HEAVY, TEST]), /execute|spawn|child/i);
   assert.doesNotMatch(JSON.stringify(errorMocks.output), /postgres:\/\/user:pass/);
 });
+
+for (const cmd of [
+  `node --test ${TEST} && npm run typecheck`,
+  `scripts/toolchain/tp-node22.sh -- node --test ${TEST} && scripts/toolchain/tp-node22.sh -- npm run typecheck`,
+  `scripts/toolchain/wrong-node.sh -- node --test --test-reporter=tap ${TEST} && scripts/toolchain/tp-node22.sh -- npm run typecheck`,
+]) {
+  test(`rejects noncanonical runner evidence: ${cmd}`, () => {
+    rejects({ evidence: { cmd, exit_code: 0, epoch: NOW - 10 } }, /evidence\.cmd/);
+  });
+}
