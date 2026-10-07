@@ -63,10 +63,67 @@ jobs:
       - name: Run focused E2E smoke (bounded allowlist)
         run: npm run test:e2e:smoke -w @tour/web
 
+      # Supplemental ordinary CI only: existing managed Chromium, unchanged mock specs.
+      # This does not replace canonical host E2E evidence or clear its HOLD.
+      # Separate processes retain each spec's owned 3108 fixture and cleanup.
+      - name: Supplemental ordinary CI - upcoming schedules (12 cases)
+        id: supplemental_upcoming
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          node_dir="$(dirname "$(command -v node)")"
+          test "$(/usr/bin/env -i PATH="$node_dir:/usr/bin:/bin" "$node_dir/node" -p "process.versions.node.split('.')[0]")" = 22
+          browser_cache="$HOME/.cache/ms-playwright"
+          test -d "$browser_cache"
+          for directory in . apps apps/web; do
+            if test -e "$directory/.npmrc" || test -L "$directory/.npmrc"; then exit 1; fi
+          done
+          cache="$(mktemp -d)"
+          trap 'rm -rf -- "$cache"' EXIT
+          : > "$cache/user.npmrc"
+          : > "$cache/global.npmrc"
+          /usr/bin/env -i PATH="$node_dir:/usr/bin:/bin" \
+            PLAYWRIGHT_NO_WEBSERVER=1 PLAYWRIGHT_BROWSERS_PATH="$browser_cache" \
+            PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 NEXT_TELEMETRY_DISABLED=1 \
+            npm_config_offline=true npm_config_ignore_scripts=true \
+            npm_config_audit=false npm_config_fund=false npm_config_update_notifier=false \
+            npm_config_yes=false npm_config_script_shell=/bin/sh \
+            npm_config_userconfig="$cache/user.npmrc" npm_config_globalconfig="$cache/global.npmrc" \
+            npm_config_cache="$cache" \
+            npm run test:e2e -w @tour/web -- e2e/issue1882-upcoming-schedules.spec.ts --output=test-results/issue1882-upcoming
+
+      - name: Supplemental ordinary CI - policy display (3 cases)
+        if: ${{ !cancelled() && (steps.supplemental_upcoming.outcome == 'success' || steps.supplemental_upcoming.outcome == 'failure') }}
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          node_dir="$(dirname "$(command -v node)")"
+          test "$(/usr/bin/env -i PATH="$node_dir:/usr/bin:/bin" "$node_dir/node" -p "process.versions.node.split('.')[0]")" = 22
+          browser_cache="$HOME/.cache/ms-playwright"
+          test -d "$browser_cache"
+          for directory in . apps apps/web; do
+            if test -e "$directory/.npmrc" || test -L "$directory/.npmrc"; then exit 1; fi
+          done
+          cache="$(mktemp -d)"
+          trap 'rm -rf -- "$cache"' EXIT
+          : > "$cache/user.npmrc"
+          : > "$cache/global.npmrc"
+          /usr/bin/env -i PATH="$node_dir:/usr/bin:/bin" \
+            PLAYWRIGHT_NO_WEBSERVER=1 PLAYWRIGHT_BROWSERS_PATH="$browser_cache" \
+            PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 NEXT_TELEMETRY_DISABLED=1 \
+            npm_config_offline=true npm_config_ignore_scripts=true \
+            npm_config_audit=false npm_config_fund=false npm_config_update_notifier=false \
+            npm_config_yes=false npm_config_script_shell=/bin/sh \
+            npm_config_userconfig="$cache/user.npmrc" npm_config_globalconfig="$cache/global.npmrc" \
+            npm_config_cache="$cache" \
+            npm run test:e2e -w @tour/web -- e2e/issue1882-policy-display.spec.ts --output=test-results/issue1882-policy
+
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: apps/web/playwright-report/
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
           retention-days: 7

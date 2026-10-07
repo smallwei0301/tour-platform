@@ -89,3 +89,12 @@ Owner 本輪只將 runner、對應測試與文件交由 Ava 接手；產品其�
 - 唯讀來源收據：`/workspace/shared/tour1887-docs-consolidation-20261007/source-evidence.json`。
 - 五項 AC readback：`/workspace/shared/tour1887-runner-evidence-20261007/gate-scout/five-ac-readback.md`。
 - Current-main merge-tree readback：`/workspace/shared/tour1887-runner-evidence-20261007/gate-scout/merge-tree-readback-receipt.json`。
+
+## 2026-10-07 ordinary mock CI 補充（尚未發布／未取得 browser 結果）
+
+- Controller Ava 明確限定本次只補 existing `e2e-smoke.yml` 的 ordinary CI 行為證據，不是 canonical host fallback／等效替代或 gate 豁免。現有 managed Chromium 沿用原 workflow 安裝；不修改 `tp-node22.sh`、官方 Node artifact、Chromium host 路徑、spec/config/helper pins、凍結測試或 shared TEST／Production。
+- 只在既有 smoke job 增加 upcoming 12 與 policy 3 的順序步驟；兩個原 spec bytes 不变，各自管理 3108 mock fixture 及 cleanup。第二步在第一步成功或失敗後執行，取消則停止；各限 6 分鐘，job 原 20 分鐘上限維持。
+- 兩步使用 `env -i`、既有 Node22 PATH、原 Playwright browser cache、`PLAYWRIGHT_NO_WEBSERVER=1`；不傳 caller 的 secrets／CI／NODE_OPTIONS／npm config。只使用 owned 空白 npm user/global configs、offline／ignore-scripts，非零 exit 保留並 cleanup。ordinary 專屬 output 子目錄防止後一步覆蓋前一步的失敗產物，沿原失敗 artifact upload 保存。
+- 新增窄 contract test：核對兩步／原 pins／不碰 canonical、以 fake npm sentinel 實跑兩段 shell，驗無敏感環境外洩、非零 exit 與 cleanup、repo `.npmrc` 先拒絕。首次實跑發現 `set -e` 不能保證 `test A && test B` 在 for-loop 中提早停下，2/4 FAIL；修成 explicit if/exit，不放寬測試。原 RED log 保留。
+- Node22 canonical `run-checks.sh` 的新四案與既有 #1275 三案合計 7/7 PASS；YAML parse 與兩段 `bash -n` PASS。這些是 shell/source contract，沒有 launch 本機 Chromium，不是 15 案 browser PASS。本次仍待 fresh independent review、正常發布與新 exact candidate 自然 CI 回讀；未啟動 Work、Ready、手動 workflow、merge、部署或 DB。
+- #1890／#1894 最新 diff 的 workflow 修改位於 `midao-baseline-e2e.yml`，本次完全不動該檔。Source ownership 維持原 controller；D7、#1886 disposition、canonical 12＋3 NOT_VERIFIED-runtime、完整 acceptance／merge／release HOLD 原樣保留，ordinary CI 即使成功也不得清除此 HOLD。
