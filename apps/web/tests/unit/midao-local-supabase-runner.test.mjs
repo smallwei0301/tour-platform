@@ -1941,6 +1941,273 @@ test('#1894 runtime override catalog and history drift hold before fixtures whil
   assert.equal(reads, 1, 'invalid manifest/URL must hold before any new read');
 });
 
+function catalogDiagnosticFixture() {
+  const bytes = Buffer.from('private catalog row and canonical name\n');
+  const digest = createHash('sha256').update(bytes).digest('hex');
+  const historyVersions = ['00000000000001', '20261006121148'];
+  return {
+    bytes, digest, historyVersions,
+    options: {
+      runtimeDbOverrideProfile: runtimeDbProfileName,
+      databaseUrl: 'postgresql://private-user:private-password@127.0.0.1:54322/postgres',
+      expectedManifest: { payloadDigests: { 'catalog.expected-terminal.normalized.json': digest }, historyVersions },
+    },
+  };
+}
+
+function readCatalogDiagnostic(stages) {
+  assert.equal(stages.length, 1, 'one bounded stage line per candidate check');
+  assert.match(stages[0], /^runtime-db-catalog:phase=(?:expected-contract|local-connection|extract-terminal|compare-terminal|compatible),extraction_success=[01],expected_sha256=(?:[a-f0-9]{64}|unavailable),actual_sha256=(?:[a-f0-9]{64}|unavailable),history_equal=(?:[01]|unavailable),expected_history_count=(?:\d+|unavailable),actual_history_count=(?:\d+|unavailable),reason=[a-z-]+$/u);
+  assert.ok(stages[0].length < 400);
+  assert.doesNotMatch(stages[0], /private|postgresql:|canonical|STATEMENT|SELECT|secret/u);
+  return Object.fromEntries(stages[0].slice('runtime-db-catalog:'.length).split(',').map((field) => field.split('=')));
+}
+
+test('#1894 catalog diagnostics report compatible hashes and exact history while defaults stay silent', async () => {
+  const { bytes, digest, historyVersions, options } = catalogDiagnosticFixture();
+  const stages = []; let reads = 0; let extracted;
+  const extractTerminal = async () => { reads += 1; extracted = Buffer.from(bytes); return { terminalBytes: extracted, historyVersions }; };
+  const reportStage = (stage) => stages.push(stage);
+  await runner.verifyRuntimeDbCatalog({ extractTerminal, reportStage });
+  assert.equal(reads, 0); assert.deepEqual(stages, []);
+  await runner.verifyRuntimeDbCatalog({ ...options, extractTerminal, reportStage });
+  assert.equal(reads, 1); assert.ok(extracted.every((byte) => byte === 0));
+  assert.deepEqual(readCatalogDiagnostic(stages), {
+    phase: 'compatible', extraction_success: '1', expected_sha256: digest, actual_sha256: digest,
+    history_equal: '1', expected_history_count: '2', actual_history_count: '2', reason: 'none',
+  });
+});
+
+test('#1894 catalog diagnostics distinguish expected contract and local connection failures before reads', async () => {
+  const { options, digest } = catalogDiagnosticFixture();
+  for (const [change, phase] of [
+    [{ expectedManifest: { payloadDigests: { 'catalog.expected-terminal.normalized.json': 'private-secret' }, historyVersions: ['private-history'] } }, 'expected-contract'],
+    [{ runtimeDbOverrideProfile: 'private-profile' }, 'expected-contract'],
+    [{ expectedManifest: { ...options.expectedManifest, historyVersions: [] } }, 'expected-contract'],
+    [{ databaseUrl: 'postgresql://private-user:private-password@private-host.invalid:54322/postgres' }, 'local-connection'],
+  ]) {
+    const stages = []; let reads = 0;
+    await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options, ...change, extractTerminal: async () => { reads += 1; }, reportStage: (stage) => stages.push(stage) }), (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD');
+    assert.equal(reads, 0);
+    const diagnostic = readCatalogDiagnostic(stages);
+    assert.equal(diagnostic.phase, phase); assert.equal(diagnostic.extraction_success, '0');
+    assert.equal(diagnostic.actual_sha256, 'unavailable'); assert.equal(diagnostic.history_equal, 'unavailable');
+    if (phase === 'local-connection') assert.equal(diagnostic.expected_sha256, digest);
+    if (change.expectedManifest?.payloadDigests?.['catalog.expected-terminal.normalized.json'] === 'private-secret') assert.equal(diagnostic.expected_sha256, 'unavailable');
+  }
+});
+
+test('#1894 catalog diagnostics map only exact known extractor failures to finite safe reasons', async () => {
+  const { options, digest } = catalogDiagnosticFixture();
+  for (const [message, reason] of [
+    ['catalog psql child failed', 'psql-child-failed'],
+    ['catalog psql emitted unexpected stderr', 'psql-stderr'],
+    ['catalog extractor output exceeded limit', 'output-limit'],
+    ['catalog must end with exactly one terminal LF', 'catalog-framing'],
+    ['catalog must contain exactly one JSON document', 'catalog-framing'],
+    ['actual migration history mismatch', 'extractor-history'],
+    ['catalog psql child failed: private-password SELECT private-row', 'unavailable'],
+  ]) {
+    const stages = []; const primary = new Error(message);
+    await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options, extractTerminal: async () => { throw primary; }, reportStage: (stage) => stages.push(stage) }), (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD' && error.cause === primary);
+    assert.deepEqual(readCatalogDiagnostic(stages), {
+      phase: 'extract-terminal', extraction_success: '0', expected_sha256: digest, actual_sha256: 'unavailable',
+      history_equal: 'unavailable', expected_history_count: '2', actual_history_count: 'unavailable', reason,
+    });
+  }
+});
+
+test('#1894 catalog diagnostics retain wrong catalog HOLD and report matching history without rows', async () => {
+  const { options, digest, historyVersions } = catalogDiagnosticFixture();
+  const extracted = Buffer.from('different private catalog SELECT canonical-name\n');
+  const actualDigest = createHash('sha256').update(extracted).digest('hex');
+  const stages = [];
+  await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options, extractTerminal: async () => ({ terminalBytes: extracted, historyVersions }), reportStage: (stage) => stages.push(stage) }), (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD');
+  assert.ok(extracted.every((byte) => byte === 0));
+  assert.deepEqual(readCatalogDiagnostic(stages), {
+    phase: 'compare-terminal', extraction_success: '1', expected_sha256: digest, actual_sha256: actualDigest,
+    history_equal: '1', expected_history_count: '2', actual_history_count: '2', reason: 'unavailable',
+  });
+});
+
+test('#1894 catalog diagnostics retain exact ordered history comparison and count-only metadata', async () => {
+  const { options, bytes, digest, historyVersions } = catalogDiagnosticFixture();
+  for (const actualHistory of [[...historyVersions].reverse(), [historyVersions[0]], ['private-version', 'private-version']]) {
+    const stages = []; const extracted = Buffer.from(bytes);
+    await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options, extractTerminal: async () => ({ terminalBytes: extracted, historyVersions: actualHistory }), reportStage: (stage) => stages.push(stage) }), (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD');
+    assert.ok(extracted.every((byte) => byte === 0));
+    assert.deepEqual(readCatalogDiagnostic(stages), {
+      phase: 'compare-terminal', extraction_success: '1', expected_sha256: digest, actual_sha256: digest,
+      history_equal: '0', expected_history_count: '2', actual_history_count: String(actualHistory.length), reason: 'unavailable',
+    });
+  }
+});
+
+test('#1894 catalog diagnostics handle malformed extractor output without emitting values or raw errors', async () => {
+  const { options, bytes, digest } = catalogDiagnosticFixture();
+  for (const output of [undefined, { terminalBytes: 'private-secret', historyVersions: 'private-history' }, { terminalBytes: Buffer.from(bytes), historyVersions: { private: 'secret' } }]) {
+    const stages = [];
+    await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options, extractTerminal: async () => output, reportStage: (stage) => stages.push(stage) }), (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD');
+    const diagnostic = readCatalogDiagnostic(stages);
+    assert.equal(diagnostic.phase, 'compare-terminal'); assert.equal(diagnostic.extraction_success, '1');
+    assert.equal(diagnostic.expected_sha256, digest); assert.equal(diagnostic.actual_history_count, 'unavailable');
+    assert.equal(diagnostic.history_equal, 'unavailable');
+    if (Buffer.isBuffer(output?.terminalBytes)) assert.ok(output.terminalBytes.every((byte) => byte === 0));
+    else assert.equal(diagnostic.actual_sha256, 'unavailable');
+  }
+});
+
+test('#1894 catalog diagnostic reporter failure preserves primary HOLD, buffer wiping and owned cleanup', async () => {
+  const { options, bytes, historyVersions } = catalogDiagnosticFixture();
+  for (const success of [false, true]) for (const asynchronous of [false, true]) {
+    const stages = []; const calls = []; const extracted = Buffer.from(bytes);
+    const adapter = diagnosticLifecycle({ calls });
+    adapter.statusJson = async () => ({ DATABASE_URL: options.databaseUrl });
+    const reporterFailure = new Error('private reporter failure');
+    const reportStage = (stage) => {
+      stages.push(stage);
+      if (stage.startsWith('runtime-db-catalog:')) {
+        if (asynchronous) return Promise.reject(reporterFailure);
+        throw reporterFailure;
+      }
+    };
+    const run = runWithLocalSupabase({ adapter, expectedProjectId: projectId, initialize: 'start-only', childArgs: [], reportStage,
+      onReady: async ({ localEnv }) => runner.verifyRuntimeDbCatalog({ ...options, databaseUrl: localEnv.DATABASE_URL, reportStage,
+        extractTerminal: async () => ({ terminalBytes: extracted, historyVersions: success ? historyVersions : ['private-history'] }),
+      }),
+    });
+    if (success) await run;
+    else await assert.rejects(run, (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD');
+    assert.ok(extracted.every((byte) => byte === 0));
+    assert.deepEqual(calls, ['identity-1', 'identity-2', 'cleanup']);
+    readCatalogDiagnostic(stages.filter((stage) => stage.startsWith('runtime-db-catalog:')));
+  }
+});
+
+test('#1894 catalog diagnostics reject nonfinite or nonnumeric counts without exposing array proxy values', async () => {
+  const { options } = catalogDiagnosticFixture();
+  for (const count of ['private-secret', Infinity, -1, 2 ** 53]) for (const expected of [false, true]) {
+    const history = new Proxy(['private-history'], { get: (target, key) => key === 'length' ? count : Reflect.get(target, key) });
+    const stages = [];
+    await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options,
+      expectedManifest: expected ? { ...options.expectedManifest, historyVersions: history } : options.expectedManifest,
+      extractTerminal: async () => ({ terminalBytes: Buffer.from('wrong private catalog'), historyVersions: expected ? [] : history }),
+      reportStage: (stage) => stages.push(stage),
+    }), (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD');
+    const diagnostic = readCatalogDiagnostic(stages);
+    assert.equal(diagnostic[expected ? 'expected_history_count' : 'actual_history_count'], 'unavailable');
+    assert.equal(diagnostic.history_equal, 'unavailable');
+  }
+});
+
+test('#1894 catalog diagnostics bound metadata history comparison and never invoke malformed toJSON', async () => {
+  const { options, historyVersions } = catalogDiagnosticFixture();
+  for (const history of [new Array(10_001), [...historyVersions]]) {
+    let serializations = 0;
+    history.toJSON = () => { serializations += 1; throw new Error('private history serialization'); };
+    const stages = [];
+    await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options,
+      extractTerminal: async () => ({ terminalBytes: Buffer.from('wrong private catalog'), historyVersions: history }),
+      reportStage: (stage) => stages.push(stage),
+    }), (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD');
+    const diagnostic = readCatalogDiagnostic(stages);
+    assert.equal(diagnostic.actual_history_count, String(history.length));
+    assert.equal(diagnostic.history_equal, 'unavailable');
+    assert.equal(serializations, 0, 'metadata must not invoke a serialization hook skipped by the primary comparison');
+  }
+});
+
+test('#1894 catalog diagnostics use the actual candidate runner stage reporter', async () => {
+  const source = await readFile(join(repoRoot, 'scripts/testing/with-midao-local-supabase.mjs'), 'utf8');
+  assert.match(source, /await verifyRuntimeDbCatalog\(\{\s*runtimeDbOverrideProfile: invocation\.runtimeDbOverrideProfile,\s*databaseUrl: localEnv\.DATABASE_URL,\s*expectedManifest: databaseWorkdir\.expectedManifest,\s*reportStage,\s*\}\)/u);
+});
+
+test('#1894 optional digest metadata preserves original getter reads and catalog HOLD', async () => {
+  const { options, bytes, digest, historyVersions } = catalogDiagnosticFixture();
+  const key = 'catalog.expected-terminal.normalized.json';
+  const extracted = Buffer.from('different private catalog\n');
+  const actualDigest = createHash('sha256').update(extracted).digest('hex');
+  let reads = 0;
+  const payloadDigests = { get [key]() { reads += 1; return reads <= 2 ? digest : actualDigest; } };
+  const stages = [];
+  await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options,
+    expectedManifest: { payloadDigests, historyVersions },
+    extractTerminal: async () => ({ terminalBytes: extracted, historyVersions }),
+    reportStage: (stage) => stages.push(stage),
+  }), (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD');
+  assert.equal(reads, 2, 'diagnostics must reuse reads already performed by the original guard');
+  assert.equal(readCatalogDiagnostic(stages).phase, 'compare-terminal');
+  assert.ok(extracted.every((byte) => byte === 0));
+  assert.ok(bytes.some((byte) => byte !== 0));
+});
+
+test('#1894 optional history metadata preserves original getter reads and history HOLD', async () => {
+  const { options, bytes, historyVersions } = catalogDiagnosticFixture();
+  let reads = 0;
+  const badHistory = [historyVersions[0], 'private-version'];
+  const expectedManifest = { payloadDigests: options.expectedManifest.payloadDigests,
+    get historyVersions() { reads += 1; return reads <= 3 ? badHistory : historyVersions; },
+  };
+  const extracted = Buffer.from(bytes); const stages = [];
+  await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options, expectedManifest,
+    extractTerminal: async () => ({ terminalBytes: extracted, historyVersions }),
+    reportStage: (stage) => stages.push(stage),
+  }), (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD');
+  assert.equal(reads, 3, 'diagnostics must not add expected history getter reads');
+  assert.equal(readCatalogDiagnostic(stages).history_equal, '0');
+  assert.ok(extracted.every((byte) => byte === 0));
+});
+
+test('#1894 never-settling diagnostic reporter cannot delay catalog HOLD or owned cleanup', async () => {
+  const { options, bytes } = catalogDiagnosticFixture();
+  const calls = []; const stages = []; const extracted = Buffer.from(bytes);
+  const adapter = diagnosticLifecycle({ calls });
+  adapter.statusJson = async () => ({ DATABASE_URL: options.databaseUrl });
+  let release;
+  const pending = new Promise((resolveReporter) => { release = resolveReporter; });
+  const reportStage = (stage) => {
+    stages.push(stage);
+    if (stage.startsWith('runtime-db-catalog:')) return pending;
+  };
+  const run = runWithLocalSupabase({ adapter, expectedProjectId: projectId, initialize: 'start-only', childArgs: [], reportStage,
+    onReady: async ({ localEnv }) => runner.verifyRuntimeDbCatalog({ ...options, databaseUrl: localEnv.DATABASE_URL, reportStage,
+      extractTerminal: async () => ({ terminalBytes: extracted, historyVersions: ['private-version'] }),
+    }),
+  });
+  const hold = assert.rejects(run, (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD');
+  let timeout;
+  try {
+    await Promise.race([hold, new Promise((_, reject) => {
+      timeout = setTimeout(() => reject(new Error('diagnostic reporter blocked owned cleanup')), 100);
+    })]);
+    assert.deepEqual(calls, ['identity-1', 'identity-2', 'cleanup']);
+    assert.ok(extracted.every((byte) => byte === 0));
+    readCatalogDiagnostic(stages.filter((stage) => stage.startsWith('runtime-db-catalog:')));
+  } finally {
+    clearTimeout(timeout);
+    release();
+    await hold;
+  }
+});
+
+test('#1894 sparse history metadata stays unavailable without changing original comparison', async () => {
+  const { options, bytes } = catalogDiagnosticFixture();
+  for (const makeHistory of [() => new Array(2), () => ['private-version', ,]]) {
+    const stages = []; const extracted = Buffer.from(bytes);
+    await runner.verifyRuntimeDbCatalog({ ...options,
+      expectedManifest: { ...options.expectedManifest, historyVersions: makeHistory() },
+      extractTerminal: async () => ({ terminalBytes: extracted, historyVersions: makeHistory() }),
+      reportStage: (stage) => stages.push(stage),
+    });
+    const diagnostic = readCatalogDiagnostic(stages);
+    assert.equal(diagnostic.phase, 'compatible');
+    assert.equal(diagnostic.history_equal, 'unavailable');
+    assert.equal(diagnostic.expected_history_count, '2');
+    assert.equal(diagnostic.actual_history_count, '2');
+    assert.ok(extracted.every((byte) => byte === 0));
+  }
+});
+
 test('#1894 runtime override startup failures retain automatic identity-bound resource cleanup', async () => {
   const { loadRuntimeDbOverride } = await import('../../../../scripts/database-baseline/verify-toolchain-lock.mjs');
   const runtime = await loadRuntimeDbOverride(runtimeDbProfileName);

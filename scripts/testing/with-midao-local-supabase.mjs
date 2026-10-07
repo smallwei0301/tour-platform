@@ -1691,27 +1691,99 @@ export function createActualAdapter({
 }
 
 export async function verifyRuntimeDbCatalog({
-  runtimeDbOverrideProfile, databaseUrl, expectedManifest, extractTerminal,
+  runtimeDbOverrideProfile, databaseUrl, expectedManifest, extractTerminal, reportStage = () => {},
 } = {}) {
   if (runtimeDbOverrideProfile === undefined) return;
   let terminal;
+  let phase = 'expected-contract';
+  let extractionSucceeded = false;
+  let expectedDigestValue;
+  let expectedHistory;
+  let expectedHistoryLength;
+  let expectedDigest;
+  let actualDigest;
+  let historyEqual;
+  let expectedHistoryCount;
+  let actualHistoryCount;
+  let reason = 'unavailable';
   try {
     if (runtimeDbOverrideProfile !== RUNTIME_DB_OVERRIDE_PROFILE
-      || !/^[0-9a-f]{64}$/u.test(expectedManifest?.payloadDigests?.['catalog.expected-terminal.normalized.json'] ?? '')
-      || !Array.isArray(expectedManifest?.historyVersions) || expectedManifest.historyVersions.length === 0) {
+      || !/^[0-9a-f]{64}$/u.test((expectedDigestValue = expectedManifest?.payloadDigests?.['catalog.expected-terminal.normalized.json']) ?? '')
+      || !Array.isArray(expectedHistory = expectedManifest?.historyVersions)
+      || (expectedHistoryLength = (expectedHistory = expectedManifest.historyVersions).length) === 0) {
       throw new Error('candidate expected catalog contract invalid');
     }
+    // Reuse only operands already read by the original contract guard.
+    if (typeof expectedDigestValue === 'string' && /^[0-9a-f]{64}$/u.test(expectedDigestValue)) expectedDigest = expectedDigestValue;
+    if (Number.isSafeInteger(expectedHistoryLength) && expectedHistoryLength >= 0 && expectedHistoryLength <= 0xffff_ffff) expectedHistoryCount = expectedHistoryLength;
+    phase = 'local-connection';
     // Dynamic import preserves the existing builder -> runner dependency direction.
     const builder = await import('../database-baseline/build-expected-terminal.mjs');
     builder.parseLocalConnectionEnv(databaseUrl);
+    phase = 'extract-terminal';
     terminal = await (extractTerminal ?? builder.extractLocalTerminalAndHistory)({ databaseUrl });
+    extractionSucceeded = true;
+    phase = 'compare-terminal';
     if (!Buffer.isBuffer(terminal?.terminalBytes)
-      || createHash('sha256').update(terminal.terminalBytes).digest('hex') !== expectedManifest.payloadDigests['catalog.expected-terminal.normalized.json']
-      || JSON.stringify(terminal.historyVersions) !== JSON.stringify(expectedManifest.historyVersions)) {
+      || (actualDigest = createHash('sha256').update(terminal.terminalBytes).digest('hex')) !== expectedManifest.payloadDigests['catalog.expected-terminal.normalized.json']
+      || JSON.stringify(terminal.historyVersions) !== JSON.stringify(expectedHistory = expectedManifest.historyVersions)) {
       throw new Error('candidate catalog or migration history changed');
     }
-  } catch (error) { throw new Error('RUNTIME_DB_CATALOG_HOLD', { cause: error }); }
-  finally { if (Buffer.isBuffer(terminal?.terminalBytes)) terminal.terminalBytes.fill(0); }
+    phase = 'compatible';
+    reason = 'none';
+  } catch (error) {
+    if (phase === 'extract-terminal') {
+      // Exact fixed messages only: never interpolate extractor output or raw errors.
+      try {
+        reason = new Map([
+          ['catalog psql child failed', 'psql-child-failed'],
+          ['catalog psql emitted unexpected stderr', 'psql-stderr'],
+          ['catalog extractor output exceeded limit', 'output-limit'],
+          ['catalog must end with exactly one terminal LF', 'catalog-framing'],
+          ['catalog must contain exactly one JSON document', 'catalog-framing'],
+          ['actual migration history mismatch', 'extractor-history'],
+        ]).get(error?.message) ?? 'unavailable';
+      } catch { /* Diagnostic classification must preserve the primary HOLD. */ }
+    }
+    throw new Error('RUNTIME_DB_CATALOG_HOLD', { cause: error });
+  } finally {
+    if (Buffer.isBuffer(terminal?.terminalBytes)) terminal.terminalBytes.fill(0);
+    // Metadata only, including history on a hash mismatch; no further database reads.
+    try {
+      const actualHistory = terminal?.historyVersions;
+      if (extractionSucceeded && Array.isArray(actualHistory)) {
+        const count = actualHistory.length;
+        if (Number.isSafeInteger(count) && count >= 0 && count <= 0xffff_ffff) actualHistoryCount = count;
+        // Bound this optional metadata pass, without invoking serialization hooks.
+        // Ordered string equality is the same comparison for valid history arrays.
+        if (Array.isArray(expectedHistory) && actualHistoryCount !== undefined && expectedHistoryCount !== undefined
+          && actualHistoryCount <= 10_000 && expectedHistoryCount <= 10_000
+          && actualHistory.toJSON === undefined && expectedHistory.toJSON === undefined) {
+          let validHistories = true;
+          for (const [history, count] of [[actualHistory, actualHistoryCount], [expectedHistory, expectedHistoryCount]]) {
+            for (let index = 0; validHistories && index < count; index += 1) {
+              if (!Object.hasOwn(history, index)) { validHistories = false; break; }
+              const entry = history[index];
+              if (typeof entry !== 'string' || entry.length > 64) validHistories = false;
+            }
+          }
+          if (validHistories) {
+            historyEqual = actualHistoryCount === expectedHistoryCount;
+            for (let index = 0; historyEqual && index < actualHistoryCount; index += 1) {
+              historyEqual = actualHistory[index] === expectedHistory[index];
+            }
+          }
+        }
+      }
+    } catch { /* Malformed diagnostic input must not affect comparison or cleanup. */ }
+    try {
+      Promise.resolve(reportStage(`runtime-db-catalog:phase=${phase},extraction_success=${extractionSucceeded ? 1 : 0}`
+        + `,expected_sha256=${expectedDigest ?? 'unavailable'},actual_sha256=${actualDigest ?? 'unavailable'}`
+        + `,history_equal=${historyEqual === undefined ? 'unavailable' : Number(historyEqual)}`
+        + `,expected_history_count=${expectedHistoryCount ?? 'unavailable'},actual_history_count=${actualHistoryCount ?? 'unavailable'}`
+        + `,reason=${reason}`)).catch(() => {});
+    } catch { /* Reporting failure must not replace the primary HOLD or prevent cleanup. */ }
+  }
 }
 
 export function parseMidaoRunnerInvocation(args) {
@@ -1909,6 +1981,7 @@ async function main() {
             runtimeDbOverrideProfile: invocation.runtimeDbOverrideProfile,
             databaseUrl: localEnv.DATABASE_URL,
             expectedManifest: databaseWorkdir.expectedManifest,
+            reportStage,
           });
           reportStage('runtime-db-catalog-compatible');
         }
