@@ -497,18 +497,62 @@ test('#1893 admission ACL rejects anonymous/authenticated execution and admits t
   for (const role of ['anon', 'authenticated', 'service_role']) {
     const acl = await client.query("SELECT has_function_privilege($1, $2, 'EXECUTE') AS allowed", [role, ADMISSION_SIGNATURE]);
     assert.equal(acl.rows[0].allowed, role === 'service_role');
+    // Keep a failed role probe from poisoning the fixture cleanup connection.
+    const probe = new pg.Client({ connectionString: DATABASE_URL });
+    let connected = false;
+    let phase = 'connect';
+    let primaryError;
+    let executionError;
+    const connectionErrors = [];
+    const annotate = (error, action) => new Error(
+      `admission ACL role=${role} phase=${action} ${error.code ?? error.name}: ${error.message}`,
+      { cause: error },
+    );
+    // pg also emits socket errors outside query rejection. Retain them as FAIL,
+    // with the role/stage, instead of an unrelated uncaught after-hook error.
+    const onConnectionError = error => connectionErrors.push(annotate(error, phase));
+    probe.on('error', onConnectionError);
     try {
-      await client.query('BEGIN');
+      await probe.connect();
+      connected = true;
+      phase = 'initial-role';
+      assert.equal((await probe.query('SELECT current_user AS role')).rows[0].role, originalRole);
+      phase = 'begin';
+      await probe.query('BEGIN');
       // Names come only from this fixed allowlist, never an external role value.
-      await client.query(`SET LOCAL ROLE ${role}`);
-      assert.equal((await client.query('SELECT current_user AS role')).rows[0].role, role);
-      await assert.rejects(client.query("SELECT public.fn_admit_initial_payment_attempt(NULL, 'ecpay', 'ACLPROBE')"), error => {
+      phase = 'set-role';
+      await probe.query(`SET LOCAL ROLE ${role}`);
+      phase = 'verify-role';
+      assert.equal((await probe.query('SELECT current_user AS role')).rows[0].role, role);
+      phase = 'execute';
+      await assert.rejects(probe.query("SELECT public.fn_admit_initial_payment_attempt(NULL, 'ecpay', 'ACLPROBE')"), error => {
+        executionError = error;
         if (role === 'service_role') return error.code === '22023' && /invalid initial payment admission request/u.test(error.message);
         return error.code === '42501' && /permission denied for function fn_admit_initial_payment_attempt/u.test(error.message);
       });
+    } catch (error) {
+      primaryError = annotate(error, phase);
+      if (executionError && executionError !== error) {
+        const rejection = annotate(executionError, phase);
+        primaryError = new AggregateError([rejection, primaryError], `${rejection.message}; ${primaryError.message}`);
+      }
     } finally {
-      await client.query('ROLLBACK');
-      assert.equal((await client.query('SELECT current_user AS role')).rows[0].role, originalRole);
+      const cleanupErrors = [];
+      if (connected) {
+        phase = 'rollback';
+        try { await probe.query('ROLLBACK'); } catch (error) { cleanupErrors.push(annotate(error, phase)); }
+        phase = 'restore-role';
+        try {
+          assert.equal((await probe.query('SELECT current_user AS role')).rows[0].role, originalRole);
+        } catch (error) { cleanupErrors.push(annotate(error, phase)); }
+      }
+      phase = 'close';
+      try { await probe.end(); } catch (error) { cleanupErrors.push(annotate(error, phase)); }
+      // Do not silently collect a late error after this test has finalized.
+      probe.removeListener('error', onConnectionError);
+      const errors = [primaryError, ...connectionErrors.filter(error => error.cause !== primaryError?.cause), ...cleanupErrors].filter(Boolean);
+      if (errors.length === 1) throw errors[0];
+      if (errors.length > 1) throw new AggregateError(errors, errors.map(error => error.message).join('; '));
     }
   }
 });

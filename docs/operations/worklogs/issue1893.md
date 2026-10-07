@@ -103,3 +103,13 @@
 - 所有16個openPR changedpaths對該integration檔無overlap；#1776 manual-payment owner與pending_confirmation不動。嚴格DB URL限定既有wrapper的127.0.0.1:54322/postgres，並保留finally清理與錯誤回報
 - 目前三case只有syntax檢查PASS，真DB NOT_RUN；本地無Docker，需原隔離CI才可驗。ordinary --all不含integration，不能把其成功誤稱這三case實測通過；發布前仍需合法CI-first檢驗接點與獨立審查，不修改檢查器來繞過
 - bookingId checkout接線先保留：RPC已原子寫initiated，但caller payment_events另有correlationId/sourceChannel/auditSignal契約，不能直接重複寫initiated或丟audit欄位。待等價事件契約明確再施工，尚未覆蓋全writer/late callback
+
+## 2026-10-07 15:23 Asia/Taipei ACL 診斷修正，real-PG gate 仍 HOLD
+
+- 三案首輪發布 head `0b8274fbad0efb42553cce2bef31b51d35607e8c`，實際 CI merge candidate `a214dadbf0b4df51cad8e7521dde40cfac66031a` 合入 main `8841776809e576fabf88bdc2046c70003c5a25dc`。[baseline 37585279302](https://github.com/smallwei0301/tour-platform/actions/runs/37585279302/job/112673867826) FAILURE；[一般 CI 37585279208](https://github.com/smallwei0301/tour-platform/actions/runs/37585279208) SUCCESS，不能取代隔離 runtime。
+- baseline 完整 job log 明列原八案、cross-provider order-lock、required-event rollback/retry PASS；ACL 案 FAIL，finally 的 `ROLLBACK` 回 `Client has encountered a connection error and is not queryable`，共用 client 的 after hook 隨後同樣失敗，另有 `Connection terminated unexpectedly` 非同步錯誤。原 ACL 錯誤遭 finally 覆蓋，log 無 role／probe phase 與原始 SQLSTATE，故底層 PostgreSQL 斷線根因仍 UNKNOWN，不能寫成已修復。
+- 本次只修 ACL 案的診斷與連線生命週期：每個固定 allowlist role 使用獨立 disposable client；共用 fixture client 不執行 role probe。保留 `has_function_privilege`、真 `SET LOCAL ROLE`、`current_user`、精確 `42501` permission denial／`22023` invalid-request 拒絕與 rollback 後 role 恢復要求，不放寬、不 skip、不 retry。
+- socket error event、原 query rejection、assertion、rollback、role restoration 與 close 錯誤全部保留為 FAIL，訊息帶 role／phase／SQLSTATE 並保留原 cause；finally 仍嘗試 rollback、role 驗證與 close，不用清理錯誤取代 primary。原前十案（含兩個新增 runtime 已 PASS 案）的 source bytes 未改；SQL／adapter／workflow／runner／auth／URL 安全 guard 未改。
+- 官方 canonical Node `22.23.1` 的外部 source-seam fault controls 真實 RED→GREEN：原版 `4 PASS / 7 FAIL`、exit 1；診斷修正版 `11/11 PASS`、exit 0。覆蓋有／無 error event 的斷線、錯誤 grant／SQLSTATE、未拒絕執行、role leak、rollback／close／connect failure。這些是 deterministic mock controls，僅證明錯誤保存、隔離與 fail-closed，沒有本機 PG／HTTP 實測，不代替 real-PG 驗收。
+- wrapper 的 `cleanup-identity`／`cleanup` marker 存在，但最後 `[REDACTED_ERROR]` 不足以辨認 cleanup 自身是否成功，故 resource cleanup 仍 NOT_VERIFIED；後續 browser gate SKIPPED。未原樣 rerun 紅燈 CI。下一步：新 exact diff 獨立審查與原發布 gates 後，沿已批准 CI-first 路徑在既有隔離 CI 實跑診斷修正版，確認三案、fixture 清理與後續 browser；新 CI 終局前維持 Draft／HOLD，不 merge、不動 shared TEST／Production。
+- 首輪 fresh source 審查另以19項邊界 controls 得到18 PASS／1 FAIL：close後仍掛著的收集 listener 會靜默接收 callback 結束後的晚到 error。保留該 finding；最小修正是在 close 完成後移除該 collector，讓後續未處理 error 顯式失敗，不假稱這是 PostgreSQL 原始斷線根因。
