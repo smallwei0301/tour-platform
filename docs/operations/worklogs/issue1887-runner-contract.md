@@ -52,3 +52,40 @@ Owner 本輪只將 runner、對應測試與文件交由 Ava 接手；產品其�
 - 不修改 helper、vendor source、guard、E2E pins、鎖檔、凍結檔案；真 vendor 副本只在 owned temp／private dependencies 內使用
 - 不以 fixture probe 當真 Next build／browser／DB 證據；原 FAIL、UNKNOWN、skip 與調度限制保留
 - 不執行 DB／共用 TEST／Production、憑證、網路或權限變更；本輪沒有 Ready／外部 Codex 啟動／merge／手動部署
+
+## 2026-10-07 D6 CI／五項 issue AC 有界回讀（證據紀錄）
+
+> 證據觀察：2026-10-07 05:18–06:49 UTC；PR 仍為 open／Draft。本節依唯讀 source evidence、五項 AC readback 與 merge-tree readback 追加；紀錄整理時間：2026-10-07 15:14 Asia/Taipei。以下測試只綁各自明列的 SHA，不涵蓋保存本節的後續文件 commit。
+
+### D6：精確測試候選的自然 CI
+
+- PR source head `e1555ec3b98d3ff07256487979b8e26bb46b5fc6`、source tree `6d8b7b14657f6c02eca82a3ab38bea48bafad231`。
+- 四個自然 workflow 的 actual checkout 均為 merge candidate `6f4f027b3f321afa770cf37ddf78fdbbe17d2910`、tested tree `1f736ea5ab61b6145dbeddb64f7c2ac8f621f87f`；該候選以當時 base `d12b9a9c7004319d6c4b3e53d161532cbeb4049a` 整合此 source head。四個 workflow 均為 SUCCESS，沒有沿用舊 head 或手動 rerun：
+  - [Source CI #37573150017](https://github.com/smallwei0301/tour-platform/actions/runs/37573150017)：5,950 total／5,947 PASS／0 FAIL／3 SKIP；lint／typecheck、helper/build 234/234、ISR／preflight 通過。Preflight 重跑的是同一套 ordinary，不重複計數。
+  - [E2E smoke #37573150074](https://github.com/smallwei0301/tour-platform/actions/runs/37573150074)：首輪 14/14 PASS，沒有 flaky／retry；範圍仍是既有 bounded allowlist。
+  - [Secret scan #37573150119](https://github.com/smallwei0301/tour-platform/actions/runs/37573150119)：SUCCESS。
+  - [Baseline／E2E #37573150013](https://github.com/smallwei0301/tour-platform/actions/runs/37573150013)：infra 190/190、Midao browser 53/53、manual LINE 2/2、legacy login 3/3；Phase4 real-auth 與 Package4 real-HTTP chain SUCCESS，owned cleanup／identity stages 已完成。歷史 #1811 RED 證明 conditional SKIP 與 failure-artifact upload SKIP 不算已執行。
+- 同一份 PR comment 的自然 CI 收據：[exact candidate 結果](https://github.com/smallwei0301/tour-platform/pull/1887#issuecomment-6031357613)。以上可作為 **candidate `6f4f027…` 的 D6 CI 綠燈證據**，不等於更新後 current-main 整合候選、完整產品驗收或 merge／release／Production gate 通過。
+- Current main `8841776809e576fabf88bdc2046c70003c5a25dc` 相較前次基準只更新 `docs/operations/reports/readiness-live-state-latest.md` 這個既有文件 blob；read-only merge-tree 對照為 3,158/3,159 blobs+modes 相同，候選新 tree `83b74f6664046e31920e73e5c73da5a63b7982b7` 僅有此文件差異。**新 tree CI 為 NOT_RUN，沒有宣稱它已測或綠燈。**
+
+### Issue #1882 五項 AC 的本輪證據與邊界
+
+1. **過期場次／列表與 CTA 一致性：有界 PASS。** Current candidate CI 的 upcoming-schedules 測試 4576–4583 通過，涵蓋過期／已開始排除、滿額行為、全過期時 generic entry，以及 Taipei midnight 列表／CTA 一致。唯讀 Preview river detail 本次選取的日期列與 CTA 沒顯示歷史 April 日期；這只是單一 live sample，不是已控制的正式部署舊資料證明，也不把過去觀察直接歸因到目前產品。
+2. **未來方案／名額／URL：所測分支 PASS，scheduleId 分支未驗。** Preview 選 standard plan 與 2026-10-12 顯示剩 8 位，href 為 `/booking/hualien-river-trekking?plan=d1fd0e00-7bbe-4d2d-b258-81c73b7a3c7f&date=2026-10-12`；此生成場次樣本沒有 `scheduleId`。切換 half-day plan 會清掉已選日期，兩個方案 CTA 回到各自 plan-only href；不據此宣稱已驗有 populated scheduleId 的路徑。
+3. **凍結時鐘／已開始、未來、台北日界與空 live 回應：純函式／handler 證據 PASS；受控 Chromium runtime NOT_VERIFIED。** 同一 current candidate CI 通過 upcoming helper 8 案、DatePicker SSR civil 7 案、resolver 4 案、真 handler／VM ordering 12 案。另依既有 canonical 路徑對 upcoming 12 與 policy 3 執行時，Chromium 在產品 assertions 前因 socket `EPERM`／`SIGABRT` 無法啟動，兩組 actual exit 1；分類為 `NOT_VERIFIED-runtime`，不是 15 個產品回歸。未重試、未加旗標、未換 binary／digest／allowlist。這些 focused E2E 結果不被 CI 的其他 browser lane 或純函式測試取代。
+4. **Client／ISR 邊界：範圍有界，既有依賴保留。** Detail page 對顯示列／初始 CTA 共用 `selectUpcomingSchedules` 輸出，並將同一集合傳入 `DatePlanSection`；client resolver 會在 render 過濾 SSR／live 集合，成功的空 live response 會取代 SSR；detail ISR 為 `revalidate=60`。既有 client ordering/cancellation 與 API V2 cutoff／fallback regression 測試在 current ordinary CI 通過。Legacy API schedules query 仍沒有 absolute start-at floor，cache 也可能在既有 tier 內短暫過期；不宣稱已保證已送出的 HTML 即時過期或 mounted 頁面跨午夜持續更新，亦不刪除既有 legacy fallback。若要求更強的 API／cache 保證，仍是明確有界的依賴。
+5. **安全的已部署 exact-commit 瀏覽器：所述桌面 Preview 窄驗 PASS-in-scope。** 自動 Git Preview `dpl_74JaRoJS1JJVoPWZVy8W6fkUzQJx` 為 READY、target `null`、`meta.githubCommitSha=e1555ec3b98d3ff07256487979b8e26bb46b5fc6`。唯讀載入真實 river detail，僅操作方案／日期 UI 選擇並檢視 DOM／href；沒有進 booking、登入、提交表單、下單、付款、手動部署或直接 DB 操作。此桌面樣本未建立 responsive/mobile 視覺證據；最初列出的 cave detail 為 not-found，不歸因於基準或產品修正。
+
+### 仍保留的依賴與流程狀態
+
+- #1886 仍為 Draft，head `455b2e0a38cbc970b2f35af6cab5ae5bfe13cb99`；它的三個 tooling 檔與 #1887 重疊。舊 6 個 runtime assertions 在 #1887 的 14 個案例中保留並擴充；不應盲目把舊三檔合併回來。建議由 controller／owner 記錄 superseded／dependency disposition，保留 #1886 branch 與 artifacts，再對任何聲稱的獨特 assertion 做 exact-delta audit。此為建議，**沒有關閉、轉移 ownership 或合併 PR**。
+- mounted reverse completion、error/retry、unmount-late completion 仍是既有 coverage 限制；StrictMode replay 與 persistent mounted midnight 依 controller 指示不自動升格為這五項 AC 的新增強制 gate。不得藉此把缺少的 coverage 說成已通過，也不另造 gate。
+- final 8-file independent review PASS-in-scope、source findings 0，及其另行 10/10 run，僅由 [既有 PR comment](https://github.com/smallwei0301/tour-platform/pull/1887#issuecomment-6031156579) 支持；不是 44-file aggregate signoff。Requested Sol，actual model `unknown`；不宣稱 runtime identity 已驗證。
+- Production ledger 的歷史 `10 missing` 仍是既有 release HOLD 記錄；本輪沒有重查為當前事實，也不把它改寫成新的 direct source gate。
+- 本節只保存 D6 對上述**已測 merge candidate**的收據。截至 2026-10-07 15:14 Asia/Taipei，D7 雙寫仍 pending：本節已整理 repo 側證據，但 Issue #1882 尚未同步本次結果；先前取消的 issue 動作未重試。保存本節的後續文件 commit 必須另記 actual SHA／tree 與自身 CI 狀態，不得倒稱由上述 CI 測過。PR 仍 Draft，未 Ready、未 merge、未手動部署，原 merge／release／Production gates 仍依原流程判定。
+
+### 本節來源
+
+- 唯讀來源收據：`/workspace/shared/tour1887-docs-consolidation-20261007/source-evidence.json`。
+- 五項 AC readback：`/workspace/shared/tour1887-runner-evidence-20261007/gate-scout/five-ac-readback.md`。
+- Current-main merge-tree readback：`/workspace/shared/tour1887-runner-evidence-20261007/gate-scout/merge-tree-readback-receipt.json`。
