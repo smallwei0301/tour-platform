@@ -87,7 +87,7 @@ export async function verifyWorldMediaBlob(url, info, pathname, { fetchImpl = fe
 export const WORLD_MEDIA_POST_PUT_READBACK = Object.freeze({ maxAttempts: 8, maxWallMs: 90_000, delaysMs: Object.freeze([1000, 2000, 4000, 8000, 16000, 16000, 16000]) });
 const delay = (ms, signal) => waitTimer(ms, undefined, { signal });
 
-/** 只處理SDK已成功put之後的同URL 404；不重傳、不把lookup/其他HTTP/內容錯當可重试。 */
+/** SDK成功put後，同URL fullGET/Range404共用8attempt/90s預算；不重傳，不套lookup。 */
 export async function verifyWorldMediaAfterPut(url, info, pathname, { fetchImpl = fetch, signal, waitImpl = delay, now = () => performance.now() } = {}) {
   const policy = WORLD_MEDIA_POST_PUT_READBACK;
   const budgetSignal = AbortSignal.timeout(policy.maxWallMs);
@@ -97,6 +97,7 @@ export async function verifyWorldMediaAfterPut(url, info, pathname, { fetchImpl 
   const expired = () => {
     const error = new Error('WORLD_MEDIA_POST_PUT_VISIBILITY_TIMEOUT');
     if (last404?.worldMediaHttp) error.worldMediaHttp = last404.worldMediaHttp;
+    if (last404?.worldMediaRange) error.worldMediaRange = last404.worldMediaRange;
     return error;
   };
   try {
@@ -111,7 +112,9 @@ export async function verifyWorldMediaAfterPut(url, info, pathname, { fetchImpl 
         boundedSignal.throwIfAborted();
         return result;
       } catch (error) {
-        if (error.message !== 'WORLD_MEDIA_REMOTE_HTTP_INVALID' || error.worldMediaHttp?.status !== 404 || error.worldMediaHttp?.responseURLMatches !== true) throw error;
+        const full404 = error.message === 'WORLD_MEDIA_REMOTE_HTTP_INVALID' && error.worldMediaHttp?.status === 404 && error.worldMediaHttp?.responseURLMatches === true;
+        const range404 = error.message === 'WORLD_MEDIA_REMOTE_RANGE_INVALID' && error.worldMediaRange?.status === 404 && error.worldMediaRange?.responseURLMatches === true && error.worldMediaRange?.stage === 'post-put-readback';
+        if (!full404 && !range404) throw error;
         last404 = error;
         if (attempt + 1 === policy.maxAttempts) throw error;
       }

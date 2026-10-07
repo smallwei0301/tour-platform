@@ -257,8 +257,8 @@ test('post-put wall deadline and cancellation during wait abort before any furth
   assert.equal(noPut.puts, 0); assert.equal(noPut.waits.length, 0);
 });
 
-test('every Range header rejection reports all safe fields and cancels unread body without another GET or put', async () => {
-  for (const kind of ['200', '404', '401', '403', '500', 'foreign-url', 'wrong-range', 'unsafe-range', 'wrong-length', 'unsafe-length']) {
+test('every nonretryable Range header rejection reports all safe fields and cancels unread body without another GET or put', async () => {
+  for (const kind of ['200', '401', '403', '500', 'foreign-url', 'wrong-range', 'unsafe-range', 'wrong-length', 'unsafe-length']) {
     let gets = 0; let ranges = 0; let pulls = 0; let cancelled = 0;
     const probe = waitingAdapter(async (_u, options) => {
       if (!options.headers?.Range) return ++gets === 1 ? new Response(null, { status: 404 }) : response(bytes);
@@ -341,4 +341,49 @@ test('external cancellation still aborts a pending Range stream without another 
   }, { signal: controller.signal });
   await probe.adapter.authenticate(); await assert.rejects(() => probe.adapter.put(pathname, bytes, info), (error) => error.name === 'AbortError');
   assert.equal(probe.puts, 1); assert.equal(gets, 2); assert.equal(ranges, 1); assert.equal(probe.waits.length, 0);
+});
+
+test('post-put fullGET404 and sameURL Range404 share one finite attempt/backoff budget and never repeat put', async () => {
+  let gets = 0; let ranges = 0;
+  const probe = waitingAdapter(async (_u, options) => {
+    if (options.headers?.Range) return ++ranges === 1 ? new Response(null, { status: 404 }) : response(bytes, 206, { 'content-range': `bytes 0-${bytes.length - 1}/${bytes.length}` });
+    return ++gets <= 2 ? new Response(null, { status: 404 }) : response(bytes);
+  });
+  await probe.adapter.authenticate(); assert.deepEqual(await probe.adapter.put(pathname, bytes, info), { url, action: 'uploaded' });
+  assert.equal(probe.puts, 1); assert.equal(gets, 4); assert.equal(ranges, 2); assert.deepEqual(probe.waits, [1000, 2000]);
+});
+
+test('persistent post-put Range404 exhausts at most8 Range/full reads within the same90s policy and retains safe details', async () => {
+  let gets = 0; let ranges = 0;
+  const probe = waitingAdapter(async (_u, options) => {
+    if (options.headers?.Range) { ranges += 1; return new Response('not found', { status: 404 }); }
+    return ++gets === 1 ? new Response(null, { status: 404 }) : response(bytes);
+  });
+  await probe.adapter.authenticate(); await assert.rejects(() => probe.adapter.put(pathname, bytes, info), (error) => {
+    assert.equal(error.message, 'WORLD_MEDIA_REMOTE_RANGE_INVALID'); assert.equal(worldMediaHttpDiagnostic(error).status, 404); assert.equal(worldMediaHttpDiagnostic(error).stage, 'post-put-readback'); return true;
+  });
+  assert.equal(probe.puts, 1); assert.equal(gets, 9); assert.equal(ranges, 8); assert.deepEqual(probe.waits, WORLD_MEDIA_POST_PUT_READBACK.delaysMs);
+  assert.equal(probe.clock, 63000); assert.equal(WORLD_MEDIA_POST_PUT_READBACK.maxWallMs, 90000);
+});
+
+test('Range404 readiness keeps the shared wall deadline and external cancellation, while lookup/foreign404 never wait', async () => {
+  let gets = 0; let clock = 0;
+  const timeout = waitingAdapter(async (_u, options) => options.headers?.Range ? new Response(null, { status: 404 }) : ++gets === 1 ? new Response(null, { status: 404 }) : response(bytes), { now: () => clock, waitImpl: async () => { clock = 90001; } });
+  await timeout.adapter.authenticate(); await assert.rejects(() => timeout.adapter.put(pathname, bytes, info), (error) => error.message === 'WORLD_MEDIA_POST_PUT_VISIBILITY_TIMEOUT' && worldMediaHttpDiagnostic(error).phase === 'world-media-public-range-failure');
+  assert.equal(timeout.puts, 1); assert.equal(gets, 2);
+  const controller = new AbortController(); let cancelledGets = 0;
+  const cancelled = waitingAdapter(async (_u, options) => options.headers?.Range ? new Response(null, { status: 404 }) : ++cancelledGets === 1 ? new Response(null, { status: 404 }) : response(bytes), { signal: controller.signal, waitImpl: async (_ms, signal) => { controller.abort(); signal.throwIfAborted(); } });
+  await cancelled.adapter.authenticate(); await assert.rejects(() => cancelled.adapter.put(pathname, bytes, info), (error) => error.name === 'AbortError');
+  assert.equal(cancelled.puts, 1); assert.equal(cancelledGets, 2);
+  for (const existing of [true, false]) {
+    let fullGets = 0;
+    const noWait = waitingAdapter(async (_u, options) => {
+      if (!options.headers?.Range) return !existing && ++fullGets === 1 ? new Response(null, { status: 404 }) : response(bytes);
+      const result = new Response(null, { status: 404 });
+      if (!existing) Object.defineProperty(result, 'url', { value: 'https://foreign.invalid/path' });
+      return result;
+    });
+    await noWait.adapter.authenticate(); await assert.rejects(() => noWait.adapter.put(pathname, bytes, info), /WORLD_MEDIA_REMOTE_RANGE_INVALID/);
+    assert.equal(noWait.waits.length, 0); assert.equal(noWait.puts, existing ? 0 : 1);
+  }
 });
