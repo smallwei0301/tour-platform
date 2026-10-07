@@ -8,10 +8,14 @@ import { createConnection, createServer } from 'node:net';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { FIXED_DOCKER } from '../database-baseline/resolve-toolchain-supply.mjs';
 import { materializeFreshWorkdir } from '../database-baseline/materialize-fresh-workdir.mjs';
 import { resolveRepositoryPublicationPaths } from '../database-baseline/publish-baseline.mjs';
 import { resolveExpectedTerminalPublicationPaths } from '../database-baseline/publish-expected-terminal.mjs';
 import { verifyCaptureTransaction, verifyExpectedTerminalTransaction } from '../database-baseline/verify-manifest.mjs';
+import {
+  loadRuntimeDbOverride, RUNTIME_DB_OVERRIDE_PROFILE, verifyDockerIdentity, verifyRuntimeDbOverrideImages,
+} from '../database-baseline/verify-toolchain-lock.mjs';
 
 export const LOCK_PATH = '/tmp/tour-platform-local-supabase.lock';
 const SUPABASE_TOOLCHAIN_DIR = '/root/.hermes/toolchains/supabase/2.87.2';
@@ -458,7 +462,7 @@ export function buildMidaoRealAuthE2ELocalConfig(canonical) {
 }
 
 export async function prepareBaselineWorkdirWithAdapters({
-  repoRoot, lockDir, fullServices = false,
+  repoRoot, lockDir, fullServices = false, runtimeDbOverrideProfile,
   verifyCapture, verifyExpected, materialize, readFullConfig, rewriteFullConfig,
 }) {
   for (const fn of [verifyCapture, verifyExpected, materialize]) {
@@ -488,6 +492,7 @@ export async function prepareBaselineWorkdirWithAdapters({
       outputParent: parent,
       projectId,
       postCutoffManifest: expected.manifest,
+      ...(runtimeDbOverrideProfile === undefined ? {} : { runtimeDbOverrideProfile }),
     });
     if (materialized.transactionId !== capture.transactionId) {
       throw new Error('BASELINE_MATERIALIZER_CAPTURE_BINDING_MISMATCH');
@@ -503,9 +508,11 @@ export async function prepareBaselineWorkdirWithAdapters({
       seedPath: materialized.seedPath,
       stageCliReplay: (...args) => materialized.stageCliReplay(...args),
       cleanupCliMetadata: (...args) => materialized.cleanupCliMetadata(...args),
+      verifyRuntimeDbMetadata: (...args) => materialized.verifyRuntimeDbMetadata(...args),
       migrationNames: [...materialized.history],
       captureTransactionId: capture.transactionId,
       expectedTransactionId: expected.transactionId,
+      expectedManifest: expected.manifest,
       async enableFullServices() {
         if (!fullServices || fullServicesAttempted) throw new Error('BASELINE_WORKDIR_FULL_SERVICE_STATE_INVALID');
         fullServicesAttempted = true;
@@ -548,10 +555,12 @@ export async function prepareBaselineWorkdirWithAdapters({
   } finally { expected?.dispose(); capture?.dispose(); }
 }
 
-export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir, fullServices = false, realAuth = false }) {
+export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir, fullServices = false, realAuth = false, runtimeDbOverrideProfile }) {
   if (realAuth && !fullServices) throw new Error('MIDAO_REAL_AUTH_REQUIRES_FULL_SERVICES');
+  if (runtimeDbOverrideProfile !== undefined && (!realAuth || !fullServices
+    || runtimeDbOverrideProfile !== RUNTIME_DB_OVERRIDE_PROFILE)) throw new Error('RUNTIME_DB_OVERRIDE_LANE_INVALID');
   return prepareBaselineWorkdirWithAdapters({
-    repoRoot, lockDir, fullServices,
+    repoRoot, lockDir, fullServices, runtimeDbOverrideProfile,
     verifyCapture: () => verifyCaptureTransaction({
       baselineDir: join(repoRoot, 'supabase/baselines/v1'),
       ledgerPath: join(repoRoot, 'docs/operations/baseline-ledger.json'),
@@ -569,10 +578,11 @@ export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir, fullServic
       }
       return verified;
     }),
-    materialize: ({ outputParent, projectId: id, postCutoffManifest }) => materializeFreshWorkdir({
+    materialize: ({ outputParent, projectId: id, postCutoffManifest, runtimeDbOverrideProfile: profile }) => materializeFreshWorkdir({
       outputParent,
       projectId: id,
       postCutoffManifest,
+      ...(profile === undefined ? {} : { runtimeDbOverrideProfile: profile }),
     }),
     readFullConfig: () => readSafeSourceFile(join(repoRoot, 'supabase/config.toml')).then((text) => Buffer.from(text)),
     rewriteFullConfig: async (workdir, bytes) => {
@@ -914,6 +924,11 @@ const SAFE_RUNNER_ERROR_CODES = new Set([
   'API_BRIDGE_CLOSE_FAILED',
   'DATABASE_BRIDGE_CLOSE_FAILED',
   'RUNNER_LOCK_RELEASE_FAILED',
+  'RUNTIME_DB_OVERRIDE_LANE_INVALID',
+  'RUNTIME_DB_IMAGE_IDENTITY_INVALID',
+  'RUNTIME_DB_CONTAINER_IDENTITY_INVALID',
+  'RUNTIME_DB_METADATA_IDENTITY_INVALID',
+  'RUNTIME_DB_CATALOG_HOLD',
 ]);
 const SAFE_RUNNER_ERROR_PREFIX_CODES = Object.freeze([
   'SUPABASE_START_FAILED',
@@ -1349,18 +1364,58 @@ export function resolveMidaoDatabaseHealthTimeoutSeconds(value = process.env.MID
   return seconds;
 }
 
+// Only the approved candidate lane binds child Docker resolution to the same
+// fixed executable/socket as verifyDockerIdentity. Never change process.env.
+export function buildRuntimeDbExecutionEnvironment(parentEnv, runtimeDbOverrideProfile) {
+  if (runtimeDbOverrideProfile === undefined) return parentEnv;
+  if (runtimeDbOverrideProfile !== RUNTIME_DB_OVERRIDE_PROFILE) throw new Error('RUNTIME_DB_OVERRIDE_LANE_INVALID');
+  const environment = Object.fromEntries(Object.entries(parentEnv).filter(([key]) => !key.startsWith('DOCKER_')));
+  return { ...environment, PATH: '/usr/bin:/bin', DOCKER_HOST: 'unix:///var/run/docker.sock', DOCKER_API_VERSION: '1.43' };
+}
+
 export function createActualAdapter({
   repoRoot, pin, nodeBin, signal, cliWorkdir, lifecycleContract,
   fullServices = false, enableFullServices, commandRunner = runCommand,
+  runtimeDbOverrideProfile, verifyRuntimeDbMetadata,
 }) {
   const expectedProjectId = canonicalProjectId(repoRoot);
   const databaseHealthTimeoutSeconds = resolveMidaoDatabaseHealthTimeoutSeconds(process.env.MIDAO_DB_HEALTH_TIMEOUT_SECONDS);
   if (cliWorkdir && basename(resolve(cliWorkdir)) !== expectedProjectId) throw new Error('CLI_WORKDIR_PROJECT_IDENTITY_MISMATCH');
   if (fullServices && typeof enableFullServices !== 'function') throw new Error('FULL_SERVICE_CONFIG_ADAPTER_INVALID');
-  const cli = (args, { cleanup = false } = {}) => {
+  if (runtimeDbOverrideProfile !== undefined && (runtimeDbOverrideProfile !== RUNTIME_DB_OVERRIDE_PROFILE
+    || !fullServices || !cliWorkdir || typeof verifyRuntimeDbMetadata !== 'function')) {
+    throw new Error('RUNTIME_DB_OVERRIDE_LANE_INVALID');
+  }
+  const invokeCommand = (command, args, options = {}) => commandRunner(
+    runtimeDbOverrideProfile !== undefined && command === 'docker' ? FIXED_DOCKER : command,
+    args,
+    runtimeDbOverrideProfile === undefined ? options : {
+      ...options, env: buildRuntimeDbExecutionEnvironment(options.env ?? process.env, runtimeDbOverrideProfile),
+    },
+  );
+  let runtimeOverride;
+  const verifyRuntimeImages = async () => {
+    if (runtimeDbOverrideProfile === undefined) return;
+    runtimeOverride = await loadRuntimeDbOverride(runtimeDbOverrideProfile);
+    try {
+      await verifyRuntimeDbOverrideImages(runtimeOverride, {
+        inspectImage: async (ref) => {
+          const result = await invokeCommand('docker', ['image', 'inspect', '--', ref], { cwd: repoRoot, signal });
+          if (result.exitCode !== 0 || result.signal !== null || result.stderr.trim()) throw new Error('RUNTIME_DB_IMAGE_IDENTITY_INVALID');
+          return result.stdout;
+        },
+      });
+    } catch (error) { throw new Error('RUNTIME_DB_IMAGE_IDENTITY_INVALID', { cause: error }); }
+  };
+  const cli = async (args, { cleanup = false } = {}) => {
+    if (runtimeDbOverrideProfile !== undefined) {
+      try { await verifyRuntimeDbMetadata(); } catch (error) {
+        throw new Error('RUNTIME_DB_METADATA_IDENTITY_INVALID', { cause: error });
+      }
+    }
     const effectiveArgs = cliWorkdir ? [...args, '--workdir', cliWorkdir] : args;
     const invocation = buildSupabaseCliInvocation(pin, effectiveArgs);
-    return commandRunner(invocation.command, invocation.args, {
+    return invokeCommand(invocation.command, invocation.args, {
       cwd: repoRoot,
       signal: cleanup ? undefined : signal,
       env: {
@@ -1374,7 +1429,7 @@ export function createActualAdapter({
   };
   const containers = async () => {
     const projectId = canonicalProjectId(repoRoot);
-    const result = await commandRunner('docker', [
+    const result = await invokeCommand('docker', [
       'ps', '-a', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`,
       '--format', '{{.ID}}\t{{.Names}}\t{{.Label "com.supabase.cli.project"}}',
     ], { cwd: repoRoot });
@@ -1385,7 +1440,7 @@ export function createActualAdapter({
     for (const row of listed) {
       if (row.name.endsWith(`_${projectId}`)) { normalized.push(row); continue; }
       transientCount += 1;
-      const inspected = await commandRunner('docker', ['inspect', '--format', '{{json .}}', '--', row.id], { cwd: repoRoot });
+      const inspected = await invokeCommand('docker', ['inspect', '--format', '{{json .}}', '--', row.id], { cwd: repoRoot });
       if (transientCount > 1 || inspected.exitCode !== 0 || inspected.stderr.trim()) throw new Error('DOCKER_TRANSIENT_IDENTITY_FAILED');
       let identity;
       try { identity = JSON.parse(inspected.stdout); } catch { throw new Error('DOCKER_TRANSIENT_IDENTITY_FAILED'); }
@@ -1412,7 +1467,7 @@ export function createActualAdapter({
   };
   const networks = async ({ allowEmpty = false } = {}) => {
     const projectId = canonicalProjectId(repoRoot);
-    const result = await commandRunner('docker', [
+    const result = await invokeCommand('docker', [
       'network', 'ls', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`,
       '--format', '{{.ID}}\t{{.Name}}\t{{.Label "com.supabase.cli.project"}}',
     ], { cwd: repoRoot });
@@ -1424,7 +1479,7 @@ export function createActualAdapter({
   };
   const volumes = async ({ allowEmpty = false } = {}) => {
     const projectId = canonicalProjectId(repoRoot);
-    const result = await commandRunner('docker', [
+    const result = await invokeCommand('docker', [
       'volume', 'ls', '--filter', `label=com.supabase.cli.project=${projectId}`,
       '--format', '{{.Name}}\t{{.Label "com.supabase.cli.project"}}',
     ], { cwd: repoRoot });
@@ -1435,7 +1490,7 @@ export function createActualAdapter({
     });
     const rows = [];
     for (const listed of listedRows) {
-      const inspected = await commandRunner('docker', [
+      const inspected = await invokeCommand('docker', [
         'volume', 'inspect', '--format', '{{.Name}}\t{{.CreatedAt}}\t{{.Driver}}\t{{.Scope}}\t{{index .Labels "com.supabase.cli.project"}}', '--', listed.name,
       ], { cwd: repoRoot });
       if (inspected.exitCode !== 0 || inspected.stderr.trim()) throw new Error('DOCKER_VOLUME_IDENTITY_FAILED');
@@ -1464,9 +1519,22 @@ export function createActualAdapter({
     const expectedName = `supabase_db_${canonicalProjectId(repoRoot)}`;
     const database = owned.filter((container) => container.name === expectedName);
     if (database.length !== 1) throw new Error('DATABASE_CONTAINER_IDENTITY_INVALID');
+    if (runtimeDbOverrideProfile !== undefined) {
+      if (!runtimeOverride || !/^[0-9a-f]{64}$/u.test(database[0].id)) throw new Error('RUNTIME_DB_CONTAINER_IDENTITY_INVALID');
+      const inspected = await invokeCommand('docker', ['inspect', '--format', '{{json .}}', '--', database[0].id], { cwd: repoRoot, signal });
+      let identity;
+      try { identity = JSON.parse(inspected.stdout); } catch { identity = null; }
+      if (inspected.exitCode !== 0 || inspected.signal !== null || inspected.stderr.trim()
+        || identity?.Id !== database[0].id || identity?.Name !== `/${expectedName}`
+        || identity?.Image !== runtimeOverride.image.imageId
+        || identity?.Config?.Image !== `${runtimeOverride.image.repository}:${runtimeOverride.image.tag}`
+        || identity?.Config?.Labels?.['com.supabase.cli.project'] !== expectedProjectId
+        || identity?.Config?.Labels?.['com.docker.compose.project'] !== expectedProjectId
+        || identity?.State?.Status !== 'running') throw new Error('RUNTIME_DB_CONTAINER_IDENTITY_INVALID');
+    }
     for (let attempt = 0; attempt < databaseHealthTimeoutSeconds; attempt += 1) {
       if (signal?.aborted) throw new Error('RUNNER_SIGNALLED');
-      const result = await commandRunner('docker', ['inspect', '--format', '{{.State.Health.Status}}', database[0].id], { cwd: repoRoot });
+      const result = await invokeCommand('docker', ['inspect', '--format', '{{.State.Health.Status}}', database[0].id], { cwd: repoRoot });
       if (result.exitCode !== 0 || result.stderr.trim()) throw new Error('DATABASE_HEALTH_INSPECT_FAILED');
       if (result.stdout.trim() === 'healthy') return;
       await new Promise((resolveDelay) => setTimeout(resolveDelay, 1000));
@@ -1478,7 +1546,7 @@ export function createActualAdapter({
   const bootstrapVerify = "SELECT column_name || '|' || data_type || '|' || udt_name || '|' || is_nullable FROM information_schema.columns WHERE table_schema='supabase_migrations' AND table_name='schema_migrations' ORDER BY ordinal_position; SELECT '--history--'; SELECT version FROM supabase_migrations.schema_migrations ORDER BY version;";
   const expectedBootstrapSchema = 'version|text|text|NO\nstatements|ARRAY|_text|YES\nname|text|text|YES';
   const expectedBootstrapHistory = `${expectedBootstrapSchema}\n--history--\n00000000000000`;
-  const runBootstrapQuery = (databaseId, query) => commandRunner('docker', [
+  const runBootstrapQuery = (databaseId, query) => invokeCommand('docker', [
     'exec', '--env', 'PGPASSWORD=postgres', databaseId,
     'psql', '--username', 'supabase_admin', '--dbname', 'postgres',
     '--set=ON_ERROR_STOP=1', '--tuples-only', '--no-align', '--command', query,
@@ -1511,6 +1579,7 @@ export function createActualAdapter({
   return {
     status: async () => ({ ...(await cli(['status'])), expectedWorkdir: cliWorkdir }),
     start: async () => {
+      await verifyRuntimeImages();
       const databaseResult = await cli(fullServices
         ? ['start', '--ignore-health-check', '--exclude', MIDAO_DATABASE_ONLY_EXCLUDED_SERVICES]
         : ['db', 'start']);
@@ -1533,6 +1602,7 @@ export function createActualAdapter({
         const diagnostic = redactSupabaseOutput(stopped.stderr).trim();
         throw new Error(diagnostic ? `SUPABASE_DATABASE_HANDOFF_STOP_FAILED: ${diagnostic}` : 'SUPABASE_DATABASE_HANDOFF_STOP_FAILED');
       }
+      await verifyRuntimeImages();
       const serviceResult = await cli(['start', '--exclude', MIDAO_E2E_EXCLUDED_SERVICES]);
       if (serviceResult.exitCode !== 0) {
         const diagnostic = redactSupabaseOutput(serviceResult.stderr).trim();
@@ -1554,7 +1624,7 @@ export function createActualAdapter({
       const confirmed = confirmProjectContainers({ expectedProjectId, containers: owned });
       if (confirmed.length !== 1 || confirmed[0].name !== `supabase_db_${expectedProjectId}`
         || !/^[0-9a-f]{64}$/u.test(confirmed[0].id)) throw new Error('DATABASE_DIAGNOSTIC_IDENTITY_INVALID');
-      const result = await commandRunner('docker', [
+      const result = await invokeCommand('docker', [
         'logs', '--since', '10m', '--tail', '100', '--timestamps', '--', confirmed[0].id,
       ], { cwd: repoRoot, timeoutMs: 5_000, maxOutputBytes: 32_768 });
       if (result.exitCode !== 0 || result.signal !== null || result.timedOut) throw new Error('DATABASE_DIAGNOSTIC_UNAVAILABLE');
@@ -1581,7 +1651,7 @@ export function createActualAdapter({
     ready: async (env) => {
       let lastError;
       for (let attempt = 0; attempt < 20; attempt += 1) {
-        const result = await commandRunner(nodeBin, ['-e', "import('pg').then(async({default:pg})=>{const c=new pg.Client({connectionString:process.env.DATABASE_URL});await c.connect();await c.query('SELECT 1');await c.end()})"], {
+        const result = await invokeCommand(nodeBin, ['-e', "import('pg').then(async({default:pg})=>{const c=new pg.Client({connectionString:process.env.DATABASE_URL});await c.connect();await c.query('SELECT 1');await c.end()})"], {
           cwd: repoRoot, env: { ...process.env, ...env }, signal,
         });
         if (result.exitCode === 0) return;
@@ -1592,7 +1662,7 @@ export function createActualAdapter({
       throw new Error(`DATABASE_NOT_READY: exit=${lastError?.exitCode ?? 'unknown'}${diagnostic ? ` ${diagnostic}` : ''}`);
     },
     child: async (paths, env) => {
-      const result = await commandRunner(nodeBin, ['--test', '--test-concurrency=1', ...paths], {
+      const result = await invokeCommand(nodeBin, ['--test', '--test-concurrency=1', ...paths], {
         cwd: repoRoot, env: { ...process.env, ...env, NODE_OPTIONS: '--experimental-strip-types' }, signal,
       });
       const secrets = Object.values(env);
@@ -1604,20 +1674,44 @@ export function createActualAdapter({
       const errors = [];
       const containerIds = owned.map((container) => container.id);
       if (containerIds.length > 0) {
-        const containerResult = await commandRunner('docker', ['rm', '--force', '--', ...containerIds], { cwd: repoRoot });
+        const containerResult = await invokeCommand('docker', ['rm', '--force', '--', ...containerIds], { cwd: repoRoot });
         if (containerResult.exitCode !== 0) errors.push(new Error('OWNED_CONTAINER_CLEANUP_FAILED'));
       }
       if (ownedAssets.networks.length > 0) {
-        const networkResult = await commandRunner('docker', ['network', 'rm', ...ownedAssets.networks.map((network) => network.id)], { cwd: repoRoot });
+        const networkResult = await invokeCommand('docker', ['network', 'rm', ...ownedAssets.networks.map((network) => network.id)], { cwd: repoRoot });
         if (networkResult.exitCode !== 0) errors.push(new Error('OWNED_NETWORK_CLEANUP_FAILED'));
       }
       if (ownedAssets.volumes.length > 0) {
-        const volumeResult = await commandRunner('docker', ['volume', 'rm', ...ownedAssets.volumes.map((volume) => volume.name)], { cwd: repoRoot });
+        const volumeResult = await invokeCommand('docker', ['volume', 'rm', ...ownedAssets.volumes.map((volume) => volume.name)], { cwd: repoRoot });
         if (volumeResult.exitCode !== 0) errors.push(new Error('OWNED_VOLUME_CLEANUP_FAILED'));
       }
       if (errors.length > 0) throw new AggregateError(errors, 'owned Supabase asset cleanup failed');
     },
   };
+}
+
+export async function verifyRuntimeDbCatalog({
+  runtimeDbOverrideProfile, databaseUrl, expectedManifest, extractTerminal,
+} = {}) {
+  if (runtimeDbOverrideProfile === undefined) return;
+  let terminal;
+  try {
+    if (runtimeDbOverrideProfile !== RUNTIME_DB_OVERRIDE_PROFILE
+      || !/^[0-9a-f]{64}$/u.test(expectedManifest?.payloadDigests?.['catalog.expected-terminal.normalized.json'] ?? '')
+      || !Array.isArray(expectedManifest?.historyVersions) || expectedManifest.historyVersions.length === 0) {
+      throw new Error('candidate expected catalog contract invalid');
+    }
+    // Dynamic import preserves the existing builder -> runner dependency direction.
+    const builder = await import('../database-baseline/build-expected-terminal.mjs');
+    builder.parseLocalConnectionEnv(databaseUrl);
+    terminal = await (extractTerminal ?? builder.extractLocalTerminalAndHistory)({ databaseUrl });
+    if (!Buffer.isBuffer(terminal?.terminalBytes)
+      || createHash('sha256').update(terminal.terminalBytes).digest('hex') !== expectedManifest.payloadDigests['catalog.expected-terminal.normalized.json']
+      || JSON.stringify(terminal.historyVersions) !== JSON.stringify(expectedManifest.historyVersions)) {
+      throw new Error('candidate catalog or migration history changed');
+    }
+  } catch (error) { throw new Error('RUNTIME_DB_CATALOG_HOLD', { cause: error }); }
+  finally { if (Buffer.isBuffer(terminal?.terminalBytes)) terminal.terminalBytes.fill(0); }
 }
 
 export function parseMidaoRunnerInvocation(args) {
@@ -1626,6 +1720,12 @@ export function parseMidaoRunnerInvocation(args) {
   }
   let mode = 'postgres';
   let childArgs = [...args];
+  let runtimeDbOverrideProfile;
+  if (childArgs[0] === '--runtime-db-override') {
+    runtimeDbOverrideProfile = childArgs[1];
+    if (runtimeDbOverrideProfile !== RUNTIME_DB_OVERRIDE_PROFILE) throw new Error('RUNTIME_DB_OVERRIDE_ARGS_INVALID');
+    childArgs = childArgs.slice(2);
+  }
   if (childArgs[0] === '--playwright') {
     mode = 'playwright';
     childArgs = childArgs.slice(1);
@@ -1658,7 +1758,11 @@ export function parseMidaoRunnerInvocation(args) {
   ) {
     throw new Error(`MIDAO_${mode.toUpperCase()}_ARGS_INVALID`);
   }
-  return { mode, childArgs };
+  if (runtimeDbOverrideProfile !== undefined && (mode !== 'api-real-auth' || childArgs.length !== 1
+    || childArgs[0] !== 'apps/web/tests/integration/midao-issue1814-checkout-idempotency-real-auth.test.mjs')) {
+    throw new Error('RUNTIME_DB_OVERRIDE_ARGS_INVALID');
+  }
+  return { mode, childArgs, ...(runtimeDbOverrideProfile === undefined ? {} : { runtimeDbOverrideProfile }) };
 }
 
 // Fixed deterministic id/credentials for the Package 4 API real-auth
@@ -1719,6 +1823,8 @@ async function createOrUpdateMidaoTravelerAuthUser({ traveler, supabaseUrl, serv
 }
 
 async function main() {
+  // Reject an expanded profile/lane before locks, bridges, CLI, or Docker work.
+  const invocation = parseMidaoRunnerInvocation(process.argv.slice(2));
   const repoRoot = process.cwd();
   const projectId = canonicalProjectId(repoRoot);
   const packageLock = await fsPromises.readFile(resolve(repoRoot, 'package-lock.json'), 'utf8');
@@ -1728,6 +1834,12 @@ async function main() {
     resolve(repoRoot, 'supabase/baselines/v1/toolchain-lock.json'),
     'utf8',
   ));
+  if (invocation.runtimeDbOverrideProfile !== undefined) {
+    await loadRuntimeDbOverride(invocation.runtimeDbOverrideProfile);
+    const docker = await verifyDockerIdentity(FIXED_DOCKER);
+    if (docker.architecture !== 'amd64') throw new Error('RUNTIME_DB_IMAGE_IDENTITY_INVALID');
+    process.stderr.write(`MIDAO_RUNTIME_DB_OVERRIDE=${invocation.runtimeDbOverrideProfile}\n`);
+  }
   await verifyPinnedSupabaseBinary();
   const nodeBin = process.execPath;
   const stat = await fsPromises.readFile(`/proc/${process.pid}/stat`, 'utf8');
@@ -1753,7 +1865,6 @@ async function main() {
       await fsPromises.readFile('/proc/1/cgroup', 'utf8'),
     );
     if (gateway) databaseBridge = await startLoopbackBridge({ listenPort: 54322, targetHost: gateway, targetPort: 54322 });
-    const invocation = parseMidaoRunnerInvocation(process.argv.slice(2));
     const playwrightMode = invocation.mode === 'playwright';
     const realAuthPlaywrightMode = invocation.mode === 'playwright-real-auth';
     const apiRealAuthMode = invocation.mode === 'api-real-auth';
@@ -1765,6 +1876,7 @@ async function main() {
     }
     databaseWorkdir = await prepareDatabaseOnlyWorkdir({
       repoRoot, lockDir: LOCK_PATH, fullServices: realAuthMode, realAuth: realAuthMode,
+      runtimeDbOverrideProfile: invocation.runtimeDbOverrideProfile,
     });
     replay = await databaseWorkdir.stageCliReplay();
     if (!playwrightMode && childArgs.length === 0) childArgs.push(
@@ -1780,6 +1892,8 @@ async function main() {
         lifecycleContract: { migrationNames: [replay.bootstrapName], noticesByMigration: {} },
         fullServices: realAuthMode,
         enableFullServices: realAuthMode ? () => databaseWorkdir.enableFullServices() : undefined,
+        runtimeDbOverrideProfile: invocation.runtimeDbOverrideProfile,
+        verifyRuntimeDbMetadata: () => databaseWorkdir.verifyRuntimeDbMetadata(),
       }),
       expectedProjectId: projectId,
       initialize: 'start-only',
@@ -1790,6 +1904,14 @@ async function main() {
           history: databaseWorkdir.history,
           signal: controller.signal,
         });
+        if (invocation.runtimeDbOverrideProfile !== undefined) {
+          await verifyRuntimeDbCatalog({
+            runtimeDbOverrideProfile: invocation.runtimeDbOverrideProfile,
+            databaseUrl: localEnv.DATABASE_URL,
+            expectedManifest: databaseWorkdir.expectedManifest,
+          });
+          reportStage('runtime-db-catalog-compatible');
+        }
         const seed = await runCommand('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', databaseWorkdir.seedPath], {
           cwd: databaseWorkdir.workdir, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
         });
@@ -1825,14 +1947,14 @@ async function main() {
           }
           reportStage('real-auth-traveler-fixtures-ready');
           reportStage('real-auth-runtime-fixture-ready');
-          const e2eEnv = {
+          const e2eEnv = buildRuntimeDbExecutionEnvironment({
             ...buildMidaoPlaywrightEnvironment({ localEnv }),
             MIDAO_E2E_TRAVELER_EMAIL: MIDAO_E2E_TRAVELER_EMAIL,
             MIDAO_E2E_TRAVELER_PASSWORD: MIDAO_E2E_TRAVELER_PASSWORD,
             MIDAO_E2E_SECOND_TRAVELER_EMAIL: MIDAO_E2E_SECOND_TRAVELER_EMAIL,
             MIDAO_E2E_SECOND_TRAVELER_PASSWORD: MIDAO_E2E_SECOND_TRAVELER_PASSWORD,
             NEXT_PUBLIC_TRANSFER_PAYMENT_ENABLED: '1',
-          };
+          }, invocation.runtimeDbOverrideProfile);
           childSecrets = Object.values(e2eEnv);
           if (apiRealAuthMode) {
             apiServer = await startMidaoApiServer({

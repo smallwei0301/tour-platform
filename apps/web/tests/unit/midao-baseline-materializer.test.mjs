@@ -365,3 +365,60 @@ test('directory cleanup identity tolerates child-count nlink changes but rejects
   assert.equal(api.__internal.sameDirectoryObjectIdentity(original, { ...original, dev: 12, nlink: 2 }), false);
   assert.equal(api.__internal.sameDirectoryObjectIdentity(original, { ...original, uid: 34, nlink: 2 }), false);
 });
+
+const runtimeDbProfileName = 'issue1894-pg-supautils-3.2.2';
+test('#1894 runtime override materializes exact owned postgres-version bytes and preserves every migration/default', async () => {
+  const api = await subject();
+  const parent = await mkdtemp(path.join(os.tmpdir(), 'midao-runtime-override-'));
+  let result; let ordinary;
+  try {
+    ordinary = await api.materializeFreshWorkdir({ outputParent: parent });
+    assert.equal(existsSync(path.join(ordinary.workdir, 'supabase/.temp')), false);
+    result = await api.materializeFreshWorkdir({ outputParent: parent, runtimeDbOverrideProfile: runtimeDbProfileName });
+    assert.deepEqual(result.history, ordinary.history);
+    assert.deepEqual(await readFile(result.configPath), await readFile(ordinary.configPath));
+    const metadata = path.join(result.workdir, 'supabase/.temp/postgres-version');
+    assert.equal(await readFile(metadata, 'utf8'), '17.6.1.143');
+    assert.equal((await lstat(metadata)).mode & 0o777, 0o600);
+    assert.equal((await lstat(path.dirname(metadata))).mode & 0o777, 0o700);
+    await result.verifyRuntimeDbMetadata();
+    const replay = await result.stageCliReplay(); await replay.restore();
+    await writeFile(path.join(path.dirname(metadata), 'cli-latest'), 'v2.109.1', { mode: 0o644, flag: 'wx' });
+    await result.verifyRuntimeDbMetadata();
+    await result.cleanupCliMetadata();
+    assert.equal(existsSync(path.dirname(metadata)), false);
+    await result.cleanup(); result = undefined;
+    await ordinary.cleanup(); ordinary = undefined;
+    await assert.rejects(api.materializeFreshWorkdir({ outputParent: parent, runtimeDbOverrideProfile: 'arbitrary' }), /runtime.*override/iu);
+    await assert.rejects(api.materializeFreshWorkdir({ outputParent: parent, runtimeDbOverrideProfile: {} }), /runtime.*override/iu);
+    assert.deepEqual(await readdir(parent), []);
+  } finally {
+    await result?.cleanup().catch(() => {}); await ordinary?.cleanup().catch(() => {});
+    await rm(parent, { recursive: true, force: true });
+  }
+});
+
+test('#1894 runtime override rejects metadata byte/inode/symlink/inventory drift and holds foreign cleanup', async () => {
+  const api = await subject();
+  const parent = await mkdtemp(path.join(os.tmpdir(), 'midao-runtime-drift-'));
+  try {
+    for (const mutation of ['bytes', 'inode', 'symlink', 'extra', 'directory']) {
+      const result = await api.materializeFreshWorkdir({ outputParent: parent, runtimeDbOverrideProfile: runtimeDbProfileName });
+      const directory = path.join(result.workdir, 'supabase/.temp');
+      const metadata = path.join(directory, 'postgres-version');
+      if (mutation === 'bytes') await writeFile(metadata, '17.6.1.143\n');
+      if (mutation === 'inode') { await rename(metadata, `${metadata}.owned`); await writeFile(metadata, '17.6.1.143', { mode: 0o600, flag: 'wx' }); await rm(`${metadata}.owned`); }
+      if (mutation === 'symlink') { await rename(metadata, `${metadata}.owned`); await symlink(`${metadata}.owned`, metadata); }
+      if (mutation === 'extra') await writeFile(path.join(directory, 'rest-version'), 'v14.8', { mode: 0o600, flag: 'wx' });
+      if (mutation === 'directory') { await rename(directory, `${directory}.owned`); await mkdir(directory, { mode: 0o700 }); await writeFile(metadata, '17.6.1.143', { mode: 0o600, flag: 'wx' }); }
+      await assert.rejects(result.verifyRuntimeDbMetadata(), /runtime|identity|inventory|symbolic/iu);
+      await assert.rejects(result.cleanupCliMetadata(), /runtime|identity|inventory|symbolic/iu);
+      await assert.rejects(result.cleanup(), /runtime|identity|inventory|symbolic/iu);
+      assert.equal(existsSync(metadata), true, `foreign ${mutation} metadata retained`);
+    }
+    const ordinary = await api.materializeFreshWorkdir({ outputParent: parent });
+    const directory = path.join(ordinary.workdir, 'supabase/.temp'); await mkdir(directory, { mode: 0o700 });
+    await writeFile(path.join(directory, 'postgres-version'), '17.6.1.143', { mode: 0o600, flag: 'wx' });
+    await assert.rejects(ordinary.cleanupCliMetadata(), /inventory/iu);
+  } finally { await rm(parent, { recursive: true, force: true }); }
+});

@@ -1825,3 +1825,256 @@ test('owned DB diagnostic timeout settles despite kill or pipe teardown exceptio
     assert.doesNotMatch(JSON.stringify(result), /private/u);
   }
 });
+
+const runtimeDbProfileName = 'issue1894-pg-supautils-3.2.2';
+const runtimeDbTestPath = 'apps/web/tests/integration/midao-issue1814-checkout-idempotency-real-auth.test.mjs';
+test('#1894 runtime override is opt-in for only the exact single real-auth admission lane', () => {
+  assert.deepEqual(parseMidaoRunnerInvocation(['--api-real-auth', runtimeDbTestPath]), { mode: 'api-real-auth', childArgs: [runtimeDbTestPath] });
+  assert.deepEqual(parseMidaoRunnerInvocation(['--runtime-db-override', runtimeDbProfileName, '--api-real-auth', runtimeDbTestPath]), {
+    mode: 'api-real-auth', childArgs: [runtimeDbTestPath], runtimeDbOverrideProfile: runtimeDbProfileName,
+  });
+  for (const args of [
+    ['--runtime-db-override', 'other', '--api-real-auth', runtimeDbTestPath],
+    ['--runtime-db-override', runtimeDbProfileName, runtimeDbTestPath],
+    ['--runtime-db-override', runtimeDbProfileName, '--postgrest', runtimeDbTestPath],
+    ['--runtime-db-override', runtimeDbProfileName, '--api-real-auth', 'apps/web/tests/integration/midao-issue1813-points-atomicity-real-auth.test.mjs'],
+    ['--runtime-db-override', runtimeDbProfileName, '--api-real-auth', runtimeDbTestPath, runtimeDbTestPath],
+    ['--api-real-auth', runtimeDbTestPath, '--runtime-db-override', runtimeDbProfileName],
+    ['--runtime-db-override'],
+  ]) assert.throws(() => parseMidaoRunnerInvocation(args), /ARGS_INVALID|RUNTIME_DB_OVERRIDE/iu);
+});
+
+test('#1894 runtime override verifies both DB starts before any bootstrap write and preserves owned cleanup on wrong image', async () => {
+  const { loadRuntimeDbOverride } = await import('../../../../scripts/database-baseline/verify-toolchain-lock.mjs');
+  const runtime = await loadRuntimeDbOverride(runtimeDbProfileName);
+  const dbId = '1'.repeat(64);
+  const dbName = `supabase_db_${projectId}`;
+  const image = { Id: runtime.image.imageId, Architecture: 'amd64', Os: 'linux', RepoDigests: [runtime.image.repoDigest] };
+  for (const wrongPhase of [null, 'prestart', 'second-prestart', 'first', 'second']) {
+    const calls = []; let dbChecks = 0; let metadataChecks = 0; let imageChecks = 0;
+    const adapter = createActualAdapter({
+      repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22', cliWorkdir: `/tmp/owned/${projectId}`,
+      fullServices: true, runtimeDbOverrideProfile: runtimeDbProfileName,
+      verifyRuntimeDbMetadata: async () => { metadataChecks += 1; },
+      enableFullServices: async () => { calls.push('enable-full'); },
+      commandRunner: async (command, args) => {
+        calls.push([command, ...args]);
+        const ok = (stdout = '') => ({ exitCode: 0, signal: null, stdout, stderr: '' });
+        if (args[0] === 'image') {
+          imageChecks += 1;
+          const wrong = wrongPhase === 'prestart' || (wrongPhase === 'second-prestart' && imageChecks === 3);
+          return ok(JSON.stringify([{ ...image, ...(wrong ? { Id: 'sha256:' + 'a'.repeat(64) } : {}) }]));
+        }
+        if (args[0] === 'ps') return ok(`${dbId}\t${dbName}\t${projectId}\n`);
+        if (args[0] === 'inspect' && args[2] === '{{json .}}') {
+          dbChecks += 1;
+          const wrong = wrongPhase === (dbChecks === 1 ? 'first' : 'second');
+          return ok(JSON.stringify({ Id: dbId, Name: `/${dbName}`, Image: wrong ? 'sha256:' + 'a'.repeat(64) : runtime.image.imageId,
+            Config: { Image: `${runtime.image.repository}:${runtime.image.tag}`, Labels: { 'com.supabase.cli.project': projectId, 'com.docker.compose.project': projectId } },
+            State: { Status: 'running' },
+          }));
+        }
+        if (args[0] === 'inspect') return ok('healthy\n');
+        if (args[0] === 'exec') return ok(args.at(-1).includes('to_regclass')
+          ? 'supabase_migrations.schema_migrations\nversion|text|text|NO\nstatements|ARRAY|_text|YES\nname|text|text|YES'
+          : 'version|text|text|NO\nstatements|ARRAY|_text|YES\nname|text|text|YES\n--history--\n00000000000000');
+        return ok();
+      },
+    });
+    if (wrongPhase) await assert.rejects(adapter.start(), /RUNTIME_DB_.*IDENTITY/iu);
+    else { await adapter.start(); assert.equal(dbChecks, 2); assert.equal(metadataChecks, 3); assert.equal(imageChecks, 4); }
+    if (wrongPhase === 'prestart') assert.equal(calls.some((call) => Array.isArray(call) && call[0].endsWith('/supabase')), false);
+    if (wrongPhase === 'first') assert.equal(calls.some((call) => Array.isArray(call) && call[1] === 'exec'), false);
+    if (wrongPhase === 'second') assert.equal(calls.filter((call) => Array.isArray(call) && call[1] === 'exec').length, 2);
+    if (wrongPhase === 'second-prestart') assert.equal(calls.filter((call) => Array.isArray(call) && call[0].endsWith('/supabase') && call[1] === 'start').length, 1);
+    if (wrongPhase !== 'prestart') {
+      await adapter.stop([{ id: dbId, name: dbName, projectLabel: projectId }], { networks: [], volumes: [] });
+      assert.deepEqual(calls.at(-1), ['/usr/bin/docker', 'rm', '--force', '--', dbId]);
+    }
+  }
+  assert.throws(() => createActualAdapter({ repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22', runtimeDbOverrideProfile: runtimeDbProfileName }), /RUNTIME_DB_OVERRIDE/iu);
+});
+
+test('#1894 runtime override workflow preserves the original builder/default images and opts in one exact lane', async () => {
+  const { load } = await import('js-yaml');
+  const workflow = load(await readFile(join(repoRoot, '.github/workflows/midao-baseline-e2e.yml'), 'utf8'));
+  const steps = workflow.jobs.browser.steps;
+  const provision = steps.find((step) => step.name === 'Provision digest-bound database and API images');
+  assert.match(provision.run.replace(/\\\n\s*/gu, ' '), /node scripts\/database-baseline\/verify-toolchain-lock\.mjs\s+--runtime-db-override issue1894-pg-supautils-3\.2\.2/u);
+  assert.match(provision.run, /provision db "\$runtime_profile_file"/u);
+  assert.ok(provision.run.split('\n').includes('provision db'));
+  assert.ok(provision.run.split('\n').includes('provision api'));
+  const optedIn = steps.filter((step) => step.run?.includes('with-midao-local-supabase.mjs --runtime-db-override'));
+  assert.equal(optedIn.length, 1);
+  assert.equal(optedIn[0].run.trim(), `timeout --signal=TERM --kill-after=30s 1200s node scripts/testing/with-midao-local-supabase.mjs --runtime-db-override ${runtimeDbProfileName} --api-real-auth ${runtimeDbTestPath}`);
+  assert.equal(steps.filter((step) => step.run?.includes('build-expected-terminal.mjs')).length, 1);
+  assert.doesNotMatch(steps.find((step) => step.run?.includes('build-expected-terminal.mjs')).run, /runtime-db-override/u);
+  assert.equal(workflow.jobs.browser['timeout-minutes'], 60);
+  assert.deepEqual(workflow.permissions, { contents: 'read' });
+});
+
+test('#1894 runtime override catalog and history drift hold before fixtures while defaults do no new reads', async () => {
+  const bytes = Buffer.from('trusted normalized terminal mock\n');
+  const expectedManifest = {
+    payloadDigests: { 'catalog.expected-terminal.normalized.json': createHash('sha256').update(bytes).digest('hex') },
+    historyVersions: ['00000000000001', '20261006121148'],
+  };
+  let reads = 0;
+  const good = async () => { reads += 1; return { terminalBytes: Buffer.from(bytes), historyVersions: [...expectedManifest.historyVersions] }; };
+  await runner.verifyRuntimeDbCatalog({ extractTerminal: good });
+  assert.equal(reads, 0);
+  const options = { runtimeDbOverrideProfile: runtimeDbProfileName, databaseUrl: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres', expectedManifest };
+  await runner.verifyRuntimeDbCatalog({ ...options, extractTerminal: good });
+  assert.equal(reads, 1);
+  let observed;
+  await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options, extractTerminal: async () => {
+    observed = Buffer.from('wrong normalized terminal mock\n');
+    return { terminalBytes: observed, historyVersions: [...expectedManifest.historyVersions] };
+  } }), /RUNTIME_DB_CATALOG_HOLD/u);
+  assert.ok(observed.every((byte) => byte === 0));
+  await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options, extractTerminal: async () => ({
+    terminalBytes: Buffer.from(bytes), historyVersions: ['00000000000001'],
+  }) }), /RUNTIME_DB_CATALOG_HOLD/u);
+  await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options, extractTerminal: async () => { throw new Error('read failed'); } }), /RUNTIME_DB_CATALOG_HOLD/u);
+  await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options, expectedManifest: { ...expectedManifest, payloadDigests: {} }, extractTerminal: good }), /RUNTIME_DB_CATALOG_HOLD/u);
+  await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options, databaseUrl: 'postgresql://postgres:postgres@shared-test.invalid:54322/postgres', extractTerminal: good }), /RUNTIME_DB_CATALOG_HOLD/u);
+  assert.equal(reads, 1, 'invalid manifest/URL must hold before any new read');
+});
+
+test('#1894 runtime override startup failures retain automatic identity-bound resource cleanup', async () => {
+  const { loadRuntimeDbOverride } = await import('../../../../scripts/database-baseline/verify-toolchain-lock.mjs');
+  const runtime = await loadRuntimeDbOverride(runtimeDbProfileName);
+  const dbId = '2'.repeat(64); const networkId = '3'.repeat(64);
+  const workdir = `/tmp/owned/${projectId}`;
+  for (const failure of ['first-image', 'second-image', 'metadata-drift']) {
+    let started = false; let dbChecks = 0; let metadataChecks = 0; const calls = [];
+    const adapter = createActualAdapter({
+      repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22', cliWorkdir: workdir,
+      fullServices: true, runtimeDbOverrideProfile: runtimeDbProfileName,
+      verifyRuntimeDbMetadata: async () => { metadataChecks += 1; if (failure === 'metadata-drift' && metadataChecks === 3) throw new Error('owned inode drift'); },
+      enableFullServices: async () => {},
+      commandRunner: async (command, args) => {
+        calls.push([command, ...args]);
+        const ok = (stdout = '') => ({ exitCode: 0, signal: null, stdout, stderr: '' });
+        if (command.endsWith('/supabase')) {
+          if (args[0] === 'status') return { ...ok(), exitCode: 1, stderr: `Using workdir ${workdir}\n${missingLine}\n${helpLine}\n` };
+          if (args[0] === 'start') started = true;
+          if (args[0] === 'stop') started = false;
+          return ok();
+        }
+        if (args[0] === 'image') return ok(JSON.stringify([{ Id: runtime.image.imageId, Architecture: 'amd64', Os: 'linux', RepoDigests: [runtime.image.repoDigest] }]));
+        if (args[0] === 'ps') return ok(started ? `${dbId}\tsupabase_db_${projectId}\t${projectId}\n` : '');
+        if (args[0] === 'network' && args[1] === 'ls') return ok(started ? `${networkId}\tsupabase_network_${projectId}\t${projectId}\n` : '');
+        if (args[0] === 'volume' && args[1] === 'ls') return ok(started ? `supabase_db_${projectId}\t${projectId}\n` : '');
+        if (args[0] === 'volume' && args[1] === 'inspect') return ok(`supabase_db_${projectId}\t2026-10-07T00:00:00Z\tlocal\tlocal\t${projectId}\n`);
+        if (args[0] === 'inspect' && args[2] === '{{json .}}') {
+          dbChecks += 1;
+          const wrong = failure === (dbChecks === 1 ? 'first-image' : 'second-image');
+          return ok(JSON.stringify({ Id: dbId, Name: `/supabase_db_${projectId}`,
+            Image: wrong ? 'sha256:' + 'a'.repeat(64) : runtime.image.imageId,
+            Config: { Image: `${runtime.image.repository}:${runtime.image.tag}`, Labels: { 'com.supabase.cli.project': projectId, 'com.docker.compose.project': projectId } },
+            State: { Status: 'running' },
+          }));
+        }
+        if (args[0] === 'inspect') return ok('healthy\n');
+        if (args[0] === 'exec') return ok(args.at(-1).includes('to_regclass')
+          ? 'supabase_migrations.schema_migrations\nversion|text|text|NO\nstatements|ARRAY|_text|YES\nname|text|text|YES'
+          : 'version|text|text|NO\nstatements|ARRAY|_text|YES\nname|text|text|YES\n--history--\n00000000000000');
+        return ok();
+      },
+    });
+    await assert.rejects(runWithLocalSupabase({ adapter, expectedProjectId: projectId, initialize: 'start-only', childArgs: [] }), /RUNTIME_DB_.*IDENTITY_INVALID/u);
+    assert.deepEqual(calls.slice(-3), [
+      ['/usr/bin/docker', 'rm', '--force', '--', dbId],
+      ['/usr/bin/docker', 'network', 'rm', networkId],
+      ['/usr/bin/docker', 'volume', 'rm', `supabase_db_${projectId}`],
+    ]);
+    assert.equal(calls.some((call) => call[0] === '/node22'), false, 'child/ready cannot run after candidate failure');
+  }
+});
+
+
+test('#1894 runtime binding fixes executable and daemon across CLI, identity, diagnostics and cleanup', async () => {
+  const { loadRuntimeDbOverride } = await import('../../../../scripts/database-baseline/verify-toolchain-lock.mjs');
+  const runtime = await loadRuntimeDbOverride(runtimeDbProfileName);
+  const ambient = {
+    PATH: '/unapproved/bin', DOCKER_HOST: 'tcp://unapproved.invalid:2375', DOCKER_CONTEXT: 'unapproved',
+    DOCKER_TLS: '1', DOCKER_TLS_VERIFY: '1', DOCKER_CERT_PATH: '/unapproved/certs',
+    DOCKER_CONFIG: '/unapproved/config', DOCKER_API_VERSION: '0.1', DOCKER_CUSTOM_HEADERS: 'unapproved=value',
+  };
+  const previous = Object.fromEntries(Object.keys(ambient).map((key) => [key, process.env[key]]));
+  const dbId = '4'.repeat(64); const networkId = '5'.repeat(64);
+  const workdir = `/tmp/owned/${projectId}`;
+  const calls = [];
+  try {
+    Object.assign(process.env, ambient);
+    const adapter = createActualAdapter({
+      repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22', cliWorkdir: workdir,
+      fullServices: true, runtimeDbOverrideProfile: runtimeDbProfileName,
+      verifyRuntimeDbMetadata: async () => {}, enableFullServices: async () => {},
+      commandRunner: async (command, args, options) => {
+        calls.push({ command, args, options });
+        const ok = (stdout = '', stderr = '') => ({ exitCode: 0, signal: null, stdout, stderr });
+        if (command.endsWith('/supabase')) {
+          if (args.includes('json')) return ok(JSON.stringify({ DB_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' }), `Using workdir ${workdir}\n`);
+          return ok();
+        }
+        if (command === '/node22') return ok();
+        if (args[0] === 'image') return ok(JSON.stringify([{ Id: runtime.image.imageId, Architecture: 'amd64', Os: 'linux', RepoDigests: [runtime.image.repoDigest] }]));
+        if (args[0] === 'ps') return ok(`${dbId}\tsupabase_db_${projectId}\t${projectId}\n`);
+        if (args[0] === 'network' && args[1] === 'ls') return ok(`${networkId}\tsupabase_network_${projectId}\t${projectId}\n`);
+        if (args[0] === 'volume' && args[1] === 'ls') return ok(`supabase_db_${projectId}\t${projectId}\n`);
+        if (args[0] === 'volume' && args[1] === 'inspect') return ok(`supabase_db_${projectId}\t2026-10-07T00:00:00Z\tlocal\tlocal\t${projectId}\n`);
+        if (args[0] === 'inspect' && args[2] === '{{json .}}') return ok(JSON.stringify({
+          Id: dbId, Name: `/supabase_db_${projectId}`, Image: runtime.image.imageId,
+          Config: { Image: `${runtime.image.repository}:${runtime.image.tag}`, Labels: { 'com.supabase.cli.project': projectId, 'com.docker.compose.project': projectId } },
+          State: { Status: 'running' },
+        }));
+        if (args[0] === 'inspect') return ok('healthy\n');
+        if (args[0] === 'exec') return ok(args.at(-1).includes('to_regclass')
+          ? 'supabase_migrations.schema_migrations\nversion|text|text|NO\nstatements|ARRAY|_text|YES\nname|text|text|YES'
+          : 'version|text|text|NO\nstatements|ARRAY|_text|YES\nname|text|text|YES\n--history--\n00000000000000');
+        return ok();
+      },
+    });
+    await adapter.status(); await adapter.start();
+    const owned = await adapter.containers(); const assets = await adapter.assets();
+    const localEnv = await adapter.statusJson();
+    await adapter.ready({ ...localEnv, ...ambient });
+    await adapter.child([], { ...localEnv, ...ambient });
+    await adapter.captureDatabaseFailureDiagnostic(owned);
+    // Even selectors changed after ownership capture cannot redirect cleanup.
+    process.env.DOCKER_HOST = 'tcp://late-unapproved.invalid:2375';
+    await adapter.stop(owned, assets);
+    const dockerCalls = calls.filter((call) => !call.command.endsWith('/supabase') && call.command !== '/node22');
+    assert.ok(dockerCalls.length > 15);
+    assert.ok(dockerCalls.every((call) => call.command === '/usr/bin/docker'), 'all candidate Docker operations must use the preflight binary');
+    for (const { options } of calls) {
+      assert.equal(options.env.PATH, '/usr/bin:/bin');
+      assert.equal(options.env.DOCKER_HOST, 'unix:///var/run/docker.sock');
+      assert.equal(options.env.DOCKER_API_VERSION, '1.43');
+      assert.deepEqual(Object.keys(options.env).filter((key) => key.startsWith('DOCKER_')).sort(), ['DOCKER_API_VERSION', 'DOCKER_HOST']);
+    }
+    for (const verb of ['image', 'ps', 'network', 'volume', 'inspect', 'exec', 'logs', 'rm']) assert.ok(dockerCalls.some((call) => call.args[0] === verb), verb);
+    assert.deepEqual(dockerCalls.slice(-3).map((call) => call.args.slice(0, 2)), [['rm', '--force'], ['network', 'rm'], ['volume', 'rm']]);
+    const diagnostic = dockerCalls.find((call) => call.args[0] === 'logs');
+    assert.equal(diagnostic.options.timeoutMs, 5_000); assert.equal(diagnostic.options.maxOutputBytes, 32_768);
+    assert.equal(diagnostic.options.signal, undefined);
+    assert.equal(process.env.PATH, ambient.PATH, 'binding must not mutate persistent parent settings');
+    assert.equal(process.env.DOCKER_CONTEXT, ambient.DOCKER_CONTEXT);
+  } finally {
+    for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  }
+});
+
+test('#1894 runtime binding environment keeps default identity and binds the actual API/test child environment', async () => {
+  const ambient = { PATH: '/other/bin', DOCKER_HOST: 'tcp://other.invalid:2375', DOCKER_CONTEXT: 'other', DOCKER_TLS_VERIFY: '1', KEEP: 'ordinary-env' };
+  assert.equal(runner.buildRuntimeDbExecutionEnvironment(ambient), ambient);
+  assert.deepEqual(runner.buildRuntimeDbExecutionEnvironment(ambient, runtimeDbProfileName), {
+    PATH: '/usr/bin:/bin', DOCKER_HOST: 'unix:///var/run/docker.sock', DOCKER_API_VERSION: '1.43', KEEP: 'ordinary-env',
+  });
+  assert.throws(() => runner.buildRuntimeDbExecutionEnvironment(ambient, 'arbitrary-profile'), /RUNTIME_DB_OVERRIDE/u);
+  assert.equal(ambient.DOCKER_CONTEXT, 'other');
+  const source = await readFile(join(repoRoot, 'scripts/testing/with-midao-local-supabase.mjs'), 'utf8');
+  assert.match(source, /const e2eEnv = buildRuntimeDbExecutionEnvironment\(\{[\s\S]*?\}, invocation\.runtimeDbOverrideProfile\);/u);
+});

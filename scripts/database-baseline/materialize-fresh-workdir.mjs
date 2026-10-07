@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateExpectedTerminalManifest, verifyCaptureTransaction } from './verify-manifest.mjs';
 import { resolveRepositoryPublicationPaths } from './publish-baseline.mjs';
+import { loadRuntimeDbOverride } from './verify-toolchain-lock.mjs';
 
 export const SYNTHETIC_BASELINE_FILENAME = '00000000000001_baseline_v1.sql';
 export const SYNTHETIC_BASELINE_PREFIX = '-- MIDAO BASELINE V1: BASELINE BEGIN --\n';
@@ -264,7 +265,29 @@ async function assertExactNames(directory, expected, label) {
   if (JSON.stringify(actual) !== JSON.stringify([...expected].sort())) throw new Error(`cleanup HOLD: ${label} inventory changed`);
 }
 
-async function removeCliMetadata(workdir) {
+async function verifyOwnedRuntimeDbMetadata(workdir, metadata) {
+  const directory = path.join(workdir, 'supabase/.temp');
+  const file = path.join(directory, 'postgres-version');
+  const directoryIdentity = await lstat(directory);
+  assertOwnedDirectory(directoryIdentity, 'runtime DB override metadata');
+  if (!sameIdentity(directoryIdentity, metadata.directoryIdentity)) throw new Error('runtime DB override metadata directory identity changed');
+  const names = await readdir(directory);
+  if (!names.includes('postgres-version') || names.some((name) => !['postgres-version', 'cli-latest'].includes(name))) {
+    throw new Error('runtime DB override metadata inventory changed');
+  }
+  if (!sameIdentity(await lstat(file), metadata.fileIdentity)) throw new Error('runtime DB override metadata file identity changed');
+  const bytes = await readIdentityBound(file, 'runtime DB override postgres-version');
+  try {
+    if (bytes.toString('utf8') !== metadata.version) throw new Error('runtime DB override metadata bytes changed');
+    if (!sameIdentity(await lstat(file), metadata.fileIdentity)
+      || !sameIdentity(await lstat(directory), metadata.directoryIdentity)) {
+      throw new Error('runtime DB override metadata identity changed');
+    }
+  } finally { bytes.fill(0); }
+  return names;
+}
+
+async function removeCliMetadata(workdir, runtimeMetadata) {
   const supabase = path.join(workdir, 'supabase');
   const specifications = [
     ['.temp', 'cli-latest', (value) => /^v\d{1,4}\.\d{1,4}\.\d{1,4}$/u.test(value)],
@@ -273,6 +296,7 @@ async function removeCliMetadata(workdir) {
   const allowed = ['config.toml', 'migrations', 'seed.sql', ...specifications.map(([directory]) => directory)];
   const inventory = await readdir(supabase);
   if (inventory.some((name) => !allowed.includes(name))) throw new Error('cleanup HOLD: supabase CLI metadata inventory changed');
+  if (runtimeMetadata) await verifyOwnedRuntimeDbMetadata(workdir, runtimeMetadata);
   for (const [directoryName, fileName, validate] of specifications) {
     const directory = path.join(supabase, directoryName);
     let identity;
@@ -281,15 +305,22 @@ async function removeCliMetadata(workdir) {
       throw error;
     }
     assertOwnedDirectory(identity, `Supabase CLI metadata ${directoryName}`);
-    await assertExactNames(directory, [fileName], `Supabase CLI metadata ${directoryName}`);
+    const runtimeDirectory = runtimeMetadata && directoryName === '.temp';
+    const hasLatest = !runtimeDirectory || (await readdir(directory)).includes(fileName);
+    await assertExactNames(directory, runtimeDirectory
+      ? ['postgres-version', ...(hasLatest ? [fileName] : [])] : [fileName], `Supabase CLI metadata ${directoryName}`);
     const file = path.join(directory, fileName);
-    const bytes = await readIdentityBound(file, `Supabase CLI metadata ${fileName}`);
-    try {
-      if (!validate(bytes.toString('utf8'))) throw new Error(`Supabase CLI metadata ${fileName} content invalid`);
-    } finally { bytes.fill(0); }
+    if (hasLatest) {
+      const bytes = await readIdentityBound(file, `Supabase CLI metadata ${fileName}`);
+      try {
+        if (!validate(bytes.toString('utf8'))) throw new Error(`Supabase CLI metadata ${fileName} content invalid`);
+      } finally { bytes.fill(0); }
+    }
     const current = await lstat(directory);
     if (!sameIdentity(current, identity)) throw new Error(`Supabase CLI metadata ${directoryName} identity changed`);
-    await unlink(file);
+    if (runtimeDirectory) await verifyOwnedRuntimeDbMetadata(workdir, runtimeMetadata);
+    if (hasLatest) await unlink(file);
+    if (runtimeDirectory) await unlink(path.join(directory, 'postgres-version'));
     await rmdir(directory);
   }
   await assertExactNames(supabase, ['config.toml', 'migrations', 'seed.sql'], 'supabase after CLI metadata cleanup');
@@ -327,6 +358,8 @@ async function materializeWithPaths(options = {}) {
   }
   const journalPath = path.resolve(options.journalPath ?? resolveRepositoryPublicationPaths().journalPath);
   const entries = options.entries ?? POST_CUTOFF_MIGRATIONS;
+  const runtimeOverride = options.runtimeDbOverrideProfile === undefined
+    ? null : await loadRuntimeDbOverride(options.runtimeDbOverrideProfile);
 
   const verified = await verifyCaptureTransaction({ baselineDir, ledgerPath, journalPath });
   let workdir;
@@ -338,6 +371,7 @@ async function materializeWithPaths(options = {}) {
   let marker;
   let baseline;
   let overlay;
+  let runtimeMetadata;
   try {
     options.onPayloadRead?.('baseline.sql');
     baseline = verified.payloads.get('baseline.sql');
@@ -381,6 +415,17 @@ async function materializeWithPaths(options = {}) {
     await writeExclusive(configPath, runtimeConfig);
     const seedPath = path.join(workdir, 'supabase/seed.sql');
     await writeExclusive(seedPath, seed);
+    if (runtimeOverride) {
+      const directory = path.join(workdir, 'supabase/.temp');
+      await mkdir(directory, { mode: 0o700 });
+      const directoryIdentity = await enforceDirectoryMode(directory);
+      const file = path.join(directory, 'postgres-version');
+      const versionBytes = Buffer.from(runtimeOverride.image.tag, 'utf8');
+      try { await writeExclusive(file, versionBytes); } finally { versionBytes.fill(0); }
+      runtimeMetadata = { directoryIdentity, fileIdentity: await lstat(file), version: runtimeOverride.image.tag };
+      await verifyOwnedRuntimeDbMetadata(workdir, runtimeMetadata);
+      await syncDirectory(directory);
+    }
     await syncDirectory(outputMigrations);
     await syncDirectory(path.join(workdir, 'supabase'));
     await syncDirectory(workdir);
@@ -392,6 +437,7 @@ async function materializeWithPaths(options = {}) {
 
     let cleaned = false;
     let replayActive = false;
+    let runtimeMetadataCleaned = false;
     const bootstrapName = '00000000000000_midao_history_bootstrap.sql';
     const pendingMigrationsDir = `${outputMigrations}.midao-pending`;
     const migrationsIdentity = await lstat(outputMigrations);
@@ -403,8 +449,16 @@ async function materializeWithPaths(options = {}) {
       transactionId: verified.transactionId,
       history: [SYNTHETIC_BASELINE_FILENAME, ...selected.map(({ filename }) => filename)],
       historyVersions: [SYNTHETIC_BASELINE_FILENAME.slice(0, 14), ...selected.map(({ filename }) => filename.slice(0, 14))],
+      async verifyRuntimeDbMetadata() {
+        if (!runtimeMetadata || cleaned || runtimeMetadataCleaned) throw new Error('runtime DB override metadata state invalid');
+        await verifyOwnedRuntimeDbMetadata(workdir, runtimeMetadata);
+      },
       async stageCliReplay() {
         if (cleaned || replayActive) throw new Error('materialized replay staging state invalid');
+        if (runtimeMetadata) {
+          if (runtimeMetadataCleaned) throw new Error('runtime DB override metadata state invalid');
+          await verifyOwnedRuntimeDbMetadata(workdir, runtimeMetadata);
+        }
         await assertExactNames(outputMigrations, expectedNames, 'migrations before replay staging');
         try { await lstat(pendingMigrationsDir); throw new Error('materialized replay pending path exists'); }
         catch (error) { if (error?.code !== 'ENOENT') throw error; }
@@ -443,11 +497,16 @@ async function materializeWithPaths(options = {}) {
       },
       async cleanupCliMetadata() {
         if (cleaned || replayActive) throw new Error('materialized CLI metadata cleanup state invalid');
-        await removeCliMetadata(workdir);
+        await removeCliMetadata(workdir, runtimeMetadataCleaned ? undefined : runtimeMetadata);
+        runtimeMetadataCleaned = true;
       },
       async cleanup() {
         if (replayActive) throw new Error('materialized replay must restore before cleanup');
         if (cleaned) return;
+        if (runtimeMetadata && !runtimeMetadataCleaned) {
+          await removeCliMetadata(workdir, runtimeMetadata);
+          runtimeMetadataCleaned = true;
+        }
         await removeOwnedWorkdir(workdir, workdirIdentity, expectedNames);
         cleaned = true;
       },
@@ -476,7 +535,7 @@ export async function materializeFreshWorkdir(options = {}) {
     throw new Error('materializer public options contain forbidden path override');
   }
   const keys = Object.keys(options).sort();
-  if (keys.some((key) => !['outputParent', 'postCutoffManifest', 'projectId'].includes(key))) {
+  if (keys.some((key) => !['outputParent', 'postCutoffManifest', 'projectId', 'runtimeDbOverrideProfile'].includes(key))) {
     throw new Error('materializer public options contain forbidden path override');
   }
   let entries = POST_CUTOFF_MIGRATIONS;
@@ -493,6 +552,7 @@ export async function materializeFreshWorkdir(options = {}) {
     repoRoot,
     outputParent: options.outputParent,
     projectId: options.projectId,
+    runtimeDbOverrideProfile: options.runtimeDbOverrideProfile,
     journalPath: resolveJournalForRepository(repoRoot),
     entries,
   });
