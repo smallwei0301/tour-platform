@@ -2720,3 +2720,166 @@ test('#1894 catalog observation reporter throw, rejection and pending promise pr
     } finally { clearTimeout(timeout); release(); await harness.close(); }
   }
 });
+
+// Execute the actual candidate/main source with external I/O mocked; ownership and catalog guards stay real.
+let catalogPhaseSequence = 0;
+async function catalogPhaseHarness({ failure, secondaryFailure, candidate = true } = {}) {
+  let source = await readFile(join(repoRoot, 'scripts/testing/with-midao-local-supabase.mjs'), 'utf8');
+  assert.match(source, /export async function runRuntimeDbCatalogPreflight\(/u);
+  const slot = `catalog-phase-${catalogPhaseSequence++}`;
+  const events = []; const prepared = []; const adapters = []; const { options, bytes, historyVersions } = catalogDiagnosticFixture();
+  const fail = (name) => { if (failure === name || secondaryFailure === name) throw new Error(name); };
+  const localEnv = { DATABASE_URL: options.databaseUrl, SUPABASE_URL: 'http://127.0.0.1:54321', NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321',
+    SUPABASE_ANON_KEY: 'fake-anon', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'fake-anon', SUPABASE_SERVICE_ROLE_KEY: 'fake-service' };
+  const mocks = {
+    process: { argv: ['node', 'mock', ...(candidate ? ['--runtime-db-override', runtimeDbProfileName] : []), '--api-real-auth', runtimeDbTestPath],
+      cwd: () => `/tmp/${projectId}`, execPath: '/node22', pid: 1, env: {}, on() {}, removeListener() {}, stdout: { write() {} }, stderr: { write() {} } },
+    fsPromises: { async readFile(path) { return path.startsWith('/proc/') ? '1 (mock) ' + Array(25).fill('0').join(' ') : readFile(join(repoRoot, path.endsWith('package-lock.json') ? 'package-lock.json' : 'supabase/baselines/v1/toolchain-lock.json'), 'utf8'); } },
+    loadRuntimeDbOverride: async () => {}, verifyDockerIdentity: async () => ({ architecture: 'amd64' }), verifyPinnedSupabaseBinary: async () => {},
+    acquireKernelRunnerLock: async () => { events.push('lock'); return {}; }, releaseKernelRunnerLock: async () => { events.push('unlock'); },
+    parseDockerHostGateway: () => null,
+    async prepareDatabaseOnlyWorkdir(args) {
+      const phase = args.fullServices ? 'auth' : 'db'; events.push(`prepare-${phase}`); prepared.push(args); fail(`prepare-${phase}`);
+      return { workdir: `/tmp/owned/${phase}/${projectId}`, history: ['original.sql'], seedPath: '/mock/original-seed.sql', expectedManifest: options.expectedManifest,
+        async stageCliReplay() { events.push(`stage-${phase}`); return { bootstrapName: '00000000000000_midao_history_bootstrap.sql', pendingMigrationsDir: `/mock/${phase}/pending`,
+          async restore() { events.push(`restore-${phase}`); fail(`restore-${phase}`); } }; },
+        async verifyRuntimeDbMetadata() {}, async enableFullServices() { events.push(`enable-${phase}`); },
+        async cleanupCliMetadata() { events.push(`metadata-${phase}`); fail(`metadata-${phase}`); },
+        async cleanup() { events.push(`workdir-${phase}`); fail(`workdir-${phase}`); } };
+    },
+    createActualAdapter(args) {
+      adapters.push(args); const phase = args.fullServices ? 'auth' : 'db'; let owned = false; let residueChecks = 0;
+      const database = { ...diagnosticDatabase, id: (phase === 'db' ? '6' : '7').repeat(64) };
+      const network = { id: (phase === 'db' ? '8' : '9').repeat(64), name: `supabase_network_${projectId}`, projectLabel: projectId };
+      const volume = { id: phase, name: `supabase_db_${projectId}`, projectLabel: projectId };
+      const adapter = diagnosticLifecycle({ calls: [], success: true });
+      return { ...adapter, async assertNoPreexistingResources() { events.push(`${owned ? 'preexisting' : 'residue'}-${phase}`); residueChecks += 1; if (residueChecks > 1) fail(`residue-${phase}`); assert.equal(owned, false); },
+        async containers() { return [database]; }, async networks() { return [network]; }, async volumes() { return [volume]; },
+        async start() { events.push(`start-${phase}`); owned = true; fail(`start-${phase}`); }, async statusJson() { return localEnv; },
+        async stop(containers, assets) { events.push(`stop-${phase}`); assert.deepEqual(containers, [database]); assert.deepEqual(assets, { networks: [network], volumes: [volume] }); fail(`container-${phase}`); fail(`network-${phase}`); fail(`volume-${phase}`); owned = false; } };
+    },
+    builder: { parseLocalConnectionEnv: () => ({}), async replayExactMigrations(args) { const phase = args.pendingMigrationsDir.includes('/db/') ? 'db' : 'auth'; events.push(`replay-${phase}`); fail(`replay-${phase}`); } },
+    async verifyRuntimeDbCatalog(args) { events.push('catalog-db'); fail('extract-db'); return runner.verifyRuntimeDbCatalog({ ...args,
+      extractTerminal: async () => ({ terminalBytes: Buffer.from(failure === 'catalog-db' ? 'mismatch' : bytes), historyVersions }) }); },
+    async runCommand(command, args) { events.push(command === '/node22' ? 'child-auth' : 'seed-auth'); return { exitCode: 0, signal: null, stdout: '', stderr: '' }; },
+    async createOrUpdateMidaoTravelerAuthUser() {}, buildMidaoPlaywrightEnvironment: () => localEnv,
+    async startMidaoApiServer() { return { baseUrl: 'http://127.0.0.1:43127', async close() { events.push('api-close'); } }; },
+  };
+  globalThis[slot] = mocks;
+  const base = new URL('../../../../scripts/testing/with-midao-local-supabase.mjs', import.meta.url);
+  source = source.replace(/(from\s+|import\()(['"])(\.\.?\/[^'"]+)\2/gu, (_, prefix, quote, path) => `${prefix}${quote}${new URL(path, base).href}${quote}`);
+  const start = source.indexOf('export async function runRuntimeDbCatalogPreflight(');
+  let tail = source.slice(start, source.indexOf('\nif (process.argv[1]'));
+  tail = tail.replace(/const \{[^\n]+\} = await import\([^\n]+build-expected-terminal\.mjs[^\n]+\);/gu, `const { parseLocalConnectionEnv, replayExactMigrations } = globalThis[${JSON.stringify(slot)}].builder;`);
+  for (const name of Object.keys(mocks).filter((name) => !['process', 'fsPromises', 'builder'].includes(name))) {
+    tail = tail.replace(new RegExp(`\\b${name}\\(`, 'gu'), `globalThis[${JSON.stringify(slot)}].${name}(`);
+  }
+  tail = tail.replace('async function main() {', `export async function main() {\n  const { process, fsPromises } = globalThis[${JSON.stringify(slot)}];`);
+  try {
+    const loaded = await import(`data:text/javascript;base64,${Buffer.from(source.slice(0, start) + tail).toString('base64')}`);
+    return { loaded, events, prepared, adapters, close: () => { delete globalThis[slot]; } };
+  } catch (error) { delete globalThis[slot]; throw error; }
+}
+
+test('#1894 catalog phase executes DB-only guard and terminal cleanup before fresh real-auth lifecycle', async () => {
+  const h = await catalogPhaseHarness();
+  try {
+    await h.loaded.main();
+    assert.deepEqual(h.events.filter((event) => !['seed-auth', 'api-close'].includes(event)), [
+      'lock', 'prepare-db', 'stage-db', 'residue-db', 'start-db', 'replay-db', 'catalog-db', 'stop-db', 'residue-db',
+      'restore-db', 'metadata-db', 'workdir-db', 'prepare-auth', 'stage-auth', 'residue-auth', 'start-auth', 'replay-auth', 'child-auth', 'stop-auth', 'restore-auth', 'metadata-auth', 'workdir-auth', 'unlock',
+    ]);
+    assert.deepEqual(h.prepared.map((args) => [args.fullServices, args.realAuth, args.runtimeDbOverrideProfile]), [[false, false, runtimeDbProfileName], [true, true, runtimeDbProfileName]]);
+    assert.notEqual(h.adapters[0].cliWorkdir, h.adapters[1].cliWorkdir);
+    assert.ok(h.adapters.every((args) => args.pin === '2.87.2' && args.runtimeDbOverrideProfile === runtimeDbProfileName));
+    assert.equal(h.events.filter((event) => event === 'catalog-db').length, 1);
+    const root = await mkdtemp(join(tmpdir(), 'catalog-phase-workdirs-')); const paths = [];
+    const capture = { transactionId: 'a'.repeat(64), ledger: { captureManifestSha256: 'b'.repeat(64) }, dispose() {} };
+    const expected = { transactionId: 'c'.repeat(64), manifest: { captureTransactionId: capture.transactionId, captureManifestSha256: capture.ledger.captureManifestSha256, historyVersions: ['00000000000001'] }, dispose() {} };
+    try {
+      for (const runtimeDbPhase of [h.prepared[0].runtimeDbPhase, undefined]) {
+        const workdir = await h.loaded.prepareBaselineWorkdirWithAdapters({ repoRoot: `/tmp/${projectId}`, lockDir: root, runtimeDbPhase, runtimeDbOverrideProfile: runtimeDbProfileName,
+          verifyCapture: async () => capture, verifyExpected: async () => expected,
+          materialize: async ({ outputParent, projectId: id, runtimeDbOverrideProfile }) => {
+            assert.equal(runtimeDbOverrideProfile, runtimeDbProfileName); const path = join(outputParent, id); await mkdir(path); paths.push(path);
+            assert.deepEqual(await readdir(path), []);
+            return { workdir: path, transactionId: capture.transactionId, history: ['00000000000001_baseline.sql'], async cleanup() { await rm(path, { recursive: true }); } };
+          } });
+        await workdir.cleanup(); assert.deepEqual(await readdir(root), []);
+      }
+      assert.notEqual(paths[0], paths[1]); assert.equal(paths[0].split('/').at(-1), projectId); assert.equal(paths[1].split('/').at(-1), projectId);
+    } finally { await rm(root, { recursive: true, force: true }); }
+  } finally { h.close(); }
+});
+
+test('#1894 catalog phase exact guard mismatch blocks second workdir and fixtures', async () => {
+  const h = await catalogPhaseHarness({ failure: 'catalog-db' });
+  try { await assert.rejects(h.loaded.main(), /RUNTIME_DB_CATALOG_HOLD/u); assert.deepEqual(h.events.slice(-4), ['restore-db', 'metadata-db', 'workdir-db', 'unlock']); assert.equal(h.prepared.length, 1); }
+  finally { h.close(); }
+});
+
+test('#1894 catalog phase replay or extraction failure still cleans owned lifecycle and workdir', async () => {
+  for (const failure of ['start-db', 'replay-db', 'extract-db']) {
+    const h = await catalogPhaseHarness({ failure });
+    try { await assert.rejects(h.loaded.main(), new RegExp(failure, 'u')); assert.ok(h.events.includes('stop-db')); assert.equal(h.prepared.length, 1); assert.equal(h.events.at(-2), 'workdir-db'); }
+    finally { h.close(); }
+  }
+});
+
+test('#1894 catalog phase every resource or workdir cleanup failure blocks real-auth', async () => {
+  for (const failure of ['container-db', 'network-db', 'volume-db', 'restore-db', 'metadata-db', 'workdir-db', 'residue-db']) {
+    const h = await catalogPhaseHarness({ failure });
+    try { await assert.rejects(h.loaded.main()); assert.equal(h.prepared.length, 1); assert.ok(h.events.includes('workdir-db')); assert.equal(h.events.includes('child-auth'), false); }
+    finally { h.close(); }
+  }
+});
+
+test('#1894 catalog phase keeps replay failure primary and cleanup aggregate truth', async () => {
+  const h = await catalogPhaseHarness({ failure: 'replay-db', secondaryFailure: 'container-db' });
+  try { await assert.rejects(h.loaded.main(), (error) => error instanceof AggregateError && error.errors[0].message === 'replay-db' && error.errors[1].message === 'container-db'); assert.equal(h.prepared.length, 1); }
+  finally { h.close(); }
+});
+
+test('#1894 catalog phase does no new preflight or catalog reads in the default real-auth lane', async () => {
+  const h = await catalogPhaseHarness({ candidate: false });
+  try { await h.loaded.main(); assert.equal(h.prepared.length, 1); assert.equal(h.prepared[0].fullServices, true); assert.equal(h.events.includes('catalog-db'), false); assert.ok(h.events.includes('child-auth')); }
+  finally { h.close(); }
+});
+
+test('#1894 catalog phase private token cannot create arbitrary DB-only override lanes', async () => {
+  const h = await catalogPhaseHarness();
+  try {
+    await h.loaded.main(); const args = h.adapters[0]; assert.equal(typeof args.runtimeDbPhase, 'symbol');
+    assert.doesNotThrow(() => h.loaded.createActualAdapter(args));
+    for (const change of [{ runtimeDbPhase: undefined }, { runtimeDbPhase: 'catalog-preflight' }, { runtimeDbPhase: Symbol('catalog-preflight') },
+      { fullServices: true, enableFullServices: async () => {} }, { runtimeDbOverrideProfile: undefined }, { runtimeDbOverrideProfile: 'arbitrary' }, { verifyRuntimeDbMetadata: undefined }]) {
+      assert.throws(() => h.loaded.createActualAdapter({ ...args, ...change }), /RUNTIME_DB_OVERRIDE/u);
+    }
+    await assert.rejects(h.loaded.prepareDatabaseOnlyWorkdir({ ...h.prepared[0], runtimeDbPhase: Symbol('catalog-preflight') }), /RUNTIME_DB_OVERRIDE/u);
+  } finally { h.close(); }
+});
+
+test('#1894 catalog phase actual DB-only adapter keeps image, daemon, metadata and owned-container guards', async () => {
+  const h = await catalogPhaseHarness();
+  try {
+    await h.loaded.main(); const args = h.adapters[0]; const runtime = await import('../../../../scripts/database-baseline/verify-toolchain-lock.mjs').then((module) => module.loadRuntimeDbOverride(runtimeDbProfileName));
+    for (const failure of [undefined, 'image', 'metadata', 'container']) {
+      const calls = []; let metadata = 0; const id = '6'.repeat(64);
+      const adapter = h.loaded.createActualAdapter({ ...args, verifyRuntimeDbMetadata: async () => { metadata += 1; if (failure === 'metadata') throw new Error('drift'); },
+        commandRunner: async (command, argv, opts) => {
+          calls.push({ command, argv, opts }); const ok = (stdout = '', stderr = '') => ({ exitCode: 0, signal: null, stdout, stderr });
+          if (command.endsWith('/supabase')) return ok('', `Using workdir ${args.cliWorkdir}\nStarting database...\nInitialising schema...\nSeeding globals from roles.sql...\nApplying migration ${args.lifecycleContract.migrationNames[0]}...\n`);
+          if (argv[0] === 'image') return ok(JSON.stringify([{ Id: failure === 'image' ? 'sha256:' + 'a'.repeat(64) : runtime.image.imageId, Architecture: 'amd64', Os: 'linux', RepoDigests: [runtime.image.repoDigest] }]));
+          if (argv[2] === '{{json .}}') return ok(JSON.stringify({ Id: id, Name: `/supabase_db_${projectId}`, Image: failure === 'container' ? 'sha256:' + 'a'.repeat(64) : runtime.image.imageId,
+            Config: { Image: `${runtime.image.repository}:${runtime.image.tag}`, Labels: { 'com.supabase.cli.project': projectId, 'com.docker.compose.project': projectId } }, State: { Status: 'running' } }));
+          return ok('healthy\n');
+        } });
+      if (failure === 'image' || failure === 'metadata') await assert.rejects(adapter.start(), /RUNTIME_DB_.*IDENTITY_INVALID/u);
+      else { await adapter.start(); if (failure) await assert.rejects(adapter.waitForDatabase([{ id, name: `supabase_db_${projectId}`, projectLabel: projectId }]), /RUNTIME_DB_CONTAINER_IDENTITY_INVALID/u); else await adapter.waitForDatabase([{ id, name: `supabase_db_${projectId}`, projectLabel: projectId }]); }
+      for (const { command, opts } of calls) { assert.ok(command.endsWith('/supabase') || command === '/usr/bin/docker'); assert.equal(opts.env.DOCKER_HOST, 'unix:///var/run/docker.sock'); assert.equal(opts.env.PATH, '/usr/bin:/bin'); }
+      const cli = calls.filter((call) => call.command.endsWith('/supabase'));
+      assert.equal(cli.length, failure === 'image' || failure === 'metadata' ? 0 : 1);
+      if (cli.length) { assert.deepEqual(cli[0].argv.slice(0, 2), ['db', 'start']); assert.equal(metadata, 1); }
+    }
+  } finally { h.close(); }
+});

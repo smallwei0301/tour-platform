@@ -18,6 +18,8 @@ import {
 } from '../database-baseline/verify-toolchain-lock.mjs';
 
 export const LOCK_PATH = '/tmp/tour-platform-local-supabase.lock';
+// Private capability for the one candidate DB-only catalog lifecycle, never a CLI lane.
+const RUNTIME_DB_CATALOG_PREFLIGHT = Symbol('runtime-db-catalog-preflight');
 const SUPABASE_TOOLCHAIN_DIR = '/root/.hermes/toolchains/supabase/2.87.2';
 const SUPABASE_TOOLCHAIN_BIN = `${SUPABASE_TOOLCHAIN_DIR}/supabase`;
 const SUPABASE_TOOLCHAIN_SHA256 = 'e325dd50b274e88fd1416f93b9e063902827ae326d356ab7f9dc604c3eba5c59';
@@ -462,7 +464,7 @@ export function buildMidaoRealAuthE2ELocalConfig(canonical) {
 }
 
 export async function prepareBaselineWorkdirWithAdapters({
-  repoRoot, lockDir, fullServices = false, runtimeDbOverrideProfile,
+  repoRoot, lockDir, fullServices = false, runtimeDbOverrideProfile, runtimeDbPhase,
   verifyCapture, verifyExpected, materialize, readFullConfig, rewriteFullConfig,
 }) {
   for (const fn of [verifyCapture, verifyExpected, materialize]) {
@@ -472,7 +474,8 @@ export async function prepareBaselineWorkdirWithAdapters({
     throw new Error('BASELINE_WORKDIR_FULL_SERVICE_ADAPTER_INVALID');
   }
   const projectId = canonicalProjectId(repoRoot);
-  const parent = join(lockDir, 'db-only-workdir');
+  const parent = join(lockDir, runtimeDbPhase === RUNTIME_DB_CATALOG_PREFLIGHT
+    ? 'db-only-catalog-preflight-workdir' : 'db-only-workdir');
   let capture; let expected; let materialized; let parentIdentity; let primary;
   try {
     try {
@@ -555,12 +558,15 @@ export async function prepareBaselineWorkdirWithAdapters({
   } finally { expected?.dispose(); capture?.dispose(); }
 }
 
-export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir, fullServices = false, realAuth = false, runtimeDbOverrideProfile }) {
+export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir, fullServices = false, realAuth = false, runtimeDbOverrideProfile, runtimeDbPhase }) {
   if (realAuth && !fullServices) throw new Error('MIDAO_REAL_AUTH_REQUIRES_FULL_SERVICES');
-  if (runtimeDbOverrideProfile !== undefined && (!realAuth || !fullServices
-    || runtimeDbOverrideProfile !== RUNTIME_DB_OVERRIDE_PROFILE)) throw new Error('RUNTIME_DB_OVERRIDE_LANE_INVALID');
+  const catalogPreflight = runtimeDbPhase === RUNTIME_DB_CATALOG_PREFLIGHT
+    && runtimeDbOverrideProfile === RUNTIME_DB_OVERRIDE_PROFILE && !realAuth && !fullServices;
+  if ((runtimeDbPhase !== undefined && !catalogPreflight)
+    || (runtimeDbOverrideProfile !== undefined && (runtimeDbOverrideProfile !== RUNTIME_DB_OVERRIDE_PROFILE
+      || (!catalogPreflight && (!realAuth || !fullServices))))) throw new Error('RUNTIME_DB_OVERRIDE_LANE_INVALID');
   return prepareBaselineWorkdirWithAdapters({
-    repoRoot, lockDir, fullServices, runtimeDbOverrideProfile,
+    repoRoot, lockDir, fullServices, runtimeDbOverrideProfile, runtimeDbPhase,
     verifyCapture: () => verifyCaptureTransaction({
       baselineDir: join(repoRoot, 'supabase/baselines/v1'),
       ledgerPath: join(repoRoot, 'docs/operations/baseline-ledger.json'),
@@ -1376,14 +1382,17 @@ export function buildRuntimeDbExecutionEnvironment(parentEnv, runtimeDbOverrideP
 export function createActualAdapter({
   repoRoot, pin, nodeBin, signal, cliWorkdir, lifecycleContract,
   fullServices = false, enableFullServices, commandRunner = runCommand,
-  runtimeDbOverrideProfile, verifyRuntimeDbMetadata,
+  runtimeDbOverrideProfile, verifyRuntimeDbMetadata, runtimeDbPhase,
 }) {
   const expectedProjectId = canonicalProjectId(repoRoot);
   const databaseHealthTimeoutSeconds = resolveMidaoDatabaseHealthTimeoutSeconds(process.env.MIDAO_DB_HEALTH_TIMEOUT_SECONDS);
   if (cliWorkdir && basename(resolve(cliWorkdir)) !== expectedProjectId) throw new Error('CLI_WORKDIR_PROJECT_IDENTITY_MISMATCH');
   if (fullServices && typeof enableFullServices !== 'function') throw new Error('FULL_SERVICE_CONFIG_ADAPTER_INVALID');
-  if (runtimeDbOverrideProfile !== undefined && (runtimeDbOverrideProfile !== RUNTIME_DB_OVERRIDE_PROFILE
-    || !fullServices || !cliWorkdir || typeof verifyRuntimeDbMetadata !== 'function')) {
+  const catalogPreflight = runtimeDbPhase === RUNTIME_DB_CATALOG_PREFLIGHT
+    && runtimeDbOverrideProfile === RUNTIME_DB_OVERRIDE_PROFILE && !fullServices;
+  if ((runtimeDbPhase !== undefined && !catalogPreflight)
+    || (runtimeDbOverrideProfile !== undefined && (runtimeDbOverrideProfile !== RUNTIME_DB_OVERRIDE_PROFILE
+      || (!fullServices && !catalogPreflight) || !cliWorkdir || typeof verifyRuntimeDbMetadata !== 'function'))) {
     throw new Error('RUNTIME_DB_OVERRIDE_LANE_INVALID');
   }
   const invokeCommand = (command, args, options = {}) => commandRunner(
@@ -2002,6 +2011,67 @@ async function createOrUpdateMidaoTravelerAuthUser({ traveler, supabaseUrl, serv
   }
 }
 
+export async function runRuntimeDbCatalogPreflight({
+  repoRoot, lockDir, pin, nodeBin, signal, invocation, reportStage,
+}) {
+  if (invocation?.runtimeDbOverrideProfile !== RUNTIME_DB_OVERRIDE_PROFILE) throw new Error('RUNTIME_DB_OVERRIDE_LANE_INVALID');
+  let databaseWorkdir; let replay; let primaryError;
+  try {
+    reportStage('runtime-db-catalog-preflight');
+    databaseWorkdir = await prepareDatabaseOnlyWorkdir({
+      repoRoot, lockDir, fullServices: false, realAuth: false,
+      runtimeDbOverrideProfile: invocation.runtimeDbOverrideProfile,
+      runtimeDbPhase: RUNTIME_DB_CATALOG_PREFLIGHT,
+    });
+    replay = await databaseWorkdir.stageCliReplay();
+    const { replayExactMigrations } = await import('../database-baseline/build-expected-terminal.mjs');
+    const adapter = createActualAdapter({
+      repoRoot, pin, nodeBin, signal, cliWorkdir: databaseWorkdir.workdir,
+      lifecycleContract: { migrationNames: [replay.bootstrapName], noticesByMigration: {} },
+      fullServices: false, runtimeDbOverrideProfile: invocation.runtimeDbOverrideProfile,
+      runtimeDbPhase: RUNTIME_DB_CATALOG_PREFLIGHT,
+      verifyRuntimeDbMetadata: () => databaseWorkdir.verifyRuntimeDbMetadata(),
+    });
+    await runWithLocalSupabase({
+      adapter, expectedProjectId: canonicalProjectId(repoRoot), initialize: 'start-only', signal, reportStage,
+      onReady: async ({ localEnv }) => {
+        await replayExactMigrations({
+          databaseUrl: localEnv.DATABASE_URL, pendingMigrationsDir: replay.pendingMigrationsDir,
+          history: databaseWorkdir.history, signal,
+        });
+        await verifyRuntimeDbCatalog({
+          runtimeDbOverrideProfile: invocation.runtimeDbOverrideProfile,
+          databaseUrl: localEnv.DATABASE_URL,
+          expectedManifest: databaseWorkdir.expectedManifest,
+          reportStage,
+        });
+        reportStage('runtime-db-catalog-compatible');
+      },
+    });
+    // A successful delete command alone is insufficient before the next lifecycle.
+    reportStage('runtime-db-catalog-cleanup-residue');
+    await adapter.assertNoPreexistingResources();
+  } catch (error) { primaryError = error; }
+  const cleanupErrors = [];
+  let replayRestored = !replay;
+  if (replay) {
+    try { await replay.restore(); replayRestored = true; }
+    catch (error) { cleanupErrors.push(new Error('REPLAY_RESTORE_FAILED', { cause: error })); }
+  }
+  if (databaseWorkdir && replayRestored) {
+    try { await databaseWorkdir.cleanupCliMetadata(); }
+    catch (error) { cleanupErrors.push(new Error('CLI_METADATA_CLEANUP_FAILED', { cause: error })); }
+  }
+  if (databaseWorkdir) {
+    try { await databaseWorkdir.cleanup(); }
+    catch (error) { cleanupErrors.push(new Error('DATABASE_WORKDIR_CLEANUP_FAILED', { cause: error })); }
+  }
+  const errors = [primaryError, ...cleanupErrors].filter(Boolean);
+  if (errors.length > 1) throw new AggregateError(errors, 'runtime DB catalog preflight and cleanup failed');
+  if (errors.length === 1) throw errors[0];
+  reportStage('runtime-db-catalog-preflight-complete');
+}
+
 async function main() {
   // Reject an expanded profile/lane before locks, bridges, CLI, or Docker work.
   const invocation = parseMidaoRunnerInvocation(process.argv.slice(2));
@@ -2054,6 +2124,12 @@ async function main() {
     if (gateway && (playwrightMode || realAuthMode || postgrestMode)) {
       apiBridge = await startLoopbackBridge({ listenPort: 54321, targetHost: gateway, targetPort: 54321 });
     }
+    const reportStage = (stage) => process.stderr.write(`MIDAO_STAGE=${stage}\n`);
+    if (invocation.runtimeDbOverrideProfile !== undefined) {
+      await runRuntimeDbCatalogPreflight({
+        repoRoot, lockDir: LOCK_PATH, pin, nodeBin, signal: controller.signal, invocation, reportStage,
+      });
+    }
     databaseWorkdir = await prepareDatabaseOnlyWorkdir({
       repoRoot, lockDir: LOCK_PATH, fullServices: realAuthMode, realAuth: realAuthMode,
       runtimeDbOverrideProfile: invocation.runtimeDbOverrideProfile,
@@ -2065,7 +2141,6 @@ async function main() {
       'apps/web/tests/integration/midao-mode-switch-concurrency-postgres.test.mjs',
     );
     const { parseLocalConnectionEnv, replayExactMigrations } = await import('../database-baseline/build-expected-terminal.mjs');
-    const reportStage = (stage) => process.stderr.write(`MIDAO_STAGE=${stage}\n`);
     await runWithLocalSupabase({
       adapter: createActualAdapter({
         repoRoot, pin, nodeBin, signal: controller.signal, cliWorkdir: databaseWorkdir.workdir,
@@ -2084,15 +2159,6 @@ async function main() {
           history: databaseWorkdir.history,
           signal: controller.signal,
         });
-        if (invocation.runtimeDbOverrideProfile !== undefined) {
-          await verifyRuntimeDbCatalog({
-            runtimeDbOverrideProfile: invocation.runtimeDbOverrideProfile,
-            databaseUrl: localEnv.DATABASE_URL,
-            expectedManifest: databaseWorkdir.expectedManifest,
-            reportStage,
-          });
-          reportStage('runtime-db-catalog-compatible');
-        }
         const seed = await runCommand('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', databaseWorkdir.seedPath], {
           cwd: databaseWorkdir.workdir, env: parseLocalConnectionEnv(localEnv.DATABASE_URL), signal: controller.signal,
         });
