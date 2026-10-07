@@ -95,3 +95,11 @@
 - 最小修正只把該非凍結adapter真DB分支接既有order-locked admission RPC；回應維持既有identity/reused shape，hold／RPC error／locked amount不同於HTTP前讀均fail closed，不fallback direct insert。兩route bytes／auth／tenant／payment policy／SQL未改，no-DB simulation既有契約不冒稱真DB保障
 - 15個其他openPR對adapter／652測試無overlap；原fileguard放行。新9案修前1PASS／8FAIL、修後9PASS；連同既有652／614與admission契約四檔共46/46 PASS。652保留create／reuse／concurrency行為斷言，只把mock邊界從錯誤依賴unique-constraint切至原RPC
 - 待：新exact tree full/type、獨立審查、自然CI原第8案與後續assertions；獨立bookingId checkout、transfer/manual/callback全writer接線及最終驗收仍HOLD，不因這批source測試通過就merge
+
+## 2026-10-07 收斂隔離 admission runtime 驗收
+
+- 已發布head `c4ba99c4f88260422318cc7c804b4b3e97277ec8` 的 [baseline 37573545502](https://github.com/smallwei0301/tour-platform/actions/runs/37573545502) 於05:07:45 UTC SUCCESS；原checkout real-auth整檔8/8，包括double-click、legacy identity、row count與brokenaggregate實際PASS；[一般CI37573545595](https://github.com/smallwei0301/tour-platform/actions/runs/37573545595) 亦SUCCESS。公開審查／限制已記[PR留言6031427231](https://github.com/smallwei0301/tour-platform/pull/1894#issuecomment-6031427231)，仍維持Draft
+- 下一個有界段只在既有非凍結integration檔新增三項真PG測試：兩獨立連線order-lock屏障的cross-provider競爭、限定case order的required-event fault整筆rollback、實際role EXECUTE拒絕與role恢復；重用既有loopback PG／fake Auth fixture，不改migration、workflow、runner、既有8案斷言或其他writer
+- 所有16個openPR changedpaths對該integration檔無overlap；#1776 manual-payment owner與pending_confirmation不動。嚴格DB URL限定既有wrapper的127.0.0.1:54322/postgres，並保留finally清理與錯誤回報
+- 目前三case只有syntax檢查PASS，真DB NOT_RUN；本地無Docker，需原隔離CI才可驗。ordinary --all不含integration，不能把其成功誤稱這三case實測通過；發布前仍需合法CI-first檢驗接點與獨立審查，不修改檢查器來繞過
+- bookingId checkout接線先保留：RPC已原子寫initiated，但caller payment_events另有correlationId/sourceChannel/auditSignal契約，不能直接重複寫initiated或丟audit欄位。待等價事件契約明確再施工，尚未覆蓋全writer/late callback
