@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { WORLD_MEDIA_TRIAL, worldMediaBuildMode, worldMediaCspSource } from '../../../../scripts/media/world-media-build-contract.mjs';
-import { createWorldMediaBlobAdapter, verifyWorldMediaBlob } from '../../../../scripts/media/world-media-blob-adapter.mjs';
+import { createWorldMediaBlobAdapter, verifyWorldMediaBlob, worldMediaHttpDiagnostic } from '../../../../scripts/media/world-media-blob-adapter.mjs';
 
 const context = { nodeVersion: '22.23.1', sourceRoot: '/vercel/path0', appRoot: '/vercel/path0/apps/web', exclusiveCheckout: true };
 const env = { VERCEL: '1', VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: WORLD_MEDIA_TRIAL.branch, VERCEL_PROJECT_ID: WORLD_MEDIA_TRIAL.projectId, TOUR_WORLD_BLOB_STORE_ID: WORLD_MEDIA_TRIAL.storeId, VERCEL_OIDC_TOKEN: 'synthetic-test-only' };
@@ -163,4 +163,28 @@ test('Node24 exact Preview delegates before SDK/build and preserves the child fa
 
 test('untrusted Node archive bytes fail the immutable official SHA check before extraction or execution', () => {
   assert.throws(() => verifyWorldMediaNode22Archive(Buffer.from('synthetic invalid archive')), /WORLD_MEDIA_NODE22_ARCHIVE_INVALID/);
+});
+
+test('public HTTP failure reports exact lookup/post-put phase without provider body or secret fields, and never retries put', async () => {
+  let puts = 0; const sdk = { list() {}, put() { puts += 1; return { url, pathname }; } };
+  const lookup = createWorldMediaBlobAdapter({ sdk, fetchImpl: async () => new Response('synthetic private provider detail', { status: 503 }) });
+  await lookup.authenticate();
+  await assert.rejects(() => lookup.put(pathname, bytes, info), (error) => {
+    assert.equal(error.message, 'WORLD_MEDIA_REMOTE_HTTP_INVALID');
+    assert.deepEqual(worldMediaHttpDiagnostic(error), { phase: 'world-media-public-http-failure', status: 503, stage: 'lookup-existing', pathname, responseURLMatches: true });
+    assert.equal(JSON.stringify(error).includes('synthetic private provider detail'), false);
+    return true;
+  });
+  assert.equal(puts, 0);
+  let gets = 0; const postPut = createWorldMediaBlobAdapter({ sdk, fetchImpl: async () => new Response(null, { status: ++gets === 1 ? 404 : 503 }) });
+  await postPut.authenticate();
+  await assert.rejects(() => postPut.put(pathname, bytes, info), (error) => {
+    assert.equal(worldMediaHttpDiagnostic(error).stage, 'post-put-readback');
+    assert.equal(worldMediaHttpDiagnostic(error).status, 503);
+    return true;
+  });
+  assert.equal(puts, 1); assert.equal(gets, 2);
+  assert.equal(worldMediaHttpDiagnostic({ worldMediaHttp: { status: 503, pathname: 'foreign', stage: 'lookup-existing', responseURLMatches: true, token: 'synthetic-secret' } }), null);
+  const safe = worldMediaHttpDiagnostic({ worldMediaHttp: { status: 403, pathname, stage: 'lookup-existing', responseURLMatches: true, token: 'synthetic-secret' } });
+  assert.equal(Object.hasOwn(safe, 'token'), false);
 });

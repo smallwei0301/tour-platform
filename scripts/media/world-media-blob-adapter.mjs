@@ -6,11 +6,16 @@ const approvedPath = /^world-media\/v1\/(intro|mountain|river|cave|culture|ecolo
 const mimeFor = (pathname) => pathname.endsWith('.mp4') ? 'video/mp4' : pathname.endsWith('.webm') ? 'video/webm' : null;
 
 /** Public readback：不帶 auth、不跟 redirect，驗實際 bytes/hash/type；404 才視為不存在。 */
-export async function verifyWorldMediaBlob(url, info, pathname, { fetchImpl = fetch, allowMissing = false, checkRange = true } = {}) {
+export async function verifyWorldMediaBlob(url, info, pathname, { fetchImpl = fetch, allowMissing = false, checkRange = true, verificationStage = 'readback' } = {}) {
   if (!approvedPath.test(pathname) || pathname.split('/').at(-1).split('.')[0] !== info.sha256 || url !== `${WORLD_MEDIA_TRIAL.storeOrigin}/${pathname}` || !mimeFor(pathname)) throw new Error('WORLD_MEDIA_REMOTE_URL_INVALID');
   const response = await fetchImpl(url, { redirect: 'error', cache: 'no-store' });
   if (response.status === 404 && allowMissing) return null;
-  if (response.status !== 200 || response.url && response.url !== url) throw new Error('WORLD_MEDIA_REMOTE_HTTP_INVALID');
+  if (response.status !== 200 || response.url && response.url !== url) {
+    const error = new Error('WORLD_MEDIA_REMOTE_HTTP_INVALID');
+    // 只保留public path／status／固定stage，不能印provider body、headers或auth payload。
+    error.worldMediaHttp = { status: response.status, pathname, stage: verificationStage, responseURLMatches: !response.url || response.url === url };
+    throw error;
+  }
   const bytes = Buffer.from(await response.arrayBuffer());
   if (bytes.length !== info.bytes || digest(bytes) !== info.sha256 || response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== mimeFor(pathname)) throw new Error('WORLD_MEDIA_REMOTE_CONTENT_INVALID');
   const length = response.headers.get('content-length');
@@ -22,6 +27,13 @@ export async function verifyWorldMediaBlob(url, info, pathname, { fetchImpl = fe
     if (range.url && range.url !== url || range.status !== 206 || range.headers.get('content-range') !== `bytes 0-${end}/${info.bytes}` || !part.equals(bytes.subarray(0, end + 1))) throw new Error('WORLD_MEDIA_REMOTE_RANGE_INVALID');
   }
   return { url, bytes: info.bytes, sha256: info.sha256 };
+}
+
+/** CLI只准這四個已知public欄位，未知SDK error內容不會被轉貼到build log。 */
+export function worldMediaHttpDiagnostic(error) {
+  const detail = error?.worldMediaHttp;
+  if (!Number.isInteger(detail?.status) || detail.status < 100 || detail.status > 599 || !approvedPath.test(detail?.pathname || '') || !['lookup-existing', 'post-put-readback', 'readback'].includes(detail?.stage) || typeof detail.responseURLMatches !== 'boolean') return null;
+  return { phase: 'world-media-public-http-failure', status: detail.status, stage: detail.stage, pathname: detail.pathname, responseURLMatches: detail.responseURLMatches };
 }
 
 /** SDK 只接明確 storeId；OIDC 全由 SDK 處理，沒有 token/oidcToken 參數。 */
@@ -36,13 +48,13 @@ export function createWorldMediaBlobAdapter({ sdk, fetchImpl = fetch }) {
     async put(pathname, bytes, info) {
       if (!authenticated || digest(bytes) !== info.sha256 || bytes.length !== info.bytes) throw new Error('WORLD_MEDIA_ADAPTER_SOURCE_INVALID');
       const url = `${WORLD_MEDIA_TRIAL.storeOrigin}/${pathname}`;
-      const current = await verifyWorldMediaBlob(url, info, pathname, { fetchImpl, allowMissing: true });
+      const current = await verifyWorldMediaBlob(url, info, pathname, { fetchImpl, allowMissing: true, verificationStage: 'lookup-existing' });
       if (current) return { url, action: 'reused' };
       const result = await sdk.put(pathname, bytes, {
         storeId: WORLD_MEDIA_TRIAL.storeId, access: 'public', addRandomSuffix: false, allowOverwrite: false, contentType: mimeFor(pathname),
       });
       if (result?.url !== url || result.pathname !== pathname) throw new Error('WORLD_MEDIA_SDK_RESULT_INVALID');
-      await verifyWorldMediaBlob(url, info, pathname, { fetchImpl });
+      await verifyWorldMediaBlob(url, info, pathname, { fetchImpl, verificationStage: 'post-put-readback' });
       return { url, action: 'uploaded' };
     },
   };

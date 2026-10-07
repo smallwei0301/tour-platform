@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { worldMediaBuildContext, worldMediaBuildMode } from './world-media-build-contract.mjs';
 import { bootstrapWorldMediaNode22 } from './bootstrap-world-media-node22.mjs';
-import { createWorldMediaBlobAdapter } from './world-media-blob-adapter.mjs';
+import { createWorldMediaBlobAdapter, worldMediaHttpDiagnostic } from './world-media-blob-adapter.mjs';
 import { prepareWorldMediaPreview, validateWorldMediaPreviewOutput } from './prepare-world-media-preview.mjs';
 
 const originalBuild = () => command('npm', ['run', 'build', '-w', '@tour/web']);
@@ -60,6 +60,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     // 不印SDK request、token、env或原始provider payload；只回安全錯誤碼。
     const safe = /^WORLD_MEDIA_[A-Z_]+$/.test(error.message) ? error.message : 'WORLD_MEDIA_TRIAL_BUILD_FAILED';
     console.error(safe);
+    const diagnostic = worldMediaHttpDiagnostic(error);
+    if (diagnostic) console.error(JSON.stringify(diagnostic));
     if (error.rollbackStatus) console.error(error.rollbackStatus);
     process.exitCode = 1;
   });
