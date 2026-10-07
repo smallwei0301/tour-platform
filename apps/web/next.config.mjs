@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import createNextIntlPlugin from 'next-intl/plugin';
 
 import { assertStartupEnv } from './src/config/startup-env.mjs';
+import { WORLD_MEDIA_STATE } from './src/lib/scroll-world/media-trial-state.mjs';
+import { worldMediaCspSource } from '../../scripts/media/world-media-build-contract.mjs';
 
 // 多語言（#multilingual Phase 0）：把 next-intl request config 接進 build。
 // 與既有 withSentryConfig / 頂部 assertStartupEnv 共存——僅在最外層再包一層。
@@ -52,6 +54,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://images.unsplash.com https://images.pexels.com https://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com",
   "font-src 'self' data:",
+  worldMediaCspSource(WORLD_MEDIA_STATE, process.env),
   `connect-src 'self'${connectSrcLocalDev} https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://vitals.vercel-insights.com https://va.vercel-scripts.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com`,
   "form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw",
   "frame-ancestors 'self'",
