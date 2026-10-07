@@ -2017,6 +2017,204 @@ test('#1894 catalog diagnostics map only exact known extractor failures to finit
   }
 });
 
+async function assertCatalogExtractionReason(primary, reason) {
+  const { options, digest } = catalogDiagnosticFixture();
+  const stages = [];
+  await assert.rejects(runner.verifyRuntimeDbCatalog({ ...options,
+    extractTerminal: async () => { throw primary; }, reportStage: (stage) => stages.push(stage),
+  }), (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD' && error.cause === primary);
+  assert.deepEqual(readCatalogDiagnostic(stages), {
+    phase: 'extract-terminal', extraction_success: '0', expected_sha256: digest, actual_sha256: 'unavailable',
+    history_equal: 'unavailable', expected_history_count: '2', actual_history_count: 'unavailable', reason,
+  });
+}
+
+test('#1894 complete extractor reasons cover fixed extraction normalization and terminal contracts', async () => {
+  for (const [reason, messages] of [
+    ['extractor-contract', ['extractor options must be an object', 'psql path substitution refused', 'SQL path substitution refused',
+      'runner HOME must be absolute', 'connection env invalid', 'PGPORT invalid']],
+    ['local-connection', ['local database connection invalid', 'local loopback database connection refused',
+      'local database connection encoding invalid', 'local database connection credential invalid']],
+    ['catalog-keys', ['catalog must be an object']],
+    ['catalog-state', ['catalog schema version mismatch', 'catalog extractor version mismatch', 'catalog requires PostgreSQL major 17',
+      'catalog connection was not read-only', 'ownership overlay status must remain pending before reviewed ownership publication',
+      'managed schema overlays must remain empty while ownership is pending']],
+    ['catalog-sections', ['catalog sections invalid']],
+    ['catalog-framing', ['catalog JSON string expected', 'catalog JSON string unterminated', 'catalog JSON colon expected',
+      'catalog JSON object delimiter expected', 'catalog JSON object unterminated', 'catalog JSON array delimiter expected',
+      'catalog JSON array unterminated', 'catalog JSON value invalid']],
+    ['psql-encoding', ['catalog stdout must be valid UTF-8', 'catalog stderr must be valid UTF-8']],
+    ['catalog-normalization', ['routine definition missing']],
+    ['normalized-catalog', ['normalized catalog must be an object', 'normalized catalog version or state mismatch']],
+    ['terminal-catalog', ['terminal catalog bytes invalid', 'terminal catalog JSON invalid', 'terminal catalog canonical framing invalid']],
+    ['history-query-close', ['migration history query and close failed']],
+  ]) for (const message of messages) await assertCatalogExtractionReason(new Error(message), reason);
+});
+
+test('#1894 complete extractor reasons classify actual dynamic source errors without their private values', async () => {
+  const extractor = await import('../../../../scripts/database-baseline/extract-catalog.mjs');
+  const normalizer = await import('../../../../scripts/database-baseline/normalize-catalog.mjs');
+  const { validateNormalizedCatalog } = await import('../../../../scripts/database-baseline/validate-normalized-catalog.mjs');
+  const raw = JSON.parse(await readFile(join(repoRoot, 'apps/web/tests/fixtures/database-baseline/catalog-unstable-a.json'), 'utf8'));
+  const normalized = JSON.parse(normalizer.normalizeCatalog(raw));
+  const invocation = { psqlPath: extractor.FIXED_PSQL, sqlPath: extractor.FIXED_SQL, home: '/tmp/mock-home',
+    connectionEnv: { PGHOST: '127.0.0.1', PGPORT: '54322', PGDATABASE: 'postgres', PGUSER: 'private-user', PGPASSWORD: 'private-password', PGSSLMODE: 'disable' } };
+  const capture = (operation) => { try { operation(); } catch (error) { return error; } assert.fail('source must reject'); };
+  const cases = [
+    [() => extractor.buildPsqlInvocation({ ...invocation, 'private-secret': 'SELECT private-row' }), 'extractor-contract'],
+    [() => extractor.buildPsqlInvocation({ ...invocation, psqlPath: undefined }), 'extractor-contract'],
+    [() => extractor.buildPsqlInvocation({ ...invocation, connectionEnv: { ...invocation.connectionEnv, 'private-secret': 'SELECT private-row' } }), 'extractor-contract'],
+    [() => extractor.buildPsqlInvocation({ ...invocation, connectionEnv: { ...invocation.connectionEnv, PGUSER: '' } }), 'extractor-contract'],
+    [() => extractor.buildPsqlInvocation({ ...invocation, connectionEnv: { PGHOST: '127.0.0.1' } }), 'extractor-contract'],
+    [() => extractor.validateRawCatalog({ ...raw, 'private-secret': 'SELECT private-row' }), 'catalog-keys'],
+    [() => extractor.validateRawCatalog({ ...raw, extractorVersion: undefined, sections: undefined, schemaVersion: undefined }), 'catalog-state'],
+    [() => extractor.validateRawCatalog({ ...raw, sections: { ...raw.sections, 'private-secret': [] } }), 'catalog-sections'],
+    [() => extractor.assertNoDuplicateJsonKeys('{"private-password":1,"private-password":2}'), 'catalog-json-key'],
+    [() => validateNormalizedCatalog({ ...normalized, 'private-secret': 'SELECT private-row' }), 'normalized-catalog'],
+    [() => validateNormalizedCatalog(Object.fromEntries(Object.entries(normalized).filter(([key]) => key !== 'sections'))), 'normalized-catalog'],
+    [() => normalizer.normalizeRoutineBody(''), 'catalog-normalization'],
+  ];
+  for (const key of ['', 'private-password\nSELECT private-row', 'private-password\0SELECT private-row']) {
+    cases.push([() => extractor.buildPsqlInvocation({ ...invocation, [key]: true }), 'extractor-contract']);
+    cases.push([() => extractor.buildPsqlInvocation({ ...invocation, connectionEnv: { ...invocation.connectionEnv, [key]: true } }), 'extractor-contract']);
+    cases.push([() => extractor.validateRawCatalog({ ...raw, [key]: true }), 'catalog-keys']);
+    cases.push([() => extractor.validateRawCatalog({ ...raw, sections: { ...raw.sections, [key]: [] } }), 'catalog-sections']);
+    cases.push([() => validateNormalizedCatalog({ ...normalized, [key]: true }), 'normalized-catalog']);
+    cases.push([() => extractor.assertNoDuplicateJsonKeys(`{${JSON.stringify(key)}:1,${JSON.stringify(key)}:2}`), 'catalog-json-key']);
+  }
+  for (const section of extractor.CATALOG_SECTIONS) {
+    const absent = { ...raw.sections }; delete absent[section];
+    cases.push([() => extractor.validateRawCatalog({ ...raw, sections: absent }), 'catalog-sections']);
+    for (const entries of [null, [null]]) cases.push([() => extractor.validateRawCatalog({ ...raw, sections: { ...raw.sections, [section]: entries } }), 'catalog-sections']);
+    cases.push([() => extractor.validateRawCatalog({ ...raw, sections: { ...raw.sections, [section]: [{ canonicalKey: [] }] } }), 'catalog-key']);
+    cases.push([() => extractor.validateRawCatalog({ ...raw, sections: { ...raw.sections, [section]: [
+      { canonicalKey: ['private-password', 'SELECT private-row'] }, { canonicalKey: ['private-password', 'SELECT private-row'] },
+    ] } }), 'catalog-key']);
+  }
+  const missingRawKey = structuredClone(raw); delete missingRawKey.sections;
+  cases.push([() => extractor.validateRawCatalog(missingRawKey), 'catalog-keys']);
+  const missingOption = { ...invocation }; delete missingOption.home;
+  cases.push([() => extractor.buildPsqlInvocation(missingOption), 'extractor-contract']);
+  for (const [operation, reason] of cases) await assertCatalogExtractionReason(capture(operation), reason);
+});
+
+test('#1894 complete extractor reasons use anchored bounded patterns with fixed safe output', async () => {
+  for (const [message, reason] of [
+    ['catalog extractor timeout after 60000ms', 'psql-timeout'],
+    ['catalog extractor timeout after 1ms', 'psql-timeout'],
+    ['catalog unexpected option or key: private-password SELECT private-row', 'catalog-keys'],
+    ['unknown section: private-password\nSELECT private-row', 'catalog-sections'],
+    ['duplicate JSON key: private-password\0SELECT private-row', 'catalog-json-key'],
+    ['duplicate canonical key in routines: ["private-password","SELECT private-row"]', 'catalog-key'],
+    ['normalized catalog unknown key: private-password', 'normalized-catalog'],
+    ['private-password is not allowed in connection env', 'extractor-contract'],
+    ['catalog schema version mismatch: private-password', 'unavailable'],
+    ['catalog extractor timeout after private-passwordms', 'unavailable'],
+    ['catalog extractor timeout after 60000ms\nSELECT private-row', 'unavailable'],
+    ['catalog extractor timeout after 60000ms\n', 'unavailable'],
+    ['duplicate canonical key in private-password: ["secret"]', 'unavailable'],
+    ['section private-password must be an array', 'unavailable'],
+    ['catalog missing key: ', 'unavailable'],
+    ['prefix duplicate JSON key: private-password', 'unavailable'],
+    [`duplicate JSON key: ${'private-password'.repeat(400)}`, 'unavailable'],
+  ]) await assertCatalogExtractionReason(new Error(message), reason);
+});
+
+test('#1894 complete extractor reasons classify finite spawn filesystem and socket errors without raw messages', async () => {
+  const systemError = (code, syscall) => Object.assign(new Error('private-password SELECT private-row /private-path'), { code, syscall });
+  for (const code of ['ENOENT', 'EACCES', 'ENOEXEC', 'ENOMEM', 'EAGAIN', 'EPERM']) {
+    await assertCatalogExtractionReason(systemError(code, 'spawn /usr/bin/psql'), 'psql-spawn');
+  }
+  for (const syscall of ['mkdtemp', 'chmod', 'lstat', 'stat', 'scandir', 'rmdir', 'unlink', 'rm']) {
+    for (const code of ['ENOENT', 'EACCES', 'EPERM', 'ENOSPC', 'EMFILE', 'ENFILE', 'EROFS', 'ENOTDIR', 'EISDIR', 'ENOTEMPTY', 'EBUSY', 'EIO', 'ENOMEM']) {
+      await assertCatalogExtractionReason(systemError(code, syscall), 'extractor-filesystem');
+    }
+  }
+  for (const [code, syscall] of [['ECONNREFUSED', 'connect'], ['ECONNRESET', 'read'], ['EPIPE', 'write'], ['ETIMEDOUT', 'connect'], ['ENETUNREACH', 'connect'], ['EHOSTUNREACH', 'connect']]) {
+    await assertCatalogExtractionReason(systemError(code, syscall), 'history-connection');
+  }
+  for (const [code, syscall] of [['private-password', 'mkdtemp'], ['ENOENT', 'spawn /private-path'], ['ENOENT', 'private-password'], ['ECONNREFUSED', 'private-password'], ['ERR_UNKNOWN', 'connect']]) {
+    await assertCatalogExtractionReason(systemError(code, syscall), 'unavailable');
+  }
+});
+
+test('#1894 complete extractor reasons cover fixed PG client failures and finite SQLSTATE categories', async () => {
+  for (const [reason, messages] of [
+    ['history-connection', ['Connection terminated', 'Connection terminated unexpectedly', 'Client has encountered a connection error and is not queryable', 'Client was closed and is not queryable']],
+    ['history-timeout', ['timeout expired', 'Query read timeout']],
+    ['history-client', ['Client has already been connected. You cannot reuse a client.', 'Client was passed a null or undefined query']],
+    ['history-auth', ['Password must be a string', 'SASL: Only mechanism(s) SCRAM-SHA-256 are supported',
+      'SASL: Only mechanism(s) SCRAM-SHA-256-PLUS and SCRAM-SHA-256 are supported', 'SASL: Mechanism SCRAM-SHA-256-PLUS requires a certificate',
+      'SASL: Last message was not SASLInitialResponse', 'SASL: Last message was not SASLResponse', 'SASL: Invalid attribute pair entry']],
+    ['history-protocol', ['Binary mode not supported yet', 'Unknown authenticationOk message type 99', 'Received unexpected rowDescription message from backend.',
+      'The server does not support SSL connections', 'There was an error establishing an SSL connection']],
+    ['history-client', ["Cannot find package 'pg' imported from /private-path"]],
+  ]) for (const message of messages) await assertCatalogExtractionReason(new Error(message), reason);
+  for (const [reason, codes] of [
+    ['history-connection', ['08000', '08001', '08003', '08004', '08006', '08007', '08P01', '57P01', '57P02', '57P03']],
+    ['history-auth', ['28000', '28P01']], ['history-permission', ['42501']],
+    ['history-schema', ['3F000', '42P01', '42703']], ['history-timeout', ['57014']], ['history-resource', ['53300', '53400', '53200']],
+  ]) for (const code of codes) await assertCatalogExtractionReason(Object.assign(new Error('private-password SELECT private-row'), { code }), reason);
+  for (const message of ['SASL: private-password', 'Received unexpected private-password message from backend.',
+    "Cannot find package 'private-password' imported from /private-path", 'Connection terminated unexpectedly\nSELECT private-row',
+    'SASL: Only mechanism(s) SCRAM-SHA-256 and SCRAM-SHA-256-PLUS are supported']) {
+    await assertCatalogExtractionReason(new Error(message), 'unavailable');
+  }
+  await assertCatalogExtractionReason(Object.assign(new Error('private-password'), { code: 'private-password' }), 'unavailable');
+});
+
+test('#1894 complete extractor reasons survive hostile error metadata without replacing the original HOLD', async () => {
+  for (const primary of [undefined, null, 'private-password', Symbol('private-password'),
+    { message: { toString() { throw new Error('private-password'); } } },
+    { get message() { throw new Error('private-password'); } },
+    { message: 'private-password', get code() { throw new Error('private-password'); } },
+    { message: 'private-password', code: 'ENOENT', get syscall() { throw new Error('private-password'); } },
+  ]) await assertCatalogExtractionReason(primary, 'unavailable');
+});
+
+test('#1894 complete extractor reasons preserve real mocked history-chain errors and dual failure identity', async () => {
+  const builder = await import('../../../../scripts/database-baseline/build-expected-terminal.mjs');
+  const raw = JSON.parse(await readFile(join(repoRoot, 'apps/web/tests/fixtures/database-baseline/catalog-unstable-a.json'), 'utf8'));
+  const { options } = catalogDiagnosticFixture();
+  for (const phase of ['connect', 'query', 'end', 'query-and-end']) {
+    const primary = Object.assign(new Error('private-password SELECT private-row'), { code: '42501' });
+    const close = new Error('Connection terminated unexpectedly');
+    class FakeClient {
+      async connect() { if (phase === 'connect') throw primary; }
+      async query() { if (phase.startsWith('query')) throw primary; return { rows: builder.EXPECTED_HISTORY_VERSIONS.map((version) => ({ version })) }; }
+      async end() { if (phase === 'end' || phase === 'query-and-end') throw close; }
+    }
+    let extractedError;
+    try { await builder.extractLocalTerminalAndHistory({ databaseUrl: options.databaseUrl, extractCatalogAdapter: async () => raw, ClientClass: FakeClient }); }
+    catch (error) { extractedError = error; }
+    if (phase === 'query-and-end') {
+      assert.ok(extractedError instanceof AggregateError); assert.deepEqual(extractedError.errors, [primary, close]);
+    } else assert.equal(extractedError, phase === 'end' ? close : primary);
+    await assertCatalogExtractionReason(extractedError, phase === 'query-and-end' ? 'history-query-close' : phase === 'end' ? 'history-connection' : 'history-permission');
+  }
+});
+
+test('#1894 complete extractor reasons retain reporter isolation and identity-bound cleanup on new errors', async () => {
+  const { options } = catalogDiagnosticFixture();
+  for (const asynchronous of [false, true]) {
+    const primary = new Error('catalog requires PostgreSQL major 17');
+    const stages = []; const calls = [];
+    const adapter = diagnosticLifecycle({ calls }); adapter.statusJson = async () => ({ DATABASE_URL: options.databaseUrl });
+    const reportStage = (stage) => {
+      stages.push(stage);
+      if (stage.startsWith('runtime-db-catalog:')) {
+        if (asynchronous) return Promise.reject(new Error('private reporter failure'));
+        throw new Error('private reporter failure');
+      }
+    };
+    await assert.rejects(runWithLocalSupabase({ adapter, expectedProjectId: projectId, initialize: 'start-only', childArgs: [], reportStage,
+      onReady: async () => runner.verifyRuntimeDbCatalog({ ...options, reportStage, extractTerminal: async () => { throw primary; } }),
+    }), (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD' && error.cause === primary);
+    assert.deepEqual(calls, ['identity-1', 'identity-2', 'cleanup']);
+    assert.equal(readCatalogDiagnostic(stages.filter((stage) => stage.startsWith('runtime-db-catalog:'))).reason, 'catalog-state');
+  }
+});
+
 test('#1894 catalog diagnostics retain wrong catalog HOLD and report matching history without rows', async () => {
   const { options, digest, historyVersions } = catalogDiagnosticFixture();
   const extracted = Buffer.from('different private catalog SELECT canonical-name\n');

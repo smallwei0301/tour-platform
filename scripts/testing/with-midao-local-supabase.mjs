@@ -1690,6 +1690,81 @@ export function createActualAdapter({
   };
 }
 
+function runtimeCatalogExtractionReason(error) {
+  // Diagnostic-only allowlist for extractLocalTerminalAndHistory and its dependencies.
+  // Dynamic keys, paths, catalog values and server messages never become output.
+  const message = error?.message;
+  if (typeof message === 'string' && message.length <= 4096) {
+    const fixed = new Map([
+      ['psql-child-failed', ['catalog psql child failed']],
+      ['psql-stderr', ['catalog psql emitted unexpected stderr']],
+      ['output-limit', ['catalog extractor output exceeded limit']],
+      ['psql-encoding', ['catalog stdout must be valid UTF-8', 'catalog stderr must be valid UTF-8']],
+      ['catalog-framing', ['catalog must end with exactly one terminal LF', 'catalog must contain exactly one JSON document',
+        'catalog JSON string expected', 'catalog JSON string unterminated', 'catalog JSON colon expected',
+        'catalog JSON object delimiter expected', 'catalog JSON object unterminated', 'catalog JSON array delimiter expected',
+        'catalog JSON array unterminated', 'catalog JSON value invalid']],
+      ['extractor-contract', ['extractor options must be an object', 'psql path substitution refused', 'SQL path substitution refused',
+        'runner HOME must be absolute', 'connection env invalid', 'PGPORT invalid']],
+      ['local-connection', ['local database connection invalid', 'local loopback database connection refused',
+        'local database connection encoding invalid', 'local database connection credential invalid']],
+      ['catalog-keys', ['catalog must be an object']],
+      ['catalog-state', ['catalog schema version mismatch', 'catalog extractor version mismatch', 'catalog requires PostgreSQL major 17',
+        'catalog connection was not read-only', 'ownership overlay status must remain pending before reviewed ownership publication',
+        'managed schema overlays must remain empty while ownership is pending']],
+      ['catalog-sections', ['catalog sections invalid']],
+      ['catalog-normalization', ['routine definition missing']],
+      ['normalized-catalog', ['normalized catalog must be an object', 'normalized catalog version or state mismatch']],
+      ['terminal-catalog', ['terminal catalog bytes invalid', 'terminal catalog JSON invalid', 'terminal catalog canonical framing invalid']],
+      ['extractor-history', ['actual migration history mismatch']],
+      ['history-query-close', ['migration history query and close failed']],
+      ['history-connection', ['Connection terminated', 'Connection terminated unexpectedly',
+        'Client has encountered a connection error and is not queryable', 'Client was closed and is not queryable']],
+      ['history-timeout', ['timeout expired', 'Query read timeout']],
+      ['history-client', ['Client has already been connected. You cannot reuse a client.', 'Client was passed a null or undefined query']],
+      ['history-auth', ['Password must be a string']],
+      ['history-protocol', ['Binary mode not supported yet', 'The server does not support SSL connections', 'There was an error establishing an SSL connection']],
+    ].flatMap(([reason, messages]) => messages.map((value) => [value, reason]))).get(message);
+    if (fixed !== undefined) return fixed;
+    const section = '(?:schemas|relations|sequences|columns|types|constraints|indexes|routines|triggers|rls|policies|acl|owners|defaultPrivileges|extensions|extensionMemberships|publicationMembership|managedSchemaInventory|managedSchemaOverlays)';
+    for (const [pattern, reason] of [
+      [/^catalog extractor timeout after \d{1,10}ms$/u, 'psql-timeout'],
+      [/^extractor options (?:unexpected option or key: [\s\S]*|missing key: (?:psqlPath|sqlPath|home|connectionEnv))$/u, 'extractor-contract'],
+      [/^[\s\S]* is not allowed in connection env$/u, 'extractor-contract'],
+      [/^(?:PGHOST|PGPORT|PGDATABASE|PGUSER|PGPASSWORD|PGSSLMODE|PGSSLROOTCERT) invalid$/u, 'extractor-contract'],
+      [/^connection env missing (?:PGHOST|PGPORT|PGDATABASE|PGUSER|PGPASSWORD|PGSSLMODE)$/u, 'extractor-contract'],
+      [/^catalog (?:unexpected option or key: [\s\S]*|missing key: (?:schemaVersion|extractorVersion|serverVersionNum|transactionReadOnly|ownershipOverlayStatus|sections))$/u, 'catalog-keys'],
+      [/^unknown section: [\s\S]*$/u, 'catalog-sections'],
+      [new RegExp(`^(?:missing section: ${section}|section ${section} (?:must be an array|entry invalid))$`, 'u'), 'catalog-sections'],
+      [new RegExp(`^(?:section ${section} canonical key must be a non-empty JSON scalar array|duplicate canonical key in ${section}: [\\s\\S]+)$`, 'u'), 'catalog-key'],
+      [/^duplicate JSON key: [\s\S]*$/u, 'catalog-json-key'],
+      [/^normalized catalog (?:unknown key: [\s\S]*|missing key: (?:schemaVersion|normalizerVersion|extractorVersion|serverMajorVersion|ownershipOverlayStatus|sections))$/u, 'normalized-catalog'],
+      [/^Cannot find package 'pg' imported from [^\0\r\n]+$/u, 'history-client'],
+      [/^(?:Unknown authenticationOk message type \d{1,10}|Received unexpected (?:rowDescription|dataRow|portalSuspended|emptyQuery|commandComplete|parseComplete|copyInResponse|copyData) message from backend\.)$/u, 'history-protocol'],
+      [/^SASL: (?:Only mechanism\(s\) (?:SCRAM-SHA-256|SCRAM-SHA-256-PLUS and SCRAM-SHA-256) are supported|Mechanism SCRAM-SHA-256-PLUS requires a certificate|Last message was not (?:SASLInitialResponse|SASLResponse)|Invalid attribute pair entry|text must be a string|attribute pairs text must be a string|SCRAM-SERVER-FIRST-MESSAGE: (?:client password must be a (?:string|non-empty string)|serverData must be a string|server nonce does not start with client nonce|server nonce is too short|nonce missing|nonce must only contain printable characters|salt missing|salt must be base64|iteration missing|invalid iteration count)|SCRAM-SERVER-FINAL-MESSAGE: (?:serverData must be a string|server signature does not match|server signature is missing|server signature must be base64))$/u, 'history-auth'],
+    ]) {
+      const match = pattern.exec(message);
+      if (match?.[0].length === message.length) return reason;
+    }
+  }
+  // Underlying Node/PG exceptions carry structured codes; only finite known
+  // values are recognized, and neither the code nor message is interpolated.
+  const code = error?.code;
+  if (typeof code !== 'string') return 'unavailable';
+  for (const [reason, codes] of [
+    ['history-connection', ['08000', '08001', '08003', '08004', '08006', '08007', '08P01', '57P01', '57P02', '57P03']],
+    ['history-auth', ['28000', '28P01']], ['history-permission', ['42501']],
+    ['history-schema', ['3F000', '42P01', '42703']], ['history-timeout', ['57014']], ['history-resource', ['53300', '53400', '53200']],
+  ]) if (codes.includes(code)) return reason;
+  const syscall = error?.syscall;
+  if (syscall === 'spawn /usr/bin/psql' && ['ENOENT', 'EACCES', 'ENOEXEC', 'ENOMEM', 'EAGAIN', 'EPERM'].includes(code)) return 'psql-spawn';
+  if (['mkdtemp', 'chmod', 'lstat', 'stat', 'scandir', 'rmdir', 'unlink', 'rm'].includes(syscall)
+    && ['ENOENT', 'EACCES', 'EPERM', 'ENOSPC', 'EMFILE', 'ENFILE', 'EROFS', 'ENOTDIR', 'EISDIR', 'ENOTEMPTY', 'EBUSY', 'EIO', 'ENOMEM'].includes(code)) return 'extractor-filesystem';
+  if (['connect', 'read', 'write'].includes(syscall)
+    && ['ECONNREFUSED', 'ECONNRESET', 'EPIPE', 'ETIMEDOUT', 'ENETUNREACH', 'EHOSTUNREACH'].includes(code)) return 'history-connection';
+  return 'unavailable';
+}
+
 export async function verifyRuntimeDbCatalog({
   runtimeDbOverrideProfile, databaseUrl, expectedManifest, extractTerminal, reportStage = () => {},
 } = {}) {
@@ -1733,16 +1808,8 @@ export async function verifyRuntimeDbCatalog({
     reason = 'none';
   } catch (error) {
     if (phase === 'extract-terminal') {
-      // Exact fixed messages only: never interpolate extractor output or raw errors.
       try {
-        reason = new Map([
-          ['catalog psql child failed', 'psql-child-failed'],
-          ['catalog psql emitted unexpected stderr', 'psql-stderr'],
-          ['catalog extractor output exceeded limit', 'output-limit'],
-          ['catalog must end with exactly one terminal LF', 'catalog-framing'],
-          ['catalog must contain exactly one JSON document', 'catalog-framing'],
-          ['actual migration history mismatch', 'extractor-history'],
-        ]).get(error?.message) ?? 'unavailable';
+        reason = runtimeCatalogExtractionReason(error);
       } catch { /* Diagnostic classification must preserve the primary HOLD. */ }
     }
     throw new Error('RUNTIME_DB_CATALOG_HOLD', { cause: error });
