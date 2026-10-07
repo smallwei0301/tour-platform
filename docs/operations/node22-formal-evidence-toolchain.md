@@ -116,3 +116,25 @@ lint/build只准三argv，repo root cwd、canonical package/guard檔、精確roo
 本次browser執行仍FAIL：兩輪3/3均在finally blocked=[]失敗；第二輪只剩dev POST `/__nextjs_original-stack-frames`（被guard abort），不是booking mutation成功。第二輪AC段沒有primary-AC-error附件，但整體三AC不能標PASS；停止第三次重試，留待fresh獨立review提出有證據的窄修。NativeClaudeEdit hook wiring仍NOT_VERIFIED，手動guard不能替代。
 
 Fresh reviewer R1窄修（2026-10-04）：兩輪原FAIL全保留；新 `policy-fixture-network.mjs` 僅分類精確loopback、無query/hash的POST original-stack-frames為expected aborted devdiagnostic。依舊abort所有POST，booking／unknown／remote同path／queryvariant不豁免；console僅同一已abort diagnostic失敗資源可分類，pageErrors仍必為空。新classifier為pinned spec dependency，byte/symlink tamper拒絕，behavior negatives驗證狹窄邊界。不是盲目第三retry；必先由原fresh reviewer回讀修正exactdiff，才能再執行browser。
+
+## 2026-10-07 #1887：current-main 字型 prebuild 契約對齊
+
+以 `main=d12b9a9c7004319d6c4b3e53d161532cbeb4049a` 的既有 build script 為唯一允許值：
+`node ../../scripts/build/prepare-next-google-font-compat.mjs && next build`。
+舊 `next build`、換 helper、`;`／`||` fallback、額外 command／flags、env prefix 與空白變體均拒絕；
+root workspace proxy、lint script、lifecycle、npmrc、精確 argv、官方 Node artifact 與 offline guard 檢查維持不變。
+
+lint/build 共用 preflight 另外要求 `scripts/build/prepare-next-google-font-compat.mjs` 是 repo 內 canonical 實體檔，
+SHA-256 固定 `866f34c9f210e88e15003db71fa0753eff7c0939dee800d734a3cfe8c78d6812`。
+helper 缺失、bytes drift、檔案或父目錄 symlink 均 fail closed；不提供 caller digest override。
+本次不修改 helper、產品字型、Next vendor source、startup/security guard 或 E2E spec/config pins。
+
+host-bound runtime fixture 複製真 helper，並從已安裝的 Next 複製 `package.json`、真 fontkit 與真 Google-font loader
+到 owned temp package。只在該副本執行真 helper，先核對原 loader digest，再驗證首次 patched、第二次 already-patched；
+來源 vendor bytes 必須前後一致。原 next executable probe 保留 network、secret、empty-env child、empty-execArgv worker 與 cleanup assertions，
+且明確檢查真 helper 已先完成 patch 與 next 收到唯一 `build` argv。
+另以缺 package/fontkit/loader、version drift、parser/loader digest drift 驗證 helper 失敗時 next probe 不會執行。
+
+fixture 的真 helper＋instrumented next probe 只驗證 runner sequencing 與 safeguard，不能當實際 Next build、browser、DB 或 merge 驗收。
+只讀 preflight 不執行 vendor helper，也不驗 vendor 安裝狀態；正式 build 才執行其原 version/digest gates。
+歷史 local build／browser FAIL、未驗證的 mounted race／unmount／StrictMode／mobile，以及原 CI／ownership／release gates 仍保留。

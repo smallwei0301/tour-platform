@@ -112,11 +112,12 @@ validate_ci() {
   [[ $# -eq 3 && "$1" == npm && "$2" == run && ( "$3" == lint || "$3" == build ) ]] || fail 'unsupported CI command'
   repo_root=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")/../..") || fail 'missing repository'
   [[ "$(pwd -P)" == "$repo_root" ]] || fail 'CI requires repository root cwd'
-  for reviewed in package.json apps/web/package.json scripts/check-lint-node.mjs scripts/toolchain/offline-node-guard.cjs; do
+  for reviewed in package.json apps/web/package.json scripts/check-lint-node.mjs scripts/build/prepare-next-google-font-compat.mjs scripts/toolchain/offline-node-guard.cjs; do
     [[ -f "$repo_root/$reviewed" && "$(realpath -e "$repo_root/$reviewed")" == "$repo_root/$reviewed" ]] || fail 'missing or noncanonical CI file'
   done
   [[ "$(sha256sum "$repo_root/scripts/toolchain/offline-node-guard.cjs" | cut -d ' ' -f 1)" == 3a348e1262ba6bed6f74a46c2b4904a563ee3f9fee22abbd01c00a7a5815c2b6 ]] || fail 'offline guard digest mismatch'
   [[ "$(sha256sum "$repo_root/scripts/check-lint-node.mjs" | cut -d ' ' -f 1)" == d857e6e20406f87676086aa2fe32a0c6c5c1a6ab81800916fafc9b8bf315f03a ]] || fail 'lint guard digest mismatch'
+  [[ "$(sha256sum "$repo_root/scripts/build/prepare-next-google-font-compat.mjs" | cut -d ' ' -f 1)" == 866f34c9f210e88e15003db71fa0753eff7c0939dee800d734a3cfe8c78d6812 ]] || fail 'font compatibility helper digest mismatch'
   for directory in "$repo_root" "$repo_root/apps" "$repo_root/apps/web"; do
     [[ "$(realpath -e "$directory")" == "$directory" && ! -e "$directory/.npmrc" && ! -L "$directory/.npmrc" ]] || fail 'CI directory or npmrc rejected'
   done
@@ -126,7 +127,7 @@ const root = JSON.parse(readFileSync(`${process.argv[2]}/package.json`));
 const app = JSON.parse(readFileSync(`${process.argv[2]}/apps/web/package.json`));
 if (root.name !== 'tour-platform' || JSON.stringify(root.workspaces) !== '["apps/*"]' || app.name !== '@tour/web' ||
  root.scripts?.lint !== 'npm run lint -w @tour/web' || root.scripts?.build !== 'npm run build -w @tour/web' ||
- app.scripts?.build !== 'next build' || app.scripts?.lint !== "node ../../scripts/check-lint-node.mjs && ESLINT_USE_FLAT_CONFIG=false eslint app src --ignore-pattern '.next/**'" ||
+ app.scripts?.build !== 'node ../../scripts/build/prepare-next-google-font-compat.mjs && next build' || app.scripts?.lint !== "node ../../scripts/check-lint-node.mjs && ESLINT_USE_FLAT_CONFIG=false eslint app src --ignore-pattern '.next/**'" ||
  [root, app].some(p => Object.keys(p.scripts || {}).some(k => /^(?:(?:pre|post)(?:lint|build)|pre|post)$/.test(k)))) process.exit(1);
 JS
 }
