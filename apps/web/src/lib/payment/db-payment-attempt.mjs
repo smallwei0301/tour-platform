@@ -1,4 +1,5 @@
-import { getSupabase, hasSupabaseEnv } from '../supabase-env.mjs';
+import { hasSupabaseEnv } from '../supabase-env.mjs';
+import { admitInitialPaymentAttemptDb } from './db-payment-admission.mjs';
 
 const memoryPendingAttempts = new Map();
 
@@ -8,7 +9,8 @@ export function __resetEcpayPaymentAttemptsForTest() {
 
 /**
  * Creates, or safely reuses, the one pending ECPay attempt for an order.
- * The database uniqueness constraint is the concurrency authority.
+ * The order-locked admission RPC is the database concurrency authority.
+ * Both HTTP entry points use this adapter; no SELECT/INSERT fallback is safe.
  */
 export async function upsertEcpayPaymentAttemptDb(input = {}) {
   const orderId = String(input?.orderId || '').trim();
@@ -34,52 +36,22 @@ export async function upsertEcpayPaymentAttemptDb(input = {}) {
     return created;
   }
 
-  const supabase = await getSupabase();
-  const findExistingPending = async () => {
-    const { data, error } = await supabase
-      .from('payments')
-      .select('id, order_id, merchant_trade_no, status')
-      .eq('order_id', orderId)
-      .eq('provider', 'ecpay')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error) throw new Error(error.message || 'failed to fetch existing pending payment attempt');
-    return data;
-  };
-  const toResult = (row, reused) => ({
-    id: row.id,
-    orderId: row.order_id,
-    merchantTradeNo: row.merchant_trade_no,
-    status: row.status,
-    reused,
-  });
-
-  const existingPending = await findExistingPending();
-  if (existingPending) return toResult(existingPending, true);
-
-  const { data, error } = await supabase
-    .from('payments')
-    .insert({
-      order_id: orderId,
-      provider: 'ecpay',
-      merchant_trade_no: merchantTradeNo,
-      amount_twd: Math.round(amountTwd),
-      currency: 'TWD',
-      status: 'pending',
-      provider_status: 'pending',
-      updated_at: new Date().toISOString(),
-    })
-    .select('id, order_id, merchant_trade_no, status')
-    .single();
-
-  if (error || !data) {
-    if (error?.code === '23505') {
-      const winner = await findExistingPending();
-      if (winner) return toResult(winner, true);
-    }
-    throw new Error(error?.message || 'failed to create ecpay payment attempt');
+  const admitted = await admitInitialPaymentAttemptDb({ orderId, provider: 'ecpay', merchantTradeNo });
+  if (admitted.outcome === 'hold') {
+    const failure = new Error('initial payment admission is on hold');
+    failure.code = admitted.code;
+    throw failure;
   }
-  return toResult(data, false);
+  // HTTP callers use a prior order read to build the form. Never launch it with
+  // an amount that differs from the transaction's locked, reconciled amount.
+  if (admitted.amountTwd !== amountTwd) {
+    const failure = new Error('payment amount changed during admission');
+    failure.code = 'PAYMENT_AMOUNT_CHANGED';
+    throw failure;
+  }
+  return {
+    id: admitted.id, orderId: admitted.orderId,
+    merchantTradeNo: admitted.merchantTradeNo, status: admitted.status,
+    reused: admitted.reused,
+  };
 }
