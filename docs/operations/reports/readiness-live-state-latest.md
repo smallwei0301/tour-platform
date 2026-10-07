@@ -1,19 +1,21 @@
-<!-- query_timestamp: 2026-10-06T05:05:21.601Z -->
+<!-- query_timestamp: 2026-10-07T05:05:42.816Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-10-06T05:05:21.601Z  
-**Commit SHA:** `e9bc2416780ba19372a077e24102679f4575b8bd`
+**Query timestamp:** 2026-10-07T05:05:42.816Z  
+**Commit SHA:** `d12b9a9c7004319d6c4b3e53d161532cbeb4049a`
 
 ---
 
-## Open PRs (14)
+## Open PRs (16)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1894 | [fix(payment): 初次付款 admission kernel 與限定 P0 測試改名（#1893）](https://github.com/smallwei0301/tour-platform/pull/1894) _(draft)_ | `fix/order-payment-admission-20261006` |
+| #1890 | [ci(midao): 補齊旅客確認路由的隔離 runtime 觸發](https://github.com/smallwei0301/tour-platform/pull/1890) _(draft)_ | `fix/issue1819-confirmation-ci-trigger` |
 | #1887 | [fix(activity): 同步即時場次與報名識別，補齊 fixture 診斷](https://github.com/smallwei0301/tour-platform/pull/1887) _(draft)_ | `rework/midao2-live-availability` |
 | #1886 | [支援指定詳頁 E2E 的正式 Node22 工具鏈入口](https://github.com/smallwei0301/tour-platform/pull/1886) _(draft)_ | `codex/tour-canonical-e2e-1882` |
 | #1883 | [修正行程詳情過期場次與立即預約入口（#1882）](https://github.com/smallwei0301/tour-platform/pull/1883) _(draft)_ | `codex/tour-detail-upcoming-local` |
@@ -29,7 +31,7 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (68 total)
+## Open Issues (69 total)
 
 ### P0 (1)
 
@@ -105,10 +107,11 @@
 |---|-------|--------|
 | #1647 | [[Payments] Decide and verify post-#1637 historical paid-order / payout reconciliation](https://github.com/smallwei0301/tour-platform/issues/1647) | triaged, priority:P1, owner:human-decision, status:needs-decision, type:decision, payments, orders |
 
-### Other (14)
+### Other (15)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1893 | [[Payment] 初次付款 order-wide admission：ECPay 雙點產生不同 MerchantTradeNo](https://github.com/smallwei0301/tour-platform/issues/1893) | — |
 | #1885 | [[QA] 公開服務條款與隱私政策仍標示草案且內容僅簡短摘要](https://github.com/smallwei0301/tour-platform/issues/1885) | — |
 | #1884 | [[QA] 公開客服頁電話仍為 0800-XXX-XXX，與緊急支援說明不一致](https://github.com/smallwei0301/tour-platform/issues/1884) | — |
 | #1882 | [[Bug] 公開行程詳情仍列出過期場次，立即預約帶入過去日期](https://github.com/smallwei0301/tour-platform/issues/1882) | — |
@@ -130,6 +133,9 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1892 | [fix(build): 修復 Google 無副檔名字型 URL (#1891)](https://github.com/smallwei0301/tour-platform/pull/1892) | 2026-10-06 |
+| #1889 | [fix(midao2): 防止封面上傳與儲存競態](https://github.com/smallwei0301/tour-platform/pull/1889) | 2026-10-06 |
+| #1888 | [docs(ledger): 補登 #1861 單筆歷史缺證例外](https://github.com/smallwei0301/tour-platform/pull/1888) | 2026-10-06 |
 | #1881 | [建立模型路由與派工防漏治理](https://github.com/smallwei0301/tour-platform/pull/1881) | 2026-10-04 |
 | #1880 | [修正 Node22 雲端工具鏈與正式證據契約](https://github.com/smallwei0301/tour-platform/pull/1880) | 2026-10-04 |
 | #1878 | [[#1761][Midao2 P0] 唯讀 orders 工作台](https://github.com/smallwei0301/tour-platform/pull/1878) | 2026-09-15 |
@@ -137,9 +143,6 @@
 | #1876 | [fix(#1796): qualify unpaid expiry booking log column](https://github.com/smallwei0301/tour-platform/pull/1876) | 2026-09-14 |
 | #1874 | [fix(#1761): require causal witness for triage recovery](https://github.com/smallwei0301/tour-platform/pull/1874) | 2026-09-14 |
 | #1873 | [ci(#1761): add hosted PostgreSQL lane for issue 1796](https://github.com/smallwei0301/tour-platform/pull/1873) | 2026-09-14 |
-| #1871 | [feat(midao): 新增唯讀訂單工作台](https://github.com/smallwei0301/tour-platform/pull/1871) | 2026-09-01 |
-| #1870 | [fix(shop): restore public bookable service cards](https://github.com/smallwei0301/tour-platform/pull/1870) | 2026-08-28 |
-| #1868 | [feat(midao): add Phase 6 masked projection comparison baseline](https://github.com/smallwei0301/tour-platform/pull/1868) | 2026-08-26 |
 
 ---
 
