@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { setTimeout as waitTimer } from 'node:timers/promises';
 import { WORLD_MEDIA_TRIAL } from './world-media-build-contract.mjs';
 
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
@@ -6,9 +7,10 @@ const approvedPath = /^world-media\/v1\/(intro|mountain|river|cave|culture|ecolo
 const mimeFor = (pathname) => pathname.endsWith('.mp4') ? 'video/mp4' : pathname.endsWith('.webm') ? 'video/webm' : null;
 
 /** Public readback：不帶 auth、不跟 redirect，驗實際 bytes/hash/type；404 才視為不存在。 */
-export async function verifyWorldMediaBlob(url, info, pathname, { fetchImpl = fetch, allowMissing = false, checkRange = true, verificationStage = 'readback' } = {}) {
+export async function verifyWorldMediaBlob(url, info, pathname, { fetchImpl = fetch, allowMissing = false, checkRange = true, verificationStage = 'readback', signal } = {}) {
   if (!approvedPath.test(pathname) || pathname.split('/').at(-1).split('.')[0] !== info.sha256 || url !== `${WORLD_MEDIA_TRIAL.storeOrigin}/${pathname}` || !mimeFor(pathname)) throw new Error('WORLD_MEDIA_REMOTE_URL_INVALID');
-  const response = await fetchImpl(url, { redirect: 'error', cache: 'no-store' });
+  signal?.throwIfAborted();
+  const response = await fetchImpl(url, { redirect: 'error', cache: 'no-store', ...(signal ? { signal } : {}) });
   if (response.status === 404 && allowMissing) return null;
   if (response.status !== 200 || response.url && response.url !== url) {
     const error = new Error('WORLD_MEDIA_REMOTE_HTTP_INVALID');
@@ -22,11 +24,52 @@ export async function verifyWorldMediaBlob(url, info, pathname, { fetchImpl = fe
   if (length !== null && Number(length) !== info.bytes) throw new Error('WORLD_MEDIA_REMOTE_LENGTH_INVALID');
   if (checkRange) {
     const end = Math.min(31, info.bytes - 1);
-    const range = await fetchImpl(url, { redirect: 'error', cache: 'no-store', headers: { Range: `bytes=0-${end}` } });
+    signal?.throwIfAborted();
+    const range = await fetchImpl(url, { redirect: 'error', cache: 'no-store', headers: { Range: `bytes=0-${end}` }, ...(signal ? { signal } : {}) });
     const part = Buffer.from(await range.arrayBuffer());
     if (range.url && range.url !== url || range.status !== 206 || range.headers.get('content-range') !== `bytes 0-${end}/${info.bytes}` || !part.equals(bytes.subarray(0, end + 1))) throw new Error('WORLD_MEDIA_REMOTE_RANGE_INVALID');
   }
+  signal?.throwIfAborted();
   return { url, bytes: info.bytes, sha256: info.sha256 };
+}
+
+export const WORLD_MEDIA_POST_PUT_READBACK = Object.freeze({ maxAttempts: 8, maxWallMs: 90_000, delaysMs: Object.freeze([1000, 2000, 4000, 8000, 16000, 16000, 16000]) });
+const delay = (ms, signal) => waitTimer(ms, undefined, { signal });
+
+/** 只處理SDK已成功put之後的同URL 404；不重傳、不把lookup/其他HTTP/內容錯當可重试。 */
+export async function verifyWorldMediaAfterPut(url, info, pathname, { fetchImpl = fetch, signal, waitImpl = delay, now = () => performance.now() } = {}) {
+  const policy = WORLD_MEDIA_POST_PUT_READBACK;
+  const budgetSignal = AbortSignal.timeout(policy.maxWallMs);
+  const boundedSignal = signal ? AbortSignal.any([signal, budgetSignal]) : budgetSignal;
+  const deadline = now() + policy.maxWallMs;
+  let last404;
+  const expired = () => {
+    const error = new Error('WORLD_MEDIA_POST_PUT_VISIBILITY_TIMEOUT');
+    if (last404?.worldMediaHttp) error.worldMediaHttp = last404.worldMediaHttp;
+    return error;
+  };
+  try {
+    for (let attempt = 0; attempt < policy.maxAttempts; attempt += 1) {
+      boundedSignal.throwIfAborted();
+      if (now() >= deadline) throw expired();
+      if (attempt > 0) await waitImpl(Math.min(policy.delaysMs[attempt - 1], Math.max(0, deadline - now())), boundedSignal);
+      boundedSignal.throwIfAborted();
+      if (now() >= deadline) throw expired();
+      try {
+        const result = await verifyWorldMediaBlob(url, info, pathname, { fetchImpl, verificationStage: 'post-put-readback', signal: boundedSignal });
+        boundedSignal.throwIfAborted();
+        return result;
+      } catch (error) {
+        if (error.message !== 'WORLD_MEDIA_REMOTE_HTTP_INVALID' || error.worldMediaHttp?.status !== 404 || error.worldMediaHttp?.responseURLMatches !== true) throw error;
+        last404 = error;
+        if (attempt + 1 === policy.maxAttempts) throw error;
+      }
+    }
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    if (budgetSignal.aborted && (error === budgetSignal.reason || error === boundedSignal.reason || ['TimeoutError', 'AbortError'].includes(error.name))) throw expired();
+    throw error;
+  }
 }
 
 /** CLI只准這四個已知public欄位，未知SDK error內容不會被轉貼到build log。 */
@@ -37,24 +80,27 @@ export function worldMediaHttpDiagnostic(error) {
 }
 
 /** SDK 只接明確 storeId；OIDC 全由 SDK 處理，沒有 token/oidcToken 參數。 */
-export function createWorldMediaBlobAdapter({ sdk, fetchImpl = fetch }) {
+export function createWorldMediaBlobAdapter({ sdk, fetchImpl = fetch, signal, waitImpl, now }) {
   if (typeof sdk?.put !== 'function' || typeof sdk?.list !== 'function') throw new Error('WORLD_MEDIA_SDK_REQUIRED');
   let authenticated = false;
   return {
     async authenticate() {
-      await sdk.list({ prefix: 'world-media/v1/', limit: 1, storeId: WORLD_MEDIA_TRIAL.storeId });
+      signal?.throwIfAborted();
+      await sdk.list({ prefix: 'world-media/v1/', limit: 1, storeId: WORLD_MEDIA_TRIAL.storeId, ...(signal ? { abortSignal: signal } : {}) });
       authenticated = true;
     },
     async put(pathname, bytes, info) {
+      signal?.throwIfAborted();
       if (!authenticated || digest(bytes) !== info.sha256 || bytes.length !== info.bytes) throw new Error('WORLD_MEDIA_ADAPTER_SOURCE_INVALID');
       const url = `${WORLD_MEDIA_TRIAL.storeOrigin}/${pathname}`;
-      const current = await verifyWorldMediaBlob(url, info, pathname, { fetchImpl, allowMissing: true, verificationStage: 'lookup-existing' });
+      const current = await verifyWorldMediaBlob(url, info, pathname, { fetchImpl, allowMissing: true, verificationStage: 'lookup-existing', signal });
+      signal?.throwIfAborted();
       if (current) return { url, action: 'reused' };
       const result = await sdk.put(pathname, bytes, {
-        storeId: WORLD_MEDIA_TRIAL.storeId, access: 'public', addRandomSuffix: false, allowOverwrite: false, contentType: mimeFor(pathname),
+        storeId: WORLD_MEDIA_TRIAL.storeId, access: 'public', addRandomSuffix: false, allowOverwrite: false, contentType: mimeFor(pathname), ...(signal ? { abortSignal: signal } : {}),
       });
       if (result?.url !== url || result.pathname !== pathname) throw new Error('WORLD_MEDIA_SDK_RESULT_INVALID');
-      await verifyWorldMediaBlob(url, info, pathname, { fetchImpl, verificationStage: 'post-put-readback' });
+      await verifyWorldMediaAfterPut(url, info, pathname, { fetchImpl, signal, waitImpl, now });
       return { url, action: 'uploaded' };
     },
   };

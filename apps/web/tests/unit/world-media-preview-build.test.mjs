@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { WORLD_MEDIA_TRIAL, worldMediaBuildMode, worldMediaCspSource } from '../../../../scripts/media/world-media-build-contract.mjs';
-import { createWorldMediaBlobAdapter, verifyWorldMediaBlob, worldMediaHttpDiagnostic } from '../../../../scripts/media/world-media-blob-adapter.mjs';
+import { createWorldMediaBlobAdapter, verifyWorldMediaBlob, worldMediaHttpDiagnostic, WORLD_MEDIA_POST_PUT_READBACK } from '../../../../scripts/media/world-media-blob-adapter.mjs';
 
 const context = { nodeVersion: '22.23.1', sourceRoot: '/vercel/path0', appRoot: '/vercel/path0/apps/web', exclusiveCheckout: true };
 const env = { VERCEL: '1', VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: WORLD_MEDIA_TRIAL.branch, VERCEL_PROJECT_ID: WORLD_MEDIA_TRIAL.projectId, TOUR_WORLD_BLOB_STORE_ID: WORLD_MEDIA_TRIAL.storeId, VERCEL_OIDC_TOKEN: 'synthetic-test-only' };
@@ -187,4 +187,72 @@ test('public HTTP failure reports exact lookup/post-put phase without provider b
   assert.equal(worldMediaHttpDiagnostic({ worldMediaHttp: { status: 503, pathname: 'foreign', stage: 'lookup-existing', responseURLMatches: true, token: 'synthetic-secret' } }), null);
   const safe = worldMediaHttpDiagnostic({ worldMediaHttp: { status: 403, pathname, stage: 'lookup-existing', responseURLMatches: true, token: 'synthetic-secret' } });
   assert.equal(Object.hasOwn(safe, 'token'), false);
+});
+
+function waitingAdapter(fetchImpl, overrides = {}) {
+  let puts = 0; let clock = 0; const waits = [];
+  const sdk = { list() {}, put() { puts += 1; return { url, pathname }; } };
+  const adapter = createWorldMediaBlobAdapter({ sdk, fetchImpl, now: () => clock, waitImpl: async (ms, signal) => { signal.throwIfAborted(); waits.push(ms); clock += ms; }, ...overrides });
+  return { adapter, waits, get puts() { return puts; }, get clock() { return clock; } };
+}
+
+test('only successful immutable put gets bounded same-URL 404 reads until full hash/type/Range all pass, without another put', async () => {
+  let gets = 0; let ranges = 0;
+  const probe = waitingAdapter(async (u, options) => {
+    assert.equal(u, url); assert.equal(options.redirect, 'error');
+    if (options.headers?.Range) { ranges += 1; return response(bytes, 206, { 'content-range': `bytes 0-${bytes.length - 1}/${bytes.length}` }); }
+    if (++gets <= 3) return new Response(null, { status: 404 }); // lookup plus two post-put misses
+    return response(bytes, 200, { 'content-length': String(bytes.length) });
+  });
+  await probe.adapter.authenticate();
+  assert.deepEqual(await probe.adapter.put(pathname, bytes, info), { url, action: 'uploaded' });
+  assert.equal(probe.puts, 1); assert.equal(gets, 4); assert.equal(ranges, 1); assert.deepEqual(probe.waits, [1000, 2000]);
+});
+
+test('post-put persistent404 exhausts exactly8 reads and7 bounded backoffs; no fallback or repeated upload', async () => {
+  let gets = 0;
+  const probe = waitingAdapter(async () => { gets += 1; return new Response(null, { status: 404 }); });
+  await probe.adapter.authenticate();
+  await assert.rejects(() => probe.adapter.put(pathname, bytes, info), (error) => {
+    assert.equal(error.message, 'WORLD_MEDIA_REMOTE_HTTP_INVALID'); assert.equal(worldMediaHttpDiagnostic(error).status, 404); return true;
+  });
+  assert.equal(probe.puts, 1); assert.equal(gets, 1 + WORLD_MEDIA_POST_PUT_READBACK.maxAttempts);
+  assert.deepEqual(probe.waits, WORLD_MEDIA_POST_PUT_READBACK.delaysMs);
+  assert.equal(probe.clock, 63000); assert.equal(WORLD_MEDIA_POST_PUT_READBACK.maxWallMs, 90000);
+});
+
+test('post-put401/403/500/503, foreignURL, badcontent/type and badRange all stop immediately without a read retry', async () => {
+  for (const kind of ['401', '403', '500', '503', 'foreign-url', 'bad-content', 'bad-type', 'bad-range']) {
+    let gets = 0; let ranges = 0;
+    const probe = waitingAdapter(async (_u, options) => {
+      if (options.headers?.Range) { ranges += 1; return response(bytes, 200); }
+      if (++gets === 1) return new Response(null, { status: 404 });
+      if (/^\d+$/.test(kind)) return new Response(null, { status: Number(kind) });
+      if (kind === 'foreign-url') { const r = new Response(null, { status: 404 }); Object.defineProperty(r, 'url', { value: 'https://foreign.invalid/path' }); return r; }
+      if (kind === 'bad-content') return response('wrong bytes');
+      if (kind === 'bad-type') return new Response(bytes, { headers: { 'content-type': 'text/plain' } });
+      return response(bytes);
+    });
+    await probe.adapter.authenticate(); await assert.rejects(() => probe.adapter.put(pathname, bytes, info));
+    assert.equal(probe.puts, 1, kind); assert.equal(gets, 2, kind); assert.equal(probe.waits.length, 0, kind);
+    assert.equal(ranges, kind === 'bad-range' ? 1 : 0, kind);
+  }
+});
+
+test('post-put wall deadline and cancellation during wait abort before any further GET or put', async () => {
+  let gets = 0; let clock = 0;
+  const timeout = waitingAdapter(async () => { gets += 1; return new Response(null, { status: 404 }); }, { now: () => clock, waitImpl: async () => { clock = 90001; } });
+  await timeout.adapter.authenticate(); await assert.rejects(() => timeout.adapter.put(pathname, bytes, info), /WORLD_MEDIA_POST_PUT_VISIBILITY_TIMEOUT/);
+  assert.equal(timeout.puts, 1); assert.equal(gets, 2);
+  const controller = new AbortController(); let cancelledGets = 0;
+  const cancelled = waitingAdapter(async () => { cancelledGets += 1; return new Response(null, { status: 404 }); }, { signal: controller.signal, waitImpl: async () => { controller.abort(); } });
+  await cancelled.adapter.authenticate(); await assert.rejects(() => cancelled.adapter.put(pathname, bytes, info), (error) => error.name === 'AbortError');
+  assert.equal(cancelled.puts, 1); assert.equal(cancelledGets, 2);
+  const preCancelled = new AbortController(); preCancelled.abort(); let auths = 0;
+  const noAuth = createWorldMediaBlobAdapter({ sdk: { list() { auths += 1; }, put() { throw new Error('must not put'); } }, signal: preCancelled.signal });
+  await assert.rejects(() => noAuth.authenticate(), (error) => error.name === 'AbortError'); assert.equal(auths, 0);
+  const duringLookup = new AbortController();
+  const noPut = waitingAdapter(async () => { duringLookup.abort(); return new Response(null, { status: 404 }); }, { signal: duringLookup.signal });
+  await noPut.adapter.authenticate(); await assert.rejects(() => noPut.adapter.put(pathname, bytes, info), (error) => error.name === 'AbortError');
+  assert.equal(noPut.puts, 0); assert.equal(noPut.waits.length, 0);
 });
