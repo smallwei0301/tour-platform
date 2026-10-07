@@ -1765,11 +1765,37 @@ function runtimeCatalogExtractionReason(error) {
   return 'unavailable';
 }
 
+function formatRuntimeCatalogObservation(rawCatalog, normalizeCatalog, sections) {
+  const limit = 32 * 1024 * 1024; // Diagnostic work only; the frozen 4MiB verdict guard is unchanged.
+  let normalizedBytes = 'unavailable'; let normalizedHash = 'unavailable';
+  const metadata = new Map(sections.map((section) => [section, { count: 'unavailable', hash: 'unavailable' }]));
+  try {
+    const text = normalizeCatalog(rawCatalog);
+    const bytes = Buffer.byteLength(text);
+    if (Number.isSafeInteger(bytes) && bytes >= 0 && bytes <= 0xffff_ffff) normalizedBytes = bytes;
+    if (bytes <= limit) {
+      normalizedHash = createHash('sha256').update(text).digest('hex');
+      const normalized = JSON.parse(text);
+      for (const section of sections) {
+        const entries = normalized?.sections?.[section];
+        if (!Array.isArray(entries) || !Number.isSafeInteger(entries.length) || entries.length > 0xffff_ffff) continue;
+        const serialized = JSON.stringify(entries);
+        if (Buffer.byteLength(serialized) <= limit) metadata.set(section, {
+          count: entries.length, hash: createHash('sha256').update(serialized).digest('hex'),
+        });
+      }
+    }
+  } catch { /* Observation cannot change the original normalization, HOLD cause or cleanup. */ }
+  return `runtime-db-catalog-observation:normalized_bytes=${normalizedBytes},normalized_sha256=${normalizedHash}`
+    + sections.map((section) => `,${section}_count=${metadata.get(section).count},${section}_sha256=${metadata.get(section).hash}`).join('');
+}
+
 export async function verifyRuntimeDbCatalog({
   runtimeDbOverrideProfile, databaseUrl, expectedManifest, extractTerminal, reportStage = () => {},
 } = {}) {
   if (runtimeDbOverrideProfile === undefined) return;
   let terminal;
+  let catalogObservation;
   let phase = 'expected-contract';
   let extractionSucceeded = false;
   let expectedDigestValue;
@@ -1796,7 +1822,17 @@ export async function verifyRuntimeDbCatalog({
     const builder = await import('../database-baseline/build-expected-terminal.mjs');
     builder.parseLocalConnectionEnv(databaseUrl);
     phase = 'extract-terminal';
-    terminal = await (extractTerminal ?? builder.extractLocalTerminalAndHistory)({ databaseUrl });
+    if (extractTerminal === undefined || extractTerminal === null) {
+      const extractor = await import('../database-baseline/extract-catalog.mjs');
+      const normalizer = await import('../database-baseline/normalize-catalog.mjs');
+      let rawCatalog;
+      catalogObservation = () => formatRuntimeCatalogObservation(rawCatalog, normalizer.normalizeCatalog, extractor.CATALOG_SECTIONS);
+      terminal = await builder.extractLocalTerminalAndHistory({ databaseUrl, extractCatalogAdapter: async (options) => {
+        const raw = await extractor.extractCatalog(options);
+        rawCatalog = raw;
+        return raw;
+      } });
+    } else terminal = await extractTerminal({ databaseUrl });
     extractionSucceeded = true;
     phase = 'compare-terminal';
     if (!Buffer.isBuffer(terminal?.terminalBytes)
@@ -1843,6 +1879,11 @@ export async function verifyRuntimeDbCatalog({
         }
       }
     } catch { /* Malformed diagnostic input must not affect comparison or cleanup. */ }
+    // Defer every optional raw read until the original helper/verdict has finished.
+    // Never await reporters: a pending observer must not hold the cleanup lifecycle.
+    if (catalogObservation) {
+      try { Promise.resolve(reportStage(catalogObservation())).catch(() => {}); } catch { /* Diagnostic only. */ }
+    }
     try {
       Promise.resolve(reportStage(`runtime-db-catalog:phase=${phase},extraction_success=${extractionSucceeded ? 1 : 0}`
         + `,expected_sha256=${expectedDigest ?? 'unavailable'},actual_sha256=${actualDigest ?? 'unavailable'}`

@@ -2543,3 +2543,180 @@ test('#1894 runtime binding environment keeps default identity and binds the act
   const source = await readFile(join(repoRoot, 'scripts/testing/with-midao-local-supabase.mjs'), 'utf8');
   assert.match(source, /const e2eEnv = buildRuntimeDbExecutionEnvironment\(\{[\s\S]*?\}, invocation\.runtimeDbOverrideProfile\);/u);
 });
+
+// Source seam keeps the real frozen builder/normalizer and replaces only external I/O.
+async function catalogObservationHarness(raw, { observeNormalize, extractError } = {}) {
+  const builder = await import('../../../../scripts/database-baseline/build-expected-terminal.mjs');
+  const extractor = await import('../../../../scripts/database-baseline/extract-catalog.mjs');
+  const normalizer = await import('../../../../scripts/database-baseline/normalize-catalog.mjs');
+  const directory = await mkdtemp(join(tmpdir(), 'catalog-observation-test-'));
+  const slot = `catalog-observation-${directory}`;
+  const calls = { extracts: 0, clients: 0, queries: 0, rawReturned: undefined, forwarded: undefined, primary: undefined };
+  const extractCatalog = async (args) => {
+    calls.extracts += 1;
+    if (calls.forwarded) assert.equal(args, calls.forwarded, 'forward the exact helper connection options');
+    assert.deepEqual(args.connectionEnv, builder.parseLocalConnectionEnv(catalogDiagnosticFixture().options.databaseUrl));
+    if (extractError) throw extractError;
+    return raw;
+  };
+  class Client {
+    constructor() { calls.clients += 1; }
+    async connect() {}
+    async query(sql) {
+      calls.queries += 1;
+      assert.equal(sql, 'SELECT version FROM supabase_migrations.schema_migrations ORDER BY version');
+      return { rows: builder.EXPECTED_HISTORY_VERSIONS.map((version) => ({ version })) };
+    }
+    async end() {}
+  }
+  globalThis[slot] = {
+    extractor: { ...extractor, extractCatalog }, normalizer: { ...normalizer, normalizeCatalog: observeNormalize ?? normalizer.normalizeCatalog },
+    builder: { ...builder, extractLocalTerminalAndHistory: async (options) => {
+      assert.equal(options.databaseUrl, catalogDiagnosticFixture().options.databaseUrl);
+      try {
+        return await builder.extractLocalTerminalAndHistory({ ...options, ClientClass: Client,
+          extractCatalogAdapter: async (args) => {
+            calls.forwarded = args;
+            const returned = await (options.extractCatalogAdapter ?? extractCatalog)(args);
+            calls.rawReturned = returned;
+            assert.equal(returned, raw, 'the observational seam must return the original raw object');
+            return returned;
+          },
+        });
+      } catch (error) { calls.primary = error; throw error; }
+    } },
+  };
+  const runnerUrl = new URL('../../../../scripts/testing/with-midao-local-supabase.mjs', import.meta.url);
+  let source = await readFile(runnerUrl, 'utf8');
+  source = source.replace(/(['"])(\.\.\/database-baseline\/[^'"]+)\1/gu, (_match, quote, relative) => `${quote}${new URL(relative, runnerUrl).href}${quote}`);
+  for (const [filename, field] of [['build-expected-terminal.mjs', 'builder'], ['extract-catalog.mjs', 'extractor'], ['normalize-catalog.mjs', 'normalizer']]) {
+    const url = new URL(`../database-baseline/${filename}`, runnerUrl).href;
+    source = source.replaceAll(`await import('${url}')`, `globalThis[${JSON.stringify(slot)}].${field}`);
+  }
+  const path = join(directory, 'runner.mjs'); await writeFile(path, source);
+  const loaded = await import(path);
+  const options = { ...catalogDiagnosticFixture().options,
+    expectedManifest: { payloadDigests: { 'catalog.expected-terminal.normalized.json': 'a'.repeat(64) }, historyVersions: builder.EXPECTED_HISTORY_VERSIONS },
+  };
+  return { loaded, calls, options, normalizer, sections: extractor.CATALOG_SECTIONS,
+    close: async () => { delete globalThis[slot]; await rm(directory, { recursive: true, force: true }); },
+  };
+}
+
+function readCatalogObservation(stages, sections) {
+  const lines = stages.filter((stage) => stage.startsWith('runtime-db-catalog-observation:'));
+  assert.equal(lines.length, 1, 'one complete informational pass per default extraction');
+  assert.ok(lines[0].length < 2500);
+  assert.doesNotMatch(lines[0], /private|postgresql:|canonicalKey|SELECT|secret|rowData/u);
+  const fields = Object.fromEntries(lines[0].slice('runtime-db-catalog-observation:'.length).split(',').map((field) => field.split('=')));
+  assert.deepEqual(Object.keys(fields), ['normalized_bytes', 'normalized_sha256', ...sections.flatMap((section) => [`${section}_count`, `${section}_sha256`])]);
+  for (const [key, value] of Object.entries(fields)) assert.match(value, key.endsWith('sha256') ? /^(?:[a-f0-9]{64}|unavailable)$/u : /^(?:\d{1,10}|unavailable)$/u);
+  return fields;
+}
+
+async function observationRawFixture() {
+  return JSON.parse(await readFile(join(repoRoot, 'apps/web/tests/fixtures/database-baseline/catalog-unstable-a.json'), 'utf8'));
+}
+
+test('#1894 catalog observation preserves one real-helper extraction, raw identity and fixed normalized metadata', async () => {
+  const raw = await observationRawFixture(); raw.sections.schemas[0].privateData = 'private-secret SELECT private-row';
+  const harness = await catalogObservationHarness(raw);
+  try {
+    const normalized = harness.normalizer.normalizeCatalog(raw); const digest = createHash('sha256').update(normalized).digest('hex');
+    harness.options.expectedManifest.payloadDigests['catalog.expected-terminal.normalized.json'] = digest;
+    const stages = [];
+    await harness.loaded.verifyRuntimeDbCatalog({ ...harness.options, runtimeDbOverrideProfile: undefined, reportStage: (stage) => stages.push(stage) });
+    assert.deepEqual(stages, []); assert.equal(harness.calls.extracts, 0);
+    await harness.loaded.verifyRuntimeDbCatalog({ ...harness.options, reportStage: (stage) => stages.push(stage) });
+    assert.equal(harness.calls.extracts, 1); assert.equal(harness.calls.queries, 1); assert.equal(harness.calls.rawReturned, raw);
+    const observation = readCatalogObservation(stages, harness.sections);
+    assert.equal(observation.normalized_bytes, String(Buffer.byteLength(normalized)));
+    assert.equal(observation.normalized_sha256, digest);
+    const parsed = JSON.parse(normalized);
+    for (const section of harness.sections) {
+      assert.equal(observation[`${section}_count`], String(parsed.sections[section].length));
+      assert.equal(observation[`${section}_sha256`], createHash('sha256').update(JSON.stringify(parsed.sections[section])).digest('hex'));
+    }
+    assert.equal(readCatalogDiagnostic(stages.filter((stage) => stage.startsWith('runtime-db-catalog:'))).phase, 'compatible');
+  } finally { await harness.close(); }
+});
+
+test('#1894 catalog observation measures a real-helper over-4MiB HOLD without widening frozen terminal guard', async () => {
+  const raw = await observationRawFixture(); raw.sections.schemas[0].privateData = 'x'.repeat(4 * 1024 * 1024);
+  const harness = await catalogObservationHarness(raw);
+  try {
+    const stages = []; const normalized = harness.normalizer.normalizeCatalog(raw);
+    await assert.rejects(harness.loaded.verifyRuntimeDbCatalog({ ...harness.options, reportStage: (stage) => stages.push(stage) }),
+      (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD' && error.cause === harness.calls.primary && error.cause.message === 'terminal catalog bytes invalid');
+    assert.equal(harness.calls.extracts, 1); assert.equal(harness.calls.clients, 0); assert.equal(harness.calls.queries, 0);
+    const observation = readCatalogObservation(stages, harness.sections);
+    assert.equal(observation.normalized_bytes, String(Buffer.byteLength(normalized)));
+    assert.equal(observation.normalized_sha256, createHash('sha256').update(normalized).digest('hex'));
+    const diagnostic = readCatalogDiagnostic(stages.filter((stage) => stage.startsWith('runtime-db-catalog:')));
+    assert.equal(diagnostic.reason, 'terminal-catalog'); assert.equal(diagnostic.actual_sha256, 'unavailable');
+  } finally { await harness.close(); }
+});
+
+test('#1894 catalog observation failures and malformed raw keep original helper verdict and cause', async () => {
+  const valid = await observationRawFixture(); const accessorError = new Error('private original raw accessor');
+  let rawReads = 0;
+  const accessorRaw = { ...valid, get sections() { rawReads += 1; throw accessorError; } };
+  for (const [raw, configuration] of [[valid, { observeNormalize: () => { throw new Error('private observer error'); } }],
+    [null, {}], [{ ...valid, 'private-secret': 'SELECT private-row' }, {}], [accessorRaw, {}],
+    [valid, { extractError: new Error('private extractor error SELECT private-row') }]]) {
+    const harness = await catalogObservationHarness(raw, configuration);
+    try {
+      const stages = [];
+      if (raw === valid && !configuration.extractError) {
+        harness.options.expectedManifest.payloadDigests['catalog.expected-terminal.normalized.json'] = createHash('sha256').update(harness.normalizer.normalizeCatalog(raw)).digest('hex');
+        await harness.loaded.verifyRuntimeDbCatalog({ ...harness.options, reportStage: (stage) => stages.push(stage) });
+      } else await assert.rejects(harness.loaded.verifyRuntimeDbCatalog({ ...harness.options, reportStage: (stage) => stages.push(stage) }),
+        (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD' && error.cause === harness.calls.primary);
+      assert.equal(harness.calls.extracts, 1);
+      if (raw === accessorRaw) { assert.equal(harness.calls.primary, accessorError); assert.equal(rawReads, 2); }
+      assert.ok(Object.values(readCatalogObservation(stages, harness.sections)).every((value) => value === 'unavailable'));
+    } finally { await harness.close(); }
+  }
+});
+
+test('#1894 catalog observation bounds normalized hashing and all metadata names', async () => {
+  const raw = await observationRawFixture();
+  for (const normalized of ['x'.repeat(32 * 1024 * 1024 + 1), JSON.stringify({ sections: { 'private-secret': [{ rowData: 'SELECT private-row' }] } })]) {
+    const harness = await catalogObservationHarness(raw, { observeNormalize: () => normalized });
+    try {
+      harness.options.expectedManifest.payloadDigests['catalog.expected-terminal.normalized.json'] = createHash('sha256').update(harness.normalizer.normalizeCatalog(raw)).digest('hex');
+      const stages = []; await harness.loaded.verifyRuntimeDbCatalog({ ...harness.options, reportStage: (stage) => stages.push(stage) });
+      const observation = readCatalogObservation(stages, harness.sections);
+      assert.equal(observation.normalized_bytes, String(Buffer.byteLength(normalized)));
+      assert.equal(observation.normalized_sha256, normalized.length > 32 * 1024 * 1024 ? 'unavailable' : createHash('sha256').update(normalized).digest('hex'));
+      for (const section of harness.sections) assert.equal(observation[`${section}_count`], 'unavailable');
+    } finally { await harness.close(); }
+  }
+});
+
+test('#1894 catalog observation reporter throw, rejection and pending promise preserve owned cleanup', async () => {
+  const raw = await observationRawFixture(); raw.sections.schemas[0].privateData = 'x'.repeat(4 * 1024 * 1024);
+  for (const behavior of ['throw', 'reject', 'pending']) {
+    const harness = await catalogObservationHarness(raw); const calls = []; const adapter = diagnosticLifecycle({ calls });
+    adapter.statusJson = async () => ({ DATABASE_URL: harness.options.databaseUrl });
+    let release; const pending = new Promise((resolveReporter) => { release = resolveReporter; });
+    const stages = []; const reportStage = (stage) => {
+      stages.push(stage);
+      if (stage.startsWith('runtime-db-catalog-observation:')) {
+        if (behavior === 'throw') throw new Error('private observer reporter');
+        return behavior === 'reject' ? Promise.reject(new Error('private observer reporter')) : pending;
+      }
+    };
+    let timeout;
+    try {
+      const run = runWithLocalSupabase({ adapter, expectedProjectId: projectId, initialize: 'start-only', childArgs: [], reportStage,
+        onReady: async () => harness.loaded.verifyRuntimeDbCatalog({ ...harness.options, reportStage }),
+      });
+      await Promise.race([assert.rejects(run, (error) => error.message === 'RUNTIME_DB_CATALOG_HOLD' && error.cause === harness.calls.primary),
+        new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('observation reporter blocked cleanup')), 500); }),
+      ]);
+      assert.deepEqual(calls, ['identity-1', 'identity-2', 'cleanup']);
+      readCatalogObservation(stages, harness.sections); assert.equal(harness.calls.extracts, 1);
+    } finally { clearTimeout(timeout); release(); await harness.close(); }
+  }
+});
