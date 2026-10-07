@@ -1,10 +1,25 @@
 # Blob 媒體可逆試驗 — 2026-10-07
-> 最後更新：2026-10-07 16:12 Asia/Taipei｜負責：本輪隔離 Builder
+> 最後更新：2026-10-07 20:22 Asia/Taipei｜限定Preview試驗，維持Draft
 
 ## 目標
-以同平台 Blob＋SHA-256 自動比對準備首頁影片試驗，失敗可回到完整本地影片狀態。已寫限定 Preview 的 OIDC build sync；目前證據仍是本地／mock，沒有啟用 Preview 或正式環境。
+以同平台 Blob＋SHA-256自動比對試驗首頁影片，保留完整原影片及正式部署。限定Preview已完成一次真14檔同步／部署，原正式環境未切換；第二次完整重用、部分browser情境及完整網站rollback仍待驗。
 
-## AC 清單
+## 最新交付（20:22 Asia/Taipei；application source 75b6）
+
+- [Draft #1895](https://github.com/smallwei0301/tour-platform/pull/1895)：head `75b6f7e8cd14da02893c243643857cfee5b0d91b`、tree `7b3bfb5c34209914efecd2a20c225f5188180db1`、base main `8841776809e576fabf88bdc2046c70003c5a25dc`；22owned paths，fresh16openPR完整paths overlap0，未Ready／merge
+- [真Preview](https://tour-platform-3qjw7d179-smallwei0301s-projects.vercel.app/) `dpl_2dC8UDFYtsu5gvNcK4o6yLaNpMC8` READY／target=null／exact75b6。build契約：uploaded2、reused12、excluded14、total30,679,590B；全14實際full SHA／bytes／MIME／Range核過、atomicmanifest/state完成後才排除副本，原Nextbuild及平台emit真完成
+- deployed HEAD：14個原本站影片路徑全404、intro poster200、首頁200；media-src恰self＋已批准精確Bloborigin。原Git／本地14影片及原正式deployment／aliases保留
+- 真CloudChrome窄驗通過7rail／初始2影片／單codec／原attrs、paused scroll progress0.05993→time ratio0.3821、cave3影片ready4與intro重入2影片/time0、8張WebP已載入。reduced-motion及媒體故障mock因現有瀏覽器控制不支持模擬／攔截仍NOT_VERIFIED-live；new3spec collection不是執行
+- current Node22 full ordinary5921 total／5918PASS／0FAIL／3既有SKIP／0cancel＋typecheck真exit0；另focused58／58。只精準過濾UNDICI-EHPA環境warning，未放寬其他警告／ordinary成員；不是完整產品驗收
+- [CI37619395373](https://github.com/smallwei0301/tour-platform/actions/runs/37619395373) 與[secret37619395362](https://github.com/smallwei0301/tour-platform/actions/runs/37619395362) 真success。實際checkoutmerge `52e17e57805bb40aa6482af73aa947b79caa884f`，與75b6內容compare files0；lint／type／5921tests／原local-mode build234頁／ISR／preflight成功，preflight重跑不加總
+- [既有smoke37619395404](https://github.com/smallwei0301/tour-platform/actions/runs/37619395404) conclusion=success；14cases為13passed＋1flaky重試成功，issue1360 admin-payout空列表首跑localCSRF ECONNRESET原失敗保留、未歸因Blob；不是newworld3已跑
+- offline caller-exclusive真素材副本：current prepare→排除→rollback後，全14 SHA／bytes30,679,590B、local state原bytes及poster皆還原；原source不變、外部calls0、mock-only。僅asset-level restore，未執行完整網站rollbackbuild；另份CI localbuild不能拼成網站切回PASS
+- source各基準與窄增量分別獨立審查、最後未解0；readiness增量canonical21＋独立mock6 PASS。不冒稱一次重審全部22檔，actualmodelidentity unknown
+- 五次真Preview ERROR保留：Node24 gate、未記phase的HTTP、cave.webm post-put GET404、原原因未知RangeFAIL、ecology.webm post-put Range404。只對成功put後sameURL fullGET／Range404共用8attempt／63s退避／單一90s預算；不再PUT、不套lookup，其他錯誤failclosed。真90s同budget中止pendingRangebody／externalcancel證據與最初fixturecancel失敗均保留
+- PRopened後Vercelbot引用原READY，未產生第二fullsync。successful full sync目前1；只用本次有用文件更新的一次自然Preview收集0upload／14reuse證據，尚未發生前不預填成功，沒有manualredeploy／空commit
+- 下述前期「未push／0次／未啟用」均是dated歷史原文；本次application source後續僅改兩份owned文件，20個code／test／config blobs需核完全不變。文件新head的CI及Preview仍須另收，不冒用75b6舊PASS
+
+## 目前 AC 清單
 - [x] 14 個核准影片逐檔 SHA-256／bytes／codec URL manifest
 - [x] 同 hash 重用，單檔變更只產生新 immutable URL
 - [x] 預設 local 完全不依賴 Blob、token 或網路
@@ -13,7 +28,11 @@
 - [x] 回復 staging 實際保有全部 14 影片且逐檔同 hash
 - [x] live-wave Node 22 ordinary／type／lint／實際原影片 byte proof；原 Next production build 使用既有公開 CI fixture 成功
 - [x] 新增 browser spec 的 canonical Node22 typecheck 與 local／blob-trial 模式 test collection
-- [ ] 新增 browser spec 的獨立 delta review、exact-head CI；真 Preview／browser／平台 artifact／線上 rollback 仍需驗
+- [x] browser spec獨立delta review與application source75b6自然CI（不代表new3spec已執行）
+- [x] 一次真all14 Preview同步、部署端影片排除、normal browser scrub／cave／重入窄验
+- [x] 真14影片current live-path的offline asset-level restore（非完整網站rollback）
+- [ ] 第二次完整0upload／14reuse與文件新head CI／artifact
+- [ ] reduced-motion／媒體故障new browser cases與所需完整QA、完整網站回復驗收
 
 ## 已完成（附證據，以下保留各輪當時的 FAIL／HOLD）
 - 從 exact main `8841776809e576fabf88bdc2046c70003c5a25dc` 建立新隔離 workspace，index 初始 clean；14 影片總量 30,679,590 bytes。git archive／tracked source bytes 可读；歷史 object store 有缺失 parent，不能宣稱整個歷史 fsck 完整
@@ -38,7 +57,7 @@
 - 此窄修仍待新 exactDiff 允許的 review／正式 gates；保留所有原 HOLD／FAIL 與動態驗證限制
 - 沒有 commit／push／PR／deploy。原雲端 Chromium EPERM 仍使 browser gate 未驗，沒有反覆啟動同一已知失敗 runner
 
-## 下一步
+## 前期下一步（16:12計劃原文；以最新交付與目前AC為準）
 - 新 live-wave exact diff 與新增 browser spec 交獨立審查；不得以實作者自驗代替。既有受停止的 dynamic probes 不重試，驗證範圍保持 ordinary／exclusive checkout 契約
 - 指定 public Blob store／Preview-only 連線與實際 origin 已核，live adapter／exact-origin CSP 已寫但未啟用；待 exact-head CI 與兩次受控 Preview 實跑
 - 原 build 已用 repo 既有 CI fixture 產生本地 artifact；真 browser、平台最終 artifact 與線上 rollback 尚未驗，不能由 mock／BUILD_ID 推定通過
@@ -50,7 +69,7 @@
 - 不碰 main／production／DB／TEST／憑證／權限，沒有建立或續跑 Work task
 - 原 deployment `dpl_8sJCCh4CHCDPxnBaXXJd4XySbQaU` 保持未動；尚未實測線上切回，不宣稱即時 rollback 已驗
 
-## 自動 Preview live-wave（SOURCE 已寫，ACTIVATION 未執行）
+## 前期自動 Preview live-wave（當時SOURCE已寫、ACTIVATION未執行）
 
 - branch 固定 `trial/blob-reversible-local`；project `prj_KrrA4UrpyZtEfsQZeSHUJ5zaw4Re`，store `store_pEKGELFM9z6nKVFj`，origin `https://pekgelfm9z6nkvfj.public.blob.vercel-storage.com`
 - Root UI 真核 apps/web、include outside-root 開、原 build override `npm run build -w @tour/web`、install `npm install`、Output Directory Next default；本次不改平台設定。branch-only `apps/web/vercel.json` 只指定 wrapper，wrapper保留原 build
