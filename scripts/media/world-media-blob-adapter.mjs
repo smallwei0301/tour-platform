@@ -5,6 +5,36 @@ import { WORLD_MEDIA_TRIAL } from './world-media-build-contract.mjs';
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const approvedPath = /^world-media\/v1\/(intro|mountain|river|cave|culture|ecology|finale)\/([a-f0-9]{64})\.(mp4|webm)$/;
 const mimeFor = (pathname) => pathname.endsWith('.mp4') ? 'video/mp4' : pathname.endsWith('.webm') ? 'video/webm' : null;
+const safeContentRange = (value) => typeof value === 'string' && /^bytes (?:\d{1,16}-\d{1,16}|\*)\/\d{1,16}$/.test(value) ? value : null;
+const safeLength = (value) => typeof value === 'string' && /^\d{1,16}$/.test(value) && Number.isSafeInteger(Number(value)) ? Number(value) : null;
+
+// 只保存要求的至多32B prefix；第一個超長chunk立即cancel，不繼續吞整個response。
+async function readRangePrefix(response, expectedLength, signal) {
+  const reader = response.body?.getReader();
+  if (!reader) return { part: Buffer.alloc(0), observedBodyLength: 0, bodyComplete: true };
+  const parts = []; let observedBodyLength = 0;
+  try {
+    while (true) {
+      signal?.throwIfAborted();
+      const { done, value } = await reader.read();
+      signal?.throwIfAborted();
+      if (done) return { part: Buffer.concat(parts), observedBodyLength, bodyComplete: true };
+      const remaining = Math.max(0, expectedLength - observedBodyLength);
+      if (remaining) parts.push(Buffer.from(value.subarray(0, remaining)));
+      observedBodyLength += value.byteLength;
+      if (observedBodyLength > expectedLength) {
+        await reader.cancel();
+        return { part: Buffer.concat(parts), observedBodyLength, bodyComplete: false };
+      }
+    }
+  } finally { reader.releaseLock(); }
+}
+
+function rangeFailure(detail) {
+  const error = new Error('WORLD_MEDIA_REMOTE_RANGE_INVALID');
+  error.worldMediaRange = detail;
+  return error;
+}
 
 /** Public readback：不帶 auth、不跟 redirect，驗實際 bytes/hash/type；404 才視為不存在。 */
 export async function verifyWorldMediaBlob(url, info, pathname, { fetchImpl = fetch, allowMissing = false, checkRange = true, verificationStage = 'readback', signal } = {}) {
@@ -26,8 +56,29 @@ export async function verifyWorldMediaBlob(url, info, pathname, { fetchImpl = fe
     const end = Math.min(31, info.bytes - 1);
     signal?.throwIfAborted();
     const range = await fetchImpl(url, { redirect: 'error', cache: 'no-store', headers: { Range: `bytes=0-${end}` }, ...(signal ? { signal } : {}) });
-    const part = Buffer.from(await range.arrayBuffer());
-    if (range.url && range.url !== url || range.status !== 206 || range.headers.get('content-range') !== `bytes 0-${end}/${info.bytes}` || !part.equals(bytes.subarray(0, end + 1))) throw new Error('WORLD_MEDIA_REMOTE_RANGE_INVALID');
+    const expectedBodyLength = end + 1;
+    const reportedLength = range.headers.get('content-length');
+    const detail = {
+      status: range.status, pathname, stage: verificationStage,
+      responseURLMatches: !range.url || range.url === url,
+      contentRange: safeContentRange(range.headers.get('content-range')),
+      contentRangeMatches: range.headers.get('content-range') === `bytes 0-${end}/${info.bytes}`,
+      reportedContentLength: safeLength(reportedLength),
+      contentLengthMatches: reportedLength === null ? null : safeLength(reportedLength) === expectedBodyLength,
+      contentTypeMatches: range.headers.get('content-type')?.split(';')[0].trim().toLowerCase() === mimeFor(pathname),
+      expectedBodyLength, observedBodyLength: null, bodyComplete: false, bodyLengthMatches: null, prefixMatches: null,
+    };
+    if (!detail.responseURLMatches || range.status !== 206 || !detail.contentRangeMatches || detail.contentLengthMatches === false) {
+      await range.body?.cancel();
+      throw rangeFailure(detail);
+    }
+    const body = await readRangePrefix(range, expectedBodyLength, signal);
+    Object.assign(detail, {
+      observedBodyLength: body.observedBodyLength, bodyComplete: body.bodyComplete,
+      bodyLengthMatches: body.bodyComplete && body.observedBodyLength === expectedBodyLength,
+      prefixMatches: body.part.equals(bytes.subarray(0, expectedBodyLength)),
+    });
+    if (!detail.bodyLengthMatches || !detail.prefixMatches) throw rangeFailure(detail);
   }
   signal?.throwIfAborted();
   return { url, bytes: info.bytes, sha256: info.sha256 };
@@ -74,6 +125,12 @@ export async function verifyWorldMediaAfterPut(url, info, pathname, { fetchImpl 
 
 /** CLI只准這四個已知public欄位，未知SDK error內容不會被轉貼到build log。 */
 export function worldMediaHttpDiagnostic(error) {
+  const range = error?.worldMediaRange;
+  if (range) {
+    if (!Number.isInteger(range.status) || range.status < 100 || range.status > 599 || typeof range.pathname !== 'string' || !approvedPath.test(range.pathname) || !['lookup-existing', 'post-put-readback', 'readback'].includes(range.stage) || !['responseURLMatches', 'contentRangeMatches', 'contentTypeMatches', 'bodyComplete'].every((key) => typeof range[key] === 'boolean') || !['contentLengthMatches', 'bodyLengthMatches', 'prefixMatches'].every((key) => range[key] === null || typeof range[key] === 'boolean') || !Number.isInteger(range.expectedBodyLength) || range.expectedBodyLength < 1 || range.expectedBodyLength > 32 || !['reportedContentLength', 'observedBodyLength'].every((key) => range[key] === null || Number.isSafeInteger(range[key]) && range[key] >= 0) || range.contentRange !== null && safeContentRange(range.contentRange) !== range.contentRange) return null;
+    const { status, pathname, stage, responseURLMatches, contentRange, contentRangeMatches, reportedContentLength, contentLengthMatches, contentTypeMatches, expectedBodyLength, observedBodyLength, bodyComplete, bodyLengthMatches, prefixMatches } = range;
+    return { phase: 'world-media-public-range-failure', status, pathname, stage, responseURLMatches, contentRange, contentRangeMatches, reportedContentLength, contentLengthMatches, contentTypeMatches, expectedBodyLength, observedBodyLength, bodyComplete, bodyLengthMatches, prefixMatches };
+  }
   const detail = error?.worldMediaHttp;
   if (!Number.isInteger(detail?.status) || detail.status < 100 || detail.status > 599 || !approvedPath.test(detail?.pathname || '') || !['lookup-existing', 'post-put-readback', 'readback'].includes(detail?.stage) || typeof detail.responseURLMatches !== 'boolean') return null;
   return { phase: 'world-media-public-http-failure', status: detail.status, stage: detail.stage, pathname: detail.pathname, responseURLMatches: detail.responseURLMatches };

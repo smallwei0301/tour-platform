@@ -256,3 +256,89 @@ test('post-put wall deadline and cancellation during wait abort before any furth
   await noPut.adapter.authenticate(); await assert.rejects(() => noPut.adapter.put(pathname, bytes, info), (error) => error.name === 'AbortError');
   assert.equal(noPut.puts, 0); assert.equal(noPut.waits.length, 0);
 });
+
+test('every Range header rejection reports all safe fields and cancels unread body without another GET or put', async () => {
+  for (const kind of ['200', '404', '401', '403', '500', 'foreign-url', 'wrong-range', 'unsafe-range', 'wrong-length', 'unsafe-length']) {
+    let gets = 0; let ranges = 0; let pulls = 0; let cancelled = 0;
+    const probe = waitingAdapter(async (_u, options) => {
+      if (!options.headers?.Range) return ++gets === 1 ? new Response(null, { status: 404 }) : response(bytes);
+      ranges += 1;
+      const headers = { 'content-range': `bytes 0-${bytes.length - 1}/${bytes.length}`, 'content-length': String(bytes.length), 'content-type': 'text/plain' };
+      if (kind === 'wrong-range') headers['content-range'] = 'bytes 1-17/18';
+      if (kind === 'unsafe-range') headers['content-range'] = 'synthetic-secret';
+      if (kind === 'wrong-length') headers['content-length'] = '999';
+      if (kind === 'unsafe-length') headers['content-length'] = 'synthetic-secret';
+      const body = new ReadableStream({ pull(controller) { pulls += 1; controller.enqueue(bytes); }, cancel() { cancelled += 1; } }, { highWaterMark: 0 });
+      const result = new Response(body, { status: /^\d+$/.test(kind) ? Number(kind) : 206, headers });
+      if (kind === 'foreign-url') Object.defineProperty(result, 'url', { value: 'https://foreign.invalid/synthetic-secret' });
+      return result;
+    });
+    await probe.adapter.authenticate();
+    await assert.rejects(() => probe.adapter.put(pathname, bytes, info), (error) => {
+      assert.equal(error.message, 'WORLD_MEDIA_REMOTE_RANGE_INVALID', kind);
+      const safe = worldMediaHttpDiagnostic(error);
+      assert.equal(safe.phase, 'world-media-public-range-failure'); assert.equal(safe.stage, 'post-put-readback');
+      assert.equal(safe.pathname, pathname); assert.equal(safe.expectedBodyLength, bytes.length);
+      assert.equal(safe.status, /^\d+$/.test(kind) ? Number(kind) : 206);
+      assert.equal(safe.responseURLMatches, kind !== 'foreign-url');
+      assert.equal(safe.contentRangeMatches, !['wrong-range', 'unsafe-range'].includes(kind));
+      assert.equal(safe.contentLengthMatches, !['wrong-length', 'unsafe-length'].includes(kind));
+      assert.equal(safe.contentTypeMatches, false); assert.equal(safe.observedBodyLength, null);
+      assert.equal(safe.bodyLengthMatches, null); assert.equal(safe.prefixMatches, null); assert.equal(safe.bodyComplete, false);
+      assert.equal(safe.contentRange, kind === 'unsafe-range' ? null : kind === 'wrong-range' ? 'bytes 1-17/18' : `bytes 0-${bytes.length - 1}/${bytes.length}`);
+      assert.equal(safe.reportedContentLength, kind === 'unsafe-length' ? null : kind === 'wrong-length' ? 999 : bytes.length);
+      assert.equal(JSON.stringify(error).includes('synthetic-secret'), false); assert.equal(JSON.stringify(safe).includes('synthetic-secret'), false);
+      return true;
+    });
+    assert.equal(probe.puts, 1); assert.equal(gets, 2); assert.equal(ranges, 1); assert.equal(probe.waits.length, 0);
+    assert.equal(pulls, 0, kind); assert.equal(cancelled, 1, kind);
+  }
+});
+
+test('Range body length and prefix rejection retain strict gates; oversized body cancels after its first chunk', async () => {
+  for (const kind of ['empty', 'short', 'long', 'wrong-prefix']) {
+    let gets = 0; let pulls = 0; let cancelled = 0;
+    const body = kind === 'empty' ? Buffer.alloc(0) : kind === 'short' ? bytes.subarray(0, bytes.length - 1) : kind === 'long' ? Buffer.concat([bytes, Buffer.from('unexpected-extra')]) : Buffer.alloc(bytes.length, 0);
+    const probe = waitingAdapter(async (_u, options) => {
+      if (!options.headers?.Range) return ++gets === 1 ? new Response(null, { status: 404 }) : response(bytes);
+      const stream = new ReadableStream({ pull(controller) { pulls += 1; if (pulls === 1) controller.enqueue(body); else controller.close(); }, cancel() { cancelled += 1; } }, { highWaterMark: 0 });
+      return new Response(stream, { status: 206, headers: { 'content-range': `bytes 0-${bytes.length - 1}/${bytes.length}`, 'content-type': 'video/mp4' } });
+    });
+    await probe.adapter.authenticate();
+    await assert.rejects(() => probe.adapter.put(pathname, bytes, info), (error) => {
+      const safe = worldMediaHttpDiagnostic(error); assert.equal(safe.observedBodyLength, body.length);
+      assert.equal(safe.expectedBodyLength, bytes.length); assert.equal(safe.contentLengthMatches, null);
+      assert.equal(safe.bodyLengthMatches, kind === 'wrong-prefix'); assert.equal(safe.prefixMatches, kind === 'long');
+      assert.equal(safe.bodyComplete, kind !== 'long'); assert.equal(safe.contentRangeMatches, true); assert.equal(safe.contentTypeMatches, true);
+      return error.message === 'WORLD_MEDIA_REMOTE_RANGE_INVALID';
+    });
+    assert.equal(probe.puts, 1); assert.equal(gets, 2); assert.equal(probe.waits.length, 0);
+    assert.equal(pulls, kind === 'long' ? 1 : 2); assert.equal(cancelled, kind === 'long' ? 1 : 0);
+  }
+});
+
+test('Range diagnostic handles lookup/direct stages and rejects malformed fields or extra payloads', async () => {
+  let puts = 0; let gets = 0;
+  const adapter = createWorldMediaBlobAdapter({ sdk: { list() {}, put() { puts += 1; } }, fetchImpl: async (_u, options) => options.headers?.Range ? response(bytes, 404) : (gets += 1, response(bytes)) });
+  await adapter.authenticate();
+  let detail;
+  await assert.rejects(() => adapter.put(pathname, bytes, info), (error) => { detail = error.worldMediaRange; assert.equal(worldMediaHttpDiagnostic(error).stage, 'lookup-existing'); return true; });
+  assert.equal(puts, 0); assert.equal(gets, 1);
+  await assert.rejects(() => verifyWorldMediaBlob(url, info, pathname, { fetchImpl: async (_u, options) => options.headers?.Range ? response('wrong', 206, { 'content-range': `bytes 0-${bytes.length - 1}/${bytes.length}` }) : response(bytes) }), (error) => worldMediaHttpDiagnostic(error).stage === 'readback');
+  for (const invalid of [{ pathname: 7 }, { pathname: 'foreign' }, { status: 0 }, { status: 600 }, { stage: 'synthetic-secret' }, { contentRange: 'synthetic-secret' }, { expectedBodyLength: 33 }, { observedBodyLength: -1 }, { prefixMatches: 'synthetic-secret' }, { responseURLMatches: undefined }]) assert.equal(worldMediaHttpDiagnostic({ worldMediaRange: { ...detail, ...invalid } }), null);
+  const safe = worldMediaHttpDiagnostic({ worldMediaRange: { ...detail, token: 'synthetic-secret', headers: { private: 'synthetic-secret' }, body: 'synthetic-secret', foreignURL: 'https://foreign.invalid' } });
+  assert.equal(JSON.stringify(safe).includes('synthetic-secret'), false); assert.equal(Object.hasOwn(safe, 'foreignURL'), false);
+});
+
+test('external cancellation still aborts a pending Range stream without another GET or put', async () => {
+  const controller = new AbortController(); let gets = 0; let ranges = 0;
+  const probe = waitingAdapter(async (_u, options) => {
+    if (!options.headers?.Range) return ++gets === 1 ? new Response(null, { status: 404 }) : response(bytes);
+    ranges += 1;
+    const body = new ReadableStream({ start(stream) { options.signal.addEventListener('abort', () => stream.error(options.signal.reason), { once: true }); } });
+    setTimeout(() => controller.abort(), 10);
+    return new Response(body, { status: 206, headers: { 'content-range': `bytes 0-${bytes.length - 1}/${bytes.length}`, 'content-type': 'video/mp4' } });
+  }, { signal: controller.signal });
+  await probe.adapter.authenticate(); await assert.rejects(() => probe.adapter.put(pathname, bytes, info), (error) => error.name === 'AbortError');
+  assert.equal(probe.puts, 1); assert.equal(gets, 2); assert.equal(ranges, 1); assert.equal(probe.waits.length, 0);
+});
