@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { EventEmitter } from 'node:events';
 import { link, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { createServer as createHttpServer } from 'node:http';
 import { createServer, connect } from 'node:net';
@@ -1562,4 +1563,265 @@ test('onReady primary failure and cleanup failure are both retained', async () =
   }), (error) => error instanceof AggregateError
     && error.errors.some((entry) => /READY_PRIMARY/u.test(entry.message))
     && error.errors.some((entry) => /CLEANUP_SECONDARY/u.test(entry.message)));
+});
+
+const diagnosticDatabase = { id: 'a'.repeat(64), name: `supabase_db_${projectId}`, projectLabel: projectId };
+const postgresLog = (message) => `2026-10-07T07:44:00.000000000Z 2026-10-07 07:44:00.000 UTC [123] LOG:  ${message}`;
+
+test('owned DB diagnostic summarizes only fixed crash and recovery metadata, never log text', () => {
+  const output = [
+    postgresLog('server process (PID 987) was terminated by signal 11: Segmentation fault'),
+    postgresLog('server process (PID 988) exited with exit code 1'),
+    postgresLog('terminating any other active server processes'),
+    postgresLog('all server processes terminated; reinitializing'),
+    postgresLog('database system was interrupted; last known up at 2026-10-07 07:43:00 UTC'),
+    postgresLog('database system was not properly shut down; automatic recovery in progress'),
+    postgresLog('database system is ready to accept connections'),
+    postgresLog('server process (PID 987) was terminated by signal 11: Segmentation fault SECRET_VALUE'),
+    postgresLog('STATEMENT: SELECT secret_customer_value'),
+    postgresLog('DETAIL: SERVICE_ROLE_KEY=secret-key'),
+    postgresLog('CONTEXT: postgres://private-user:private-password@private-host/private-db'),
+    'STATEMENT: database system is ready to accept connections',
+    'untrusted plain text: all server processes terminated; reinitializing',
+    postgresLog('PANIC: private customer data'),
+    postgresLog('database system is ready to accept connections').replace('LOG:', 'STATEMENT:'),
+  ].join('\n');
+  assert.deepEqual(runner.summarizeOwnedDatabaseFailure(output, ['secret-key']), {
+    backend_signal_6: 0, backend_signal_7: 0, backend_signal_9: 0, backend_signal_11: 1,
+    backend_exit: 1, terminating_backends: 1, reinitializing: 1, interrupted: 1,
+    automatic_recovery: 1, ready: 1, output_truncated: 0,
+  });
+  const summary = JSON.stringify(runner.summarizeOwnedDatabaseFailure(output, ['secret-key']));
+  assert.doesNotMatch(summary, /SECRET_VALUE|secret_customer_value|secret-key|private-|STATEMENT|DETAIL|CONTEXT|SELECT|987|2026/u);
+  assert.equal(runner.summarizeOwnedDatabaseFailure(Array.from({ length: 250 }, () => postgresLog('database system is ready to accept connections')).join('\n')).ready, 100);
+});
+
+test('owned DB diagnostic accepts pinned Supabase host and session prefixes without emitting their values', () => {
+  // Official 17.6.1.104 postgresql.conf.j2 uses %h %m [%p] %q%u@%d, UTC.
+  const timestamp = '2026-10-07 07:44:00.000 UTC [321] ';
+  const dockerTimestamp = '2026-10-07T07:44:00.000000000Z ';
+  for (const prefix of [
+    timestamp, ` ${timestamp}`, `${dockerTimestamp} ${timestamp}`,
+    `${dockerTimestamp}127.0.0.1 ${timestamp}fixture_user@fixture_db `,
+    `${dockerTimestamp}[local] ${timestamp}fixture_user@fixture_db `,
+    `${dockerTimestamp}::1 ${timestamp}fixture_user@fixture_db `,
+    `${dockerTimestamp}fixture-host ${timestamp}fixture_user@fixture_db `,
+  ]) {
+    const summary = runner.summarizeOwnedDatabaseFailure(`${prefix}LOG:  all server processes terminated; reinitializing`);
+    assert.equal(summary.reinitializing, 1);
+    assert.doesNotMatch(JSON.stringify(summary), /fixture|321|127\.0\.0\.1|::1|2026/u);
+  }
+  for (const severity of ['STATEMENT', 'DETAIL', 'CONTEXT', 'ERROR', 'FATAL', 'PANIC']) {
+    const summary = runner.summarizeOwnedDatabaseFailure(`${dockerTimestamp} ${timestamp}${severity}:  all server processes terminated; reinitializing`);
+    assert.equal(summary.reinitializing, 0);
+  }
+});
+
+test('owned DB diagnostic adapter reads only one validated immutable DB ID with fixed bounds', async () => {
+  const calls = [];
+  const adapter = createActualAdapter({
+    repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22',
+    commandRunner: async (command, args, options) => {
+      calls.push({ command, args, options });
+      return { exitCode: 0, signal: null, stdout: '', stderr: postgresLog('all server processes terminated; reinitializing'), outputTruncated: true };
+    },
+  });
+  const summary = await adapter.captureDatabaseFailureDiagnostic([diagnosticDatabase], []);
+  assert.equal(summary.reinitializing, 1);
+  assert.equal(summary.output_truncated, 1);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].command, 'docker');
+  assert.deepEqual(calls[0].args, ['logs', '--since', '10m', '--tail', '100', '--timestamps', '--', diagnosticDatabase.id]);
+  assert.equal(calls[0].options.cwd, `/tmp/${projectId}`);
+  assert.equal(calls[0].options.timeoutMs, 5_000);
+  assert.equal(calls[0].options.maxOutputBytes, 32_768);
+  assert.equal(calls[0].options.signal, undefined);
+  for (const invalid of [
+    [], [diagnosticDatabase, { ...diagnosticDatabase, id: 'b'.repeat(64) }],
+    [{ ...diagnosticDatabase, id: '--all' }], [{ ...diagnosticDatabase, projectLabel: 'foreign' }],
+    [{ ...diagnosticDatabase, name: `supabase_rest_${projectId}` }],
+  ]) await assert.rejects(adapter.captureDatabaseFailureDiagnostic(invalid, []));
+  assert.equal(calls.length, 1);
+});
+
+test('owned DB diagnostic adapter suppresses command errors, timeout and signal output', async () => {
+  for (const failure of [{ exitCode: 1, signal: null }, { exitCode: 0, signal: 'SIGTERM' }, { exitCode: 0, signal: null, timedOut: true }]) {
+    const adapter = createActualAdapter({
+      repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22',
+      commandRunner: async () => ({ ...failure, stdout: 'private customer data', stderr: 'postgres://private-user:private-password@private-host/private-db' }),
+    });
+    await assert.rejects(adapter.captureDatabaseFailureDiagnostic([diagnosticDatabase], []), (error) => error.message === 'DATABASE_DIAGNOSTIC_UNAVAILABLE');
+  }
+});
+
+function diagnosticLifecycle({ calls, current = [diagnosticDatabase], childFailure, diagnosticFailure, cleanupFailure, success = false }) {
+  let reads = 0;
+  return {
+    async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+    async assertNoPreexistingResources() {},
+    async start() {},
+    async containers() { reads += 1; calls.push(`identity-${reads}`); return structuredClone(reads === 1 ? [diagnosticDatabase] : current); },
+    async child() { calls.push('child'); if (childFailure) throw childFailure; return { exitCode: success ? 0 : 9 }; },
+    async captureDatabaseFailureDiagnostic(owned) {
+      calls.push('diagnostic'); assert.deepEqual(owned, [diagnosticDatabase]);
+      if (diagnosticFailure) throw diagnosticFailure;
+      return { backend_signal_11: 1, ready: 0, SECRET_VALUE: 'postgres://private-user:private-password@private-host/private-db' };
+    },
+    async stop() { calls.push('cleanup'); if (cleanupFailure) throw cleanupFailure; },
+  };
+}
+
+test('owned DB diagnostic occurs after fresh identity and before teardown on child failure', async () => {
+  const calls = [];
+  const stages = [];
+  await assert.rejects(runWithLocalSupabase({
+    adapter: diagnosticLifecycle({ calls }), expectedProjectId: projectId, initialize: 'start-only',
+    childArgs: ['test.mjs'], reportStage: (stage) => stages.push(stage),
+  }), /CHILD_FAILED_9/u);
+  assert.deepEqual(calls, ['identity-1', 'child', 'identity-2', 'diagnostic', 'cleanup']);
+  assert.deepEqual(stages.slice(-3), ['cleanup-identity', 'owned-db-diagnostic:backend_signal_11=1', 'cleanup']);
+  assert.doesNotMatch(stages.join('\n'), /SECRET_VALUE|postgres:|private-/u);
+});
+
+test('owned DB diagnostic rejects identity drift, missing DB and ambiguous DB without reading logs', async () => {
+  for (const current of [
+    [{ ...diagnosticDatabase, id: 'b'.repeat(64) }],
+    [{ ...diagnosticDatabase, name: `supabase_rest_${projectId}` }],
+    [{ ...diagnosticDatabase, projectLabel: 'foreign' }], [],
+    [diagnosticDatabase, { ...diagnosticDatabase, id: 'b'.repeat(64) }],
+  ]) {
+    const calls = [];
+    await assert.rejects(runWithLocalSupabase({
+      adapter: diagnosticLifecycle({ calls, current }), expectedProjectId: projectId, initialize: 'start-only', childArgs: ['test.mjs'],
+    }));
+    assert.equal(calls.includes('diagnostic'), false);
+    assert.equal(calls.includes('cleanup'), false);
+  }
+});
+
+test('owned DB diagnostic skips missing or ambiguous owned DB without weakening existing cleanup', async () => {
+  for (const owned of [
+    [{ ...diagnosticDatabase, name: `supabase_rest_${projectId}` }],
+    [diagnosticDatabase, { ...diagnosticDatabase, id: 'b'.repeat(64) }],
+  ]) {
+    const calls = [];
+    const adapter = diagnosticLifecycle({ calls });
+    adapter.containers = async () => structuredClone(owned);
+    adapter.stop = async (safe) => { calls.push('cleanup'); assert.deepEqual(safe, owned); };
+    await assert.rejects(runWithLocalSupabase({ adapter, expectedProjectId: projectId, initialize: 'start-only', childArgs: ['test.mjs'] }), /CHILD_FAILED_9/u);
+    assert.deepEqual(calls, ['child', 'cleanup']);
+  }
+});
+
+test('owned DB diagnostic is absent on success and failures before the child runs', async () => {
+  const calls = [];
+  const adapter = diagnosticLifecycle({ calls, success: true });
+  await runWithLocalSupabase({ adapter, expectedProjectId: projectId, initialize: 'start-only', childArgs: ['test.mjs'] });
+  assert.deepEqual(calls, ['identity-1', 'child', 'identity-2', 'cleanup']);
+  calls.length = 0;
+  adapter.ready = async () => { throw new Error('READY_FAILED'); };
+  await assert.rejects(runWithLocalSupabase({ adapter, expectedProjectId: projectId, initialize: 'start-only', childArgs: ['test.mjs'] }), /READY_FAILED/u);
+  assert.equal(calls.includes('diagnostic'), false);
+});
+
+test('owned DB diagnostic failure preserves primary failure and still attempts cleanup', async () => {
+  for (const cleanupFailure of [undefined, new Error('CLEANUP_FAILED')]) {
+    const calls = [];
+    const stages = [];
+    const primary = new Error('CHILD_SOURCE_FAILED');
+    await assert.rejects(runWithLocalSupabase({
+      adapter: diagnosticLifecycle({ calls, childFailure: primary, diagnosticFailure: new Error('secret diagnostic failure'), cleanupFailure }),
+      expectedProjectId: projectId, initialize: 'start-only', childArgs: ['test.mjs'], reportStage: (stage) => stages.push(stage),
+    }), (error) => cleanupFailure ? error instanceof AggregateError && error.errors[0] === primary && error.errors[1] === cleanupFailure : error === primary);
+    assert.deepEqual(calls, ['identity-1', 'child', 'identity-2', 'diagnostic', 'cleanup']);
+    assert.ok(stages.includes('owned-db-diagnostic:unavailable'));
+    assert.doesNotMatch(stages.join('\n'), /secret diagnostic failure/u);
+  }
+});
+
+test('owned DB diagnostic rejects arbitrary count values and survives diagnostic reporting failure', async () => {
+  const calls = [];
+  const stages = [];
+  const adapter = diagnosticLifecycle({ calls });
+  adapter.captureDatabaseFailureDiagnostic = async () => ({ ready: 'private-value', backend_exit: 101, reinitializing: -1, backend_signal_11: NaN });
+  await assert.rejects(runWithLocalSupabase({
+    adapter, expectedProjectId: projectId, initialize: 'start-only', childArgs: ['test.mjs'],
+    reportStage: (stage) => { stages.push(stage); if (stage.startsWith('owned-db-diagnostic:')) throw new Error('REPORT_FAILED'); },
+  }), /CHILD_FAILED_9/u);
+  assert.deepEqual(stages.slice(-3), ['owned-db-diagnostic:no-events', 'owned-db-diagnostic:unavailable', 'cleanup']);
+  assert.deepEqual(calls, ['identity-1', 'child', 'identity-2', 'cleanup']);
+  assert.doesNotMatch(stages.join('\n'), /private-value|101|NaN|REPORT_FAILED/u);
+});
+
+test('owned DB diagnostic captures the controlled onReady child failure used by the actual runner', async () => {
+  const calls = [];
+  const adapter = diagnosticLifecycle({ calls });
+  await assert.rejects(runWithLocalSupabase({
+    adapter, expectedProjectId: projectId, initialize: 'start-only',
+    onReady: async () => { calls.push('child'); throw new Error('CHILD_FAILED_1'); },
+  }), /CHILD_FAILED_1/u);
+  assert.deepEqual(calls, ['identity-1', 'child', 'identity-2', 'diagnostic', 'cleanup']);
+});
+
+test('owned DB diagnostic command bounds cap combined output and force timeout using mock processes', async () => {
+  const source = await readFile(join(repoRoot, 'scripts/testing/with-midao-local-supabase.mjs'), 'utf8');
+  const commandSource = source.slice(source.indexOf('export function runCommand('), source.indexOf('export async function startMidaoApiServer('));
+  const destroyed = [];
+  const child = Object.assign(new EventEmitter(), {
+    pid: 777, unref() { destroyed.push('unref'); },
+    stdout: Object.assign(new EventEmitter(), { destroy() { destroyed.push('stdout'); } }),
+    stderr: Object.assign(new EventEmitter(), { destroy() { destroyed.push('stderr'); } }),
+  });
+  const kills = [];
+  const timers = [];
+  const cleared = [];
+  const mockedRunCommand = new Function('spawn', 'process', 'setTimeout', 'clearTimeout', `${commandSource.replace(/^export /u, '')}\nreturn runCommand;`)(
+    () => child, { env: {}, kill: (...args) => kills.push(args) },
+    (callback, delay) => { const timer = { callback, delay, unref() {} }; timers.push(timer); return timer; },
+    (timer) => cleared.push(timer),
+  );
+  const pending = mockedRunCommand('mock-docker', ['logs'], { maxOutputBytes: 12, timeoutMs: 5_000 });
+  child.stdout.emit('data', Buffer.from('12345678'));
+  child.stderr.emit('data', Buffer.from('abcdefgh'));
+  child.stdout.emit('data', Buffer.from('ignored'));
+  assert.equal(timers.length, 1);
+  assert.equal(timers[0].delay, 5_000);
+  timers[0].callback();
+  assert.deepEqual(kills, [[-777, 'SIGKILL']]);
+  const result = await pending;
+  assert.equal(Buffer.byteLength(result.stdout) + Buffer.byteLength(result.stderr), 12);
+  assert.equal(result.stdout, '12345678');
+  assert.equal(result.stderr, 'abcd');
+  assert.equal(result.outputTruncated, true);
+  assert.equal(result.timedOut, true);
+  assert.deepEqual(destroyed, ['stdout', 'stderr', 'unref']);
+  child.emit('close', null, 'SIGKILL');
+  assert.deepEqual(cleared, [timers[0]]);
+});
+
+test('owned DB diagnostic timeout settles despite kill or pipe teardown exceptions', async () => {
+  const source = await readFile(join(repoRoot, 'scripts/testing/with-midao-local-supabase.mjs'), 'utf8');
+  const commandSource = source.slice(source.indexOf('export function runCommand('), source.indexOf('export async function startMidaoApiServer('));
+  for (const failing of ['kill', 'stdout', 'stderr', 'unref', 'detach']) {
+    const calls = [];
+    const action = (name) => { calls.push(name); if (failing === name) throw new Error('private diagnostic teardown'); };
+    const child = Object.assign(new EventEmitter(), {
+      pid: 777, kill() { action('kill'); }, unref() { action('unref'); },
+      stdout: Object.assign(new EventEmitter(), { destroy() { action('stdout'); } }),
+      stderr: Object.assign(new EventEmitter(), { destroy() { action('stderr'); } }),
+    });
+    let timeout;
+    const mocked = new Function('spawn', 'process', 'setTimeout', 'clearTimeout', `${commandSource.replace(/^export /u, '')}\nreturn runCommand;`)(
+      () => child, { env: {}, kill() { throw Object.assign(new Error('private group failure'), { code: 'EPERM' }); } },
+      callback => { timeout = callback; return { unref() {} }; }, () => {},
+    );
+    const signal = { addEventListener() {}, removeEventListener() { action('detach'); }, aborted: false };
+    const pending = mocked('mock-docker', ['logs'], { timeoutMs: 5_000, maxOutputBytes: 32_768, signal });
+    assert.doesNotThrow(() => timeout());
+    const result = await pending;
+    assert.equal(result.exitCode, 1);
+    assert.equal(result.timedOut, true);
+    assert.deepEqual(calls, ['kill', 'stdout', 'stderr', 'unref', 'detach']);
+    assert.doesNotMatch(JSON.stringify(result), /private/u);
+  }
 });

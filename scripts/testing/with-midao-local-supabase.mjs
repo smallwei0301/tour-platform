@@ -860,6 +860,38 @@ function redactRunnerDiagnostic(text, secrets = []) {
     .replace(/postgres(?:ql)?:\/\/[^\s]+/giu, '[REDACTED_DATABASE_URL]');
 }
 
+const OWNED_DATABASE_DIAGNOSTIC_EVENTS = Object.freeze([
+  ...[[6, 'Aborted'], [7, 'Bus error'], [9, 'Killed'], [11, 'Segmentation fault']]
+    .map(([signal, reason]) => [`backend_signal_${signal}`, new RegExp(`^server process \\(PID \\d{1,10}\\) was terminated by signal ${signal}: ${reason}$`, 'u')]),
+  ['backend_exit', /^server process \(PID \d{1,10}\) exited with exit code \d{1,3}$/u],
+  ['terminating_backends', /^terminating any other active server processes$/u],
+  ['reinitializing', /^all server processes terminated; reinitializing$/u],
+  ['interrupted', /^database system was interrupted; last known up at \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC$/u],
+  ['automatic_recovery', /^database system was not properly shut down; automatic recovery in progress$/u],
+  ['ready', /^database system is ready to accept connections$/u],
+  ['output_truncated', /$^/u],
+]);
+const OWNED_DATABASE_LOG_LINE = /^(?:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,9}Z )?(?:[A-Za-z0-9_.:\[\]-]{0,128} )?\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{1,6})? UTC \[\d{1,10}\] (?:[A-Za-z0-9_.-]{0,64}@[A-Za-z0-9_.-]{0,64} )?LOG: {1,2}(.{1,2048})$/u;
+
+export function summarizeOwnedDatabaseFailure(output, secrets = []) {
+  const counts = Object.fromEntries(OWNED_DATABASE_DIAGNOSTIC_EVENTS.map(([event]) => [event, 0]));
+  const lines = redactRunnerDiagnostic(String(output ?? '').slice(0, 32_768), secrets).split(/\r?\n/u).slice(0, 100);
+  for (const line of lines) {
+    // Supabase 17.6.1.104 uses %h %m [%p] %q%u@%d; no prefix values or SQL/DETAIL/CONTEXT are returned.
+    const message = line.match(OWNED_DATABASE_LOG_LINE)?.[1];
+    if (message) for (const [event, pattern] of OWNED_DATABASE_DIAGNOSTIC_EVENTS) if (pattern.test(message)) counts[event] += 1;
+  }
+  return counts;
+}
+
+function formatOwnedDatabaseFailureDiagnostic(counts) {
+  const fields = OWNED_DATABASE_DIAGNOSTIC_EVENTS.flatMap(([event]) => {
+    const count = counts?.[event];
+    return Number.isSafeInteger(count) && count > 0 && count <= 100 ? [`${event}=${count}`] : [];
+  });
+  return `owned-db-diagnostic:${fields.join(',') || 'no-events'}`;
+}
+
 const SAFE_RUNNER_AGGREGATE_MESSAGES = new Set([
   'baseline workdir cleanup failed',
   'baseline workdir setup failed and cleanup held',
@@ -1015,6 +1047,7 @@ export async function runWithLocalSupabase({
   let localEnv;
   let value;
   let primaryError;
+  let childStarted = false;
   try {
     reportStage('status');
     const status = await adapter.status();
@@ -1082,6 +1115,7 @@ export async function runWithLocalSupabase({
       });
     } else if (adapter.child) {
       reportStage('child');
+      childStarted = true;
       const child = await adapter.child(childArgs, localEnv);
       if (child.exitCode !== 0) throw new Error(`CHILD_FAILED_${child.exitCode}`);
     }
@@ -1104,6 +1138,16 @@ export async function runWithLocalSupabase({
         safe[resource] = ownership[resource];
       } catch (error) { cleanupErrors.push(error); }
     }
+    if (primaryError && (childStarted || (onReady && /^CHILD_FAILED_\d+$/u.test(primaryError.message)))
+      && cleanupErrors.length === 0 && typeof adapter.captureDatabaseFailureDiagnostic === 'function') {
+      const database = safe.containers.filter((container) => container.name === `supabase_db_${expectedProjectId}`);
+      if (database.length === 1) {
+        try { reportStage(formatOwnedDatabaseFailureDiagnostic(await adapter.captureDatabaseFailureDiagnostic(database, Object.values(localEnv ?? {})))); }
+        catch {
+          try { reportStage('owned-db-diagnostic:unavailable'); } catch { /* Diagnostic reporting must not prevent cleanup. */ }
+        }
+      }
+    }
     if (Object.values(safe).some((resources) => resources.length > 0)) {
       reportStage('cleanup');
       try { await adapter.stop(safe.containers, { networks: safe.networks, volumes: safe.volumes }); }
@@ -1119,25 +1163,49 @@ export async function runWithLocalSupabase({
   return { exitCode: 0, localEnv, value };
 }
 
-export function runCommand(command, args, { cwd, env = process.env, signal } = {}) {
+export function runCommand(command, args, { cwd, env = process.env, signal, timeoutMs, maxOutputBytes = Infinity } = {}) {
+  if ((timeoutMs !== undefined && (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 60_000))
+    || (maxOutputBytes !== Infinity && (!Number.isSafeInteger(maxOutputBytes) || maxOutputBytes < 1 || maxOutputBytes > 1_048_576))) throw new Error('RUN_COMMAND_BOUNDS_INVALID');
   return new Promise((resolveResult, reject) => {
     const child = spawn(command, args, { cwd, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
-    const onAbort = () => {
-      try { process.kill(-child.pid, 'SIGTERM'); } catch (error) {
-        if (error?.code !== 'ESRCH') child.kill('SIGTERM');
+    let capturedBytes = 0;
+    let outputTruncated = false;
+    let timedOut = false;
+    const killGroup = (killSignal) => {
+      try { process.kill(-child.pid, killSignal); } catch (error) {
+        if (error?.code !== 'ESRCH') child.kill(killSignal);
       }
+    };
+    const onAbort = () => killGroup('SIGTERM');
+    const timeout = timeoutMs === undefined ? undefined : setTimeout(() => {
+      timedOut = true;
+      // A failed diagnostic teardown must not escape this timer or block owned DB cleanup.
+      for (const cleanup of [() => killGroup('SIGKILL'), () => child.stdout.destroy(),
+        () => child.stderr.destroy(), () => child.unref(), detachAbort]) {
+        try { cleanup(); } catch { /* timedOut remains a fixed diagnostic failure. */ }
+      }
+      resolveResult({ exitCode: 1, signal: 'SIGKILL', stdout, stderr, outputTruncated, timedOut });
+    }, timeoutMs);
+    timeout?.unref();
+    const capture = (chunk) => {
+      const remaining = Math.max(0, maxOutputBytes - capturedBytes);
+      if (chunk.length > remaining) outputTruncated = true;
+      const kept = chunk.subarray(0, remaining);
+      capturedBytes += kept.length;
+      return kept.toString('utf8');
     };
     const detachAbort = () => signal?.removeEventListener('abort', onAbort);
     signal?.addEventListener('abort', onAbort, { once: true });
     if (signal?.aborted) onAbort();
-    child.stdout.on('data', (chunk) => { stdout += chunk; });
-    child.stderr.on('data', (chunk) => { stderr += chunk; });
-    child.once('error', (error) => { detachAbort(); reject(error); });
+    child.stdout.on('data', (chunk) => { stdout += capture(chunk); });
+    child.stderr.on('data', (chunk) => { stderr += capture(chunk); });
+    child.once('error', (error) => { clearTimeout(timeout); detachAbort(); reject(error); });
     child.once('close', (exitCode, childSignal) => {
+      clearTimeout(timeout);
       detachAbort();
-      resolveResult({ exitCode: exitCode ?? 1, signal: childSignal, stdout, stderr });
+      resolveResult({ exitCode: exitCode ?? 1, signal: childSignal, stdout, stderr, outputTruncated, timedOut });
     });
   });
 }
@@ -1482,6 +1550,18 @@ export function createActualAdapter({
     assets,
     assertNoPreexistingResources,
     waitForDatabase,
+    captureDatabaseFailureDiagnostic: async (owned, secrets = []) => {
+      const confirmed = confirmProjectContainers({ expectedProjectId, containers: owned });
+      if (confirmed.length !== 1 || confirmed[0].name !== `supabase_db_${expectedProjectId}`
+        || !/^[0-9a-f]{64}$/u.test(confirmed[0].id)) throw new Error('DATABASE_DIAGNOSTIC_IDENTITY_INVALID');
+      const result = await commandRunner('docker', [
+        'logs', '--since', '10m', '--tail', '100', '--timestamps', '--', confirmed[0].id,
+      ], { cwd: repoRoot, timeoutMs: 5_000, maxOutputBytes: 32_768 });
+      if (result.exitCode !== 0 || result.signal !== null || result.timedOut) throw new Error('DATABASE_DIAGNOSTIC_UNAVAILABLE');
+      const counts = summarizeOwnedDatabaseFailure(`${result.stdout ?? ''}\n${result.stderr ?? ''}`, secrets);
+      if (result.outputTruncated) counts.output_truncated = 1;
+      return counts;
+    },
     reset: async () => {
       const result = await cli(['db', 'reset', '--local']);
       if (result.exitCode !== 0) {
