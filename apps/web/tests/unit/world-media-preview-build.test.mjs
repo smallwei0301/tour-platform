@@ -72,6 +72,7 @@ import { WORLD_MEDIA_FILES } from '../../src/lib/scroll-world/media-manifest.mjs
 import { inventoryWorldMedia } from '../../../../scripts/media/world-media-sync.mjs';
 import { prepareWorldMediaPreview, validateWorldMediaPreviewOutput } from '../../../../scripts/media/prepare-world-media-preview.mjs';
 import { runWorldMediaBuild } from '../../../../scripts/media/build-world-media-preview.mjs';
+import { verifyWorldMediaNode22Archive } from '../../../../scripts/media/bootstrap-world-media-node22.mjs';
 
 const statePath = 'apps/web/src/lib/scroll-world/media-trial-state.mjs';
 const mediaPath = (root, key) => path.join(root, 'apps/web/public', key.slice(1));
@@ -141,10 +142,25 @@ test('any missing/bad all14 readback aborts before state/exclusion; partial remo
 });
 
 test('local, Production and other branches run only original build without loading SDK, reads or source deletion', async (t) => {
-  const root = await fixture(t); const before = await inventoryWorldMedia(root); let builds = 0; let loads = 0;
+  const root = await fixture(t); const before = await inventoryWorldMedia(root); let builds = 0; let loads = 0; let bootstraps = 0;
   for (const e of [{}, { ...env, VERCEL_ENV: 'production' }, { ...env, VERCEL_GIT_COMMIT_REF: 'other-branch' }]) {
-    const code = await runWorldMediaBuild({ env: e, sourceRoot: root, appRoot: `${root}/apps/web`, exclusiveCheckout: false, build: async () => { builds += 1; return 0; }, loadAdapter: async () => { loads += 1; throw new Error('should not load'); } });
+    const code = await runWorldMediaBuild({ env: e, sourceRoot: root, appRoot: `${root}/apps/web`, nodeVersion: '24.0.0', exclusiveCheckout: false, build: async () => { builds += 1; return 0; }, loadAdapter: async () => { loads += 1; throw new Error('should not load'); }, bootstrapNode22: async () => { bootstraps += 1; throw new Error('should not bootstrap'); } });
     assert.equal(code, 0);
   }
-  assert.equal(builds, 3); assert.equal(loads, 0); assert.deepEqual(await inventoryWorldMedia(root), before);
+  assert.equal(builds, 3); assert.equal(loads, 0); assert.equal(bootstraps, 0); assert.deepEqual(await inventoryWorldMedia(root), before);
+});
+
+test('Node24 exact Preview delegates before SDK/build and preserves the child failure; invalid contexts cannot bootstrap', async () => {
+  let bootstraps = 0; let loads = 0; let builds = 0;
+  const options = { ...context, env, nodeVersion: '24.19.0', bootstrapNode22: async (args) => { bootstraps += 1; assert.equal(args.sourceRoot, context.sourceRoot); return 7; }, loadAdapter: async () => { loads += 1; throw new Error('SDK must not run on Node24'); }, build: async () => { builds += 1; return 0; } };
+  assert.equal(await runWorldMediaBuild(options), 7);
+  assert.equal(bootstraps, 1); assert.equal(loads, 0); assert.equal(builds, 0);
+  for (const changes of [{ env: { ...env, VERCEL_PROJECT_ID: 'foreign' } }, { exclusiveCheckout: false }, { sourceRoot: '/workspace/original' }]) await assert.rejects(() => runWorldMediaBuild({ ...options, ...changes }));
+  assert.equal(bootstraps, 1);
+  await assert.rejects(() => runWorldMediaBuild({ ...options, bootstrapNode22: async () => { throw new Error('bootstrap failure'); } }), /bootstrap failure/);
+  assert.equal(loads, 0); assert.equal(builds, 0);
+});
+
+test('untrusted Node archive bytes fail the immutable official SHA check before extraction or execution', () => {
+  assert.throws(() => verifyWorldMediaNode22Archive(Buffer.from('synthetic invalid archive')), /WORLD_MEDIA_NODE22_ARCHIVE_INVALID/);
 });
