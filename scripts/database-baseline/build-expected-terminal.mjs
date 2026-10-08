@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
+import { formatExpectedTerminalFailure } from '../testing/format-expected-terminal-failure.mjs';
 import {
   lstat, mkdir, readFile, rmdir,
 } from 'node:fs/promises';
@@ -480,7 +481,8 @@ async function main() {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
   main().catch((error) => {
-    process.stderr.write(`${redactSupabaseOutput(error instanceof Error ? error.stack || error.message : String(error))}\n`);
     process.exitCode = 1;
+    try { process.stderr.write(`${formatExpectedTerminalFailure(error, redactSupabaseOutput)}\n`); }
+    catch { /* Diagnostic output failure must preserve the original nonzero exit. */ }
   });
 }
