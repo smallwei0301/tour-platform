@@ -1,19 +1,22 @@
-<!-- query_timestamp: 2026-10-07T05:05:42.816Z -->
+<!-- query_timestamp: 2026-10-08T05:06:00.985Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-10-07T05:05:42.816Z  
-**Commit SHA:** `d12b9a9c7004319d6c4b3e53d161532cbeb4049a`
+**Query timestamp:** 2026-10-08T05:06:00.985Z  
+**Commit SHA:** `8841776809e576fabf88bdc2046c70003c5a25dc`
 
 ---
 
-## Open PRs (16)
+## Open PRs (19)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1897 | [fix(tooling): 保留 #1887 expected-terminal 安全錯誤原因](https://github.com/smallwei0301/tour-platform/pull/1897) _(draft)_ | `ava/issue1887-safe-error-chain-20261008-93066161` |
+| #1896 | [新增第三方設計 skills：Emil Kowalski 與 Impeccable](https://github.com/smallwei0301/tour-platform/pull/1896) _(draft)_ | `ccr-6b73111f-xycd3l` |
+| #1895 | [feat(media): 可逆 Blob Preview 自動同步與完整性比對試驗](https://github.com/smallwei0301/tour-platform/pull/1895) _(draft)_ | `trial/blob-reversible-local` |
 | #1894 | [fix(payment): 初次付款 admission kernel 與限定 P0 測試改名（#1893）](https://github.com/smallwei0301/tour-platform/pull/1894) _(draft)_ | `fix/order-payment-admission-20261006` |
 | #1890 | [ci(midao): 補齊旅客確認路由的隔離 runtime 觸發](https://github.com/smallwei0301/tour-platform/pull/1890) _(draft)_ | `fix/issue1819-confirmation-ci-trigger` |
 | #1887 | [fix(activity): 同步即時場次與報名識別，補齊 fixture 診斷](https://github.com/smallwei0301/tour-platform/pull/1887) _(draft)_ | `rework/midao2-live-availability` |
