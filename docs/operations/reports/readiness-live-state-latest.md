@@ -1,21 +1,20 @@
-<!-- query_timestamp: 2026-10-08T05:06:00.985Z -->
+<!-- query_timestamp: 2026-10-09T05:06:04.122Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-10-08T05:06:00.985Z  
-**Commit SHA:** `8841776809e576fabf88bdc2046c70003c5a25dc`
+**Query timestamp:** 2026-10-09T05:06:04.122Z  
+**Commit SHA:** `4a7d99107c1980efeac9ed72c120e296acf2c248`
 
 ---
 
-## Open PRs (19)
+## Open PRs (18)
 
 | # | Title | Branch |
 |---|-------|--------|
 | #1897 | [fix(tooling): 保留 #1887 expected-terminal 安全錯誤原因](https://github.com/smallwei0301/tour-platform/pull/1897) _(draft)_ | `ava/issue1887-safe-error-chain-20261008-93066161` |
-| #1896 | [新增第三方設計 skills：Emil Kowalski 與 Impeccable](https://github.com/smallwei0301/tour-platform/pull/1896) _(draft)_ | `ccr-6b73111f-xycd3l` |
 | #1895 | [feat(media): 可逆 Blob Preview 自動同步與完整性比對試驗](https://github.com/smallwei0301/tour-platform/pull/1895) _(draft)_ | `trial/blob-reversible-local` |
 | #1894 | [fix(payment): 初次付款 admission kernel 與限定 P0 測試改名（#1893）](https://github.com/smallwei0301/tour-platform/pull/1894) _(draft)_ | `fix/order-payment-admission-20261006` |
 | #1890 | [ci(midao): 補齊旅客確認路由的隔離 runtime 觸發](https://github.com/smallwei0301/tour-platform/pull/1890) _(draft)_ | `fix/issue1819-confirmation-ci-trigger` |
@@ -136,6 +135,7 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1896 | [新增第三方設計 skills：Emil Kowalski 與 Impeccable](https://github.com/smallwei0301/tour-platform/pull/1896) | 2026-10-08 |
 | #1892 | [fix(build): 修復 Google 無副檔名字型 URL (#1891)](https://github.com/smallwei0301/tour-platform/pull/1892) | 2026-10-06 |
 | #1889 | [fix(midao2): 防止封面上傳與儲存競態](https://github.com/smallwei0301/tour-platform/pull/1889) | 2026-10-06 |
 | #1888 | [docs(ledger): 補登 #1861 單筆歷史缺證例外](https://github.com/smallwei0301/tour-platform/pull/1888) | 2026-10-06 |
@@ -145,7 +145,6 @@
 | #1877 | [fix(#1761): remove receipt witness triage gates](https://github.com/smallwei0301/tour-platform/pull/1877) | 2026-09-14 |
 | #1876 | [fix(#1796): qualify unpaid expiry booking log column](https://github.com/smallwei0301/tour-platform/pull/1876) | 2026-09-14 |
 | #1874 | [fix(#1761): require causal witness for triage recovery](https://github.com/smallwei0301/tour-platform/pull/1874) | 2026-09-14 |
-| #1873 | [ci(#1761): add hosted PostgreSQL lane for issue 1796](https://github.com/smallwei0301/tour-platform/pull/1873) | 2026-09-14 |
 
 ---
 
