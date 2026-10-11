@@ -1,5 +1,5 @@
 # issue1898 — 純離線 current 字型輸入 consumer
-> 最後更新：2026-10-10 21:30 Asia/Taipei｜Ava 代為實作；actual runtime model unknown
+> 文件續交：2026-10-11｜本輪文件修訂 actor：`/root`；歷史 Ava 實作與 actual runtime model unknown 保留
 
 ## 目標
 
@@ -9,15 +9,17 @@
 
 - [x] 新增唯讀 consumer，無 Next 依賴、網路、下載、寫檔或 env 變更；純模擬 unit test 僅在各自 owned temporary directory 建立與清理合成 fixture
 - [x] caller 提供 manifest SHA；manifest/COMPLETE、三 family、URL/檔案全集、hash/size、容器 header/OFL/path/symlink 均核驗後才提供 callbacks
-- [x] Node22.23.1 targeted 20/20；真 current pack 3CSS／223woff2／3OFL 全數只讀驗證通過
-- [x] fresh 獨立 source 審查、44 boundary probes及真pack重跑通過，0未解 findings；actual model unknown如實保留
-- [x] 原 run-checks --all --typecheck：5909 total／5906 PASS／0 FAIL／3既有SKIP／0cancel，typecheck PASS
+- [x] 本輪 canonical Node22.23.1 targeted 20/20、exit0；真 current pack 驗證僅為歷史報告，未重新驗證
+- [ ] 歷史 fresh source 審查、44 boundary probes、真pack與0 findings 的原 receipts 未取回；未重新驗證，不作本輪 PASS
+- [x] D3 採 source-head GitHub CI success；歷史本地 run-checks 全套數字僅作報告保留，不補造 receipts
 - [x] source commit／remote exact tree讀回及 Draft PR #1898
 - [ ] 此worklog增量獨立審查／發布，並同步PR conversation進度錨點
 - [ ] exact head全部適用自然CI終局；原lint/build/ISR/preflight等未予豁免
 - [ ] 完整發布／合併gates；目前保持Draft
 
-## 已完成（附證據）
+## 歷史成果報告（非本輪重新驗證）
+
+以下保留原 worklog 的歷史自述、數字與 digest 以免遺失成果。除下方「本輪可讀回證據」明列項目外，RED、SRI／661 packages、44 probes、231 pack hashes、真 pack、舊 reviewer 及本地全套 receipts 均未在本環境取得原始檔，狀態為 `NOT_VERIFIED`；段內「通過／exit0」是歷史報告，不能當本輪 PASS 或 docs 審查。舊路徑、PR 自述與 digest 本身不證明執行。
 
 - Source base：`836f3fc372168a8978541e8d728ce9aa99da54f2`；remote source head：`2e1c683dbd557a4ba9fb1252a09b1afd252f121d`；tree：`389c0b91ededc49df43aa96e0c7db9a479bb6a69`。僅新增 `scripts/testing/current-google-font-input.mjs` 與 `apps/web/tests/unit/current-google-font-input.test.mjs`，198行。
 - source SHA256：工具 `2ef9df3d5a8ca74c98ade08b95fc36b2e17c1c6cc6ea1be9bcdd9be7d4ef52b4`；test `e5362cb1985d53169a43b5cde9a086008568ae04390c4e24527ba22f7053b563`。內容manifest digest `0a4261c97a1b015d5ff8a34f7ae381f87c68fd0738b80abd0cfee236d1a5c7bb`，完整兩新檔patch digest `aefd83d73264a0103be9a20938ca64a97a9c114ea78ea6bd52a462c2d2cce8fe`；兩種digest定義不同。
@@ -28,7 +30,16 @@
 - Fresh source獨審20unit＋44boundary＋真pack通過，technical PASS-in-scope、0未解。review report SHA `9c1324d7c93c66a743956bc99e8f3250143ecda3f54341ea4c797320570d30d7`；requested gpt-6.1-sol／actual unknown。before→fresh dispatch順序有實際工具證據，沒有聲稱平台身分已驗證。
 - 發布前18個其他open PR heads與完整paths重新核對，兩新檔overlap0；#1886/#1887保護範圍保持原bytes。local source commit `14f1f3e077a67f7cc673553e802ea09118d049e8` 與remote commit不同，但tree全同；remote parent=base已回讀。已建立[Draft PR #1898](https://github.com/smallwei0301/tour-platform/pull/1898)。
 
-## 保留失敗與限制
+## 本輪可讀回證據
+
+- 原保存 commit `7f4aed54391708911864447af6e05adcd39c2d95` 已從 Git materialize；直接 parent 為 `2e1c683dbd557a4ba9fb1252a09b1afd252f121d`，只新增此文件。原 blob `a906a64515a1eed54a6624e06fc57069dc0d53df`、原 bytes SHA256 `34663155c9f124a75d007fcc415b0776a09858cd3d85106cfb9abfb06bd05f19` 均核對吻合；本輪為證據分級的最小文字修訂，原稿另行保存。
+- 本輪工具鏈依既有 provision 腳本取得官方 Node22.23.1 archive，archive／完整檔案／symlink digest 與 canonical `scripts/toolchain/tp-node22.sh --check` 均成功。實作者透過 `.claude/hooks/run-checks.sh apps/web/tests/unit/current-google-font-input.test.mjs` 實跑 20/20、0 FAIL／SKIP、exit0。這不是獨立 reviewer rerun。
+- 已以 GitHub exact source-head 查詢重新讀回 [CI run 38055935985／job 114224390126](https://github.com/smallwei0301/tour-platform/actions/runs/38055935985/job/114224390126)：migration source、lint、typecheck、web tests、build、ISR smoke、preflight 均 completed/success；[secret-scan 38055936003](https://github.com/smallwei0301/tour-platform/actions/runs/38055936003) 亦 success。依 harness R2 D3 可用 CI 取代本地全套；此文件增量未改 source，不重跑無關大型測試。這不是 docs-head CI，也不表示 consumer 已接入 build。
+- 本輪僅 owned worklog 單檔，沒有新 discovery；small-edit/fileCount=1，不另派 Scout。Tour 容量依本 repo，沒有數字型 BUILD 配額，未借用其他專案 slots；採一般 Sol fresh reviewer，不消耗 premium。原工作分支仍由本任務管理，其他 PR ownership 不轉移。
+- 文件候選必須完成真實 before-preflight → fresh `fork_turns=none` 獨立 audit → exactDiff receipt，reviewer 自行 read-back 與 canonical targeted rerun。此候選在審查前定稿，不預填 PASS；完成後將 before／dispatch／receipt、候選 commit 與 CI／Preview 終局記於本 PR conversation 的 D7 錨點，避免把發布後結果倒填進尚未發布的 commit。
+- 本輪沒有可用的 Claude Edit hook 掛載證明；只進行文件更新、唯讀 source 檢查與 canonical runner，不宣稱 hooks 已武裝或修改產品碼。branch protection GET 的既有403與空 rulesets 不表示無保護；只允許核對 old head 後 force=false 正常更新，遇拒絕即保留 blocker。
+
+## 保留失敗與限制（以下安裝與 Git 失敗亦為歷史報告）
 
 - npm首次clean environment漏保留平台既有proxy，EAI_AGAIN／exit1；第二次漏保留既有CA，TLS驗證失敗／exit1。第三次保留平台原proxy/CA值後exit0。沒有關TLS、改信任／網路設定或引入credential。`--ignore-scripts`依repo遠端安裝政策保留，不把安裝成功視為完整應用驗收；npm副作用yarn.lock已還原原bytes。
 - 首次local commit因未設定author identity而失敗；核對owner既有身分後single-command identity重試成功。gitpush缺write credential而exit128；使用已連接GitHub寫入同blobs/tree並非force建立branch，不把local SHA冒充remote SHA。
