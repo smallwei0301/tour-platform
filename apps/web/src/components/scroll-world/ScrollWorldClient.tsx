@@ -14,6 +14,7 @@ import {
   sceneScale,
 } from '../../lib/scroll-world/camera.mjs';
 import { SCROLL_WORLD_PRELUDE } from '../../lib/scroll-world/scenes.mjs';
+import { worldClipSource } from '../../lib/scroll-world/media-source.mjs';
 import styles from './scroll-world.module.css';
 
 /** 由 server page 以 i18n 解析後傳入的單景資料。 */
@@ -113,7 +114,7 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
   /** 只有 active±1 的場景掛影片：交叉淡化只涉及相鄰兩景，其餘場景 opacity:0。 */
   const clipSrcFor = (scene: SceneView, i: number): string | null => {
     if (!scene.clip || !clipExt || Math.abs(i - active) > 1) return null;
-    return clipExt === 'webm' ? scene.clip.replace(/\.mp4$/, '.webm') : scene.clip;
+    return worldClipSource(scene.clip, clipExt);
   };
 
   useEffect(() => {
