@@ -1,19 +1,20 @@
-<!-- query_timestamp: 2026-10-10T05:05:04.911Z -->
+<!-- query_timestamp: 2026-10-11T05:05:14.795Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-10-10T05:05:04.911Z  
-**Commit SHA:** `f89a9d5e2f8782f490d8e7104443b1cb18d61621`
+**Query timestamp:** 2026-10-11T05:05:14.795Z  
+**Commit SHA:** `836f3fc372168a8978541e8d728ce9aa99da54f2`
 
 ---
 
-## Open PRs (18)
+## Open PRs (19)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1898 | [feat(tooling): 新增純離線 current 字型輸入 consumer](https://github.com/smallwei0301/tour-platform/pull/1898) _(draft)_ | `ava/current-google-font-input-20261010` |
 | #1897 | [fix(tooling): 保留 #1887 expected-terminal 安全錯誤原因](https://github.com/smallwei0301/tour-platform/pull/1897) _(draft)_ | `ava/issue1887-safe-error-chain-20261008-93066161` |
 | #1895 | [feat(media): 可逆 Blob Preview 自動同步與完整性比對試驗](https://github.com/smallwei0301/tour-platform/pull/1895) _(draft)_ | `trial/blob-reversible-local` |
 | #1894 | [fix(payment): 初次付款 admission kernel 與限定 P0 測試改名（#1893）](https://github.com/smallwei0301/tour-platform/pull/1894) _(draft)_ | `fix/order-payment-admission-20261006` |
