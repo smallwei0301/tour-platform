@@ -41052,6 +41052,29 @@
         "volatility": "v"
       },
       {
+        "bodySha256": "18d16f03f6217897c6174a6c6e7324e58341df3c33cca62cc76535609364c14d",
+        "canonicalKey": [
+          "routine",
+          "public",
+          "fn_admit_initial_payment_attempt",
+          "p_order_id uuid, p_provider text, p_merchant_trade_no text"
+        ],
+        "configuration": [
+          "search_path=pg_catalog, public"
+        ],
+        "identityArguments": "p_order_id uuid, p_provider text, p_merchant_trade_no text",
+        "kind": "f",
+        "language": "plpgsql",
+        "leakProof": false,
+        "name": "fn_admit_initial_payment_attempt",
+        "parallel": "u",
+        "result": "jsonb",
+        "schema": "public",
+        "securityDefiner": false,
+        "strict": false,
+        "volatility": "v"
+      },
+      {
         "bodySha256": "8cd46d53a4e99876f8ab46db3a07500a01520443d7b23a97c5cb68d771bc4622",
         "canonicalKey": [
           "routine",
@@ -111183,6 +111206,66 @@
           "acl",
           "routine",
           "public",
+          "fn_admit_initial_payment_attempt(p_order_id uuid, p_provider text, p_merchant_trade_no text)",
+          "supabase_admin",
+          "postgres",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "postgres",
+        "grantor": "supabase_admin",
+        "object": "fn_admit_initial_payment_attempt(p_order_id uuid, p_provider text, p_merchant_trade_no text)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "fn_admit_initial_payment_attempt(p_order_id uuid, p_provider text, p_merchant_trade_no text)",
+          "supabase_admin",
+          "service_role",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "service_role",
+        "grantor": "supabase_admin",
+        "object": "fn_admit_initial_payment_attempt(p_order_id uuid, p_provider text, p_merchant_trade_no text)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
+          "fn_admit_initial_payment_attempt(p_order_id uuid, p_provider text, p_merchant_trade_no text)",
+          "supabase_admin",
+          "supabase_admin",
+          "EXECUTE",
+          false
+        ],
+        "grantable": false,
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "object": "fn_admit_initial_payment_attempt(p_order_id uuid, p_provider text, p_merchant_trade_no text)",
+        "objectType": "routine",
+        "privilege": "EXECUTE",
+        "schema": "public",
+        "usesDefaultAcl": false
+      },
+      {
+        "canonicalKey": [
+          "acl",
+          "routine",
+          "public",
           "fn_apply_refund_adjustment_atomic(p_order_id uuid, p_refund_delta_twd integer, p_actor text)",
           "supabase_admin",
           "postgres",
@@ -121537,6 +121620,19 @@
         "objectType": "routine",
         "owner": "supabase_admin",
         "schema": "pgbouncer"
+      },
+      {
+        "canonicalKey": [
+          "owner",
+          "routine",
+          "public",
+          "fn_admit_initial_payment_attempt",
+          "p_order_id uuid, p_provider text, p_merchant_trade_no text"
+        ],
+        "object": "fn_admit_initial_payment_attempt(p_order_id uuid, p_provider text, p_merchant_trade_no text)",
+        "objectType": "routine",
+        "owner": "supabase_admin",
+        "schema": "public"
       },
       {
         "canonicalKey": [

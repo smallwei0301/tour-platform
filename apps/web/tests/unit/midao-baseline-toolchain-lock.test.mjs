@@ -327,3 +327,74 @@ test('published live request and lock cover all required images and schema versi
   assert.equal(lock.pg17.majorVersion, 17);
   assert.equal(request.images.every((x) => x.localPresent), true);
 });
+
+const runtimeDbProfileName = 'issue1894-pg-supautils-3.2.2';
+function approvedRuntimeDbOverride() {
+  return {
+    schemaVersion: 1,
+    profile: runtimeDbProfileName,
+    toolchainLockSha256: 'f9c9daabfb47d48d074d79d6d0ef7c8749c262fc1c1d500d75682ef4dc24f094',
+    registryIndexDigest: 'sha256:80d7b27c3e8d77cfa7226eee9508671796da214781ff15a35b3670d7ad5ee453',
+    image: {
+      role: 'db', repository: 'public.ecr.aws/supabase/postgres', tag: '17.6.1.143',
+      repoDigest: 'public.ecr.aws/supabase/postgres@sha256:b021e96054128399f84f24e39d29c21ee7c7169515e5d9e4e99ff15d5043d1d8',
+      imageId: 'sha256:2d3ac69ad5c95d81458cc93a6cc6c31a98dfa00cd28f88a0a9358d315e1c357a',
+      platform: 'linux/amd64', architecture: 'amd64',
+    },
+  };
+}
+
+test('#1894 runtime override binds only the approved profile to the immutable original lock bytes', async () => {
+  const [, , api] = await modules();
+  const lockBytes = await readFile(path.join(root, 'supabase/baselines/v1/toolchain-lock.json'));
+  const profile = approvedRuntimeDbOverride();
+  assert.equal(api.RUNTIME_DB_OVERRIDE_PROFILE, runtimeDbProfileName);
+  assert.deepEqual(api.validateRuntimeDbOverride(profile, lockBytes), profile);
+  assert.deepEqual(await api.loadRuntimeDbOverride(runtimeDbProfileName), profile);
+  assert.ok(Object.isFrozen(api.validateRuntimeDbOverride(profile, lockBytes).image));
+  assert.throws(() => api.validateRuntimeDbOverride(profile, Buffer.concat([lockBytes, Buffer.from('\n')])), /lock.*binding/iu);
+  assert.throws(() => api.validateRuntimeDbOverride(profile), /lock.*binding/iu);
+  for (const change of [
+    (p) => { p.profile = 'other'; },
+    (p) => { p.schemaVersion = 2; },
+    (p) => { p.toolchainLockSha256 = 'a'.repeat(64); },
+    (p) => { p.registryIndexDigest = digestA; },
+    (p) => { p.image.tag = '17.6.1.104'; },
+    (p) => { p.image.repoDigest = `${p.image.repository}@${digestA}`; },
+    (p) => { p.image.imageId = digestA; },
+    (p) => { p.image.architecture = 'arm64'; },
+    (p) => { p.image.platform = 'linux/arm64'; },
+    (p) => { p.image.repository = 'other/postgres'; },
+    (p) => { p.image.role = 'pg17-client'; },
+    (p) => { p.image.extra = 'forbidden'; },
+    (p) => { p.extra = 'forbidden'; },
+  ]) {
+    const hostile = structuredClone(profile); change(hostile);
+    assert.throws(() => api.validateRuntimeDbOverride(hostile, lockBytes), /runtime.*override/iu);
+  }
+  await assert.rejects(api.loadRuntimeDbOverride('other'), /runtime.*override/iu);
+});
+
+test('#1894 runtime override requires the digest and CLI tag to resolve the exact approved linux amd64 image', async () => {
+  const [, , api] = await modules();
+  const runtime = approvedRuntimeDbOverride();
+  const image = runtime.image;
+  const calls = [];
+  const good = { Id: image.imageId, Architecture: 'amd64', Os: 'linux', RepoDigests: [image.repoDigest] };
+  await api.verifyRuntimeDbOverrideImages(runtime, {
+    inspectImage: async (ref) => { calls.push(ref); return JSON.stringify([good]); },
+  });
+  assert.deepEqual(calls, [image.repoDigest, `${image.repository}:${image.tag}`]);
+  for (const hostile of [
+    { ...good, Id: digestA }, { ...good, Architecture: 'arm64' },
+    { ...good, Os: 'windows' }, { ...good, RepoDigests: [] },
+  ]) await assert.rejects(api.verifyRuntimeDbOverrideImages(runtime, {
+    inspectImage: async () => JSON.stringify([hostile]),
+  }), /image.*identity/iu);
+  await assert.rejects(api.verifyRuntimeDbOverrideImages(runtime, {
+    inspectImage: async (ref) => JSON.stringify([ref === image.repoDigest ? good : { ...good, Id: digestA }]),
+  }), /image.*identity/iu);
+  for (const output of [JSON.stringify([good, good]), JSON.stringify(good), '{}', '']) {
+    await assert.rejects(api.verifyRuntimeDbOverrideImages(runtime, { inspectImage: async () => output }), /image.*identity/iu);
+  }
+});

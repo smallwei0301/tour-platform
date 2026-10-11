@@ -244,7 +244,7 @@ it('verified gate rejects fake ledger identity and fabricated verified or baseli
 });
 
 describe('issue #1758 — repo現況verified release gate維持fail-closed', () => {
-  it('四支Midao migration 與 #1861 歷史回填維持verified，其餘九支缺少verified紀錄使gate精確HOLD', () => {
+  it('四支Midao migration 與 #1861 歷史回填維持verified，原九支加新付款migration缺少verified紀錄使gate精確HOLD', () => {
     const cli = runCli({ migrationsDir: path.join(REPO_ROOT, 'supabase', 'migrations'), ledgerPath: LEDGER_PATH });
     assert.equal(cli.status, 1, `repo verified gate應對缺少verified紀錄 fail closed\n${cli.stdout}\n${cli.stderr}`);
     const result = JSON.parse(cli.stdout);
@@ -259,6 +259,7 @@ describe('issue #1758 — repo現況verified release gate維持fail-closed', () 
       '20260914052608_issue1796_expire_unpaid_order_ambiguous_column_fix.sql',
       '20260914073000_issue1796_expire_unpaid_order_variable_conflict_fix.sql',
       '20260914073100_issue1796_expire_unpaid_order_restore_search_path.sql',
+      '20261006121148_initial_payment_admission.sql',
     ]);
     assert.deepEqual(result.unverified, []);
 
@@ -311,7 +312,7 @@ describe('issue #1861 — 僅一筆 Owner 核可的歷史缺證例外', () => {
     assert.match(sop, /不得援引為其他 migration 或任何新 migration 的豁免/u);
   });
 
-  it('移除這一筆只恢復 #1861 的missing，九支既有缺口仍HOLD', async () => {
+  it('移除這一筆只恢復 #1861 的missing，九支既有缺口與新付款migration仍HOLD', async () => {
     const { checkMigrationLedger } = await import(CHECK_SCRIPT);
     const ledger = JSON.parse(fs.readFileSync(LEDGER_PATH, 'utf8'));
     const migrationsDir = path.join(REPO_ROOT, 'supabase', 'migrations');
@@ -322,8 +323,9 @@ describe('issue #1861 — 僅一筆 Owner 核可的歷史缺證例外', () => {
     assert.equal(current.status, 'hold');
     assert.equal(withoutException.status, 'hold');
     assert.deepEqual(withoutException.missing, [...current.missing, filename].sort());
-    assert.equal(current.missing.length, 9);
-    assert.equal(withoutException.missing.length, 10);
+    assert.equal(current.missing.length, 10);
+    assert.equal(withoutException.missing.length, 11);
+    assert.ok(current.missing.includes('20261006121148_initial_payment_admission.sql'));
     assert.equal(withoutException.coveredByBaseline, current.coveredByBaseline);
     assert.equal(current.verifiedCount, withoutException.verifiedCount + 1);
     assert.deepEqual(withoutException.errors, []);

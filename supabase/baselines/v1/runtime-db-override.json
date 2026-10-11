@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "profile": "issue1894-pg-supautils-3.2.2",
+  "toolchainLockSha256": "f9c9daabfb47d48d074d79d6d0ef7c8749c262fc1c1d500d75682ef4dc24f094",
+  "registryIndexDigest": "sha256:80d7b27c3e8d77cfa7226eee9508671796da214781ff15a35b3670d7ad5ee453",
+  "image": {
+    "role": "db",
+    "repository": "public.ecr.aws/supabase/postgres",
+    "tag": "17.6.1.143",
+    "repoDigest": "public.ecr.aws/supabase/postgres@sha256:b021e96054128399f84f24e39d29c21ee7c7169515e5d9e4e99ff15d5043d1d8",
+    "imageId": "sha256:2d3ac69ad5c95d81458cc93a6cc6c31a98dfa00cd28f88a0a9358d315e1c357a",
+    "platform": "linux/amd64",
+    "architecture": "amd64"
+  }
+}

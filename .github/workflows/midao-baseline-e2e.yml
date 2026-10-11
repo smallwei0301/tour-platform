@@ -101,12 +101,12 @@ jobs:
           set -euo pipefail
           lock='supabase/baselines/v1/toolchain-lock.json'
           provision() {
-            local role="$1"
+            local role="$1" source="${2:-$lock}"
             local ref image_id repository tag observed_id observed_architecture pull_log attempt
-            ref="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .repoDigest' "$lock")"
-            image_id="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .imageId' "$lock")"
-            repository="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .repository' "$lock")"
-            tag="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .tag' "$lock")"
+            ref="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .repoDigest' "$source")"
+            image_id="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .imageId' "$source")"
+            repository="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .repository' "$source")"
+            tag="$(jq -er --arg role "$role" '.images[] | select(.role == $role) | .tag' "$source")"
             pull_log="$(mktemp)"
             for attempt in 1 2 3 4; do
               if docker pull "$ref" >"$pull_log" 2>&1; then
@@ -131,6 +131,13 @@ jobs:
           }
           provision db
           provision api
+          # Keep the original builder/default tag. Only #1814 selects this bounded profile.
+          runtime_profile_file="$(mktemp)"
+          trap 'rm -f -- "$runtime_profile_file"' EXIT
+          node scripts/database-baseline/verify-toolchain-lock.mjs \
+            --runtime-db-override issue1894-pg-supautils-3.2.2 \
+            | jq --exit-status '{images: [.image]}' > "$runtime_profile_file"
+          provision db "$runtime_profile_file"
 
       - name: Build deterministic expected-terminal artifacts
         run: >-
@@ -270,7 +277,8 @@ jobs:
       - name: 'Run #1814 checkout idempotency PostgreSQL and authenticated concurrent public draft runtime contract'
         run: >-
           timeout --signal=TERM --kill-after=30s 1200s
-          node scripts/testing/with-midao-local-supabase.mjs --api-real-auth
+          node scripts/testing/with-midao-local-supabase.mjs --runtime-db-override
+          issue1894-pg-supautils-3.2.2 --api-real-auth
           apps/web/tests/integration/midao-issue1814-checkout-idempotency-real-auth.test.mjs
 
       - name: 'Run #1813 anonymous points rejection PostgreSQL and public draft runtime contract'
