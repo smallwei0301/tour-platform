@@ -66,6 +66,25 @@ const mutations = {
   'directory symlink': f=>{symlinkSync(join(f.root,'css'),join(f.root,'fonts','extra'));},
 };
 for (const [name,mutate] of Object.entries(mutations)) test(`rejects ${name}`,t=>{const f=fixture(t);mutate(f);assert.throws(()=>loadCurrentGoogleFontInput(f.root,{manifestSha256:f.seal()}),/CURRENT_FONT_INPUT_/);});
+test('rejects duplicate font URL even when both family CSS mappings match',t=>{
+  const f=fixture(t),url=f.manifest.fonts[0].url;
+  f.manifest.fonts[1].url=url;
+  for (const i of [0,1]) {
+    const entry=f.manifest.css[i];
+    Object.assign(entry,f.record(entry.local_file,Buffer.from(`@font-face { src: url(${url}) format('woff2'); }\n`)));
+  }
+  assert.notEqual(f.manifest.fonts[0].local_file,f.manifest.fonts[1].local_file);
+  assert.throws(()=>loadCurrentGoogleFontInput(f.root,{manifestSha256:f.seal()}),{message:'CURRENT_FONT_INPUT_FONT_MAPPING'});
+});
+for (const field of ['verified_unique_urls','verified_woff2_v2']) test(`rejects single COMPLETE count mismatch: ${field}`,t=>{
+  const f=fixture(t),sha=f.seal();
+  assert.equal(loadCurrentGoogleFontInput(f.root,{manifestSha256:sha}).summary.fonts,3);
+  const path=join(f.root,'COMPLETE.json'),before=JSON.parse(readFileSync(path,'utf8'));
+  const after={...before,[field]:before[field]+1};
+  assert.deepEqual(Object.keys(before).filter(key=>before[key]!==after[key]),[field]);
+  writeFileSync(path,JSON.stringify(after));
+  assert.throws(()=>loadCurrentGoogleFontInput(f.root,{manifestSha256:sha}),{message:'CURRENT_FONT_INPUT_COMPLETION_COUNTS'});
+});
 test('requires independently supplied manifest digest and matching completion marker',t=>{
   const f=fixture(t),sha=f.seal();
   assert.throws(()=>loadCurrentGoogleFontInput(f.root),/EXPECTED_DIGEST/);
