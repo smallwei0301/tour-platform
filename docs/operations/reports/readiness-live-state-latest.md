@@ -1,19 +1,20 @@
-<!-- query_timestamp: 2026-10-12T05:12:26.699Z -->
+<!-- query_timestamp: 2026-10-13T05:07:18.533Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-10-12T05:12:26.699Z  
-**Commit SHA:** `447b1ca53ce94148471c8056561a0ecfbfb1a507`
+**Query timestamp:** 2026-10-13T05:07:18.533Z  
+**Commit SHA:** `e988e5a6941f7279a350e02d4a513c87627b8130`
 
 ---
 
-## Open PRs (19)
+## Open PRs (20)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1900 | [修正 #1899 設計來源與跨 repo 歷史連結（兩項 P2）](https://github.com/smallwei0301/tour-platform/pull/1900) _(draft)_ | `codex/1899-guidance-p2-20261013` |
 | #1898 | [feat(tooling): 新增純離線 current 字型輸入 consumer](https://github.com/smallwei0301/tour-platform/pull/1898) _(draft)_ | `ava/current-google-font-input-20261010` |
 | #1897 | [fix(tooling): 保留 #1887 expected-terminal 安全錯誤原因](https://github.com/smallwei0301/tour-platform/pull/1897) _(draft)_ | `ava/issue1887-safe-error-chain-20261008-93066161` |
 | #1895 | [feat(media): 可逆 Blob Preview 自動同步與完整性比對試驗](https://github.com/smallwei0301/tour-platform/pull/1895) _(draft)_ | `trial/blob-reversible-local` |
@@ -136,6 +137,7 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1899 | [第三方設計 skills 改為純建議版（移除 Impeccable 外部引擎與子代理）](https://github.com/smallwei0301/tour-platform/pull/1899) | 2026-10-13 |
 | #1896 | [新增第三方設計 skills：Emil Kowalski 與 Impeccable](https://github.com/smallwei0301/tour-platform/pull/1896) | 2026-10-08 |
 | #1892 | [fix(build): 修復 Google 無副檔名字型 URL (#1891)](https://github.com/smallwei0301/tour-platform/pull/1892) | 2026-10-06 |
 | #1889 | [fix(midao2): 防止封面上傳與儲存競態](https://github.com/smallwei0301/tour-platform/pull/1889) | 2026-10-06 |
@@ -145,7 +147,6 @@
 | #1878 | [[#1761][Midao2 P0] 唯讀 orders 工作台](https://github.com/smallwei0301/tour-platform/pull/1878) | 2026-09-15 |
 | #1877 | [fix(#1761): remove receipt witness triage gates](https://github.com/smallwei0301/tour-platform/pull/1877) | 2026-09-14 |
 | #1876 | [fix(#1796): qualify unpaid expiry booking log column](https://github.com/smallwei0301/tour-platform/pull/1876) | 2026-09-14 |
-| #1874 | [fix(#1761): require causal witness for triage recovery](https://github.com/smallwei0301/tour-platform/pull/1874) | 2026-09-14 |
 
 ---
 
