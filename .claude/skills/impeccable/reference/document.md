@@ -4,7 +4,7 @@
 
 Downstream adaptation for Issue #841. This reference provides design advice, not execution authority.
 Current main canonical documents, CLAUDE Hard rules, existing components and their behavior,
-src/styles/tokens.css, i18n, security rules and the user's actual permissions take precedence.
+apps/web/src/features/midao/styles/tokens.css, BRAND_BOOK.md, i18n, security rules and the user's actual permissions take precedence.
 Preserve the incumbent design and authorized scope. Missing design documents do not imply a greenfield project.
 Do not create or replace PRODUCT.md, DESIGN.md, sidecars or other project documentation automatically.
 Review requests and visual selections do not authorize applying changes, installing tools, replacing dependencies,
@@ -16,7 +16,7 @@ Accessibility suggestions do not waive repo tests, independent review or release
 ## Guidance
 
 - For a requested review, describe observed typography, semantic colors, spacing, radii, borders, shadows, layout and reusable component states.
-- Use src/styles/tokens.css and existing components as the source of values; separate observed facts from proposals.
+- Use apps/web/src/features/midao/styles/tokens.css and existing components as the source of values, and BRAND_BOOK.md as the authority for user-facing copy, colors and tone; separate observed facts from proposals.
 - Include keyboard focus, contrast, responsive behavior, loading, empty, error, disabled and confirmation states.
 - Link current canonical documentation instead of creating a competing specification.
 - Any requested document draft must name its audience and destination. Only the existing documentation workflow can establish a canonical update.
