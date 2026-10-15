@@ -9,8 +9,8 @@
  * 檔案位置說明（PLAN_DRIFT 記錄）：計畫 §3.2 原本要求把本檔內容 additive 寫進
  * db-midao-booking-confirmations.mjs。實測該檔會因此達 933 行，超過
  * tests/unit/architecture-ratchet-guard.test.mjs 的 800 行一般上限——而該 guard
- * 正是本卡 GREEN_CONDITION 的必跑項，且不得放寬。故拆為本模組，並由原檔
- * 單向匯出 `__confirmationRuntime` 共用同一份 in-memory store（無 ESM 循環）。
+ * 正是本卡 GREEN_CONDITION 的必跑項，且不得放寬。故保留獨立 gateway。
+ * 目前由私有 confirmation-runtime 擁有共用 state 與 lifecycle，gateway 僅處理邊界。
  *
  * 安全不變式：
  * - raw token 只存在於單次請求記憶體；本檔立即轉 sha256，不入 store／log／回應。
@@ -30,34 +30,15 @@ import {
   buildConfirmationPreview,
   resolveConfirmationPreviewStatus,
 } from './booking-confirmation-preview.ts';
-import { __confirmationRuntime } from './db-midao-booking-confirmations.mjs';
+import { acceptInMemory, acceptCommandKey, previewInMemory, nowIso,
+  seedActiveBookingForTest, seedAcceptIdempotencyForTest,
+  seedConfirmationLifecycleForTest, clearCapacityBookingsForTest } from './confirmation-runtime.mjs';
+import { acceptUnexpected, acceptNotFound } from './confirmation-runtime-errors.mjs';
 import { parseIdempotencyKey } from './idempotency.ts';
 
-const {
-  ACTIVE_BOOKING_STATUSES,
-  UUID_PATTERN,
-  HASH_PATTERN,
-  bookingStore,
-  orderStore,
-  confirmationTokenStore,
-  idempotencyStore,
-  planFixtureStore,
-  clone,
-  nowIso,
-  normalizeTimestamp,
-} = __confirmationRuntime;
+import { UUID_PATTERN, HASH_PATTERN } from './confirmation-values.mjs';
 
 const ACCEPT_RPC_NAME = 'midao_accept_traveler_confirmation';
-
-function acceptUnexpected(message = 'Midao traveler confirmation backend failure') {
-  const error = new Error(message);
-  error.name = 'MidaoTravelerConfirmationBackendError';
-  return error;
-}
-
-function acceptNotFound() {
-  return acceptRouteError('NOT_FOUND');
-}
 
 /**
  * gateway 入口參數正規化。route 已負責使用者可見的正規化（§6.2），
@@ -92,10 +73,6 @@ function normalizeAcceptCommand(input = {}) {
   };
 }
 
-function acceptCommandKey(bookingId, idempotencyKey) {
-  return `booking:${bookingId}:accept_traveler_confirmation:${idempotencyKey}`;
-}
-
 /** 成功／replay 的固定 7 鍵集合（§4.2）。 */
 function acceptResult(sanitized, { replayed }) {
   return {
@@ -113,102 +90,6 @@ function acceptResult(sanitized, { replayed }) {
  * in-memory 分支：逐項鏡射 RPC 判斷順序（§9.1 的 1–13 步）。
  * 特別是「replay 分支早於 ownership 檢查」，否則兩分支錯誤語意會不一致。
  */
-function acceptInMemory(command) {
-  // 1. token_hash → bookingId（未鎖定解析，不可信任，稍後重讀）
-  let tokenRow = null;
-  for (const row of confirmationTokenStore.values()) {
-    if (row.tokenHash === command.tokenHash) {
-      tokenRow = row;
-      break;
-    }
-  }
-  if (!tokenRow) throw acceptNotFound();
-  const bookingId = tokenRow.bookingId;
-
-  // 2. idempotency claim：in-memory 為單執行緒，且 RPC 失敗會整筆 rollback，
-  //    故此處先讀既有紀錄，僅在成功時寫入 completed（等價於 claim + rollback）。
-  const key = acceptCommandKey(bookingId, command.idempotencyKey);
-  const existing = idempotencyStore.get(key);
-
-  // 4. orders → 5. bookings（鎖序與 RPC 相同，不得反向）
-  const booking = bookingStore.get(bookingId) ?? null;
-  if (!booking) throw acceptNotFound();
-  let order = null;
-  for (const row of orderStore.values()) {
-    if (row.bookingId === bookingId) {
-      order = row;
-      break;
-    }
-  }
-  if (!order) throw acceptUnexpected('Midao traveler confirmation order relation is invalid');
-
-  // 6. replay 分支（必須早於 ownership）
-  if (existing) {
-    if (existing.requestHash !== command.requestHash) throw acceptRouteError('IDEMPOTENCY_CONFLICT');
-    if (existing.state === 'processing') throw acceptRouteError('IDEMPOTENCY_IN_PROGRESS');
-    if (existing.state !== 'completed' || !existing.responseBody) {
-      throw acceptUnexpected('Midao traveler confirmation idempotency record is invalid');
-    }
-    return acceptResult(existing.responseBody, { replayed: true });
-  }
-
-  // 7. ownership：他人 token 與不存在 token 塌成同一個 404
-  if (booking.travelerId !== command.travelerUserId) throw acceptNotFound();
-  // 8./9./10. booking 狀態重驗
-  if (booking.status !== 'draft') throw acceptRouteError('CONFIRMATION_TOKEN_EXPIRED');
-  if (booking.travelerConfirmationStatus !== 'pending') {
-    throw acceptRouteError('CONFIRMATION_TOKEN_ALREADY_CONSUMED');
-  }
-  const now = nowIso();
-  if (!booking.travelerConfirmationExpiresAt
-    || Date.parse(booking.travelerConfirmationExpiresAt) <= Date.parse(now)) {
-    throw acceptRouteError('CONFIRMATION_TOKEN_EXPIRED');
-  }
-  // 11. token 重讀驗證
-  if (tokenRow.consumedAt !== null) throw acceptRouteError('CONFIRMATION_TOKEN_ALREADY_CONSUMED');
-  if (Date.parse(tokenRow.expiresAt) <= Date.parse(now)) {
-    throw acceptRouteError('CONFIRMATION_TOKEN_EXPIRED');
-  }
-
-  // 12. capacity revalidation（排除自身）
-  const plan = planFixtureStore.get(booking.activityPlanId) ?? null;
-  if (!plan) throw acceptNotFound();
-  let others = 0;
-  for (const row of bookingStore.values()) {
-    if (row.bookingId === bookingId) continue;
-    if (row.activityId !== booking.activityId) continue;
-    if (row.activityPlanId !== booking.activityPlanId) continue;
-    if (row.localDate !== booking.localDate) continue;
-    if (!ACTIVE_BOOKING_STATUSES.has(row.status)) continue;
-    others += row.participants;
-  }
-  if (others + booking.participants > plan.maxParticipants) {
-    throw acceptRouteError('CAPACITY_EXCEEDED');
-  }
-
-  // 13. CAS 消費 token → 更新 booking → 完成 idempotency
-  //     （不動 bookings.status、不動 orders.payment_deadline_at、不呼叫 fn_book_schedule）
-  tokenRow.consumedAt = now;
-  booking.travelerConfirmationStatus = 'confirmed';
-  booking.updatedAt = now;
-
-  const sanitized = {
-    accepted: true,
-    bookingId,
-    orderId: order.orderId,
-    bookingStatus: booking.status,
-    travelerConfirmationStatus: 'confirmed',
-    paymentDeadlineAt: normalizeTimestamp(order.paymentDeadlineAt),
-  };
-  idempotencyStore.set(key, {
-    state: 'completed',
-    requestHash: command.requestHash,
-    responseBody: clone(sanitized),
-  });
-
-  return acceptResult(sanitized, { replayed: false });
-}
-
 function mapAcceptRpcError(error) {
   const token = acceptRpcErrorToken(error);
   if (token) throw acceptRouteError(ACCEPT_RPC_ERROR_CODES[token]);
@@ -262,7 +143,8 @@ async function acceptInSupabase(command) {
 export async function acceptMidaoTravelerConfirmationDb(input = {}) {
   const command = normalizeAcceptCommand(input);
   if (hasSupabaseEnv()) return acceptInSupabase(command);
-  return acceptInMemory(command);
+  const { sanitized, replayed } = acceptInMemory(command);
+  return acceptResult(sanitized, { replayed });
 }
 
 // ---------------------------------------------------------------------------
@@ -273,7 +155,7 @@ export async function acceptMidaoTravelerConfirmationDb(input = {}) {
 //
 // 與 accept 的關鍵差異：本段完全唯讀——不取鎖、不寫入、不碰 idempotency、
 // 不呼叫任何 RPC（計畫 §2 D1：唯讀不需要交易，且零 migration 可免時間戳碰撞）。
-// 上方任何既有 accept 函式一行未改。
+// in-memory lifecycle 由 confirmation-runtime 單一擁有。
 //
 // 安全鐵則：raw token 於入口即轉 sha256；原值不得進入任何查詢變數、
 // console.*、錯誤訊息或回傳值。Supabase error 一律吞掉原訊息換固定安全字串。
@@ -302,66 +184,6 @@ function normalizePreviewCommand(input = {}) {
  * §4.3 in-memory 分支。S0/S1 塌成 404（不存在與非本人不可區分），
  * 其餘交給純函式層依 RPC 順序判定。
  */
-function previewInMemory(command) {
-  // 1. 線性掃 confirmationTokenStore 比對 tokenHash（store 形狀不得改動）。
-  let tokenRow = null;
-  for (const row of confirmationTokenStore.values()) {
-    if (row.tokenHash === command.tokenHash) {
-      tokenRow = row;
-      break;
-    }
-  }
-  if (!tokenRow) throw acceptNotFound(); // S0
-
-  // 2. booking
-  const booking = bookingStore.get(tokenRow.bookingId) ?? null;
-  if (!booking) throw acceptNotFound(); // S0
-
-  // 3. ownership：他人 token 與不存在 token 同碼同訊息同狀態。
-  if (booking.travelerId !== command.travelerUserId) throw acceptNotFound(); // S1
-
-  // 4. order 關聯損毀 → 500（與 accept 對 orders 關聯的處理一致）。
-  let order = null;
-  for (const row of orderStore.values()) {
-    if (row.bookingId === booking.bookingId) {
-      order = row;
-      break;
-    }
-  }
-  if (!order) throw acceptUnexpected('Midao traveler confirmation order relation is invalid');
-
-  // 5. 純顯示欄位：查無一律 null，不得 500。
-  const plan = planFixtureStore.get(booking.activityPlanId) ?? null;
-
-  // 6./7. 狀態判定 + 投影。
-  const status = resolveConfirmationPreviewStatus({
-    bookingStatus: booking.status,
-    travelerConfirmationStatus: booking.travelerConfirmationStatus,
-    travelerConfirmationExpiresAt: booking.travelerConfirmationExpiresAt,
-    tokenConsumedAt: tokenRow.consumedAt,
-    tokenExpiresAt: tokenRow.expiresAt,
-    now: nowIso(),
-  });
-
-  return buildConfirmationPreview({
-    status,
-    bookingId: booking.bookingId,
-    orderId: order.orderId,
-    activityId: booking.activityId,
-    activityPlanId: booking.activityPlanId,
-    title: plan?.activityTitle ?? null,
-    planName: plan?.name ?? null,
-    startAt: booking.startAt,
-    endAt: booking.endAt,
-    partySize: booking.participants,
-    // in-memory 的定價真值＝conversion 當下的 quotedTotalTwd（計畫 §2 D4）。
-    // 不得在 in-memory 另建 pricing snapshot store（那是 Supabase 專屬形狀）。
-    quotedTotalTwd: order.totalTwd,
-    currency: 'TWD',
-    expiresAt: booking.travelerConfirmationExpiresAt,
-  });
-}
-
 /** Supabase 讀取封裝：吞掉 driver 原訊息，換固定安全訊息。 */
 async function previewSelectMaybeSingle(query) {
   let response;
@@ -497,43 +319,6 @@ export async function getMidaoTravelerConfirmationPreviewDb(input = {}) {
   return previewInMemory(command);
 }
 
-/** 測試接縫：塞入同 plan／同 local date 的其他 active booking（容量衝突用）。 */
-function seedActiveBookingForTest(row = {}) {
-  const bookingId = String(row.bookingId);
-  bookingStore.set(bookingId, {
-    bookingId,
-    bookingNo: null,
-    orderId: null,
-    guideId: row.guideId ?? null,
-    activityId: String(row.activityId),
-    activityPlanId: String(row.activityPlanId),
-    sourceInquiryId: null,
-    travelerId: row.travelerId ?? null,
-    participants: Number(row.participants),
-    localDate: String(row.localDate),
-    startAt: row.startAt ?? null,
-    endAt: row.endAt ?? null,
-    status: String(row.status ?? 'confirmed'),
-    guideApprovalStatus: 'approved',
-    guideApprovalNote: null,
-    travelerConfirmationStatus: 'confirmed',
-    travelerConfirmationExpiresAt: null,
-    createdAt: row.createdAt ?? nowIso(),
-  });
-  return clone(bookingStore.get(bookingId));
-}
-
-/** 測試接縫：預先塞 accept 的 idempotency 紀錄（processing／completed）。 */
-function seedAcceptIdempotencyForTest(row = {}) {
-  const key = acceptCommandKey(String(row.bookingId), String(row.idempotencyKey));
-  idempotencyStore.set(key, {
-    state: String(row.state ?? 'processing'),
-    requestHash: String(row.requestHash),
-    responseBody: row.responseBody ?? null,
-  });
-  return key;
-}
-
 export const __internal = {
   normalizeAcceptCommand,
   mapAcceptRpcError,
@@ -541,4 +326,6 @@ export const __internal = {
   acceptCommandKey,
   seedActiveBookingForTest,
   seedAcceptIdempotencyForTest,
+  seedConfirmationLifecycleForTest,
+  clearCapacityBookingsForTest,
 };
