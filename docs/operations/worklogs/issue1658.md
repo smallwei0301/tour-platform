@@ -1,6 +1,6 @@
 # issue1658 — current issue priority routing 修正
 
-> 最後更新：2026-10-16 14:26 Asia/Taipei｜requested model：`gpt-6-luna`；runtime actual：unknown｜本機候選，未提交
+> 最後更新：2026-10-16 22:46 Asia/Taipei｜原 builder requested model：`gpt-6-luna`；runtime actual：unknown｜PR #1904 合併前證據補記
 
 ## 目標
 
@@ -13,7 +13,7 @@
 - [x] 檢查全部 23 筆 open PR changed filenames；沒有 PR 擁有目標文件。
 - [x] 將 #1301、#1336 移出 active routing 與 stale-check loop，並保留為 historical/non-routing 記錄；保留其他既有歷史內容。
 - [x] Node 22.23.1 canonical wrapper 驗證通過；既有 `issue657-agent-routing.test.mjs` 6/6、issue1658 定向 routing assertions 7/7 通過。
-- [x] v2 兩檔候選完成 bounded independent source review：PASS、未解 findings 0（review report SHA-256 `fdecd7226ed624130142fed4502e09e9cdd98d6bff093841b98f61568b971c05`）；完整 issue1658、CI 與 publication gates 仍 NOT_DONE。
+- [x] v2 兩檔候選完成 bounded independent source review：PASS、未解 findings 0（review report SHA-256 `fdecd7226ed624130142fed4502e09e9cdd98d6bff093841b98f61568b971c05`）；此為當時凍結狀態，後續 CI 與發布進度見下方證據補記；完整 issue1658 驗收仍未完成。
 
 ## 已完成（附證據）
 
@@ -25,10 +25,21 @@
 
 ## 下一步
 
-v3 僅更新本 worklog 記錄 v2 的 bounded source review 結果；完整 issue1658 驗收、CI 與 publication 仍 NOT_DONE，v3 worklog-only delta 待主代理依 small-editor receipt flow review。
+v3 worklog-only delta 已完成限定獨立審查，最終未解 finding 0；報告 SHA-256 `86f5c207e0ecb1127527050cbf4eb1a4907bc15252c222d577e7c28f025e38d2`。本次僅補合併前證據，不改 routing 內容。
+
+## 合併前證據補記（2026-10-16 22:46 Asia/Taipei）
+
+- 原已驗證 head：`f4e2a4630285759a195e7340065f31b67ef4f787`；base main：`2d9c5bb410742cd8d045f154d12aa62af1fa269a`。
+- [CI 38862384002](https://github.com/smallwei0301/tour-platform/actions/runs/38862384002) conclusion=`success`；lint、typecheck、tests、build、ISR 與 preflight 通過。
+- [Secret scan 38862383852](https://github.com/smallwei0301/tour-platform/actions/runs/38862383852) 通過；[Preview](https://vercel.com/smallwei0301s-projects/tour-platform/H74EKUNPivGNL2vPcNGYr8RZeDLw) 為 Ready。這些是原 head 的結果，不移作此補記 commit 的 CI。
+- 22:44 重新核對另外 24 個 open PR，兩個目標文件沒有 ownership 重疊；待執行／執行中的 Tour workflow 均為 0。
+- Owner 於 22:43 明確同意本次 #1904 合併所附帶的 midao.com.tw 自動正式站重建／切換；不涵蓋其他 PR、DB、憑證或權限變更。
+- 本補記仍須限定獨立審查與新 exact-head CI；兩者通過後才依現行流程合併。合併後另核 main CI、部署終局與正式網址指向，不預先宣稱成功。
+- 完整 #1658 AC、全量 queue 更新與其他剩餘範圍仍未完成，不關閉整張 issue。
 
 ## 絕不重做（Do-NOT-redo）
 
 - 不 cherry-pick、merge、重建或沿用舊混合分支／PR #1774；此候選是依 exact main 與 current live issue state 的獨立文件修正。
 - 不把限定兩筆狀態核對說成整份 issue queue 已 refresh；其他 active routing 與 snapshot 數字不在本次範圍。
-- 不修改 harness、runtime code、測試檔、readiness snapshot 或任何其他候選工作；不做 Git 發布、DB／TEST、Production、credential、network、permission 或付費資源操作。
+- 不修改 harness、runtime code、測試檔、readiness snapshot 或任何其他候選工作；DB／TEST、credential、network、permission 或付費資源操作不在本次範圍；Git 發布與本次合併附帶自動正式部署僅按上述有效批准及完整 gates 執行。
+
