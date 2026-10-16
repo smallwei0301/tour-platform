@@ -1,6 +1,6 @@
 # Third-party design guidance: sources and notices
 
-This is a downstream guidance-only adaptation for Issue #841, reconstructed as a NEW r02 candidate from verified PR #836 bytes. It is not restoration of the missing historical safe patch. All 15 skill entries remain available as advisory references. External engine scripts, four engine agents and their degraded helper references are removed. No engine or hook is installed or enabled.
+This is a downstream guidance-only adaptation for [smallwei0301/vibeaico-admin-rebuild Issue #841](https://github.com/smallwei0301/vibeaico-admin-rebuild/issues/841), reconstructed as a NEW r02 candidate from verified [smallwei0301/vibeaico-admin-rebuild PR #836](https://github.com/smallwei0301/vibeaico-admin-rebuild/pull/836) bytes. It is not restoration of the missing historical safe patch. All 15 skill entries remain available as advisory references. External engine scripts, four engine agents and their degraded helper references are removed. No engine or hook is installed or enabled.
 
 ## Immutable sources
 
