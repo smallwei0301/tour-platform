@@ -1,19 +1,22 @@
-<!-- query_timestamp: 2026-10-15T05:04:57.264Z -->
+<!-- query_timestamp: 2026-10-16T05:04:46.010Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-10-15T05:04:57.264Z  
-**Commit SHA:** `5c07a01599e73236b742c39e903d9703ef8906b2`
+**Query timestamp:** 2026-10-16T05:04:46.010Z  
+**Commit SHA:** `2eb6df3d665b64569e2a31a43e08e2a95dc81bec`
 
 ---
 
-## Open PRs (20)
+## Open PRs (23)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1903 | [fix(build): 啟用 webpack build worker，明示 #1902 前置依賴](https://github.com/smallwei0301/tour-platform/pull/1903) _(draft)_ | `fix/webpack-build-worker-recovery-20261016` |
+| #1902 | [fix(testing): 對齊 staged evidence 正式 Node22 指令（#1893）](https://github.com/smallwei0301/tour-platform/pull/1902) _(draft)_ | `fix/staged-evidence-protocol-20261015` |
+| #1901 | [refactor(midao): 集中確認訂單私有狀態與隔離契約（#1816）](https://github.com/smallwei0301/tour-platform/pull/1901) _(draft)_ | `codex/issue1816-private-confirmation-runtime` |
 | #1900 | [修正 #1899 設計來源與跨 repo 歷史連結（兩項 P2）](https://github.com/smallwei0301/tour-platform/pull/1900) _(draft)_ | `codex/1899-guidance-p2-20261013` |
 | #1898 | [feat(tooling): 新增純離線 current 字型輸入 consumer](https://github.com/smallwei0301/tour-platform/pull/1898) _(draft)_ | `ava/current-google-font-input-20261010` |
 | #1897 | [fix(tooling): 保留 #1887 expected-terminal 安全錯誤原因](https://github.com/smallwei0301/tour-platform/pull/1897) _(draft)_ | `ava/issue1887-safe-error-chain-20261008-93066161` |
