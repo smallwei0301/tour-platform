@@ -15,6 +15,7 @@ export interface SelectedPlanSnapshot {
   label: string;
   price: number;
   priceType: 'per_person' | 'per_group';
+  confirmByDays?: number | null;
   date?: string;
   scheduleId?: string;
 }
