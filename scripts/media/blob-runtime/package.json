@@ -1,0 +1,12 @@
+{
+  "name": "tour-world-media-blob-runtime",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "dependencies": {
+    "@vercel/blob": "2.8.1"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
