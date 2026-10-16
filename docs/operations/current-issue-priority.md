@@ -1,6 +1,8 @@
 # Current Issue Priority Queue
 
-Updated: 2026-10-16 14:26 CST (#1658 定向更新：已核實 #1301/#1336 為結案狀態)
+Updated: 2026-06-10 15:30 CST (GH-1265 post-#1254/#1231 close + #1121 label refresh)
+
+定向修正：2026-10-16 14:26 Asia/Taipei，僅核實並移除已結案 #1301／#1336 的派工路由；未更新整份快照，其餘優先級與派工狀態仍須依即時來源重新核對。
 
 Repo: `smallwei0301/tour-platform`
 

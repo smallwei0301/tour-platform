@@ -27,6 +27,12 @@
 
 v3 worklog-only delta 已完成限定獨立審查，最終未解 finding 0；報告 SHA-256 `86f5c207e0ecb1127527050cbf4eb1a4907bc15252c222d577e7c28f025e38d2`。本次僅補合併前證據，不改 routing 內容。
 
+## 日期標示修正（2026-10-16 22:55 Asia/Taipei）
+
+- 回應 PR review 5549491192 的 P2：恢復整份快照原始 Updated 日期 2026-06-10，另列 2026-10-16 僅針對 #1301／#1336 的定向修正，不將其餘舊優先級宣稱為已刷新。
+- 補記 head `a08ee3948698bf10d06b5d024b69d07bcec5d117` 的 [CI38918941648](https://github.com/smallwei0301/tour-platform/actions/runs/38918941648) 已 success（lint、typecheck、tests、build、ISR、preflight）；此結果不挪作日期修正後的新 head CI。
+- 本次僅兩份文件的日期說明與證據紀錄，仍需獨立差異審查及新 exact-head CI，尚未合併／部署。
+
 ## 合併前證據補記（2026-10-16 22:46 Asia/Taipei）
 
 - 原已驗證 head：`f4e2a4630285759a195e7340065f31b67ef4f787`；base main：`2d9c5bb410742cd8d045f154d12aa62af1fa269a`。
