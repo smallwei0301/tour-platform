@@ -26,6 +26,14 @@ for (const [name, value] of Object.entries({ SUPABASE_URL, API_BASE_URL })) {
   assert.equal(url.hostname, '127.0.0.1', `${name} must stay loopback-only`);
 }
 
+const databaseLocation = new URL(DATABASE_URL);
+assert.ok(['postgres:', 'postgresql:'].includes(databaseLocation.protocol), 'integration DB scheme must be PostgreSQL');
+assert.equal(databaseLocation.search, '', 'integration DB query overrides are forbidden');
+assert.equal(databaseLocation.hash, '', 'integration DB fragments are forbidden');
+assert.equal(databaseLocation.hostname, '127.0.0.1', 'integration DB must stay loopback-only');
+assert.equal(databaseLocation.port, '54322', 'integration DB must use canonical disposable port');
+assert.equal(databaseLocation.pathname, '/postgres', 'integration DB must use canonical disposable database');
+
 let client;
 
 function payload(overrides = {}) {
@@ -133,6 +141,11 @@ async function removeFault() {
   await client.query('DROP FUNCTION IF EXISTS public.issue1814_materialization_fault()');
 }
 
+async function removeAdmissionFault() {
+  await client.query('DROP TRIGGER IF EXISTS issue1893_admission_event_fault ON public.payment_events');
+  await client.query('DROP FUNCTION IF EXISTS public.issue1893_admission_event_fault()');
+}
+
 async function removeConcurrencyBarrier() {
   await client.query('DROP TRIGGER IF EXISTS issue1814_concurrency_barrier ON public.orders');
   await client.query('DROP FUNCTION IF EXISTS public.issue1814_concurrency_barrier()');
@@ -186,10 +199,10 @@ before(async () => {
   await client.query(`INSERT INTO public.activity_addons(id, activity_id, name, price_twd, unit, stock, is_active, sort_order)
     VALUES ($1, $2, 'Issue 1814 午餐', 200, 'per_person', NULL, true, 1)`, [ADDON_ID, ACTIVITY_ID]);
 });
-beforeEach(async () => { await removeFault(); await removeConcurrencyBarrier(); await cleanup(); await client.query("INSERT INTO public.user_points_ledger(user_id, delta, reason, expires_at) VALUES ($1, 1000, 'adjust', NULL)", [TRAVELER_ID]); });
+beforeEach(async () => { await removeFault(); await removeConcurrencyBarrier(); await removeAdmissionFault(); await cleanup(); await client.query("INSERT INTO public.user_points_ledger(user_id, delta, reason, expires_at) VALUES ($1, 1000, 'adjust', NULL)", [TRAVELER_ID]); });
 after(async () => {
   try {
-    await removeFault(); await removeConcurrencyBarrier(); await cleanup();
+    await removeFault(); await removeConcurrencyBarrier(); await removeAdmissionFault(); await cleanup();
     await client.query('DELETE FROM public.activity_schedules WHERE id = $1', [SCHEDULE_ID]);
     await client.query('DELETE FROM public.activity_addons WHERE id = $1', [ADDON_ID]);
     await client.query('DELETE FROM public.activity_plans WHERE id = $1', [PLAN_ID]);
@@ -376,4 +389,170 @@ test('#1815 release gate: persisted draft amount reconciles before payment, whil
   assert.doesNotMatch(legacyRejected.text, /MerchantTradeNo|CheckMacValue|paymentUrl|checkoutUrl/iu);
   const paymentAttempts = await client.query('SELECT id FROM public.payments WHERE order_id = $1', [order.id]);
   assert.equal(paymentAttempts.rowCount, 1, 'rejected aggregate must not create another payment attempt');
+});
+
+const ADMISSION_SIGNATURE = 'public.fn_admit_initial_payment_attempt(uuid,text,text)';
+async function admissionOrder(key) {
+  const response = await callPublic(await loginTraveler(), key);
+  assert.equal(response.status, 200, response.text);
+  const current = await state(key);
+  assert.equal(current.orders.length, 1);
+  return current.orders[0];
+}
+async function admissionRows(orderId) {
+  const payments = await client.query('SELECT id, provider, merchant_trade_no FROM public.payments WHERE order_id = $1', [orderId]);
+  const events = await client.query("SELECT payment_id, provider FROM public.payment_events WHERE order_id = $1 AND event_type = 'initiated'", [orderId]);
+  return { payments: payments.rows, events: events.rows };
+}
+
+test('#1893 admission serializes cross-provider callers at the same order lock', { timeout: 20000 }, async () => {
+  const order = await admissionOrder('issue1893-cross-provider');
+  const blocker = new pg.Client({ connectionString: DATABASE_URL });
+  const contenders = [new pg.Client({ connectionString: DATABASE_URL }), new pg.Client({ connectionString: DATABASE_URL })];
+  const pending = [];
+  let blockerConnected = false;
+  try {
+    await blocker.connect();
+    blockerConnected = true;
+    for (const connection of contenders) {
+      await connection.connect();
+      await connection.query("SET statement_timeout = '12s'");
+    }
+    const pids = await Promise.all(contenders.map(async (connection) => (await connection.query('SELECT pg_backend_pid() AS pid')).rows[0].pid));
+    await blocker.query('BEGIN');
+    await blocker.query('SELECT id FROM public.orders WHERE id = $1 FOR UPDATE', [order.id]);
+    for (const [index, provider] of ['ecpay', 'transfer'].entries()) {
+      pending.push(contenders[index].query('SELECT public.fn_admit_initial_payment_attempt($1,$2,$3) AS result',
+        [order.id, provider, `ISSUE1893RACE${index}`]).then(result => ({ result }), error => ({ error })));
+    }
+    const deadline = Date.now() + 8000;
+    let blocked = 0;
+    while (Date.now() < deadline) {
+      const observed = await client.query("SELECT pid FROM pg_catalog.pg_stat_activity WHERE pid = ANY($1::int[]) AND wait_event_type = 'Lock'", [pids]);
+      blocked = observed.rowCount;
+      if (blocked === 2) break;
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    assert.equal(blocked, 2, 'both independent admission calls must reach the held order lock before release');
+    await blocker.query('ROLLBACK');
+    const responses = await Promise.all(pending);
+    for (const response of responses) assert.equal(response.error, undefined);
+    const results = responses.map(response => response.result.rows[0].result);
+    assert.deepEqual(results.map(result => result.outcome).sort(), ['create', 'hold']);
+    const winner = results.find(result => result.outcome === 'create');
+    assert.equal(results.find(result => result.outcome === 'hold').code, 'PAYMENT_PROVIDER_CONFLICT');
+    const rows = await admissionRows(order.id);
+    assert.equal(rows.payments.length, 1);
+    assert.equal(rows.events.length, 1);
+    assert.equal(rows.payments[0].id, winner.id);
+    assert.equal(rows.payments[0].provider, winner.provider);
+    assert.equal(rows.payments[0].merchant_trade_no, winner.merchantTradeNo);
+    assert.equal(rows.events[0].payment_id, winner.id);
+    assert.equal(rows.events[0].provider, winner.provider);
+  } finally {
+    // Release the database barrier even when the observation/assertion fails.
+    const cleanupErrors = [];
+    if (blockerConnected) {
+      try { await blocker.query('ROLLBACK'); } catch (error) { cleanupErrors.push(error); }
+    }
+    await Promise.all(pending);
+    const closed = await Promise.allSettled([...contenders, blocker].map(connection => connection.end()));
+    cleanupErrors.push(...closed.filter(result => result.status === 'rejected').map(result => result.reason));
+    if (cleanupErrors.length) throw new AggregateError(cleanupErrors, 'admission connection cleanup failed');
+  }
+});
+
+test('#1893 required initiated-event failure rolls back the payment and permits a clean retry', async () => {
+  const order = await admissionOrder('issue1893-event-rollback');
+  assert.match(order.id, /^[0-9a-f-]{36}$/u);
+  try {
+    await client.query(`CREATE FUNCTION public.issue1893_admission_event_fault() RETURNS trigger LANGUAGE plpgsql AS $f$
+      BEGIN
+        IF NEW.order_id::text = TG_ARGV[0] AND NEW.event_type = 'initiated' THEN
+          RAISE EXCEPTION 'issue1893 required-event fault' USING ERRCODE = 'P0001';
+        END IF;
+        RETURN NEW;
+      END; $f$;
+      CREATE TRIGGER issue1893_admission_event_fault BEFORE INSERT ON public.payment_events
+        FOR EACH ROW EXECUTE FUNCTION public.issue1893_admission_event_fault('${order.id}');`);
+    await assert.rejects(client.query('SELECT public.fn_admit_initial_payment_attempt($1,$2,$3)',
+      [order.id, 'ecpay', 'ISSUE1893FAULT']), error => error.code === 'P0001' && /issue1893 required-event fault/u.test(error.message));
+    assert.deepEqual(await admissionRows(order.id), { payments: [], events: [] });
+  } finally {
+    await removeAdmissionFault();
+    const remaining = await client.query("SELECT count(*)::int AS count FROM pg_catalog.pg_trigger WHERE tgname = 'issue1893_admission_event_fault'");
+    assert.equal(remaining.rows[0].count, 0);
+    const functions = await client.query("SELECT to_regprocedure('public.issue1893_admission_event_fault()') AS function");
+    assert.equal(functions.rows[0].function, null);
+  }
+  const retry = await client.query('SELECT public.fn_admit_initial_payment_attempt($1,$2,$3) AS result', [order.id, 'ecpay', 'ISSUE1893RETRY']);
+  assert.equal(retry.rows[0].result.outcome, 'create');
+  const rows = await admissionRows(order.id);
+  assert.equal(rows.payments.length, 1);
+  assert.equal(rows.events.length, 1);
+});
+
+test('#1893 admission ACL rejects anonymous/authenticated execution and admits the service-role boundary', async () => {
+  const originalRole = (await client.query('SELECT current_user AS role')).rows[0].role;
+  for (const role of ['anon', 'authenticated', 'service_role']) {
+    const acl = await client.query("SELECT has_function_privilege($1, $2, 'EXECUTE') AS allowed", [role, ADMISSION_SIGNATURE]);
+    assert.equal(acl.rows[0].allowed, role === 'service_role');
+    // Keep a failed role probe from poisoning the fixture cleanup connection.
+    const probe = new pg.Client({ connectionString: DATABASE_URL });
+    let connected = false;
+    let phase = 'connect';
+    let primaryError;
+    let executionError;
+    const connectionErrors = [];
+    const annotate = (error, action) => new Error(
+      `admission ACL role=${role} phase=${action} ${error.code ?? error.name}: ${error.message}`,
+      { cause: error },
+    );
+    // pg also emits socket errors outside query rejection. Retain them as FAIL,
+    // with the role/stage, instead of an unrelated uncaught after-hook error.
+    const onConnectionError = error => connectionErrors.push(annotate(error, phase));
+    probe.on('error', onConnectionError);
+    try {
+      await probe.connect();
+      connected = true;
+      phase = 'initial-role';
+      assert.equal((await probe.query('SELECT current_user AS role')).rows[0].role, originalRole);
+      phase = 'begin';
+      await probe.query('BEGIN');
+      // Names come only from this fixed allowlist, never an external role value.
+      phase = 'set-role';
+      await probe.query(`SET LOCAL ROLE ${role}`);
+      phase = 'verify-role';
+      assert.equal((await probe.query('SELECT current_user AS role')).rows[0].role, role);
+      phase = 'execute';
+      await assert.rejects(probe.query("SELECT public.fn_admit_initial_payment_attempt(NULL, 'ecpay', 'ACLPROBE')"), error => {
+        executionError = error;
+        if (role === 'service_role') return error.code === '22023' && /invalid initial payment admission request/u.test(error.message);
+        return error.code === '42501' && /permission denied for function fn_admit_initial_payment_attempt/u.test(error.message);
+      });
+    } catch (error) {
+      primaryError = annotate(error, phase);
+      if (executionError && executionError !== error) {
+        const rejection = annotate(executionError, phase);
+        primaryError = new AggregateError([rejection, primaryError], `${rejection.message}; ${primaryError.message}`);
+      }
+    } finally {
+      const cleanupErrors = [];
+      if (connected) {
+        phase = 'rollback';
+        try { await probe.query('ROLLBACK'); } catch (error) { cleanupErrors.push(annotate(error, phase)); }
+        phase = 'restore-role';
+        try {
+          assert.equal((await probe.query('SELECT current_user AS role')).rows[0].role, originalRole);
+        } catch (error) { cleanupErrors.push(annotate(error, phase)); }
+      }
+      phase = 'close';
+      try { await probe.end(); } catch (error) { cleanupErrors.push(annotate(error, phase)); }
+      // Do not silently collect a late error after this test has finalized.
+      probe.removeListener('error', onConnectionError);
+      const errors = [primaryError, ...connectionErrors.filter(error => error.cause !== primaryError?.cause), ...cleanupErrors].filter(Boolean);
+      if (errors.length === 1) throw errors[0];
+      if (errors.length > 1) throw new AggregateError(errors, errors.map(error => error.message).join('; '));
+    }
+  }
 });

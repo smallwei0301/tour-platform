@@ -15,6 +15,88 @@ import {
 const IMAGE_ID = /^sha256:[0-9a-f]{64}$/;
 const ARCHITECTURES = new Map([['x86_64', 'amd64'], ['aarch64', 'arm64'], ['amd64', 'amd64'], ['arm64', 'arm64']]);
 
+// Owner-approved isolated #1814 lane only. The capture/toolchain lock remains immutable.
+export const RUNTIME_DB_OVERRIDE_PROFILE = 'issue1894-pg-supautils-3.2.2';
+const APPROVED_RUNTIME_DB_OVERRIDE = Object.freeze({
+  schemaVersion: 1,
+  profile: RUNTIME_DB_OVERRIDE_PROFILE,
+  toolchainLockSha256: 'f9c9daabfb47d48d074d79d6d0ef7c8749c262fc1c1d500d75682ef4dc24f094',
+  registryIndexDigest: 'sha256:80d7b27c3e8d77cfa7226eee9508671796da214781ff15a35b3670d7ad5ee453',
+  image: Object.freeze({
+    role: 'db', repository: 'public.ecr.aws/supabase/postgres', tag: '17.6.1.143',
+    repoDigest: 'public.ecr.aws/supabase/postgres@sha256:b021e96054128399f84f24e39d29c21ee7c7169515e5d9e4e99ff15d5043d1d8',
+    imageId: 'sha256:2d3ac69ad5c95d81458cc93a6cc6c31a98dfa00cd28f88a0a9358d315e1c357a',
+    platform: 'linux/amd64', architecture: 'amd64',
+  }),
+});
+
+function assertApprovedRuntimeDbOverride(override) {
+  if (!override || Object.keys(override).sort().join(',') !== 'image,profile,registryIndexDigest,schemaVersion,toolchainLockSha256'
+    || !override.image || Object.keys(override.image).sort().join(',') !== 'architecture,imageId,platform,repoDigest,repository,role,tag'
+    || stableJson(override) !== stableJson(APPROVED_RUNTIME_DB_OVERRIDE)) {
+    throw new Error('runtime DB override profile invalid');
+  }
+  return APPROVED_RUNTIME_DB_OVERRIDE;
+}
+
+export function validateRuntimeDbOverride(override, lockBytes) {
+  const approved = assertApprovedRuntimeDbOverride(override);
+  if (!Buffer.isBuffer(lockBytes)
+    || createHash('sha256').update(lockBytes).digest('hex') !== approved.toolchainLockSha256) {
+    throw new Error('runtime DB override toolchain lock binding mismatch');
+  }
+  validateToolchainLock(JSON.parse(lockBytes.toString('utf8')));
+  return approved;
+}
+
+async function readRuntimeContract(file) {
+  const before = await lstat(file);
+  const owned = (stat) => stat.isFile() && !stat.isSymbolicLink() && stat.uid === process.getuid()
+    && stat.nlink === 1 && (stat.mode & 0o022) === 0 && stat.size <= 65_536;
+  if (!owned(before)) throw new Error('runtime DB override source identity invalid');
+  const handle = await open(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+  let bytes;
+  try {
+    const opened = await handle.stat();
+    bytes = await handle.readFile();
+    const after = await lstat(file); const afterFd = await handle.stat();
+    if (![opened, after, afterFd].every((stat) => owned(stat)
+      && stat.dev === before.dev && stat.ino === before.ino && stat.mode === before.mode
+      && stat.size === bytes.length && stat.size === before.size)) {
+      throw new Error('runtime DB override source identity changed');
+    }
+    return bytes;
+  } catch (error) { bytes?.fill(0); throw error; }
+  finally { await handle.close(); }
+}
+
+export async function loadRuntimeDbOverride(profile) {
+  if (profile !== RUNTIME_DB_OVERRIDE_PROFILE) throw new Error('runtime DB override profile invalid');
+  const baseline = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../supabase/baselines/v1');
+  let overrideBytes; let lockBytes;
+  try {
+    overrideBytes = await readRuntimeContract(path.join(baseline, 'runtime-db-override.json'));
+    lockBytes = await readRuntimeContract(path.join(baseline, 'toolchain-lock.json'));
+    return validateRuntimeDbOverride(JSON.parse(overrideBytes.toString('utf8')), lockBytes);
+  } finally { overrideBytes?.fill(0); lockBytes?.fill(0); }
+}
+
+export async function verifyRuntimeDbOverrideImages(override, {
+  inspectImage = async (ref) => strictDocker(['image', 'inspect', '--', ref]),
+} = {}) {
+  const { image } = assertApprovedRuntimeDbOverride(override);
+  for (const ref of [image.repoDigest, `${image.repository}:${image.tag}`]) {
+    let inspections;
+    try { inspections = JSON.parse(await inspectImage(ref)); } catch {
+      throw new Error('runtime DB override image identity invalid');
+    }
+    if (!Array.isArray(inspections) || inspections.length !== 1) throw new Error('runtime DB override image identity invalid');
+    const inspected = parseInspection(JSON.stringify(inspections), image);
+    if (inspected.Id !== image.imageId || inspected.Os !== 'linux') throw new Error('runtime DB override image identity invalid');
+  }
+  return image;
+}
+
 export async function verifyRenameNoReplaceRuntime(runtime = {
   path: '/usr/bin/perl', realpath: '/usr/bin/perl', version: 'v5.36.0',
   sha256: 'f01fa7776dc21c9e4b5f60b2d231ca4d96dab958b8d06aff611cb1c16f871574',
@@ -239,6 +321,10 @@ function usage() {
 async function main(args) {
   if (args.includes('--help')) {
     process.stdout.write(usage());
+    return;
+  }
+  if (args[0] === '--runtime-db-override' && args.length === 2) {
+    process.stdout.write(stableJson(await loadRuntimeDbOverride(args[1])));
     return;
   }
   const requestPath = value(args, '--request');

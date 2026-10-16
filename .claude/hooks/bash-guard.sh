@@ -19,10 +19,34 @@ if echo "$cmd" | grep -qE '\bgit\b[^|;&]*\bpush\b'; then
   fi
 fi
 
+# 僅辨識單一無引號／無 shell 運算子的 git mv；不解析或執行任意 shell。
+approved_new_test_rename() {
+  local rename_re='^git mv -- (apps/web/tests/(api|unit)/[A-Za-z0-9_-]+[.]test[.]mjs) (apps/web/tests/(api|unit)/issue[1-9][0-9]*-[A-Za-z0-9_-]+[.]test[.]mjs)$'
+  [[ "$cmd" =~ $rename_re ]] || return 1
+  local source_path="${BASH_REMATCH[1]}" target_path="${BASH_REMATCH[3]}"
+  [[ "${source_path%/*}" == "${target_path%/*}" ]] || return 1
+  [[ ! "${source_path##*/}" =~ ^issue[0-9]+- ]] || return 1
+  [[ "${target_path##*/}" =~ ^issue[1-9][0-9]*-(.+)$ ]] || return 1
+  [[ "${BASH_REMATCH[1]}" == "${source_path##*/}" ]] || return 1
+  local record="${root:-}/.claude/state/p0-override" modified_at age
+  [[ -n "$root" && -f "$record" && ! -L "$record" ]] || return 1
+  [[ "$(readlink -f -- "${record%/*}")" == "${record%/*}" ]] || return 1
+  [[ -f "$root/$source_path" && ! -L "$root/$source_path" && ! -e "$root/$target_path" && ! -L "$root/$target_path" ]] || return 1
+  [[ "$(readlink -f -- "$root/${source_path%/*}")" == "$root/${source_path%/*}" ]] || return 1
+  modified_at=$(stat -c %Y "$record" 2>/dev/null) || return 1
+  age=$(( $(date +%s) - modified_at ))
+  (( age >= 0 && age <= 3600 )) || return 1
+  # 原協議：一行一路徑，另保留 Owner 原話與時間；兩端皆須具名。
+  grep -qxF -- "$source_path" "$record" || return 1
+  grep -qxF -- "$target_path" "$record" || return 1
+  grep -qE -- "P0-OVERRIDE: ${source_path//./[.]}([[:space:];]|$)" "$record" || return 1
+  grep -qE -- "P0-OVERRIDE: ${target_path//./[.]}([[:space:];]|$)" "$record" || return 1
+}
+
 # ── 2. rm/mv 觸及受保護目錄（mv 搬走 = 變相刪除）─────────────────────
 if echo "$cmd" | grep -qE '(^|[;&|[:space:]])(rm|mv)([[:space:]]|$)' \
    && echo "$cmd" | grep -qE '(supabase/migrations|apps/web/e2e|apps/web/tests|\.claude/(hooks|settings)|\.cursor/harness|CLAUDE\.md)'; then
-  deny "禁止刪除/搬移受保護路徑（migrations / e2e / tests / harness / CLAUDE.md）內的檔案。若確有必要，走 P0-OVERRIDE 協議＋用 git rm 走 PR 讓人審。"
+  approved_new_test_rename || deny "禁止刪除/搬移受保護路徑。僅同目錄新測試加 issue 號的單一 git mv -- 命令，可在兩端具名、Owner 原話及60分鐘 P0-OVERRIDE 下分類放行；其餘 rm/mv 仍拒絕。"
 fi
 
 # ── 3. shell 寫入凍結路徑（sed -i / redirect / tee / mv,cp 目的地）────

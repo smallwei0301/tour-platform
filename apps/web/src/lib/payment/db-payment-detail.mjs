@@ -8,6 +8,7 @@ function projectMaterializedOrder(order) {
   return {
     id: order.id, bookingId: order.bookingId, status: order.status, paymentStatus: order.paymentStatus,
     totalTwd: order.totalTwd, booking, items: order.items,
+    ...(order.paymentDeadlineAt === undefined ? {} : { paymentDeadlineAt: order.paymentDeadlineAt }),
     sourceInquiryId: booking?.source_inquiry_id ?? null,
     travelerConfirmationStatus: booking?.traveler_confirmation_status ?? null,
     title: order.title ?? null,
@@ -30,7 +31,7 @@ export async function getMaterializedOrderDetailForPayment(orderId, injectedSupa
   const { data: order, error } = await supabase
     .from('orders')
     .select(`
-      id, booking_id, status, payment_status, total_twd, contact_name, contact_email, activity_id,
+      id, booking_id, status, payment_status, total_twd, payment_deadline_at, contact_name, contact_email, activity_id,
       booking:bookings!orders_booking_id_fkey(id, order_id, status, source_inquiry_id, traveler_confirmation_status),
       items:order_items!order_items_order_id_fkey(order_id, booking_id, item_type, subtotal_amount, metadata)
     `)
@@ -55,7 +56,7 @@ export async function getMaterializedOrderDetailForPayment(orderId, injectedSupa
   }
   return projectMaterializedOrder({
     id: order.id, bookingId: order.booking_id, status: order.status, paymentStatus: order.payment_status,
-    totalTwd: order.total_twd, booking: order.booking, items: order.items, title,
+    totalTwd: order.total_twd, paymentDeadlineAt: order.payment_deadline_at, booking: order.booking, items: order.items, title,
     contactName: order.contact_name, contactEmail: order.contact_email,
   });
 }
