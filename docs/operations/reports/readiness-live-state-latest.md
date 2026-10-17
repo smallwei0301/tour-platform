@@ -1,21 +1,23 @@
-<!-- query_timestamp: 2026-10-16T05:04:46.010Z -->
+<!-- query_timestamp: 2026-10-17T05:04:32.388Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-10-16T05:04:46.010Z  
-**Commit SHA:** `2eb6df3d665b64569e2a31a43e08e2a95dc81bec`
+**Query timestamp:** 2026-10-17T05:04:32.388Z  
+**Commit SHA:** `12c6bc05809db8b7bf513842f0a1a45c47eb7960`
 
 ---
 
-## Open PRs (23)
+## Open PRs (25)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1903 | [fix(build): 啟用 webpack build worker，明示 #1902 前置依賴](https://github.com/smallwei0301/tour-platform/pull/1903) _(draft)_ | `fix/webpack-build-worker-recovery-20261016` |
-| #1902 | [fix(testing): 對齊 staged evidence 正式 Node22 指令（#1893）](https://github.com/smallwei0301/tour-platform/pull/1902) _(draft)_ | `fix/staged-evidence-protocol-20261015` |
+| #1906 | [fix: 每日健康檢查區分執行失效與產品回歸（#1670）](https://github.com/smallwei0301/tour-platform/pull/1906) | `ava/issue1670-runner-recovery-20261017` |
+| #1905 | [chore(claude): 放行 gh 讀取、workflow 派送與 PR 留言／審查寫入](https://github.com/smallwei0301/tour-platform/pull/1905) _(draft)_ | `ccr-61cf40aa-0wsxsk` |
+| #1903 | [fix(build): 啟用 webpack build worker，明示 #1902 前置依賴](https://github.com/smallwei0301/tour-platform/pull/1903) | `fix/webpack-build-worker-recovery-20261016` |
+| #1902 | [fix(testing): 對齊 staged evidence 正式 Node22 指令（#1893）](https://github.com/smallwei0301/tour-platform/pull/1902) | `fix/staged-evidence-protocol-20261015` |
 | #1901 | [refactor(midao): 集中確認訂單私有狀態與隔離契約（#1816）](https://github.com/smallwei0301/tour-platform/pull/1901) _(draft)_ | `codex/issue1816-private-confirmation-runtime` |
 | #1900 | [修正 #1899 設計來源與跨 repo 歷史連結（兩項 P2）](https://github.com/smallwei0301/tour-platform/pull/1900) _(draft)_ | `codex/1899-guidance-p2-20261013` |
 | #1898 | [feat(tooling): 新增純離線 current 字型輸入 consumer](https://github.com/smallwei0301/tour-platform/pull/1898) _(draft)_ | `ava/current-google-font-input-20261010` |
@@ -140,6 +142,7 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1904 | [docs: 清除 #1301／#1336 的過期派工路由（#1658）](https://github.com/smallwei0301/tour-platform/pull/1904) | 2026-10-17 |
 | #1899 | [第三方設計 skills 改為純建議版（移除 Impeccable 外部引擎與子代理）](https://github.com/smallwei0301/tour-platform/pull/1899) | 2026-10-13 |
 | #1896 | [新增第三方設計 skills：Emil Kowalski 與 Impeccable](https://github.com/smallwei0301/tour-platform/pull/1896) | 2026-10-08 |
 | #1892 | [fix(build): 修復 Google 無副檔名字型 URL (#1891)](https://github.com/smallwei0301/tour-platform/pull/1892) | 2026-10-06 |
@@ -149,7 +152,6 @@
 | #1880 | [修正 Node22 雲端工具鏈與正式證據契約](https://github.com/smallwei0301/tour-platform/pull/1880) | 2026-10-04 |
 | #1878 | [[#1761][Midao2 P0] 唯讀 orders 工作台](https://github.com/smallwei0301/tour-platform/pull/1878) | 2026-09-15 |
 | #1877 | [fix(#1761): remove receipt witness triage gates](https://github.com/smallwei0301/tour-platform/pull/1877) | 2026-09-14 |
-| #1876 | [fix(#1796): qualify unpaid expiry booking log column](https://github.com/smallwei0301/tour-platform/pull/1876) | 2026-09-14 |
 
 ---
 
