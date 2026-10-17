@@ -2,6 +2,8 @@
 
 Updated: 2026-06-10 15:30 CST (GH-1265 post-#1254/#1231 close + #1121 label refresh)
 
+定向修正：2026-10-16 14:26 Asia/Taipei，僅核實並移除已結案 #1301／#1336 的派工路由；未更新整份快照，其餘優先級與派工狀態仍須依即時來源重新核對。
+
 Repo: `smallwei0301/tour-platform`
 
 ## Purpose
@@ -50,7 +52,7 @@ Open security issue under owner decision (NOT a launch blocker per current label
   - Routing: owner/security-controlled, awaiting human decision. **Not** currently labeled `priority:P0` and **not** `launch:first-payment-blocker` — earlier snapshots that called it P0 were stale.
   - Do not auto-run credential rotation from a generic builder card.
 
-Safe-next candidates: pull from live `gh issue list --state open --label status:ready --label owner:ai-agent` rather than hard-coding here, since they rotate quickly. Recent verified-active examples include #1301 (Booking V2 close-gate, owner smoke pending) and #1265 (this doc refresh itself).
+Safe-next candidates: pull from live `gh issue list --state open --label status:ready --label owner:ai-agent` rather than hard-coding here, since they rotate quickly. Recent verified-active examples include #1265 (this doc refresh itself).
 
 ## Agent Routing Invariants
 
@@ -98,10 +100,6 @@ Safe-next candidates: pull from live `gh issue list --state open --label status:
    - Labels: `priority:P1`, `agent:backlog`, `owner:mixed`, `status:ready`, `admin-guides`
    - Routing: owner/guide-facing demo; do not post private guide evidence publicly.
 
-4. **#1301 — [GH-1290][CloseGate] Runtime smoke does not re-emit 10:30 after migration apply** `closegate-pending`
-   - State: OPEN
-   - Labels: `priority:P1`, `type:bug`, `owner:ai-agent`, `status:ready`, `booking-v2`, `regression`
-   - Routing: all known backend fixes merged (`a6dc7f7` / `ffa2e2d` / `8b74006` / `e748ff3`) and live on `7f177fd`; remaining work is owner production close-gate smoke (build fixture → verify 10:30 → cleanup). Do not auto-mutate production data.
 
 ## P2 / launch support and readiness backlog
 
@@ -125,11 +123,6 @@ Safe-next candidates: pull from live `gh issue list --state open --label status:
    - Labels: `priority:P2`, `agent:backlog`, `owner:ai-agent`, `infra`, `status:awaiting-implementation`, `launch:post-first-payment`
    - Routing: post-soft-launch monitor setup; do not confuse with #714 alert drill.
 
-5. **#1336 — [Ops/Infra] 設定 INTERNAL_ALERT_TOKEN 並啟用 6 個 internal cron sweep endpoints**
-   - State: OPEN
-   - Labels: `triaged`, `priority:P2`, `infra`, `launch:post-first-payment`
-   - Routing: human ops (Vercel project env + GitHub Actions secret 寫入); 不在 AI agent 權限範圍。
-
 ## Historical/non-routing notes
 
 - #1106 — closed/verified 2026-06-10 after PR #1341 closed the payout-eligibility enforcement gap (Post-Trip Ops epic complete).
@@ -140,6 +133,8 @@ Safe-next candidates: pull from live `gh issue list --state open --label status:
 - #1238 — closed 2026-06-05; admin seasons fix merged.
 - #1249 — closed; activities performance work merged via PR #1252.
 - #1254 — closed/verified 2026-06-05 after PR #1259 (post-trip-summary FK embed fix).
+- #1301 — closed/completed 2026-06-10；2026-10-16 已核對 GitHub 即時狀態，故自目前派工清單移除。
+- #1336 — closed/completed 2026-07-02；2026-10-16 已核對 GitHub 即時狀態，故自目前派工清單移除。
 - #621, #639, #640, #641, #813 — historical closed launch-readiness entries; do not route.
 
 ## Stale-check protocol
@@ -157,7 +152,7 @@ npm run readiness:snapshot
 Then verify every issue in this snapshot that is marked routing-active or blocked:
 
 ```bash
-for n in 1121 714 605 320 642 319 318 1301 926 797 724 685 1336
+for n in 1121 714 605 320 642 319 318 926 797 724 685
  do
    gh issue view "$n" --repo smallwei0301/tour-platform \
      --json number,state,title,labels \
