@@ -14,24 +14,21 @@
  * - 本檔不自行 INSERT/UPDATE bookings／orders／guide_inquiries；
  *   Supabase 路徑一切寫入由 midao_convert_inquiry_to_booking RPC 在單一交易完成。
  */
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { issueConfirmationToken,
+  __setMidaoBookingConfirmationClockForTest, __setMidaoConfirmationTokenFactoryForTest,
+  __resetMidaoBookingConfirmationStoreForTest, seedConversionFixture, inspectStoresForTest,
+  convertInMemory, taipeiLocalDate,
+} from './confirmation-runtime.mjs';
+export { __setMidaoBookingConfirmationClockForTest, __setMidaoConfirmationTokenFactoryForTest };
 
 import { getSupabase, hasSupabaseEnv } from '../supabase-env.mjs';
 import { SITE_URL } from '../seo/site-metadata.ts';
-import { validateInquiryConversion } from './inquiry-conversion.ts';
+import { ERROR_STATUS, routeError, notFound, unexpected, violationToRouteError,
+  assertConversionAllowed, normalizeUuid } from './confirmation-conversion-policy.mjs';
 import { parseIdempotencyKey } from './idempotency.ts';
 import { MidaoRouteError } from './route-errors.ts';
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
-const HASH_PATTERN = /^[0-9a-f]{64}$/u;
-const ACTIVE_BOOKING_STATUSES = new Set([
-  'draft',
-  'external_hold',
-  'pending_confirmation',
-  'confirmed',
-  'reschedule_requested',
-]);
-
+import { UUID_PATTERN, HASH_PATTERN, normalizeTimestamp } from './confirmation-values.mjs';
 const RPC_NAME = 'midao_convert_inquiry_to_booking';
 const RPC_PROJECTION_KEYS = [
   'booking_id',
@@ -50,37 +47,6 @@ export const CONFIRMATION_TOKEN_NOTE_CREATED =
   '確認連結僅在本次回應顯示一次，請立即複製；重送相同 Idempotency-Key 不會再取得。';
 export const CONFIRMATION_TOKEN_NOTE_REPLAYED =
   '此請求為重送（idempotent replay），確認連結僅在首次成功時回傳一次，無法再次取得。';
-
-/** §4.5 B 類：RPC／in-memory 共用的公開錯誤碼 → 安全訊息。 */
-const SAFE_MESSAGES = {
-  NOT_FOUND: 'Resource not found',
-  INQUIRY_ALREADY_CONVERTED: 'Inquiry was already converted',
-  INQUIRY_STATE_NOT_CONVERTIBLE: 'Inquiry state does not allow conversion',
-  PLAN_INACTIVE: 'Activity plan is not active',
-  PLAN_BOOKING_TYPE_NOT_REQUEST: 'Activity plan does not accept inquiry conversion',
-  PARTICIPANTS_BELOW_PLAN_MIN: 'Participants are below the plan minimum',
-  PARTICIPANTS_ABOVE_PLAN_MAX: 'Participants exceed the plan maximum',
-  CAPACITY_EXCEEDED: 'Requested date is fully booked',
-  IDEMPOTENCY_CONFLICT: 'Idempotency key was already used for a different request',
-  IDEMPOTENCY_IN_PROGRESS: 'A request with this Idempotency-Key is already processing',
-  INVALID_INQUIRY_ID: 'Invalid inquiry id',
-  INVALID_PLAN_ID: 'Invalid activity plan id',
-};
-
-const ERROR_STATUS = {
-  NOT_FOUND: 404,
-  INQUIRY_ALREADY_CONVERTED: 409,
-  INQUIRY_STATE_NOT_CONVERTIBLE: 409,
-  PLAN_INACTIVE: 409,
-  PLAN_BOOKING_TYPE_NOT_REQUEST: 409,
-  PARTICIPANTS_BELOW_PLAN_MIN: 409,
-  PARTICIPANTS_ABOVE_PLAN_MAX: 409,
-  CAPACITY_EXCEEDED: 409,
-  IDEMPOTENCY_CONFLICT: 409,
-  IDEMPOTENCY_IN_PROGRESS: 409,
-  INVALID_INQUIRY_ID: 422,
-  INVALID_PLAN_ID: 422,
-};
 
 /**
  * §4.5 B 類：RPC message token → 公開錯誤碼。
@@ -106,80 +72,13 @@ const RPC_ERROR_CODES = {
 };
 const RPC_ERROR_TOKENS = Object.keys(RPC_ERROR_CODES).sort((left, right) => right.length - left.length);
 
-/** §4.5 A 類：Task 37 violation code → 公開錯誤碼／HTTP status。 */
-const VIOLATION_COLLAPSE_TO_NOT_FOUND = new Set([
-  'INQUIRY_GUIDE_MISMATCH',
-  'PLAN_GUIDE_MISMATCH',
-  'PLAN_ACTIVITY_MISMATCH',
-  'PLAN_NOT_FOUND_IN_INPUT',
-]);
-const VIOLATION_CONFLICT_CODES = new Set([
-  'PLAN_BOOKING_TYPE_NOT_REQUEST',
-  'PLAN_INACTIVE',
-  'INQUIRY_STATE_NOT_CONVERTIBLE',
-  'INQUIRY_ALREADY_CONVERTED',
-]);
-
-const inquiryFixtureStore = new Map();
-const planFixtureStore = new Map();
-const travelerFixtureStore = new Map();
-const bookingStore = new Map();
-const orderStore = new Map();
-const confirmationTokenStore = new Map();
-const idempotencyStore = new Map();
-
-let nowProvider = () => new Date().toISOString();
-let tokenFactory = () => randomBytes(32).toString('hex');
-
-function routeError(code) {
-  return new MidaoRouteError(code, SAFE_MESSAGES[code] ?? 'Request rejected', ERROR_STATUS[code] ?? 422);
-}
-
-function notFound() {
-  return routeError('NOT_FOUND');
-}
-
-function unexpected(message = 'Midao inquiry conversion backend failure') {
-  const error = new Error(message);
-  error.name = 'MidaoInquiryConversionBackendError';
-  return error;
-}
-
-function clone(value) {
-  return structuredClone(value);
-}
-
-function normalizeUuid(value, code) {
-  if (typeof value !== 'string' || !UUID_PATTERN.test(value.trim())) throw routeError(code);
-  return value.trim().toLowerCase();
-}
-
-function normalizeTimestamp(value) {
-  if (typeof value !== 'string' || !value.trim()) return null;
-  const parsed = Date.parse(value);
-  if (!Number.isFinite(parsed)) return null;
-  try {
-    return new Date(parsed).toISOString();
-  } catch {
-    return null;
-  }
-}
-
 function requireTimestamp(value) {
   const normalized = normalizeTimestamp(value);
   if (!normalized) throw unexpected('Midao inquiry conversion returned an invalid timestamp');
   return normalized;
 }
 
-function nowIso() {
-  return requireTimestamp(nowProvider());
-}
-
 /** 與 migration 層 3 相同的唯一 local_date 計算式（Asia/Taipei）。 */
-function taipeiLocalDate(isoTimestamp) {
-  return new Date(Date.parse(isoTimestamp)).toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
-}
-
 function normalizeCommand(input = {}) {
   const guideId = typeof input.guideId === 'string' ? input.guideId.trim() : '';
   const actorType = typeof input.actorType === 'string' ? input.actorType.trim().toLowerCase() : '';
@@ -224,42 +123,8 @@ function normalizeCommand(input = {}) {
   };
 }
 
-function commandProjection(command) {
-  return {
-    activityPlanId: command.activityPlanId,
-    startAt: command.startAt,
-    endAt: command.endAt,
-    participants: command.participants,
-    quotedTotalTwd: command.quotedTotalTwd,
-    guideNote: typeof command.guideNote === 'string' ? command.guideNote : (command.guideNote ?? null),
-    confirmationTtlHours: command.confirmationTtlHours,
-  };
-}
-
-/** §4.5 A 類：把 Task 37 的第一個 violation 轉成公開錯誤。 */
-function violationToRouteError(violation) {
-  if (!violation) return unexpected('Midao inquiry conversion validation returned no violation');
-  if (VIOLATION_COLLAPSE_TO_NOT_FOUND.has(violation.code)) return notFound();
-  const status = VIOLATION_CONFLICT_CODES.has(violation.code) ? 409 : 422;
-  return new MidaoRouteError(violation.code, violation.messageZh, status);
-}
-
-function assertConversionAllowed({ inquiry, plan, command, actorGuideId }) {
-  const result = validateInquiryConversion({ inquiry, plan, command: commandProjection(command), actorGuideId });
-  if (result.valid) return;
-  throw violationToRouteError(result.violations[0]);
-}
-
 function buildConfirmationUrl(rawToken) {
   return `${SITE_URL}/booking/confirm/${rawToken}`;
-}
-
-function issueConfirmationToken() {
-  const raw = tokenFactory();
-  if (typeof raw !== 'string' || !HASH_PATTERN.test(raw)) {
-    throw unexpected('Midao confirmation token factory produced an invalid token');
-  }
-  return { raw, tokenHash: createHash('sha256').update(raw).digest('hex') };
 }
 
 /** 成功／replay 的固定 key 集合（§4.1）。 */
@@ -280,202 +145,18 @@ function conversionResult(sanitized, { created, rawToken }) {
   };
 }
 
-function commandKey(command) {
-  return `inquiry:${command.inquiryId}:convert_inquiry_to_booking:${command.idempotencyKey}`;
-}
-
 // ---------------------------------------------------------------------------
 // 測試接縫
 // ---------------------------------------------------------------------------
 
-export function __resetMidaoBookingConfirmationStoreForTest() {
-  inquiryFixtureStore.clear();
-  planFixtureStore.clear();
-  travelerFixtureStore.clear();
-  bookingStore.clear();
-  orderStore.clear();
-  confirmationTokenStore.clear();
-  idempotencyStore.clear();
-}
-
+export { __resetMidaoBookingConfirmationStoreForTest };
 export function __seedMidaoInquiryConversionFixtureForTest(fixture = {}) {
-  const inquiry = fixture.inquiry ?? null;
-  const plan = fixture.plan ?? null;
-  const traveler = fixture.traveler ?? null;
-  if (inquiry) {
-    inquiryFixtureStore.set(normalizeUuid(inquiry.id, 'INVALID_INQUIRY_ID'), {
-      id: normalizeUuid(inquiry.id, 'INVALID_INQUIRY_ID'),
-      guideId: String(inquiry.guideId),
-      activityId: String(inquiry.activityId),
-      status: String(inquiry.status),
-      convertedBookingId: inquiry.convertedBookingId ?? null,
-      travelerUserId: inquiry.travelerUserId ?? null,
-    });
-  }
-  if (plan) {
-    planFixtureStore.set(normalizeUuid(plan.id, 'INVALID_PLAN_ID'), {
-      id: normalizeUuid(plan.id, 'INVALID_PLAN_ID'),
-      activityId: String(plan.activityId),
-      guideId: String(plan.guideId),
-      bookingType: String(plan.bookingType),
-      status: String(plan.status),
-      minParticipants: plan.minParticipants,
-      maxParticipants: plan.maxParticipants,
-      // Task 43a additive：preview 需顯示方案名／服務名（Supabase 分支分別來自
-      // activity_plans.name 與 activities.title）。既有呼叫端未傳時一律 null，
-      // 行為位元級不變（計畫 §2 D4 in-memory parity）。
-      name: plan.name ?? null,
-      activityTitle: plan.activityTitle ?? null,
-    });
-  }
-  if (traveler) {
-    travelerFixtureStore.set(String(traveler.id), {
-      id: String(traveler.id),
-      name: traveler.name ?? null,
-      email: traveler.email ?? null,
-    });
-  }
-  return { inquiry, plan, traveler };
-}
-
-export function __setMidaoBookingConfirmationClockForTest(clock) {
-  if (typeof clock === 'function') {
-    nowProvider = clock;
-    return;
-  }
-  if (typeof clock === 'string') {
-    nowProvider = () => clock;
-    return;
-  }
-  nowProvider = () => new Date().toISOString();
-}
-
-export function __setMidaoConfirmationTokenFactoryForTest(factory) {
-  tokenFactory = typeof factory === 'function' ? factory : () => randomBytes(32).toString('hex');
-}
-
-function inspectStoresForTest() {
-  return {
-    bookings: [...bookingStore.values()].map((row) => clone(row)),
-    orders: [...orderStore.values()].map((row) => clone(row)),
-    confirmationTokens: [...confirmationTokenStore.values()].map((row) => clone(row)),
-    idempotency: [...idempotencyStore.entries()].map(([key, record]) => ({ key, ...clone(record) })),
-  };
+  return seedConversionFixture(fixture);
 }
 
 // ---------------------------------------------------------------------------
 // in-memory 分支（§4.9）
 // ---------------------------------------------------------------------------
-
-function convertInMemory(command) {
-  const key = commandKey(command);
-  const existing = idempotencyStore.get(key);
-  if (existing) {
-    if (existing.requestHash !== command.requestHash) throw routeError('IDEMPOTENCY_CONFLICT');
-    if (existing.state === 'processing') throw routeError('IDEMPOTENCY_IN_PROGRESS');
-    if (existing.state !== 'completed' || !existing.responseBody) {
-      throw unexpected('Midao inquiry conversion idempotency record is invalid');
-    }
-    return conversionResult(existing.responseBody, { created: false, rawToken: null });
-  }
-
-  const inquiry = inquiryFixtureStore.get(command.inquiryId);
-  if (!inquiry) throw notFound();
-  const plan = planFixtureStore.get(command.activityPlanId) ?? null;
-  if (!plan) throw notFound();
-
-  assertConversionAllowed({
-    inquiry,
-    plan,
-    command,
-    actorGuideId: command.guideId,
-  });
-
-  const localDate = taipeiLocalDate(command.startAt);
-  let bookedParticipants = 0;
-  for (const booking of bookingStore.values()) {
-    if (booking.activityPlanId !== plan.id) continue;
-    if (booking.localDate !== localDate) continue;
-    if (!ACTIVE_BOOKING_STATUSES.has(booking.status)) continue;
-    bookedParticipants += booking.participants;
-  }
-  if (bookedParticipants + command.participants > plan.maxParticipants) {
-    throw routeError('CAPACITY_EXCEEDED');
-  }
-
-  const { raw, tokenHash } = issueConfirmationToken();
-  const createdAt = nowIso();
-  const expiresAt = new Date(
-    Date.parse(createdAt) + (command.confirmationTtlHours * 60 * 60 * 1000),
-  ).toISOString();
-  const bookingId = randomUUID();
-  const orderId = randomUUID();
-
-  orderStore.set(orderId, {
-    orderId,
-    bookingId,
-    activityId: inquiry.activityId,
-    userId: inquiry.travelerUserId,
-    participants: command.participants,
-    totalTwd: command.quotedTotalTwd,
-    status: 'pending_payment',
-    paymentStatus: 'pending',
-    // Task 40：accept 需回傳付款期限；對齊 migration 的 v_now + INTERVAL '24 hours'。
-    paymentDeadlineAt: new Date(Date.parse(createdAt) + (24 * 60 * 60 * 1000)).toISOString(),
-    createdAt,
-  });
-  bookingStore.set(bookingId, {
-    bookingId,
-    bookingNo: null,
-    orderId,
-    guideId: command.guideId,
-    activityId: inquiry.activityId,
-    activityPlanId: plan.id,
-    sourceInquiryId: inquiry.id,
-    // Task 40：accept 需驗歸屬（bookings.traveler_id ⇄ getTravelerIdentity().id 同 id space）。
-    travelerId: inquiry.travelerUserId,
-    participants: command.participants,
-    localDate,
-    startAt: command.startAt,
-    endAt: command.endAt,
-    status: 'draft',
-    guideApprovalStatus: 'approved',
-    guideApprovalNote: typeof command.guideNote === 'string' && command.guideNote.trim()
-      ? command.guideNote.trim()
-      : null,
-    travelerConfirmationStatus: 'pending',
-    travelerConfirmationExpiresAt: expiresAt,
-    createdAt,
-  });
-  // 只存 sha256；raw token 絕不進入任何 store。
-  confirmationTokenStore.set(bookingId, {
-    bookingId,
-    tokenHash,
-    expiresAt,
-    consumedAt: null,
-    createdAt,
-  });
-
-  inquiry.convertedBookingId = bookingId;
-  inquiry.status = 'converted';
-
-  const sanitized = {
-    inquiryId: inquiry.id,
-    bookingId,
-    orderId,
-    bookingNo: null,
-    bookingStatus: 'draft',
-    travelerConfirmationStatus: 'pending',
-    travelerConfirmationExpiresAt: expiresAt,
-  };
-  idempotencyStore.set(key, {
-    state: 'completed',
-    requestHash: command.requestHash,
-    responseBody: clone(sanitized),
-  });
-
-  return conversionResult(sanitized, { created: true, rawToken: raw });
-}
 
 // ---------------------------------------------------------------------------
 // Supabase 分支（§4.8）
@@ -656,7 +337,8 @@ async function convertInSupabase(command) {
 export async function convertMidaoInquiryToBookingDb(input = {}) {
   const command = normalizeCommand(input);
   if (hasSupabaseEnv()) return convertInSupabase(command);
-  return convertInMemory(command);
+  const { sanitized, created, rawToken } = convertInMemory(command);
+  return conversionResult(sanitized, { created, rawToken });
 }
 
 export const __internal = {
@@ -667,28 +349,4 @@ export const __internal = {
   violationToRouteError,
   taipeiLocalDate,
   inspectStoresForTest,
-};
-
-/**
- * Task 40 accept 模組專用的執行期接縫（additive，不改動任何既有匯出）。
- *
- * in-memory store（bookingStore／orderStore／confirmationTokenStore／
- * idempotencyStore／planFixtureStore）是模組私有 Map、未匯出；accept 分支若自建
- * store，「轉換後接受」的串接測試會失真。但把 accept 實作直接寫進本檔會讓本檔
- * 達 933 行，超過 architecture-ratchet-guard 的 800 行一般上限（該 guard 是本卡
- * GREEN_CONDITION 的必跑項），故改為單向匯出執行期把手，由
- * db-midao-traveler-confirmation.mjs 匯入。本檔不反向 import 該模組，無 ESM 循環。
- */
-export const __confirmationRuntime = {
-  ACTIVE_BOOKING_STATUSES,
-  UUID_PATTERN,
-  HASH_PATTERN,
-  bookingStore,
-  orderStore,
-  confirmationTokenStore,
-  idempotencyStore,
-  planFixtureStore,
-  clone,
-  nowIso,
-  normalizeTimestamp,
 };
