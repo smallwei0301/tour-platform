@@ -16,13 +16,31 @@ function run(command, args, cwd, options = {}) {
     cwd,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    // npm test 的 TAP 輸出超過 spawnSync 預設 maxBuffer（1MB）會觸發 ENOBUFS、
+    // status 變 null，健康的 main 被誤判 CHECKS_FAILED（#1670）。
+    maxBuffer: 64 * 1024 * 1024,
     ...options,
   });
   return {
     command: [command, ...args].join(' '),
-    exitStatus: result.status ?? 1,
+    exitStatus: result.status ?? null,
+    signal: result.signal ?? null,
+    spawnError: result.error ? String(result.error.code || result.error.message) : null,
     stdout: result.stdout ?? '',
     stderr: result.stderr ?? '',
+  };
+}
+
+function processFailed(result) {
+  return result.spawnError !== null || result.signal !== null || !Number.isInteger(result.exitStatus);
+}
+
+function failureDetail(result) {
+  return {
+    exitStatus: result.exitStatus,
+    spawnError: result.spawnError,
+    signal: result.signal,
+    outputTail: `${result.stdout}${result.stderr}`.slice(-3000),
   };
 }
 
@@ -67,13 +85,16 @@ try {
     exitCode = 2;
   } else {
     const fetchResult = run('git', ['fetch', '--quiet', 'origin', 'main'], repoRoot);
-    if (fetchResult.exitStatus !== 0) {
+    if (processFailed(fetchResult) || fetchResult.exitStatus !== 0) {
       payload = invalidBaseline('fetch_origin_main_failed', { fetch: fetchResult.stderr.trim() });
       exitCode = 2;
     } else {
       const fetchedBaseSha = git(['rev-parse', 'origin/main'], repoRoot);
       temporaryWorktree = fs.mkdtempSync(path.join(os.tmpdir(), 'tour-health-check-'));
-      run('git', ['worktree', 'add', '--detach', temporaryWorktree, 'origin/main'], repoRoot);
+      const worktreeResult = run('git', ['worktree', 'add', '--detach', temporaryWorktree, 'origin/main'], repoRoot);
+      if (processFailed(worktreeResult) || worktreeResult.exitStatus !== 0) {
+        throw new Error(`worktree_add_failed: ${JSON.stringify(failureDetail(worktreeResult))}`);
+      }
       const testedSha = git(['rev-parse', 'HEAD'], temporaryWorktree);
       const dirtyFiles = git(['status', '--porcelain'], temporaryWorktree)
         .split('\n')
@@ -103,14 +124,50 @@ try {
           ? invalidBaseline('canonical_guard_failed', provenance)
           : { status: 'PREFLIGHT_OK', productRegressionCandidate: false, ...provenance };
       } else {
-        const results = commands.map((command) => {
-          const [program, ...args] = command.split(' ');
-          const result = run(program, args, temporaryWorktree);
-          return { command, exitStatus: result.exitStatus };
-        });
-        const failed = results.some(({ exitStatus }) => exitStatus !== 0);
-        payload = { status: failed ? 'CHECKS_FAILED' : 'CHECKS_PASSED', productRegressionCandidate: failed, ...provenance, commands: results };
-        exitCode = failed ? 1 : 0;
+        // 臨時 worktree 沒有 node_modules；不先安裝依賴會讓 eslint/tsc 以 exit 127
+        // 誤報 CHECKS_FAILED（#1670）。NODE_ENV=production 會漏裝 devDependencies，
+        // 一併清除；--ignore-scripts 避免 postinstall 被受限網路擋下（lint/typecheck/test 不需要 postinstall）。
+        const installEnv = { ...process.env };
+        delete installEnv.NODE_ENV;
+        const installResult = run(
+          'npm',
+          ['install', '--no-audit', '--no-fund', '--ignore-scripts'],
+          temporaryWorktree,
+          { env: installEnv },
+        );
+        const restoreResult = run('git', ['checkout', '--', 'yarn.lock'], temporaryWorktree);
+        if (processFailed(installResult) || installResult.exitStatus !== 0) {
+          payload = invalidBaseline('dependency_install_failed', {
+            ...provenance,
+            install: { ...failureDetail(installResult), stderrTail: installResult.stderr.slice(-2000) },
+            restore: failureDetail(restoreResult),
+          });
+          exitCode = 2;
+        } else if (processFailed(restoreResult) || restoreResult.exitStatus !== 0) {
+          payload = invalidBaseline('lockfile_restore_failed', { ...provenance, restore: failureDetail(restoreResult) });
+          exitCode = 2;
+        } else if (git(['status', '--porcelain'], temporaryWorktree) !== '') {
+          payload = invalidBaseline('postinstall_dirty_worktree', provenance);
+          exitCode = 2;
+        } else {
+          const results = commands.map((command) => {
+            const [program, ...args] = command.split(' ');
+            const result = run(program, args, temporaryWorktree, { env: installEnv });
+            // 失敗時保留輸出尾段與 spawn 錯誤，否則 CHECKS_FAILED 只有 exit code、無從診斷（#1670）
+            return {
+              command,
+              exitStatus: result.exitStatus,
+              ...(processFailed(result) || result.exitStatus !== 0 ? failureDetail(result) : {}),
+            };
+          });
+          const executionInvalid = results.some((result) =>
+            (result.spawnError ?? null) !== null || (result.signal ?? null) !== null || !Number.isInteger(result.exitStatus));
+          const failed = results.some(({ exitStatus }) => exitStatus !== 0);
+          payload = executionInvalid
+            ? invalidBaseline('check_execution_failed', { ...provenance, commands: results })
+            : { status: failed ? 'CHECKS_FAILED' : 'CHECKS_PASSED', productRegressionCandidate: failed, ...provenance, commands: results };
+          exitCode = executionInvalid ? 2 : failed ? 1 : 0;
+        }
       }
     }
   }
