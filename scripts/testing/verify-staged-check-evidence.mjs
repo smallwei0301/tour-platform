@@ -150,9 +150,9 @@ export function classifyChild(childArgv, options = {}) {
 export function deriveExpectedEvidenceCmd(childArgv, options = {}) {
   const child = classifyChild(childArgv, options);
   if (child.kind === 'heavy') return childArgv.join(' ');
-  if (child.all) return 'npm test';
+  if (child.all) return 'scripts/toolchain/tp-node22.sh -- npm test';
   const doTypecheck = childArgv.includes('--typecheck');
-  return `node --test ${child.paths.join(' ')}${doTypecheck ? ' && npm run typecheck' : ''}`;
+  return `scripts/toolchain/tp-node22.sh -- node --test --test-reporter=tap ${child.paths.join(' ')}${doTypecheck ? ' && scripts/toolchain/tp-node22.sh -- npm run typecheck' : ''}`;
 }
 
 function assertSafeState(state, label) {
