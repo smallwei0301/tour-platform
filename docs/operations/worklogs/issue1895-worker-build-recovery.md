@@ -35,3 +35,12 @@
 - 不改寫 #1902 三檔歷史 snapshot、不冒稱依賴已 merge。
 - 不改 frozen harness、測試邊界、startup guards、lockfiles、模型身份／有效期 gate。
 - 不 merge／Production／DB／shared TEST／新憑證／權限／付費資源；不將普通測試稱付款 runtime 驗收。
+
+## 2026-10-19 PR 建立後證據補記
+
+- 上述驗證前快照原文保留。六檔候選已建立 [PR #1903](https://github.com/smallwei0301/tour-platform/pull/1903)，source head `763e8d5382e02b43dc37f5bc51694b31e1a6baf6`、tree `9407d1dc80b6f2c055968f5bc4889fd35732ecc5`；原 PR 保存六檔 targeted 45/45、ordinary 5890 PASS／0 FAIL／3 SKIP、typecheck／lint及 fresh independent review PASS／未解 delta findings 0，actual model unknown 保留。本補件只補紀錄，未重跑測試。
+- 2026-10-19 唯讀重查該 source head 的自然 pull_request [CI 38828521245](https://github.com/smallwei0301/tour-platform/actions/runs/38828521245)、[隔離 baseline 38828521201](https://github.com/smallwei0301/tour-platform/actions/runs/38828521201)、[secret-scan 38828521215](https://github.com/smallwei0301/tour-platform/actions/runs/38828521215)，三者 completed／success。CI job 116741560138 的 lint、typecheck、tests、build、ISR smoke、preflight 均 success；scan job 116741560712 的 secret scan success。
+- Baseline job 116741560360 的 provisioning、deterministic builder、適用 PostgreSQL／PostgREST runtime、infrastructure、browser／API chain／legacy login steps 均 success；歷史 #1811 required-write RED probe及 failure evidence upload 為 skipped，不算實跑。本次未從 step 終態新增推算測試數量，亦不作 Production 或 Blob 試驗驗收主張。
+- [Codex 摘要](https://github.com/smallwei0301/tour-platform/pull/1903#issuecomment-6227767946)綁同一 source head，Code／Security completed、無可見 findings；本次沒有觸發新審查。PR 已 Ready、尚未合併，舊 Draft 敘述為歷史。
+- #1902 仍未合併；其最新文件 head `92605afd5dcce6ebeef4a952f067305e2c4c0536` 已更新自己的 staged-evidence companion。本 PR 仍攜帶其較早三檔 snapshot；本次只追加自己的 worker-build companion，不改繼承檔，也不以較舊版本覆寫 #1902 新紀錄。這個獨立文件補件不必等待 #1902 baseline，但完整整合／merge仍須核對依賴及各自適用 gate，不接管 #1895 media imports／CSP hunks或重啟 Blob sync。
+- D7 的 parent Issue 映射尚未核定：現有關聯 #1895 是 PR，不能當作 Issue；本次不擅自把付款 Issue #1893 或無直接關聯的舊票當 parent。文件與本 PR 的錨點可先補，Issue 雙寫仍明列未完成。以上 CI／審查屬原 source head，不沿用為後續文件 head 已通過；新 head 的適用 CI／獨立審查、依賴整合與完整發布 gate 仍須另核，不宣稱產品或 Production 驗收完成。
