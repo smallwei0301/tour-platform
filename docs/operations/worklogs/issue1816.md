@@ -95,3 +95,11 @@ AC施工證據（均待父流程fresh audit；不自行驗收結案）：
 - 不跑 `midao-inquiry-convert-rpc.test.mjs`：它需要真 PG；fake RPC 在 `midao-inquiry-convert.test.mjs`。
 - reset 只清資料，clock/token setters 分開 restore；不建立 shadow stores，不匯出 Map/generic get-set/live rows 作最終 seam。
 - 單批 added+deleted 預估超300先拆；總搬遷超300需 aggregate 獨審，不稱小改。
+
+## 2026-10-19 PR 建立後證據補記
+
+- 上述施工與驗證前快照原文保留。原候選已建立 [Draft PR #1901](https://github.com/smallwei0301/tour-platform/pull/1901)，source head `64fa04f286ee299bf2845b66a89f095c83751b31`、tree `e9cc7b18fb9a34792fce7c50a0d04e0062d7cda2`；「尚未 commit/push/PR」不代表目前仍未建立 PR。本補件不修改 source/tests 或既有審查收據。
+- 2026-10-19 唯讀重查該 source head 關聯的自然 pull_request [CI 38775939421](https://github.com/smallwei0301/tour-platform/actions/runs/38775939421) completed／success；job 116563465176 的 lint、typecheck、tests、build、ISR smoke、preflight 均 success。[Secret scan 38775939324](https://github.com/smallwei0301/tour-platform/actions/runs/38775939324) completed／success，job 116563467345 的 secret scan step success。本次沒有重跑測試，未從 step 終態新增推算測試數量。
+- [Midao baseline 38775939270](https://github.com/smallwei0301/tour-platform/actions/runs/38775939270) completed／failure。job 116563465505 在 `Provision digest-bound database and API images` 失敗；原 log 實有四次 `Error response from daemon: toomanyrequests: Data limit exceeded`，最後於 2026-10-15T17:18:19.8755441Z exit 1。後續 deterministic builder、runtime contracts、Chromium install、browser／API chain／legacy login 均 skipped；failure evidence upload success 不代表 browser 通過。
+- AC7 維持 HOLD／NOT_VERIFIED-live：完整 Midao reusable browser 與一般 booking checkout 驗收尚未齊備。既有 focused checkout、memory/fake Supabase parity、source CI 綠燈不替代該 gate；不歸因 OOM 或產品 source，不盲 rerun、不提升 registry 額度或變更憑證。
+- PR 維持 Draft，Issue 目標是否已直接驗證仍為 no。以上證據綁原 source head，不沿用為本文件後續新 head 已通過；新 head 適用 CI／獨立審查、Issue 雙寫、完整 browser 與正式 sign-off 仍須完成，不 Ready／merge／關票／部署或操作真 DB。
