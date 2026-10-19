@@ -49,3 +49,14 @@
 - 獨立審查：不同 actor 對原候選 exactDiff `dc5b4eaf59d1d9b747ee8b78c98f5217831482f1d712dc4db0d2097729f977bd` 判 `BOUNDED_PASS`、0 unresolved findings，獨立重跑 28 個 focused＋17 個對抗案例皆 PASS；不代表完整發布驗收。其後只移除 runner 末尾多餘空白行並更新本段證據，無行為變更；該小差異仍需獨立覆核。
 - 限制：全量 tests／lint／typecheck／實際 canonical runner／CI 與發布 gates 尚未在本紀錄中判 PASS，不得以 focused 或 bounded audit 代替完整驗收。沒有執行 install 或擴大權限以補足缺口。
 - Ownership：沿用原 worklog owner／後續 session 接續；本候選不改其他測試 fixture、不復活 #1774 混合修改。尚未 commit、push、建立 PR、merge 或關 issue。
+
+
+## 2026-10-19 PR #1906 發布前證據補件
+
+- 本段補充上述凍結快照之後的證據；歷史未完成記錄保留。候選分支為 `ava/issue1670-runner-recovery-20261017`，程式版本為 `4339360ca33fbc837ee4956b61266c5fe914f765`，PR：https://github.com/smallwei0301/tour-platform/pull/1906。
+- exact-head CI：https://github.com/smallwei0301/tour-platform/actions/runs/38987097748/job/117260988943。Migration source gate、Web lint、Web typecheck、Web tests、Web build、ISR smoke、Preflight 均 SUCCESS；secret scan：https://github.com/smallwei0301/tour-platform/actions/runs/38987097715/job/117260988972，SUCCESS。
+- 獨立 code/security review：https://github.com/smallwei0301/tour-platform/pull/1906#issuecomment-6227472748。兩者皆綁定上述程式 head、completed，has_any_findings=false、has_unresolved_findings=false；不據此推定審查模型身分。
+- 2026-10-19 07:59（Asia/Taipei）由補件準備者查核，08:02 獨立覆核：另外 24 個 open PR 對本候選 runner、專用測試、worklog 三檔均無路徑重疊。main 相較本候選原 base `12c6bc05809db8b7bf513842f0a1a45c47eb7960` 僅新增 readiness 報告更新。
+- 本次補件僅追加 worklog，不修改程式與測試。以上 CI／review 是程式 head 的歷史證據，不冒充補件後新 head 的結果；合併前仍須回讀新 head 的自然 CI 終局、獨立文件差異審查與未解 findings，將結果同步本 issue／PR。
+- 尚未驗證：真實 canonical daily-health runner、外部每日任務改用新版、合併後 main CI 與 Production 驗收。本 PR 合併或 Vercel READY 不代表完整 #1670 已驗收，不關閉 issue。
+- 下一步與責任：Ava 核對補件後 exact head、必要 CI／獨立審查／ownership，符合有效授權與 gates 才合併，讀回 main CI 與既有 Vercel 自動 Production 建置／alias 切換結果；外部每日任務切換保持未驗證，不擴大為 DB、憑證、權限或手動部署操作。
