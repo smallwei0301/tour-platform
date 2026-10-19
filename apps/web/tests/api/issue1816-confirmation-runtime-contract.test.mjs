@@ -9,7 +9,7 @@ for (const mode of ['control', 'recording']) {
     // A nested runner must not inherit the parent's child-v8 test protocol.
     delete env.NODE_TEST_CONTEXT;
     const child = spawnSync(process.execPath, [
-      '--experimental-test-module-mocks', '--experimental-strip-types', '--test',
+      '--experimental-test-module-mocks', '--experimental-strip-types', '--test', '--test-reporter=tap',
       fileURLToPath(new URL('./fixtures/issue1816-access-probe.mjs', import.meta.url)),
     ], { env, encoding: 'utf8' });
     assert.equal(child.status, 0, child.stdout + child.stderr);

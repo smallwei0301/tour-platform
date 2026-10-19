@@ -103,3 +103,11 @@ AC施工證據（均待父流程fresh audit；不自行驗收結案）：
 - [Midao baseline 38775939270](https://github.com/smallwei0301/tour-platform/actions/runs/38775939270) completed／failure。job 116563465505 在 `Provision digest-bound database and API images` 失敗；原 log 實有四次 `Error response from daemon: toomanyrequests: Data limit exceeded`，最後於 2026-10-15T17:18:19.8755441Z exit 1。後續 deterministic builder、runtime contracts、Chromium install、browser／API chain／legacy login 均 skipped；failure evidence upload success 不代表 browser 通過。
 - AC7 維持 HOLD／NOT_VERIFIED-live：完整 Midao reusable browser 與一般 booking checkout 驗收尚未齊備。既有 focused checkout、memory/fake Supabase parity、source CI 綠燈不替代該 gate；不歸因 OOM 或產品 source，不盲 rerun、不提升 registry 額度或變更憑證。
 - PR 維持 Draft，Issue 目標是否已直接驗證仍為 no。以上證據綁原 source head，不沿用為本文件後續新 head 已通過；新 head 適用 CI／獨立審查、Issue 雙寫、完整 browser 與正式 sign-off 仍須完成，不 Ready／merge／關票／部署或操作真 DB。
+
+
+## 2026-10-19 child reporter P2 修復
+
+- Codex finding discussion_r4309458397 指出 child 未指定 reporter，Node24 預設 ℹ 摘要與父測試要求的 TAP 計數不符；只在 spawn argv 加上 --test-reporter=tap，保留 exit、tests=2、pass=2、skipped=0 與 NODE_TEST_CONTEXT 隔離，未改產品碼或 oracle。
+- exact source head 86101a2a4796d85d94a345c33d5d072bbeea7132 的 21 檔 import closure 已逐檔核 Git blob。Node24.19／24.21 真 RED→GREEN；Node22.23.1 base 與 candidate 均 2/2 PASS，原 run-checks focused exit0。三版本 native control/recording child 2/2/0；zero／fail／skip 負控均使父 exit1，保留原始結果，不把 Node24 替代 Node22。
+- 官方 Node22.23.1 archive 與原 wrapper 的完整 files／links digest 已驗，使用臨時工作目錄；系統預設不變。不同 actor fresh-context 獨立重跑 Node22 與 Node24 focused／負控，PASS-in-scope、未解本修正 findings 0，actual model unknown。
+- 本機只有 exact import closure，沒有完整 checkout／依賴；full ordinary/typecheck 未本機執行。此為既有 PR 的小增量，依 D2 在 commit 前取得 fresh targeted 證據；新 head 必須自然 CI（含 full ordinary/typecheck）終局與審查回讀後才評估 merge。此段不預填新 commit 或新 CI，也不將舊 head PASS 沿用為新 head 結果。
