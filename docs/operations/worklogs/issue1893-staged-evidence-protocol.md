@@ -37,3 +37,12 @@
 - 不更動 Node22、30 分鐘、child/evidence exit、exact tree/blob、coverage、secret、heavy allowlist、模型身份與發布 gate；不借本修復擴修已知 coverage 缺陷。
 - 保留原 RED、ordinary warning 失敗、unknown identity 與舊 trace 缺口；不改寫歷史證據，不以舊 tree PASS 代替新 tree 驗收。
 - 不執行 DB／TEST／Production、heavy runner、部署、憑證、網路、權限或付費變更；不將 source 通過稱付款 runtime 已修復。
+
+## 2026-10-19 PR 建立後證據補記
+
+- 上述驗證前快照原文保留。原三檔候選已建立 [PR #1902](https://github.com/smallwei0301/tour-platform/pull/1902)，source head `97336d140114e2125587caba8df771ddd178a907`、tree `8ae61f3c4db9084890c709eabfbd6365487df89d`；「未 commit／push」不代表目前仍未建立 PR。
+- 原三檔驗證及獨立審查收據見 [Issue #1893 里程碑](https://github.com/smallwei0301/tour-platform/issues/1893#issuecomment-6199460296)：targeted 41/41、typecheck、ordinary 5886 PASS／0 FAIL／3 SKIP、check-only／bash-guard；獨立 delta review PASS／未解 finding 0，actual model unknown 保留。本補記沒有重跑或改寫歷史測試。
+- 2026-10-19 唯讀重查 source head 關聯的自然 pull_request [CI 38786660911](https://github.com/smallwei0301/tour-platform/actions/runs/38786660911)、[隔離 baseline 38786660838](https://github.com/smallwei0301/tour-platform/actions/runs/38786660838)、[secret-scan 38786667536](https://github.com/smallwei0301/tour-platform/actions/runs/38786667536)，三者均 completed／success。CI job 116600281128 的 lint、typecheck、tests、build、ISR、preflight 均 success；scan job 116600307923 的 secret scan success。
+- Baseline job 116600280909 的 provisioning、deterministic builder、適用 PostgreSQL／PostgREST runtime、infrastructure、browser、API chain 與 legacy login steps 均 success；歷史 #1811 required-write RED probe 及 failure evidence upload 為 skipped，不算實跑。這次 step readback 更正[先前終局留言](https://github.com/smallwei0301/tour-platform/pull/1902#issuecomment-6199807946)把 skipped probe 標成 #1818 的文字，原留言與歷史結果不改寫。
+- [Codex 摘要](https://github.com/smallwei0301/tour-platform/pull/1902#issuecomment-6227720403)綁同一 source head，Code／Security 均 completed、無可見 findings；本次沒有觸發新審查。PR 已 Ready、尚未合併；舊 Draft 敘述為歷史，合併前仍須重新核對 current main、head、必要 checks 與所有適用 gate。
+- 以上 CI／審查屬原 source head，不能冒稱本文件後續新 head 已通過。既有 all-only coverage 缺陷未擴修，#1894／#1887 產品 ownership 不變；新 head 的適用 CI／獨立審查、Issue 雙寫與完整發布 gate 仍須完成，不宣稱 #1893 付款全案或 Production 驗收完成。
