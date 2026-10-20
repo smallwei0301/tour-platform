@@ -1,19 +1,20 @@
-<!-- query_timestamp: 2026-10-19T05:05:08.035Z -->
+<!-- query_timestamp: 2026-10-20T05:04:52.636Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-10-19T05:05:08.035Z  
-**Commit SHA:** `b83b8c51dbcb4a806cf9cc6d2f7bd6713a60ea3e`
+**Query timestamp:** 2026-10-20T05:04:52.636Z  
+**Commit SHA:** `5d68a11a7e93021e7f7cca8e0f02368f9b9ec764`
 
 ---
 
-## Open PRs (25)
+## Open PRs (24)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1907 | [fix(guide): 接續頭像裁切並修正過期回呼與重複確認（#1534）](https://github.com/smallwei0301/tour-platform/pull/1907) _(draft)_ | `verify/issue1534-cloud-20261019` |
 | #1906 | [fix: 每日健康檢查區分執行失效與產品回歸（#1670）](https://github.com/smallwei0301/tour-platform/pull/1906) | `ava/issue1670-runner-recovery-20261017` |
 | #1905 | [chore(claude): 放行 gh 讀取、workflow 派送與 PR 留言／審查寫入](https://github.com/smallwei0301/tour-platform/pull/1905) _(draft)_ | `ccr-61cf40aa-0wsxsk` |
 | #1903 | [fix(build): 啟用 webpack build worker，明示 #1902 前置依賴](https://github.com/smallwei0301/tour-platform/pull/1903) | `fix/webpack-build-worker-recovery-20261016` |
@@ -32,13 +33,11 @@
 | #1776 | [feat(shop): 完成導遊商店匯款 beta 文案與 SOP（#1607）](https://github.com/smallwei0301/tour-platform/pull/1776) _(draft)_ | `fix/issue-1607-guide-shop-beta` |
 | #1690 | [docs(security): 建立「已接受安全風險」定案清單](https://github.com/smallwei0301/tour-platform/pull/1690) | `claude/code-workflow-architecture-mmm4ba` |
 | #1687 | [修正排程管理的持久稽核機制](https://github.com/smallwei0301/tour-platform/pull/1687) | `kanban/issue-1686-durable-audit` |
-| #1651 | [docs(#1649): 訂單／退款／金流 v2 全面串接計劃書＋worklog（docs-only）](https://github.com/smallwei0301/tour-platform/pull/1651) | `claude/issue1649-v2-migration-plan` |
 | #1602 | [feat(ui): redesign guide shop booking flow](https://github.com/smallwei0301/tour-platform/pull/1602) | `ui/midao-shop-booking-redesign` |
 | #1534 | [feat(guide): 導遊大頭照上傳支援自選裁切範圍與大小](https://github.com/smallwei0301/tour-platform/pull/1534) | `claude/guide-profile-photo-crop-2vbzrr` |
 | #1469 | [導遊後台：新增 Dashboard 首頁與指標卡（免費/付費分級）](https://github.com/smallwei0301/tour-platform/pull/1469) | `codex/-dashboard` |
 | #1438 | [Use next/font variables in globals, set CJK fonts to `display: optional`, and scope serif usage to LP/brand](https://github.com/smallwei0301/tour-platform/pull/1438) | `codex/improve-homepage-loading-speed` |
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
-| #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
 ## Open Issues (69 total)
 
