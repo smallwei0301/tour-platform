@@ -66,11 +66,14 @@ export async function GET(req: Request) {
   // Build maps keyed by booking_id: hasConflictOverride (compact marker) and activity_plan_id
   const conflictOverrideMap: Record<string, boolean> = {};
   const bookingPlanIdMap: Record<string, string> = {};
+  // bookings 查詢失敗時，有 booking_id 的訂單無法確認 booking 方案：planId／planName 回 null，不退回 schedule.plan_id
+  let bookingsLookupFailed = false;
   if (bookingIds.length > 0) {
-    const { data: bookings } = await supabase
+    const { data: bookings, error: bookingsError } = await supabase
       .from('bookings')
       .select('id, conflict_override_snapshot, activity_plan_id')
       .in('id', bookingIds);
+    if (bookingsError || !bookings) bookingsLookupFailed = true;
     for (const booking of bookings || []) {
       if (booking.conflict_override_snapshot) {
         conflictOverrideMap[booking.id] = true;
@@ -86,7 +89,10 @@ export async function GET(req: Request) {
   // 非 UUID 值放進 .in('id', …) 會讓整個查詢失敗，所以分組處理，任一組失敗只影響該組。
   const resolveRawPlanKey = (o: any): string | null => {
     const schedule = Array.isArray(o.activity_schedules) ? o.activity_schedules[0] : o.activity_schedules;
-    return (o.booking_id ? bookingPlanIdMap[o.booking_id] : undefined) ?? schedule?.plan_id ?? null;
+    if (o.booking_id && bookingsLookupFailed) return null;
+    const raw: string | null = (o.booking_id ? bookingPlanIdMap[o.booking_id] : undefined) ?? schedule?.plan_id ?? null;
+    // UUID 不分大小寫，統一小寫後再查詢與比對
+    return raw && UUID_RE.test(raw) ? raw.toLowerCase() : raw;
   };
   const rawKeys = Array.from(new Set((orders || []).map(resolveRawPlanKey).filter((id: any): id is string => Boolean(id))));
   const uuidKeys = rawKeys.filter((k) => UUID_RE.test(k));
