@@ -34,3 +34,25 @@
 - 本 worklog commit 的 head CI 綠燈後 merge，並在 PR 留言記錄 merge commit
 - 追蹤（另案）：`sendEmailWithContract` 把 Resend 錯誤回應記成 `sent`；空收件人應在呼叫 provider 前就略過
 - 追蹤（另案）：雲端執行環境帶有正式服務金鑰（Supabase service role、Resend），建議改為測試金鑰或移除
+
+## 後續：同步 vibeaico #1094 的計分修正（2026-10-22 11:40 Asia/Taipei）
+
+- 來源：PR #1908 merge 後，Codex 回報移植的計分腳本有 3 個問題（P1×2、P2×1），在 VibeAI 原版相同。依 Owner 指示先修原版：vibeaico Issue #1093 → PR #1094，squash 為 `ddd15873`，main CI success。
+- 同步內容：
+  - `run-ledger-v2`、`score-run-current`、`scorecard-readiness` 三支腳本：扣掉來源標頭後與 `ddd15873` 逐字相同。
+  - 七個移植檔與 `docs/metrics/README.md` 的來源 SHA 都改成 `ddd15873`。
+  - `agent-metrics-observed-scorecard.460` 同步 12 個新案例。
+- 分派：
+  - build／`sonnet`：commit `394fcaa6`。
+  - audit／`opus`，fresh context：PASS，blocking 0。6 個刻意植入的錯誤全部被測試抓到。
+  - 兩次派工的 before 與 receipt 都跑過 `dispatch-preflight.mjs` 並通過，但 `dispatchedAt` 是推估值（`UTC_EVIDENCE_RECORDED_NOT_PLATFORM_VERIFIED`），requested 分別為 `sonnet`／`opus`，平台無法證明實際模型，actual 記 unknown。
+- 證據：
+  - `run-checks.sh agent-metrics-*`：95/95。
+  - 修正前（舊腳本）跑新案例：9 個失敗。
+- 分支整理：遠端工作分支仍留著已 squash 的舊 commit，以 merge commit `9368f750` 接回，檔案樹不變，沒有 force-push。
+- 未包含：merge 長期授權規則文件。這部分被 auto mode 分類器擋下（Self-Modification），等 Owner 處理，不在本 PR。
+- PR #1909 的 head `683f9068` CI：
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39724261824/job/119644466443)：success
+  - [secret-scan](https://github.com/smallwei0301/tour-platform/actions/runs/39724261780/job/119644466234)：success
+  - Vercel：success
+- Codex code review 與 security review 皆完成，無 finding。依 Owner 2026-10-22「不用我授權merge」指示自行 merge。
