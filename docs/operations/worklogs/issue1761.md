@@ -113,3 +113,30 @@
   - Vercel：success
 - browser 證據：`smoke` job 在 CI Chromium 跑 `midao2-request-conversion.spec.ts`，新案例 `midao2 request detail back link returns to the midao2 request list` PASS，整體 15/15。`midao-baseline-e2e` 的路徑條件只涵蓋 `midao-*`，本 PR 不會觸發這條 lane。
 - 下一步：本 worklog commit 的 head CI 綠燈後，依 merge 長期授權自行 merge，然後讀回確認並回寫 #1761。
+
+### merge 後讀回（2026-10-22 17:58 Asia/Taipei）
+- PR #1913：`merged=true`，`merged_at=2026-10-22T09:54:25Z`，`merge_commit_sha=ac537496`。
+- main：merge commit 是當時的 main head，可由 main 到達。在 main 上重讀 `RequestDetailScreen.tsx`（`listHref`）與 `midao2/requests/[id]/page.tsx`，內容符合預期。
+- main CI（`ac537496`）：
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39759026643/job/119758258479)：success
+  - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39759026397/job/119758255597)：success
+- #1761 里程碑留言：<https://github.com/smallwei0301/tour-platform/issues/1761#issuecomment-6337929167>
+- Production：
+  - main 由 Vercel 自動部署，沒有手動 deploy。
+  - 還沒有做 authenticated acceptance，記為 `PRODUCTION_PENDING`。
+- Run `2026-10-22-midao2-r01` 已 closeout（COMPLETE）。評分狀態 `NOT_GRADED`，唯一原因是正式環境還沒做 authenticated acceptance。
+
+### B+ 六步自檢
+1. Luna 窄盤點：做了。4 個 scout 任務，全部接受。
+2. Sol TRIAGE：做了。MAIN 定為本切片；風險由預設 high 下修為 normal，理由已記錄。
+3. MAIN Terra 施工：做了，由 sonnet 施工，主 Agent 沒有自己寫程式。
+4. LUNA_CLOSURE：做了。結果為 EMPTY_WITH_SCAN，6 項各附理由。
+5. 即時埋點：做了，但有兩項缺失：
+   - 帳本由 audit 層寫入，違反 scout 路徑判準，已記為違規。
+   - WIP 事件一度缺必填欄位，Codex 抓到後已修。
+6. 收尾判定：做了。Completion Truth 六項都已讀回；Production 仍 pending。
+
+### 下一輪
+- MAIN 依 routing 順序：multi-plan 跨介面保真。
+- Closure：#1827 的未完成 AC 需要搬到 #1863。
+- 另案：`mark-replied` 的 idempotency key 沒有寫入 DB。
