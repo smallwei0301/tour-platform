@@ -213,6 +213,19 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "medium",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-sol-reaudit2-1761",
+        "role": "Sol 第三次審查（新 actor，Codex P1 修正後）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
         "accepted": false,
         "inputTokens": null,
         "outputTokens": null,
@@ -233,7 +246,7 @@
     "cycleTimeMinutes": null
   },
   "ci": {
-    "fullCiRuns": null,
+    "fullCiRuns": 40,
     "invalidReruns": 0,
     "firstPassRatePercent": null,
     "sharedTestCollisions": 0
@@ -257,7 +270,7 @@
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
     "waitTimeConvertedPercent": null,
-    "solTouches": 3,
+    "solTouches": 4,
     "solIssues": 1
   },
   "auditability": {
@@ -277,7 +290,8 @@
     "預盤點 /midao2/me：身分只取 session、無目標 id → 無越權路徑；GAP：updateGuideExperienceYearsDb 用 Number() 寬鬆轉型（\"\"/null→0、true→1）、profile-extras 無 401/403 行為測試；頁面註解宣稱可編輯服務區域但未實作。",
     "預盤點 calendar：/midao/calendar 為靜態占位無寫入；midao2 寫入走 /api/v2/guide/midao/availability/{days/[date] PUT, defaults POST}，有 expectedRevision CAS 與 idempotency；單日衝突 409、週模板衝突 200+conflicts[]（語意不一致，疑似 GAP）。未涵蓋 pre-Midao /guide/** 檔期管理（真正的 legacy 寫入面）→ 下一輪需補盤點後才能判定 round-trip。",
     "Codex P1（a1e1ff4）：legacy text schedule.plan_id 混入 activity_plans.id UUID IN 查詢 → 整體失敗、planName 全清空；兩次 Sol 審查與自寫 stub 均未發現（stub 不模擬 UUID 型別錯誤）。",
-    "ci.fullCiRuns 暫設 null，closeout 前以 gh api actions/runs 實數填入。"
+    "ci.fullCiRuns 暫設 null，closeout 前以 gh api actions/runs 實數填入。",
+    "更正：rework3 派工時間原估 11:15:30Z，早於其 before record（11:16:52Z），改為 11:17:05Z；WIP r02-wip-12/13/14 同步更正（仍為推估值）。ci.fullCiRuns 以 gh api actions/runs（branch、created>=startedAt）實數填入，截至 11:19:13Z。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
@@ -400,6 +414,46 @@
         "head": "5b0093db72a9d2db3d7c0653ae5aa3071d3bd50f",
         "workstream": "PRODUCT_MAINLINE",
         "reason": "主 Agent 複驗 M5 被擋；CI 與 Codex review"
+      },
+      {
+        "id": "r02-wip-12",
+        "at": "2026-10-22T11:16:50Z",
+        "kind": "VERIFY_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "5b0093db72a9d2db3d7c0653ae5aa3071d3bd50f",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Codex P1：legacy plan id 混入 UUID IN"
+      },
+      {
+        "id": "r02-wip-13",
+        "at": "2026-10-22T11:17:05Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "404dffe3e03bd02356d77bc467666f83d2921809",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "rework3 派回 sonnet"
+      },
+      {
+        "id": "r02-wip-14",
+        "at": "2026-10-22T11:18:20Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "404dffe3e03bd02356d77bc467666f83d2921809",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "404dffe3，20/20，RED 6 fail 重現"
+      },
+      {
+        "id": "r02-wip-15",
+        "at": "2026-10-22T11:18:40Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "404dffe3e03bd02356d77bc467666f83d2921809",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Sol 第三次審查與 CI"
       }
     ]
   },
