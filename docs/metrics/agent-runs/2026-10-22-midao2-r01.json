@@ -1,19 +1,19 @@
 {
   "schemaVersion": 2,
   "runId": "2026-10-22-midao2-r01",
-  "status": "IN_PROGRESS",
+  "status": "COMPLETE",
   "startedAt": "2026-10-22T09:30:38.136Z",
-  "endedAt": null,
+  "endedAt": "2026-10-22T10:00:00Z",
   "sources": [],
   "main": {
-    "startSha": null,
-    "endSha": null
+    "startSha": "f6b138d5cc743679e77420a08dbaa833b831874a",
+    "endSha": "ac537496e5f96bc6326f7dc7bee16e6c0f7a693a"
   },
   "inventory": {
-    "openIssuesStart": 93,
-    "openIssuesEnd": null,
-    "openPrsStart": null,
-    "openPrsEnd": null,
+    "openIssuesStart": 69,
+    "openIssuesEnd": 71,
+    "openPrsStart": 24,
+    "openPrsEnd": 24,
     "mainTerraPeak": 1,
     "reserveTerraPeak": 0,
     "activeCandidatePeak": 1,
@@ -235,7 +235,7 @@
     "cycleTimeMinutes": null
   },
   "ci": {
-    "fullCiRuns": 3,
+    "fullCiRuns": 25,
     "invalidReruns": 0,
     "firstPassRatePercent": null,
     "sharedTestCollisions": 0
@@ -267,15 +267,22 @@
     "preciseBlockersPercent": null,
     "scoreInputsCompletePercent": null
   },
-  "notes": [],
+  "notes": [
+    "openIssuesStart 原誤記為 93（issue+PR 合計），依開工快照 tour-open.tsv 更正為 69 issue／24 PR。",
+    "#1827 為 ADVANCEABLE（未完成 AC 需搬入 #1863），本 Run 未處理，留給下一輪 Closure。",
+    "盤點發現：mark-replied idempotency key 未落 DB、client 重試換新 key；屬 command 語意變更，另案。",
+    "closeout 後更正 MERGED_TO_MAIN／CI_GREEN 的 claimedState 與 observedState 寫法：原 observedState 加了說明文字，被計分器逐字比對判為矛盾；事實未變，說明移到 evidenceRef。",
+    "MERGED_TO_MAIN 改用 canonical issue subject（issue#1761）與 merged 狀態（Codex P2）；merge commit ac537496 可由 origin/main 到達（git merge-base --is-ancestor），證據見 #1761 留言 6337929167。",
+    "ci.fullCiRuns 改為實數 25：GitHub Actions 於 Run 期間在 ccr-80d3864e-9i7mop 觸發 23 個 workflow run（含 #1914 head 229732f3 的 2 個），加 main@ac537496 的 ci 與 secret-scan 共 2 個；先前以 head 數粗估（Codex P2）。"
+  ],
   "deliveryTruthVersion": 4,
   "closeout": {
     "contractVersion": 1,
     "ownerRole": "PRODUCT_MAIN_SESSION",
     "terminalPolicy": "CLOSE_OR_REASSIGN_BEFORE_SESSION_EXIT_OR_OWNER_STOP_OR_SCOPE_EXHAUSTED_OR_OWNER_BLOCKED",
-    "state": "OPEN",
-    "closedAt": null,
-    "evidenceRef": null
+    "state": "CLOSED",
+    "closedAt": "2026-10-22T10:00:00Z",
+    "evidenceRef": "github:issue#1761"
   },
   "wipLifecycle": {
     "schemaVersion": 1,
@@ -319,12 +326,73 @@
         "head": "4dddcae5ff62f51d16911f1a642ea0103c78b377",
         "workstream": "PRODUCT_MAINLINE",
         "reason": "Codex P1：WIP 事件缺必填欄位，修正帳本產生新 head"
+      },
+      {
+        "id": "r01-wip-5",
+        "at": "2026-10-22T09:47:40Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1913,
+        "issue": 1761,
+        "head": "1617febbf8baa26c4c036a63bb5c8684a76dd27d",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "最終 head CI 與 merge 前檢查"
+      },
+      {
+        "id": "r01-wip-6",
+        "at": "2026-10-22T09:54:25Z",
+        "kind": "VERIFY_EXIT",
+        "pr": 1913,
+        "issue": 1761,
+        "head": "1617febbf8baa26c4c036a63bb5c8684a76dd27d",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "merged as ac537496"
       }
     ]
   },
   "completionTruth": {
-    "status": "NOT_CHECKED",
-    "checkedAt": null,
-    "claims": []
+    "status": "VERIFIED",
+    "checkedAt": "2026-10-22T09:58:00Z",
+    "claims": [
+      {
+        "type": "PR_MERGED",
+        "subject": "smallwei0301/tour-platform#1913",
+        "claimedState": "merged",
+        "observedState": "merged",
+        "verification": "VERIFIED",
+        "evidenceRef": "github:pull#1913 merged_at=2026-10-22T09:54:25Z"
+      },
+      {
+        "type": "MERGED_TO_MAIN",
+        "subject": "issue#1761",
+        "claimedState": "merged",
+        "observedState": "merged",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/issues/1761#issuecomment-6337929167"
+      },
+      {
+        "type": "CI_GREEN",
+        "subject": "main@ac537496",
+        "claimedState": "success",
+        "observedState": "success",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/actions/runs/39759026643/job/119758258479 (test) + run 39759026397 (scan)"
+      },
+      {
+        "type": "AUTHENTICATED_PRODUCTION_ACCEPTED",
+        "subject": "midao2 request detail back link",
+        "claimedState": "PRODUCTION_PENDING",
+        "observedState": "not checked",
+        "verification": "UNVERIFIED",
+        "evidenceRef": ""
+      },
+      {
+        "type": "RUN_COMPLETE",
+        "subject": "2026-10-22-midao2-r01",
+        "claimedState": "COMPLETE",
+        "observedState": "COMPLETE",
+        "verification": "VERIFIED",
+        "evidenceRef": "github:issue#1761 comment 6337929167; run-ledger-v2 closeout VALID_V2"
+      }
+    ]
   }
 }
