@@ -73,6 +73,20 @@
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
+      },
+      {
+        "id": "r03-terra-main-1761",
+        "role": "MAIN Terra：midao2 calendar 唯讀疊加 blackout",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-22T12:41:27Z"
       }
     ],
     "fullContextReplays": 0,
