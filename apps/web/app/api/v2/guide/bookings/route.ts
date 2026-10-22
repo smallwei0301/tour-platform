@@ -6,6 +6,8 @@ import { ok, fail } from '../../../../../src/lib/api';
 import { verifyGuideSession, maskEmail } from '../../../../../src/lib/guide-auth';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
   return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
@@ -79,32 +81,52 @@ export async function GET(req: Request) {
     }
   }
 
-  // planId 優先取 bookings.activity_plan_id，其次 schedule.plan_id；名稱只採用屬於本導遊 activity 的 plan
-  const resolvePlanId = (o: any): string | null => {
+  // 候選 plan 識別碼：bookings.activity_plan_id 優先，其次 schedule.plan_id。
+  // schedule.plan_id 是 text（legacy 識別碼如 'half-day'），activity_plans.id 是 UUID：
+  // 非 UUID 值放進 .in('id', …) 會讓整個查詢失敗，所以分組處理，任一組失敗只影響該組。
+  const resolveRawPlanKey = (o: any): string | null => {
     const schedule = Array.isArray(o.activity_schedules) ? o.activity_schedules[0] : o.activity_schedules;
     return (o.booking_id ? bookingPlanIdMap[o.booking_id] : undefined) ?? schedule?.plan_id ?? null;
   };
-  const planIds = Array.from(new Set((orders || []).map(resolvePlanId).filter((id: any): id is string => Boolean(id))));
-  const planMap: Record<string, { name: string | null; activity_id: string }> = {};
-  if (planIds.length > 0) {
+  const rawKeys = Array.from(new Set((orders || []).map(resolveRawPlanKey).filter((id: any): id is string => Boolean(id))));
+  const uuidKeys = rawKeys.filter((k) => UUID_RE.test(k));
+  const legacyKeys = rawKeys.filter((k) => !UUID_RE.test(k));
+
+  type PlanRow = { id: string; name: string | null; activity_id: string };
+  const planById: Record<string, PlanRow> = {};
+  const planByLegacy: Record<string, PlanRow> = {}; // key = `${activity_id}\u0000${legacy_plan_id}`
+  if (uuidKeys.length > 0) {
     const { data: plans } = await supabase
       .from('activity_plans')
       .select('id, name, activity_id')
-      .in('id', planIds);
+      .in('id', uuidKeys);
     for (const plan of plans || []) {
-      if (activityIdSet.has(plan.activity_id)) {
-        planMap[plan.id] = { name: plan.name ?? null, activity_id: plan.activity_id };
-      }
+      if (activityIdSet.has(plan.activity_id)) planById[plan.id] = plan;
+    }
+  }
+  if (legacyKeys.length > 0) {
+    const { data: plans } = await supabase
+      .from('activity_plans')
+      .select('id, name, activity_id, legacy_plan_id')
+      .in('legacy_plan_id', legacyKeys)
+      .in('activity_id', activityIds);
+    for (const plan of plans || []) {
+      if (!activityIdSet.has(plan.activity_id) || !plan.legacy_plan_id) continue;
+      const key = `${plan.activity_id}\u0000${plan.legacy_plan_id}`;
+      if (!planByLegacy[key]) planByLegacy[key] = plan;
     }
   }
 
   const result = (orders || []).map((o: any) => {
     const schedule = Array.isArray(o.activity_schedules) ? o.activity_schedules[0] : o.activity_schedules;
-    // planId 與 planName 一定指向同一個通過 ownership 驗證的方案；驗證失敗則兩者皆 null
-    const candidatePlanId = resolvePlanId(o);
-    const candidatePlan = candidatePlanId ? planMap[candidatePlanId] : undefined;
-    const plan = candidatePlan && candidatePlan.activity_id === o.activity_id ? candidatePlan : undefined;
-    const planId = plan ? candidatePlanId : null;
+    // planId 一律是解析後的 canonical activity_plans.id，且與 planName 指向同一個通過 ownership 驗證的方案；
+    // 驗證失敗（含他人／他 activity 的方案、legacy 識別碼對不到）兩者皆 null
+    const rawKey = resolveRawPlanKey(o);
+    const candidate = rawKey
+      ? (UUID_RE.test(rawKey) ? planById[rawKey] : planByLegacy[`${o.activity_id}\u0000${rawKey}`])
+      : undefined;
+    const plan = candidate && candidate.activity_id === o.activity_id ? candidate : undefined;
+    const planId = plan ? plan.id : null;
     return {
       id: o.id,
       scheduleId: o.schedule_id,

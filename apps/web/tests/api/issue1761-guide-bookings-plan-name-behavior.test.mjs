@@ -44,6 +44,12 @@ export function createClient() {
         limit() { return q; },
         then(resolve, reject) {
           const w = globalThis.__PLAN_TEST;
+          // 模擬 PostgreSQL：uuid 欄位收到非法 uuid 字串整個查詢失敗
+          const badUuid = filters.some((f) => f.op === 'in' && f.col === 'id' && table === 'activity_plans'
+            && f.vals.some((v) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)));
+          if (badUuid) return resolve({ data: null, error: { message: 'secret-invalid-input-syntax-for-type-uuid' } });
+          const isLegacyQuery = table === 'activity_plans' && filters.some((f) => f.col === 'legacy_plan_id');
+          if (isLegacyQuery && w.fail['activity_plans.legacy']) return resolve({ data: null, error: { message: 'secret-db-failure-legacy' } });
           if (w.fail[table]) return resolve({ data: null, error: { message: 'secret-db-failure-' + table } });
           return resolve({ data: (w.tables[table] || []).filter((r) => matchRow(r, filters)).map((r) => project(r, cols)), error: null });
         },
@@ -100,24 +106,30 @@ function seed(overrides = {}) {
         { id: 'ax', title: 'X', guide_id: 'g2' },
       ],
       orders: [
-        { id: 'o-book-wins', activity_id: 'a1', booking_id: 'b1', activity_schedules: { start_at: 's', plan_id: 'p-sched' } },
-        { id: 'o-legacy', activity_id: 'a1', booking_id: null, activity_schedules: { start_at: 's', plan_id: 'p-sched' } },
-        { id: 'o-other-guide', activity_id: 'a1', booking_id: 'b3', activity_schedules: { start_at: 's', plan_id: 'p-sched' } },
-        { id: 'o-sibling', activity_id: 'a1', booking_id: 'b4', activity_schedules: { start_at: 's', plan_id: 'p-sched' } },
+        { id: 'o-book-wins', activity_id: 'a1', booking_id: 'b1', activity_schedules: { start_at: 's', plan_id: '22222222-2222-4222-8222-222222222222' } },
+        { id: 'o-legacy', activity_id: 'a1', booking_id: null, activity_schedules: { start_at: 's', plan_id: '22222222-2222-4222-8222-222222222222' } },
+        { id: 'o-other-guide', activity_id: 'a1', booking_id: 'b3', activity_schedules: { start_at: 's', plan_id: '22222222-2222-4222-8222-222222222222' } },
+        { id: 'o-sibling', activity_id: 'a1', booking_id: 'b4', activity_schedules: { start_at: 's', plan_id: '22222222-2222-4222-8222-222222222222' } },
         { id: 'o-none', activity_id: 'a1', booking_id: 'b5', activity_schedules: null },
-        { id: 'o-foreign-order', activity_id: 'ax', booking_id: null, activity_schedules: { start_at: 's', plan_id: 'p-sched' } },
+        { id: 'o-legacy-text', activity_id: 'a1', booking_id: null, activity_schedules: { start_at: 's', plan_id: 'half-day' } },
+        { id: 'o-legacy-a2', activity_id: 'a2', booking_id: null, activity_schedules: { start_at: 's', plan_id: 'half-day' } },
+        { id: 'o-legacy-unmatched', activity_id: 'a1', booking_id: null, activity_schedules: { start_at: 's', plan_id: 'no-such-legacy' } },
+        { id: 'o-foreign-order', activity_id: 'ax', booking_id: null, activity_schedules: { start_at: 's', plan_id: '22222222-2222-4222-8222-222222222222' } },
       ],
       bookings: [
-        { id: 'b1', activity_plan_id: 'p-book' },
-        { id: 'b3', activity_plan_id: 'p-foreign' },
-        { id: 'b4', activity_plan_id: 'p-sibling' },
+        { id: 'b1', activity_plan_id: '11111111-1111-4111-8111-111111111111' },
+        { id: 'b3', activity_plan_id: '33333333-3333-4333-8333-333333333333' },
+        { id: 'b4', activity_plan_id: '44444444-4444-4444-8444-444444444444' },
         { id: 'b5', activity_plan_id: null },
       ],
       activity_plans: [
-        { id: 'p-book', name: '預約方案', activity_id: 'a1' },
-        { id: 'p-sched', name: '檔期方案', activity_id: 'a1' },
-        { id: 'p-foreign', name: 'LEAK-OTHER-GUIDE', activity_id: 'ax' },
-        { id: 'p-sibling', name: 'LEAK-SIBLING-ACTIVITY', activity_id: 'a2' },
+        { id: '11111111-1111-4111-8111-111111111111', name: '預約方案', activity_id: 'a1' },
+        { id: '22222222-2222-4222-8222-222222222222', name: '檔期方案', activity_id: 'a1' },
+        { id: '33333333-3333-4333-8333-333333333333', name: 'LEAK-OTHER-GUIDE', activity_id: 'ax' },
+        { id: '44444444-4444-4444-8444-444444444444', name: 'LEAK-SIBLING-ACTIVITY', activity_id: 'a2' },
+        { id: '55555555-5555-4555-8555-555555555555', name: '半日方案A1', activity_id: 'a1', legacy_plan_id: 'half-day' },
+        { id: '66666666-6666-4666-8666-666666666666', name: '半日方案A2', activity_id: 'a2', legacy_plan_id: 'half-day' },
+        { id: '77777777-7777-4777-8777-777777777777', name: 'LEAK-LEGACY-OTHER-GUIDE', activity_id: 'ax', legacy_plan_id: 'half-day' },
       ],
       ...overrides,
     },
@@ -135,7 +147,7 @@ test('orders 查詢的 ownership 範圍：別的導遊的訂單不在回傳結�
   const { body, byId } = await load();
   assert.equal(byId['o-foreign-order'], undefined);
   assert.ok(!body.data.some((o) => o.id === 'o-foreign-order'));
-  assert.equal(body.data.length, 5);
+  assert.equal(body.data.length, 8);
   assert.equal(byId['o-legacy'].planName, '檔期方案');
   assert.equal(typeof byId['o-book-wins'].planName, 'string');
 });
@@ -160,14 +172,14 @@ test('(b) 同導遊但屬於別的 activity 的 plan：planName 與 planId 皆�
 test('(c) bookings.activity_plan_id 優先於 schedule.plan_id，且 planId 與 planName 指向同一方案', async () => {
   seed();
   const { byId } = await load();
-  assert.equal(byId['o-book-wins'].planId, 'p-book');
+  assert.equal(byId['o-book-wins'].planId, '11111111-1111-4111-8111-111111111111');
   assert.equal(byId['o-book-wins'].planName, '預約方案');
 });
 
 test('(d) 沒有 booking_id 的 legacy 訂單仍取 schedule.plan_id；無任何方案則 null', async () => {
   seed();
   const { byId } = await load();
-  assert.equal(byId['o-legacy'].planId, 'p-sched');
+  assert.equal(byId['o-legacy'].planId, '22222222-2222-4222-8222-222222222222');
   assert.equal(byId['o-legacy'].planName, '檔期方案');
   assert.equal(byId['o-none'].planId, null);
   assert.equal(byId['o-none'].planName, null);
@@ -179,10 +191,41 @@ test('(e) activity_plans 查詢失敗：降級為 null、回 200，且回應沒�
   const { res, body, byId } = await load();
   assert.equal(res.status, 200);
   assert.equal(body.success, true);
-  assert.equal(body.data.length, 5);
+  assert.equal(body.data.length, 8);
   for (const o of Object.values(byId)) {
     assert.equal(o.planName, null);
     assert.equal(o.planId, null);
   }
   assert.ok(!JSON.stringify(body).includes('secret-db-failure'));
+});
+
+test('legacy 文字識別碼（half-day）與 booking UUID 方案同批回傳，兩者 planName 都正確，planId 為 canonical UUID', async () => {
+  seed();
+  const { res, byId } = await load();
+  assert.equal(res.status, 200);
+  assert.equal(byId['o-book-wins'].planName, '預約方案');
+  assert.equal(byId['o-legacy-text'].planName, '半日方案A1');
+  assert.equal(byId['o-legacy-text'].planId, '55555555-5555-4555-8555-555555555555');
+  assert.equal(byId['o-legacy-unmatched'].planName, null);
+  assert.equal(byId['o-legacy-unmatched'].planId, null);
+});
+
+test('跨 activity 同名 legacy id 不誤配，也不會配到他導遊的方案', async () => {
+  seed();
+  const { body, byId } = await load();
+  assert.equal(byId['o-legacy-a2'].planName, '半日方案A2');
+  assert.equal(byId['o-legacy-a2'].planId, '66666666-6666-4666-8666-666666666666');
+  assert.equal(byId['o-legacy-text'].planName, '半日方案A1');
+  assert.ok(!JSON.stringify(body).includes('LEAK-LEGACY-OTHER-GUIDE'));
+});
+
+test('legacy 組查詢失敗只影響 legacy 訂單：UUID 方案仍有名稱、回 200、不洩漏錯誤', async () => {
+  seed();
+  globalThis.__PLAN_TEST.fail['activity_plans.legacy'] = true;
+  const { res, body, byId } = await load();
+  assert.equal(res.status, 200);
+  assert.equal(byId['o-book-wins'].planName, '預約方案');
+  assert.equal(byId['o-legacy-text'].planName, null);
+  assert.equal(byId['o-legacy-text'].planId, null);
+  assert.ok(!JSON.stringify(body).includes('secret-'));
 });
