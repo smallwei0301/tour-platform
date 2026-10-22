@@ -18,8 +18,8 @@
     "reserveTerraPeak": 0,
     "activeCandidatePeak": 0,
     "sharedTestPeak": 0,
-    "closureSweeps": 0,
-    "closureAdvancedOrClosed": 0
+    "closureSweeps": 1,
+    "closureAdvancedOrClosed": 1
   },
   "modelUsage": {
     "actualTokensAvailable": false,
@@ -58,7 +58,7 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "compact",
-        "accepted": false,
+        "accepted": true,
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
@@ -71,7 +71,7 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "compact",
-        "accepted": false,
+        "accepted": true,
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
@@ -84,7 +84,7 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "compact",
-        "accepted": false,
+        "accepted": true,
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
@@ -100,14 +100,40 @@
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
+      },
+      {
+        "id": "r02-sol-triage",
+        "role": "SOL TRIAGE（主 Agent，audit 層）",
+        "requestedModel": "sol",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-terra-main-1761",
+        "role": "MAIN Terra 施工 5C 訂單方案投影",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-22T11:01:00Z"
       }
     ],
     "fullContextReplays": 0,
     "duplicateScans": 0
   },
   "delivery": {
-    "issuesStarted": 0,
-    "issuesClosed": 0,
+    "issuesStarted": 1,
+    "issuesClosed": 1,
     "auditReady": 0,
     "ownerBlockedComplete": 0,
     "exactHeadCiOnly": 0,
@@ -133,13 +159,13 @@
   },
   "flow": {
     "lunaTasks": 5,
-    "lunaAccepted": 2,
+    "lunaAccepted": 5,
     "lunaDelegationRatePercent": null,
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
     "waitTimeConvertedPercent": null,
-    "solTouches": 0,
-    "solIssues": 0
+    "solTouches": 1,
+    "solIssues": 1
   },
   "auditability": {
     "evidenceFieldsCompletePercent": null,
@@ -149,7 +175,9 @@
     "scoreInputsCompletePercent": null
   },
   "notes": [
-    "RULES_MAIN_SHA=2abbc037（自 ce39e520 起只多一個產品 commit #1096，規則檔無變動）。"
+    "RULES_MAIN_SHA=2abbc037（自 ce39e520 起只多一個產品 commit #1096，規則檔無變動）。",
+    "#1901 browser：AggregateError 吞掉內層錯誤；前一 head 86101a2 綠、與 106dff7 間只改測試與 worklog → 疑似 runner 環境；需讓 build-expected-terminal.mjs main() 印出 error.errors（另案）。",
+    "產品語意待決：轉預約報價為手填 quotedTotalTwd，與 base_price 快照無強制關係。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
@@ -167,6 +195,15 @@
   "completionTruth": {
     "status": "NOT_CHECKED",
     "checkedAt": null,
-    "claims": []
+    "claims": [
+      {
+        "type": "ISSUE_CLOSED",
+        "subject": "issue#1827",
+        "claimedState": "closed",
+        "observedState": "closed",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/issues/1827#issuecomment-6339080375"
+      }
+    ]
   }
 }
