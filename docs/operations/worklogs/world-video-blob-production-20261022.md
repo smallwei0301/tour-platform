@@ -29,6 +29,14 @@
 - 首次整套測試未先移除正式金鑰。逐筆查核：Supabase「Vibe Ai backend」15:51–15:56 UTC 本 session 只有 `admin_security`／`soft_launch_controls` GET 404，無寫入；Resend 2 次呼叫皆空收件人被拒，無信寄出。之後一律 `env -u` 移除。
 - 另觀察到 15:40–15:49 UTC 有非本 session 的 node 寫入打到「Vibe Ai backend」（`create_tour_order`／`cancel_tour_order`／`trip_departures` 等），已回報 Owner，未處理。
 
+## 審查與 CI（2026-10-22 UTC）
+- head `de85c799` CI：test https://github.com/smallwei0301/tour-platform/actions/runs/39813077187 success；secret scan https://github.com/smallwei0301/tour-platform/actions/runs/39813077188 success。
+- Codex code review 與 security review：皆 completed、no findings（23:16–23:17 UTC，head de85c79）。
+- 獨立審查（audit 層、fresh context、唯讀，actual model 依平台回報）：VERDICT PASS，0 blocking。3 項 non-blocking：
+  - F1／F2：CSP 測試未與 `WORLD_MEDIA_ORIGIN` 交叉驗證、註解掉 media-src 仍通過 → 已修：測試改為只認未註解的陣列元素，並等於 `'self' ${WORLD_MEDIA_ORIGIN}`；origin 釘死已驗證 store。兩個 mutation 皆已被抓到。
+  - F3：`3d-scroll-homepage.md` 舊路徑 → 已加註記。
+- 後續 head 的 CI 連結記於 PR 留言。
+
 ## 回滾
 revert 本 PR 的 commit：影片回到 `apps/web/public/videos/world/`，`scenes.mjs` 與 CSP 一併還原。
 
