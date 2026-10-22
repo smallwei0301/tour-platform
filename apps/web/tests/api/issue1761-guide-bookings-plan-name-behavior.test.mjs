@@ -4,16 +4,30 @@
  * 守門邏輯本身是真實執行的（非字串比對）。
  */
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
-import test, { before } from 'node:test';
+import test, { after, before } from 'node:test';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROUTE = path.resolve(__dirname, '../../app/api/v2/guide/bookings/route.ts');
 
 const STUB_SUPABASE = `
+// 依 select 字串投影欄位：頂層以逗號切分（括號內不切），嵌入語法 name!fk(...)／name(...) 以 name 為 key 整段保留
+const topLevelKeys = (selectStr) => {
+  const keys = [];
+  let depth = 0;
+  let cur = '';
+  for (const ch of selectStr) {
+    if (ch === '(') depth += 1;
+    if (ch === ')') depth -= 1;
+    if (ch === ',' && depth === 0) { keys.push(cur); cur = ''; } else cur += ch;
+  }
+  keys.push(cur);
+  return keys.map((k) => k.trim()).filter(Boolean).map((k) => k.split(/[!(]/)[0].trim());
+};
+const project = (row, cols) => (cols ? Object.fromEntries(cols.filter((c) => c in row).map((c) => [c, row[c]])) : row);
 const matchRow = (row, filters) => filters.every((f) => f.op === 'eq'
   ? row[f.col] === f.val
   : f.vals.includes(row[f.col]));
@@ -21,8 +35,9 @@ export function createClient() {
   return {
     from(table) {
       const filters = [];
+      let cols = null;
       const q = {
-        select() { return q; },
+        select(str) { cols = topLevelKeys(String(str)); return q; },
         eq(col, val) { filters.push({ op: 'eq', col, val }); return q; },
         in(col, vals) { filters.push({ op: 'in', col, vals }); return q; },
         order() { return q; },
@@ -30,7 +45,7 @@ export function createClient() {
         then(resolve, reject) {
           const w = globalThis.__PLAN_TEST;
           if (w.fail[table]) return resolve({ data: null, error: { message: 'secret-db-failure-' + table } });
-          return resolve({ data: (w.tables[table] || []).filter((r) => matchRow(r, filters)), error: null });
+          return resolve({ data: (w.tables[table] || []).filter((r) => matchRow(r, filters)).map((r) => project(r, cols)), error: null });
         },
       };
       return q;
@@ -48,9 +63,11 @@ export const getSupabaseUrl = () => 'http://stub.invalid';
 export const getSupabaseServiceRoleKey = () => 'stub-key';`;
 
 let GET;
+let tmpDir;
 
 before(async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'tp-1761-bookings-'));
+  tmpDir = dir;
   const files = { 'supabase.mjs': STUB_SUPABASE, 'api.mjs': STUB_API, 'auth.mjs': STUB_AUTH, 'env.mjs': STUB_ENV };
   for (const [name, body] of Object.entries(files)) await writeFile(path.join(dir, name), body);
   const url = (name) => pathToFileURL(path.join(dir, name)).href;
@@ -69,6 +86,10 @@ before(async () => {
   ({ GET } = await import(url('route.ts')));
 });
 
+after(async () => {
+  if (tmpDir) await rm(tmpDir, { recursive: true, force: true });
+});
+
 function seed(overrides = {}) {
   globalThis.__PLAN_TEST = {
     fail: {},
@@ -84,6 +105,7 @@ function seed(overrides = {}) {
         { id: 'o-other-guide', activity_id: 'a1', booking_id: 'b3', activity_schedules: { start_at: 's', plan_id: 'p-sched' } },
         { id: 'o-sibling', activity_id: 'a1', booking_id: 'b4', activity_schedules: { start_at: 's', plan_id: 'p-sched' } },
         { id: 'o-none', activity_id: 'a1', booking_id: 'b5', activity_schedules: null },
+        { id: 'o-foreign-order', activity_id: 'ax', booking_id: null, activity_schedules: { start_at: 's', plan_id: 'p-sched' } },
       ],
       bookings: [
         { id: 'b1', activity_plan_id: 'p-book' },
@@ -107,6 +129,16 @@ async function load() {
   const body = await res.json();
   return { res, body, byId: Object.fromEntries((body.data || []).map((o) => [o.id, o])) };
 }
+
+test('orders 查詢的 ownership 範圍：別的導遊的訂單不在回傳結果，且正常情況 planName 有值', async () => {
+  seed();
+  const { body, byId } = await load();
+  assert.equal(byId['o-foreign-order'], undefined);
+  assert.ok(!body.data.some((o) => o.id === 'o-foreign-order'));
+  assert.equal(body.data.length, 5);
+  assert.equal(byId['o-legacy'].planName, '檔期方案');
+  assert.equal(typeof byId['o-book-wins'].planName, 'string');
+});
 
 test('(a) 別的導遊的 plan：planName 與 planId 皆為 null，且名稱不外洩', async () => {
   seed();
