@@ -51,3 +51,8 @@
   - 修正前（舊腳本）跑新案例：9 個失敗。
 - 分支整理：遠端工作分支仍留著已 squash 的舊 commit，以 merge commit `9368f750` 接回，檔案樹不變，沒有 force-push。
 - 未包含：merge 長期授權規則文件。這部分被 auto mode 分類器擋下（Self-Modification），等 Owner 處理，不在本 PR。
+- PR #1909 的 head `683f9068` CI：
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39724261824/job/119644466443)：success
+  - [secret-scan](https://github.com/smallwei0301/tour-platform/actions/runs/39724261780/job/119644466234)：success
+  - Vercel：success
+- Codex code review 與 security review 皆完成，無 finding。依 Owner 2026-10-22「不用我授權merge」指示自行 merge。
