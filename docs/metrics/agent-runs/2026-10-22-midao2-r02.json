@@ -161,6 +161,19 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-terra-rework2-1761",
+        "role": "Terra 補強行為測試 stub（依 Sol 重審 non-blocking）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
         "accepted": false,
         "inputTokens": null,
         "outputTokens": null,
@@ -219,7 +232,8 @@
     "#1901 browser：AggregateError 吞掉內層錯誤；前一 head 86101a2 綠、與 106dff7 間只改測試與 worklog → 疑似 runner 環境；需讓 build-expected-terminal.mjs main() 印出 error.errors（另案）。",
     "產品語意待決：轉預約報價為手填 quotedTotalTwd，與 base_price 快照無強制關係。",
     "更正：施工派工與 WIP 事件時間原以估計值填入且晚於當時實際時間；依 before record（10:58:52Z）與完成通知（約 81 秒）改為 10:59:00Z／11:00:30Z／11:01:00Z，仍為推估值（UTC_EVIDENCE_RECORDED_NOT_PLATFORM_VERIFIED）。",
-    "流程缺失：rework（r02-terra-rework-1761）以 SendMessage 續派原 builder 前未先跑 dispatch-preflight before；事後補跑會違反時序，故不補，如實記錄。"
+    "流程缺失：rework（r02-terra-rework-1761）以 SendMessage 續派原 builder 前未先跑 dispatch-preflight before；事後補跑會違反時序，故不補，如實記錄。",
+    "另案 issue #1916：mark-replied idempotency key 未生效、client 重試換新 key（high，需 Final Risk）。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
