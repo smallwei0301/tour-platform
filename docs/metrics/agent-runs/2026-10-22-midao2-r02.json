@@ -361,7 +361,8 @@
     "第五次 Sol 審查 PASS（blocking 0）。另案 #1917：orders 查詢失敗回傳原始 DB error.message（origin/main 既有）。",
     "CI browser 缺口：本 PR 修改的兩支 issue1761 orders e2e 不在 smoke 清單、也不符合 midao-baseline 路徑條件，CI 從未跑過；派工補入 smoke。",
     "merge 827c516f；PR #1915 squash。Completion Truth：merged、reachable、main 上重讀 route.ts（legacy_plan_id）與 midao2 orders page（planName）、main CI test/scan success。",
-    "CLOSEOUT_ACCEPTED_NOT_GRADED: Production authenticated acceptance 需 Owner 以真實導遊帳號在 midao.com.tw 驗證；agent 無權限且 #1912 環境含正式金鑰禁止本機連線，故 PRODUCTION_PENDING（gaps: AUTHENTICATED_PRODUCTION_ACCEPTED orders plan name is unverified）"
+    "CLOSEOUT_ACCEPTED_NOT_GRADED: Production authenticated acceptance 需 Owner 以真實導遊帳號在 midao.com.tw 驗證；agent 無權限且 #1912 環境含正式金鑰禁止本機連線，故 PRODUCTION_PENDING（gaps: AUTHENTICATED_PRODUCTION_ACCEPTED orders plan name is unverified）",
+    "依 Codex P2（#1918）更正：WIP 補登 smoke 候選 head bf10c7be 的 BUILD/VERIFY；PR_MERGED subject 改為 PR #1915。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
@@ -607,13 +608,53 @@
       },
       {
         "id": "r02-wip-24",
-        "at": "2026-10-22T11:48:24Z",
+        "at": "2026-10-22T11:36:30Z",
         "kind": "VERIFY_EXIT",
         "pr": 1915,
         "issue": 1761,
         "head": "b93096f955a9be82138b25c0087b60d918e3757e",
         "workstream": "PRODUCT_MAINLINE",
-        "reason": "merged as 827c516f（後續 head 僅加 smoke 清單與帳本／worklog）"
+        "reason": "第五次 Sol PASS；發現改到的 orders e2e 不在任何 CI lane，轉入 smoke 補證"
+      },
+      {
+        "id": "r02-wip-25",
+        "at": "2026-10-22T11:36:40Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "bf10c7be31f20dfa602f709b511bd20a222774c5",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "smoke 清單補入 issue1761-midao2-orders-workbench（sonnet）"
+      },
+      {
+        "id": "r02-wip-26",
+        "at": "2026-10-22T11:38:30Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "bf10c7be31f20dfa602f709b511bd20a222774c5",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "bf10c7be，run-checks 5/5"
+      },
+      {
+        "id": "r02-wip-27",
+        "at": "2026-10-22T11:39:00Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "bf10c7be31f20dfa602f709b511bd20a222774c5",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "CI smoke 讀 log：orders workbench 3/3"
+      },
+      {
+        "id": "r02-wip-28",
+        "at": "2026-10-22T11:48:24Z",
+        "kind": "VERIFY_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "bf10c7be31f20dfa602f709b511bd20a222774c5",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "merged as 827c516f；最終 head 3dbf0944 只追加 worklog／帳本"
       }
     ]
   },
@@ -631,11 +672,11 @@
       },
       {
         "type": "PR_MERGED",
-        "subject": "issue#1761",
+        "subject": "smallwei0301/tour-platform#1915",
         "claimedState": "merged",
         "observedState": "merged",
         "verification": "VERIFIED",
-        "evidenceRef": "https://github.com/smallwei0301/tour-platform/issues/1761#issuecomment-6340089167"
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/pull/1915 merged_at=2026-10-22T11:48:24Z merge_commit_sha=827c516f"
       },
       {
         "type": "MERGED_TO_MAIN",
