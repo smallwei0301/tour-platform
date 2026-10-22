@@ -187,7 +187,7 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "compact",
-        "accepted": false,
+        "accepted": true,
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
@@ -200,7 +200,7 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "compact",
-        "accepted": false,
+        "accepted": true,
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
@@ -238,7 +238,7 @@
   },
   "flow": {
     "lunaTasks": 7,
-    "lunaAccepted": 5,
+    "lunaAccepted": 7,
     "lunaDelegationRatePercent": null,
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
@@ -259,7 +259,9 @@
     "產品語意待決：轉預約報價為手填 quotedTotalTwd，與 base_price 快照無強制關係。",
     "更正：施工派工與 WIP 事件時間原以估計值填入且晚於當時實際時間；依 before record（10:58:52Z）與完成通知（約 81 秒）改為 10:59:00Z／11:00:30Z／11:01:00Z，仍為推估值（UTC_EVIDENCE_RECORDED_NOT_PLATFORM_VERIFIED）。",
     "流程缺失：rework（r02-terra-rework-1761）以 SendMessage 續派原 builder 前未先跑 dispatch-preflight before；事後補跑會違反時序，故不補，如實記錄。",
-    "另案 issue #1916：mark-replied idempotency key 未生效、client 重試換新 key（high，需 Final Risk）。"
+    "另案 issue #1916：mark-replied idempotency key 未生效、client 重試換新 key（high，需 Final Risk）。",
+    "預盤點 /midao2/me：身分只取 session、無目標 id → 無越權路徑；GAP：updateGuideExperienceYearsDb 用 Number() 寬鬆轉型（\"\"/null→0、true→1）、profile-extras 無 401/403 行為測試；頁面註解宣稱可編輯服務區域但未實作。",
+    "預盤點 calendar：/midao/calendar 為靜態占位無寫入；midao2 寫入走 /api/v2/guide/midao/availability/{days/[date] PUT, defaults POST}，有 expectedRevision CAS 與 idempotency；單日衝突 409、週模板衝突 200+conflicts[]（語意不一致，疑似 GAP）。未涵蓋 pre-Midao /guide/** 檔期管理（真正的 legacy 寫入面）→ 下一輪需補盤點後才能判定 round-trip。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
