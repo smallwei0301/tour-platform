@@ -23,7 +23,7 @@ export function RequestCard({
         <span className="midao-request-card__date">{formatDateTime(request.request.startAt, request.request.timezone)}</span>
       </div>
       <strong className="midao-request-card__title">{request.service.title || '未命名服務'}</strong>
-      <span className="midao-request-card__plan">{request.service.planName || '預約需求'}</span>
+      <span className="midao-request-card__plan">{request.service.planName || '尚未指定方案'}</span>
       <div className="midao-request-card__meta">
         <span>{request.traveler.displayName || '旅人'} · {request.request.partySize ? `${request.request.partySize} 位` : '人數待確認'}</span>
         {request.needsReply ? <span className="midao-request-card__reply">需要回覆</span> : null}

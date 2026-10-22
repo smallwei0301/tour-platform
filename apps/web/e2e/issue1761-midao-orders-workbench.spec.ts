@@ -17,6 +17,7 @@ const safeOrder = {
   maskedEmail: 'traveler@example.invalid',
   scheduleDate: '2026-09-15T01:00:00.000Z',
   planId: 'plan-1761-safe',
+  planName: '日出輕健行方案',
   tourTitle: '山徑晨光小旅行',
   partySize: 2,
   status: 'confirmed',
@@ -63,6 +64,7 @@ test.describe('Midao read-only orders workbench', () => {
     await expect.poll(() => methods.length, { timeout: 30_000 }).toBe(1);
     await expect(page.getByTestId('midao-orders-list')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText('山徑晨光小旅行')).toBeVisible();
+    await expect(page.getByText('日出輕健行方案')).toBeVisible();
     const body = await page.locator('body').innerText();
     expect(body).not.toContain('旅人甲');
     expect(body).not.toContain('0912-000-000');

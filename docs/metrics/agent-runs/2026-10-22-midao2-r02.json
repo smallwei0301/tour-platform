@@ -1,0 +1,622 @@
+{
+  "schemaVersion": 2,
+  "runId": "2026-10-22-midao2-r02",
+  "status": "IN_PROGRESS",
+  "startedAt": "2026-10-22T10:56:25.964Z",
+  "endedAt": null,
+  "sources": [],
+  "main": {
+    "startSha": "1958ef814b1a1b73e64a9380ecc8e4390d0690f2",
+    "endSha": null
+  },
+  "inventory": {
+    "openIssuesStart": 71,
+    "openIssuesEnd": null,
+    "openPrsStart": 24,
+    "openPrsEnd": null,
+    "mainTerraPeak": 1,
+    "reserveTerraPeak": 0,
+    "activeCandidatePeak": 1,
+    "sharedTestPeak": 0,
+    "closureSweeps": 1,
+    "closureAdvancedOrClosed": 1
+  },
+  "modelUsage": {
+    "actualTokensAvailable": false,
+    "weeklyUsageStartPercent": null,
+    "weeklyUsageEndPercent": null,
+    "weightedUsageImprovementPercent": null,
+    "weights": {
+      "luna": 1,
+      "terra": 3,
+      "sol": 6
+    },
+    "contextMultipliers": {
+      "compact": 1,
+      "medium": 1.5,
+      "full": 3
+    },
+    "tasks": [
+      {
+        "id": "r02-luna-truth",
+        "role": "LUNA 窄盤點 truth",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-luna-plan",
+        "role": "LUNA 窄盤點 plan",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-luna-ci1901",
+        "role": "LUNA 窄盤點 ci1901",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-luna-ac1827",
+        "role": "LUNA 窄盤點 ac1827",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-ledger-writes",
+        "role": "audit 層代寫 docs/metrics 即時埋點（違反 scout 路徑判準）",
+        "requestedModel": "luna",
+        "actualModel": "sol",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-sol-triage",
+        "role": "SOL TRIAGE（主 Agent，audit 層）",
+        "requestedModel": "sol",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-terra-main-1761",
+        "role": "MAIN Terra 施工 5C 訂單方案投影",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-22T10:59:00Z"
+      },
+      {
+        "id": "r02-sol-audit-1761",
+        "role": "Early Sol diff audit（fresh context，非 builder）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-terra-rework-1761",
+        "role": "Terra rework（同 builder，依 Sol FIX_REQUIRED）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-sol-reaudit-1761",
+        "role": "Sol 重審（新 fresh context actor）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-terra-rework2-1761",
+        "role": "Terra 補強行為測試 stub（依 Sol 重審 non-blocking）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-luna-cal",
+        "role": "LUNA 下一 MAIN 預盤點：calendar round-trip",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-luna-me",
+        "role": "LUNA 下一 MAIN 預盤點：midao2/me ownership",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-terra-rework3-1761",
+        "role": "Terra 修 Codex P1（legacy schedule plan id 混入 UUID IN）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-sol-reaudit2-1761",
+        "role": "Sol 第三次審查（新 actor，Codex P1 修正後）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-terra-rework4-1761",
+        "role": "Terra 修第三次審查 BLOCKING（重複 legacy_plan_id 歧義）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-22T11:24:20Z"
+      },
+      {
+        "id": "r02-sol-reaudit3-1761",
+        "role": "Sol 第四次審查（新 actor）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-terra-rework5-1761",
+        "role": "Terra 修第四次審查 BLOCKING（bookings 查詢失敗退回 schedule 方案）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-sol-reaudit4-1761",
+        "role": "Sol 第五次審查（新 actor）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-terra-smoke-1761",
+        "role": "Terra 將 issue1761 orders e2e 加入 smoke lane（補 CI browser 證據缺口）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      }
+    ],
+    "fullContextReplays": 0,
+    "duplicateScans": 0
+  },
+  "delivery": {
+    "issuesStarted": 1,
+    "issuesClosed": 1,
+    "auditReady": 0,
+    "ownerBlockedComplete": 0,
+    "exactHeadCiOnly": 0,
+    "commitOnly": 0,
+    "unfinishedCarryover": 0,
+    "cycleTimeMinutes": null
+  },
+  "ci": {
+    "fullCiRuns": 40,
+    "invalidReruns": 0,
+    "firstPassRatePercent": null,
+    "sharedTestCollisions": 0
+  },
+  "quality": {
+    "acceptanceEvidenceCoveragePercent": null,
+    "auditFirstPassRatePercent": null,
+    "unresolvedP0": 0,
+    "unresolvedP1": 0,
+    "reopenedIssues": 0,
+    "postMergeRegressions": 0,
+    "safetyViolations": 0,
+    "hardFailReasons": [],
+    "auditFindings": 3,
+    "botFindings": 1
+  },
+  "flow": {
+    "lunaTasks": 7,
+    "lunaAccepted": 7,
+    "lunaDelegationRatePercent": null,
+    "duplicateAgentTasks": 0,
+    "ownershipCollisions": 0,
+    "waitTimeConvertedPercent": null,
+    "solTouches": 6,
+    "solIssues": 1
+  },
+  "auditability": {
+    "evidenceFieldsCompletePercent": null,
+    "exactHeadTestCoveragePercent": null,
+    "stalePendingDescriptions": 0,
+    "preciseBlockersPercent": null,
+    "scoreInputsCompletePercent": null
+  },
+  "notes": [
+    "RULES_MAIN_SHA=2abbc037（自 ce39e520 起只多一個產品 commit #1096，規則檔無變動）。",
+    "#1901 browser：AggregateError 吞掉內層錯誤；前一 head 86101a2 綠、與 106dff7 間只改測試與 worklog → 疑似 runner 環境；需讓 build-expected-terminal.mjs main() 印出 error.errors（另案）。",
+    "產品語意待決：轉預約報價為手填 quotedTotalTwd，與 base_price 快照無強制關係。",
+    "更正：施工派工與 WIP 事件時間原以估計值填入且晚於當時實際時間；依 before record（10:58:52Z）與完成通知（約 81 秒）改為 10:59:00Z／11:00:30Z／11:01:00Z，仍為推估值（UTC_EVIDENCE_RECORDED_NOT_PLATFORM_VERIFIED）。",
+    "流程缺失：rework（r02-terra-rework-1761）以 SendMessage 續派原 builder 前未先跑 dispatch-preflight before；事後補跑會違反時序，故不補，如實記錄。",
+    "另案 issue #1916：mark-replied idempotency key 未生效、client 重試換新 key（high，需 Final Risk）。",
+    "預盤點 /midao2/me：身分只取 session、無目標 id → 無越權路徑；GAP：updateGuideExperienceYearsDb 用 Number() 寬鬆轉型（\"\"/null→0、true→1）、profile-extras 無 401/403 行為測試；頁面註解宣稱可編輯服務區域但未實作。",
+    "預盤點 calendar：/midao/calendar 為靜態占位無寫入；midao2 寫入走 /api/v2/guide/midao/availability/{days/[date] PUT, defaults POST}，有 expectedRevision CAS 與 idempotency；單日衝突 409、週模板衝突 200+conflicts[]（語意不一致，疑似 GAP）。未涵蓋 pre-Midao /guide/** 檔期管理（真正的 legacy 寫入面）→ 下一輪需補盤點後才能判定 round-trip。",
+    "Codex P1（a1e1ff4）：legacy text schedule.plan_id 混入 activity_plans.id UUID IN 查詢 → 整體失敗、planName 全清空；兩次 Sol 審查與自寫 stub 均未發現（stub 不模擬 UUID 型別錯誤）。",
+    "ci.fullCiRuns 暫設 null，closeout 前以 gh api actions/runs 實數填入。",
+    "更正：rework3 派工時間原估 11:15:30Z，早於其 before record（11:16:52Z），改為 11:17:05Z；WIP r02-wip-12/13/14 同步更正（仍為推估值）。ci.fullCiRuns 以 gh api actions/runs（branch、created>=startedAt）實數填入，截至 11:19:13Z。",
+    "第五次 Sol 審查 PASS（blocking 0）。另案 #1917：orders 查詢失敗回傳原始 DB error.message（origin/main 既有）。",
+    "CI browser 缺口：本 PR 修改的兩支 issue1761 orders e2e 不在 smoke 清單、也不符合 midao-baseline 路徑條件，CI 從未跑過；派工補入 smoke。"
+  ],
+  "deliveryTruthVersion": 4,
+  "closeout": {
+    "contractVersion": 1,
+    "ownerRole": "PRODUCT_MAIN_SESSION",
+    "terminalPolicy": "CLOSE_OR_REASSIGN_BEFORE_SESSION_EXIT_OR_OWNER_STOP_OR_SCOPE_EXHAUSTED_OR_OWNER_BLOCKED",
+    "state": "OPEN",
+    "closedAt": null,
+    "evidenceRef": null
+  },
+  "wipLifecycle": {
+    "schemaVersion": 1,
+    "events": [
+      {
+        "id": "r02-wip-1",
+        "at": "2026-10-22T10:59:00Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "db3c4b62871a9d3ffa680896f97b3fbe4025a648",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "MAIN Terra 施工派工（sonnet）"
+      },
+      {
+        "id": "r02-wip-2",
+        "at": "2026-10-22T11:00:30Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "db3c4b62871a9d3ffa680896f97b3fbe4025a648",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "施工完成 db3c4b62，run-checks 16/16"
+      },
+      {
+        "id": "r02-wip-3",
+        "at": "2026-10-22T11:01:00Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "db3c4b62871a9d3ffa680896f97b3fbe4025a648",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Sol audit 與 CI"
+      },
+      {
+        "id": "r02-wip-4",
+        "at": "2026-10-22T11:03:40Z",
+        "kind": "VERIFY_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "db3c4b62871a9d3ffa680896f97b3fbe4025a648",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Sol FIX_REQUIRED：守門可移除而測試不失敗"
+      },
+      {
+        "id": "r02-wip-5",
+        "at": "2026-10-22T11:03:50Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "2a9a4d796aa0cbb516f6d3b87442b45dd9b8a9bd",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "rework 派回 sonnet"
+      },
+      {
+        "id": "r02-wip-6",
+        "at": "2026-10-22T11:05:00Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "2a9a4d796aa0cbb516f6d3b87442b45dd9b8a9bd",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "rework 完成 2a9a4d79，21/21，突變驗證"
+      },
+      {
+        "id": "r02-wip-7",
+        "at": "2026-10-22T11:05:14Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "2a9a4d796aa0cbb516f6d3b87442b45dd9b8a9bd",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "fresh Sol 重審"
+      },
+      {
+        "id": "r02-wip-8",
+        "at": "2026-10-22T11:08:05Z",
+        "kind": "VERIFY_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "2a9a4d796aa0cbb516f6d3b87442b45dd9b8a9bd",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "重審 PASS，補強測試 non-blocking"
+      },
+      {
+        "id": "r02-wip-9",
+        "at": "2026-10-22T11:08:10Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "5b0093db72a9d2db3d7c0653ae5aa3071d3bd50f",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "測試補強派回 sonnet"
+      },
+      {
+        "id": "r02-wip-10",
+        "at": "2026-10-22T11:08:50Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "5b0093db72a9d2db3d7c0653ae5aa3071d3bd50f",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "5b0093db，15/15，M5/M7 突變被擋"
+      },
+      {
+        "id": "r02-wip-11",
+        "at": "2026-10-22T11:09:05Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "5b0093db72a9d2db3d7c0653ae5aa3071d3bd50f",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "主 Agent 複驗 M5 被擋；CI 與 Codex review"
+      },
+      {
+        "id": "r02-wip-12",
+        "at": "2026-10-22T11:16:50Z",
+        "kind": "VERIFY_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "5b0093db72a9d2db3d7c0653ae5aa3071d3bd50f",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Codex P1：legacy plan id 混入 UUID IN"
+      },
+      {
+        "id": "r02-wip-13",
+        "at": "2026-10-22T11:17:05Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "404dffe3e03bd02356d77bc467666f83d2921809",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "rework3 派回 sonnet"
+      },
+      {
+        "id": "r02-wip-14",
+        "at": "2026-10-22T11:18:20Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "404dffe3e03bd02356d77bc467666f83d2921809",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "404dffe3，20/20，RED 6 fail 重現"
+      },
+      {
+        "id": "r02-wip-15",
+        "at": "2026-10-22T11:18:40Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "404dffe3e03bd02356d77bc467666f83d2921809",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Sol 第三次審查與 CI"
+      },
+      {
+        "id": "r02-wip-16",
+        "at": "2026-10-22T11:24:00Z",
+        "kind": "VERIFY_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "404dffe3e03bd02356d77bc467666f83d2921809",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "第三次 Sol FIX_REQUIRED：重複 legacy_plan_id 先到先贏"
+      },
+      {
+        "id": "r02-wip-17",
+        "at": "2026-10-22T11:24:20Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "2b2b5fa465ce392223e217dcdc2c05be685ecb2f",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "rework4"
+      },
+      {
+        "id": "r02-wip-18",
+        "at": "2026-10-22T11:25:00Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "2b2b5fa465ce392223e217dcdc2c05be685ecb2f",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "2b2b5fa4，23/23"
+      },
+      {
+        "id": "r02-wip-19",
+        "at": "2026-10-22T11:25:19Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "2b2b5fa465ce392223e217dcdc2c05be685ecb2f",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Sol 第四次審查與 CI"
+      },
+      {
+        "id": "r02-wip-20",
+        "at": "2026-10-22T11:28:04Z",
+        "kind": "VERIFY_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "2b2b5fa465ce392223e217dcdc2c05be685ecb2f",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "第四次 Sol FIX_REQUIRED：bookings 查詢失敗退回 schedule 方案"
+      },
+      {
+        "id": "r02-wip-21",
+        "at": "2026-10-22T11:28:20Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "b93096f955a9be82138b25c0087b60d918e3757e",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "rework5"
+      },
+      {
+        "id": "r02-wip-22",
+        "at": "2026-10-22T11:29:20Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "b93096f955a9be82138b25c0087b60d918e3757e",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "b93096f9，29/29"
+      },
+      {
+        "id": "r02-wip-23",
+        "at": "2026-10-22T11:29:34Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "b93096f955a9be82138b25c0087b60d918e3757e",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Sol 第五次審查與 CI"
+      }
+    ]
+  },
+  "completionTruth": {
+    "status": "NOT_CHECKED",
+    "checkedAt": null,
+    "claims": [
+      {
+        "type": "ISSUE_CLOSED",
+        "subject": "issue#1827",
+        "claimedState": "closed",
+        "observedState": "closed",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/issues/1827#issuecomment-6339080375"
+      }
+    ]
+  }
+}

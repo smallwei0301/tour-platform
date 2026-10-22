@@ -72,7 +72,7 @@ function BookingSummaryCard({ detail }: { detail: BookingRequestDetail }) {
         <DetailField label="旅人" value={detail.traveler.displayName || '匿名旅人'} />
         <DetailField label="行程時間" value={formatDateRange(detail.request.startAt, detail.request.endAt, detail.request.timezone)} />
         <DetailField label="人數" value={detail.request.partySize ? `${detail.request.partySize} 位` : '人數待確認'} />
-        <DetailField label="方案" value={detail.service.planName || '預約需求'} />
+        <DetailField label="方案" value={detail.service.planName || '尚未指定方案'} />
         <DetailField label="聯絡 Email" value={detail.traveler.contactEmail || '未提供'} />
         <DetailField label="聯絡電話" value={detail.traveler.contactPhone || '未提供'} />
         <DetailField label="預約金額" value={formatAmount(detail.totalTwd)} />
