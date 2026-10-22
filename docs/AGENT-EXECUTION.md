@@ -114,7 +114,9 @@ vibeaico-admin-rebuild 的對應裁示檔為 `docs/decisions/2026-10-22-owner-ag
   - 沒有 merge conflict。
   - 實作者不得自我驗收：依本文件前述規定，由不同 actor、fresh context 完成審查。
   - 已觸發的 bot review（例如 Codex）要先跑完；blocking finding 修正並回讀後才 merge，不得在 review 進行中搶先 merge。
-  - merge 後讀回確認：PR 顯示 merged、merge commit 可由 `main` 到達、`main` 上的 CI 結果；並依鐵律 7 把結果寫回 issue 留言與 worklog。
+- merge 後必須完成（不是 merge 前置條件）：
+  - 讀回確認：PR 顯示 merged、merge commit 可由 `main` 到達、`main` 上的 CI 結果。
+  - 依鐵律 7 把結果寫回 issue 留言與 worklog。
 - 不在本授權範圍：
   - 改動凍結區或 harness 治理檔：仍依 `CLAUDE.md` 鐵律 3、9 處理。
   - `apply_migration`／schema 變更：仍需 `SQL-OVERRIDE`（鐵律 2）。
