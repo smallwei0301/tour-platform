@@ -140,3 +140,13 @@
 - MAIN 依 routing 順序：multi-plan 跨介面保真。
 - Closure：#1827 的未完成 AC 需要搬到 #1863。
 - 另案：`mark-replied` 的 idempotency key 沒有寫入 DB。
+
+### 收尾 PR #1914
+- Codex code review 提出 2 個 P2，都是帳本資料錯誤，已在 `2c9974b7` 修正，thread 已 resolve：
+  - `MERGED_TO_MAIN` 改用 canonical issue subject。
+  - `ci.fullCiRuns` 改為實際數到的 25。
+- Codex security review：沒有 finding。
+- head `2c9974b7` 的 CI：
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39760087456/job/119761802942)：success
+  - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39760087492/job/119761802737)：success
+  - Vercel：success
