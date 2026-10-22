@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-10-21T05:04:47.806Z -->
+<!-- query_timestamp: 2026-10-22T05:05:01.084Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-10-21T05:04:47.806Z  
-**Commit SHA:** `da12e843376a8872a435baad50dd5acb43f3ba2c`
+**Query timestamp:** 2026-10-22T05:05:01.084Z  
+**Commit SHA:** `af1829d75c45d54902c80472133e8ad1645a3282`
 
 ---
 
@@ -141,6 +141,8 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1909 | [同步 vibeaico #1094：計分強制 readiness 一致性與 v4 Run 時間窗](https://github.com/smallwei0301/tour-platform/pull/1909) | 2026-10-22 |
+| #1908 | [移植 VibeAI Agent Run 埋點與 Scorecard 腳本（含修正 cron 測試日期時間炸彈）](https://github.com/smallwei0301/tour-platform/pull/1908) | 2026-10-22 |
 | #1904 | [docs: 清除 #1301／#1336 的過期派工路由（#1658）](https://github.com/smallwei0301/tour-platform/pull/1904) | 2026-10-17 |
 | #1899 | [第三方設計 skills 改為純建議版（移除 Impeccable 外部引擎與子代理）](https://github.com/smallwei0301/tour-platform/pull/1899) | 2026-10-13 |
 | #1896 | [新增第三方設計 skills：Emil Kowalski 與 Impeccable](https://github.com/smallwei0301/tour-platform/pull/1896) | 2026-10-08 |
@@ -149,8 +151,6 @@
 | #1888 | [docs(ledger): 補登 #1861 單筆歷史缺證例外](https://github.com/smallwei0301/tour-platform/pull/1888) | 2026-10-06 |
 | #1881 | [建立模型路由與派工防漏治理](https://github.com/smallwei0301/tour-platform/pull/1881) | 2026-10-04 |
 | #1880 | [修正 Node22 雲端工具鏈與正式證據契約](https://github.com/smallwei0301/tour-platform/pull/1880) | 2026-10-04 |
-| #1878 | [[#1761][Midao2 P0] 唯讀 orders 工作台](https://github.com/smallwei0301/tour-platform/pull/1878) | 2026-09-15 |
-| #1877 | [fix(#1761): remove receipt witness triage gates](https://github.com/smallwei0301/tour-platform/pull/1877) | 2026-09-14 |
 
 ---
 
