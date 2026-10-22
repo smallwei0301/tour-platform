@@ -139,6 +139,32 @@
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
+      },
+      {
+        "id": "r02-terra-rework-1761",
+        "role": "Terra rework（同 builder，依 Sol FIX_REQUIRED）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-sol-reaudit-1761",
+        "role": "Sol 重審（新 fresh context actor）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
       }
     ],
     "fullContextReplays": 0,
@@ -178,7 +204,7 @@
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
     "waitTimeConvertedPercent": null,
-    "solTouches": 2,
+    "solTouches": 3,
     "solIssues": 1
   },
   "auditability": {
@@ -192,7 +218,8 @@
     "RULES_MAIN_SHA=2abbc037（自 ce39e520 起只多一個產品 commit #1096，規則檔無變動）。",
     "#1901 browser：AggregateError 吞掉內層錯誤；前一 head 86101a2 綠、與 106dff7 間只改測試與 worklog → 疑似 runner 環境；需讓 build-expected-terminal.mjs main() 印出 error.errors（另案）。",
     "產品語意待決：轉預約報價為手填 quotedTotalTwd，與 base_price 快照無強制關係。",
-    "更正：施工派工與 WIP 事件時間原以估計值填入且晚於當時實際時間；依 before record（10:58:52Z）與完成通知（約 81 秒）改為 10:59:00Z／11:00:30Z／11:01:00Z，仍為推估值（UTC_EVIDENCE_RECORDED_NOT_PLATFORM_VERIFIED）。"
+    "更正：施工派工與 WIP 事件時間原以估計值填入且晚於當時實際時間；依 before record（10:58:52Z）與完成通知（約 81 秒）改為 10:59:00Z／11:00:30Z／11:01:00Z，仍為推估值（UTC_EVIDENCE_RECORDED_NOT_PLATFORM_VERIFIED）。",
+    "流程缺失：rework（r02-terra-rework-1761）以 SendMessage 續派原 builder 前未先跑 dispatch-preflight before；事後補跑會違反時序，故不補，如實記錄。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
@@ -235,6 +262,46 @@
         "head": "db3c4b62871a9d3ffa680896f97b3fbe4025a648",
         "workstream": "PRODUCT_MAINLINE",
         "reason": "Sol audit 與 CI"
+      },
+      {
+        "id": "r02-wip-4",
+        "at": "2026-10-22T11:03:40Z",
+        "kind": "VERIFY_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "db3c4b62871a9d3ffa680896f97b3fbe4025a648",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Sol FIX_REQUIRED：守門可移除而測試不失敗"
+      },
+      {
+        "id": "r02-wip-5",
+        "at": "2026-10-22T11:03:50Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "2a9a4d796aa0cbb516f6d3b87442b45dd9b8a9bd",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "rework 派回 sonnet"
+      },
+      {
+        "id": "r02-wip-6",
+        "at": "2026-10-22T11:05:00Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "2a9a4d796aa0cbb516f6d3b87442b45dd9b8a9bd",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "rework 完成 2a9a4d79，21/21，突變驗證"
+      },
+      {
+        "id": "r02-wip-7",
+        "at": "2026-10-22T11:05:14Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "2a9a4d796aa0cbb516f6d3b87442b45dd9b8a9bd",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "fresh Sol 重審"
       }
     ]
   },
