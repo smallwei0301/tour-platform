@@ -14,9 +14,9 @@
     "openIssuesEnd": null,
     "openPrsStart": 25,
     "openPrsEnd": null,
-    "mainTerraPeak": 0,
+    "mainTerraPeak": 1,
     "reserveTerraPeak": 0,
-    "activeCandidatePeak": 0,
+    "activeCandidatePeak": 1,
     "sharedTestPeak": 0,
     "closureSweeps": 0,
     "closureAdvancedOrClosed": 0
@@ -82,11 +82,37 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "medium",
-        "accepted": false,
+        "accepted": true,
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null,
         "dispatchedAt": "2026-10-22T12:41:27Z"
+      },
+      {
+        "id": "r03-sol-audit-1761",
+        "role": "Sol diff audit（fresh context）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r03-terra-smoke-1761",
+        "role": "Terra：calendar e2e 納入 smoke",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
       }
     ],
     "fullContextReplays": 0,
@@ -125,7 +151,7 @@
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
     "waitTimeConvertedPercent": null,
-    "solTouches": 1,
+    "solTouches": 2,
     "solIssues": 1
   },
   "auditability": {
@@ -152,7 +178,28 @@
   },
   "wipLifecycle": {
     "schemaVersion": 1,
-    "events": []
+    "events": [
+      {
+        "id": "r03-wip-1",
+        "at": "2026-10-22T12:41:27Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1918,
+        "issue": 1761,
+        "head": "856fde57340c66747b26c6a034b3843407e4a0ae",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "calendar blackout overlay 派工（sonnet）"
+      },
+      {
+        "id": "r03-wip-2",
+        "at": "2026-10-22T12:44:02Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1918,
+        "issue": 1761,
+        "head": "856fde57340c66747b26c6a034b3843407e4a0ae",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "856fde57，34/34，突變 2/2 被擋"
+      }
+    ]
   },
   "completionTruth": {
     "status": "NOT_CHECKED",
