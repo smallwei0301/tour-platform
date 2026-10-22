@@ -8,6 +8,7 @@ import styles from './orders.module.css';
 interface OrderProjection {
   id: string;
   tourTitle: string;
+  planName: string | null;
   scheduleDate: string | null;
   partySize: number;
   status: string;
@@ -29,6 +30,7 @@ function isOrderProjection(value: unknown): value is OrderProjection {
   return isRecord(value)
     && typeof value.id === 'string'
     && typeof value.tourTitle === 'string'
+    && (value.planName === null || typeof value.planName === 'string')
     && (value.scheduleDate === null || typeof value.scheduleDate === 'string')
     && typeof value.partySize === 'number'
     && Number.isFinite(value.partySize)
@@ -134,6 +136,7 @@ export function OrderListScreen() {
                 <span className={styles.status}>{formatStatus(item.status)}</span>
               </div>
               <dl className={styles.meta}>
+                <div><dt>方案</dt><dd>{item.planName || '尚未指定方案'}</dd></div>
                 <div><dt>出發時間</dt><dd>{formatDateTime(item.scheduleDate)}</dd></div>
                 <div><dt>人數</dt><dd>{item.partySize} 人</dd></div>
                 <div><dt>付款</dt><dd>{formatStatus(item.paymentStatus)}</dd></div>

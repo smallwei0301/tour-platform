@@ -26,6 +26,7 @@ export async function GET(req: Request) {
     .eq('guide_id', session.guideId);
 
   const activityIds = (activities || []).map((a: any) => a.id);
+  const activityIdSet = new Set<string>(activityIds);
   const activityMap = Object.fromEntries((activities || []).map((a: any) => [a.id, a]));
 
   if (activityIds.length === 0) return Response.json(ok([]));
@@ -60,22 +61,47 @@ export async function GET(req: Request) {
     .map((o: any) => o.booking_id)
     .filter((id: any) => Boolean(id));
 
-  // Build a map of booking_id -> hasConflictOverride (boolean compact marker for list view)
+  // Build maps keyed by booking_id: hasConflictOverride (compact marker) and activity_plan_id
   const conflictOverrideMap: Record<string, boolean> = {};
+  const bookingPlanIdMap: Record<string, string> = {};
   if (bookingIds.length > 0) {
     const { data: bookings } = await supabase
       .from('bookings')
-      .select('id, conflict_override_snapshot')
+      .select('id, conflict_override_snapshot, activity_plan_id')
       .in('id', bookingIds);
     for (const booking of bookings || []) {
       if (booking.conflict_override_snapshot) {
         conflictOverrideMap[booking.id] = true;
+      }
+      if (booking.activity_plan_id) {
+        bookingPlanIdMap[booking.id] = booking.activity_plan_id;
+      }
+    }
+  }
+
+  // planId 優先取 bookings.activity_plan_id，其次 schedule.plan_id；名稱只採用屬於本導遊 activity 的 plan
+  const resolvePlanId = (o: any): string | null => {
+    const schedule = Array.isArray(o.activity_schedules) ? o.activity_schedules[0] : o.activity_schedules;
+    return (o.booking_id ? bookingPlanIdMap[o.booking_id] : undefined) ?? schedule?.plan_id ?? null;
+  };
+  const planIds = Array.from(new Set((orders || []).map(resolvePlanId).filter((id: any): id is string => Boolean(id))));
+  const planMap: Record<string, { name: string | null; activity_id: string }> = {};
+  if (planIds.length > 0) {
+    const { data: plans } = await supabase
+      .from('activity_plans')
+      .select('id, name, activity_id')
+      .in('id', planIds);
+    for (const plan of plans || []) {
+      if (activityIdSet.has(plan.activity_id)) {
+        planMap[plan.id] = { name: plan.name ?? null, activity_id: plan.activity_id };
       }
     }
   }
 
   const result = (orders || []).map((o: any) => {
     const schedule = Array.isArray(o.activity_schedules) ? o.activity_schedules[0] : o.activity_schedules;
+    const planId = resolvePlanId(o);
+    const plan = planId ? planMap[planId] : undefined;
     return {
       id: o.id,
       scheduleId: o.schedule_id,
@@ -83,7 +109,8 @@ export async function GET(req: Request) {
       guestPhone: filterScheduleId ? (o.contact_phone || '') : '',  // show phone only when filtering by schedule
       maskedEmail: o.contact_email ? maskEmail(o.contact_email) : '',
       scheduleDate: schedule?.start_at || null,
-      planId: schedule?.plan_id || null,
+      planId,
+      planName: plan && plan.activity_id === o.activity_id ? (plan.name || null) : null,
       tourTitle: activityMap[o.activity_id]?.title || '',
       partySize: o.people_count,
       status: o.status,

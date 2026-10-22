@@ -6,6 +6,7 @@ import { C, Card, EmptyState, ErrorState, Icon, Spinner } from '../ui';
 type OrderProjection = {
   id: string;
   tourTitle: string;
+  planName: string | null;
   scheduleDate: string | null;
   partySize: number;
   status: string;
@@ -27,6 +28,7 @@ function isOrderProjection(value: unknown): value is OrderProjection {
   return isRecord(value)
     && typeof value.id === 'string'
     && typeof value.tourTitle === 'string'
+    && (value.planName === null || typeof value.planName === 'string')
     && (value.scheduleDate === null || typeof value.scheduleDate === 'string')
     && typeof value.partySize === 'number'
     && Number.isFinite(value.partySize)
@@ -48,6 +50,7 @@ function projectOrder(value: OrderProjection): OrderProjection {
   return {
     id: value.id,
     tourTitle: value.tourTitle,
+    planName: value.planName,
     scheduleDate: value.scheduleDate,
     partySize: value.partySize,
     status: value.status,
@@ -147,6 +150,7 @@ export default function Midao2OrdersPage() {
                 </span>
               </div>
               <dl style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px', margin: '16px 0 0' }}>
+                <div><dt style={{ color: C.MUTED, fontSize: 12 }}>方案</dt><dd style={{ margin: '4px 0 0' }}>{order.planName || '尚未指定方案'}</dd></div>
                 <div><dt style={{ color: C.MUTED, fontSize: 12 }}>出發時間</dt><dd style={{ margin: '4px 0 0' }}>{formatDateTime(order.scheduleDate)}</dd></div>
                 <div><dt style={{ color: C.MUTED, fontSize: 12 }}>人數</dt><dd style={{ margin: '4px 0 0' }}>{order.partySize} 人</dd></div>
                 <div><dt style={{ color: C.MUTED, fontSize: 12 }}>付款</dt><dd style={{ margin: '4px 0 0' }}>{formatStatus(order.paymentStatus)}</dd></div>

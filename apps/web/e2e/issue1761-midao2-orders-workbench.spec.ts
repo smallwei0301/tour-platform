@@ -9,6 +9,7 @@ const unsafeOrder = {
   guestPhone: '0912-000-000',
   maskedEmail: 'traveler@example.invalid',
   planId: 'plan-1761-private',
+  planName: '日出輕健行方案',
   hasConflictOverride: true,
   tourTitle: '山徑晨光小旅行',
   scheduleDate: '2026-09-15T01:00:00.000Z',
@@ -58,6 +59,7 @@ test.describe('Midao2 read-only orders workbench', () => {
     await expect.poll(() => methods.length, { timeout: 30_000 }).toBeGreaterThan(0);
     await expect(page.getByTestId('midao2-orders-list')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText('山徑晨光小旅行')).toBeVisible();
+    await expect(page.getByText('日出輕健行方案')).toBeVisible();
     const body = await page.locator('body').innerText();
     expect(body).not.toContain('旅人甲');
     expect(body).not.toContain('0912-000-000');
