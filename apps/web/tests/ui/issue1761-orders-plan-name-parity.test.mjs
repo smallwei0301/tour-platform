@@ -18,7 +18,7 @@ test('#1761 5C bookings 投影以第二次查詢取得 planName，planId 優先�
   assert.match(route, /activityIdSet\.has\(plan\.activity_id\)/u, '只採用屬於本導遊 activity 的 plan');
   assert.match(route, /planName:/u);
   assert.match(route, /bookingPlanIdMap\[o\.booking_id\] : undefined\) \?\? schedule\?\.plan_id/u, 'bookings.activity_plan_id 優先，其次 schedule.plan_id');
-  assert.match(route, /plan\.activity_id === o\.activity_id|planActivityId === o\.activity_id/u, '單筆訂單的 plan 必須屬於該訂單的 activity');
+  assert.match(route, /candidatePlan\.activity_id === o\.activity_id/u, '單筆訂單的 plan 必須屬於該訂單的 activity');
   assert.doesNotMatch(route, /bookings!|activity_plans\(/u, '不使用 embed，避免 PGRST201 歧義');
 });
 

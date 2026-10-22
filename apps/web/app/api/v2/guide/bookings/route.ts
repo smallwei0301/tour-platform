@@ -100,8 +100,11 @@ export async function GET(req: Request) {
 
   const result = (orders || []).map((o: any) => {
     const schedule = Array.isArray(o.activity_schedules) ? o.activity_schedules[0] : o.activity_schedules;
-    const planId = resolvePlanId(o);
-    const plan = planId ? planMap[planId] : undefined;
+    // planId 與 planName 一定指向同一個通過 ownership 驗證的方案；驗證失敗則兩者皆 null
+    const candidatePlanId = resolvePlanId(o);
+    const candidatePlan = candidatePlanId ? planMap[candidatePlanId] : undefined;
+    const plan = candidatePlan && candidatePlan.activity_id === o.activity_id ? candidatePlan : undefined;
+    const planId = plan ? candidatePlanId : null;
     return {
       id: o.id,
       scheduleId: o.schedule_id,
@@ -110,7 +113,7 @@ export async function GET(req: Request) {
       maskedEmail: o.contact_email ? maskEmail(o.contact_email) : '',
       scheduleDate: schedule?.start_at || null,
       planId,
-      planName: plan && plan.activity_id === o.activity_id ? (plan.name || null) : null,
+      planName: plan ? (plan.name || null) : null,
       tourTitle: activityMap[o.activity_id]?.title || '',
       partySize: o.people_count,
       status: o.status,
