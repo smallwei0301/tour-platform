@@ -114,11 +114,12 @@ vibeaico-admin-rebuild 的對應裁示檔為 `docs/decisions/2026-10-22-owner-ag
   - 沒有 merge conflict。
   - 實作者不得自我驗收：依本文件前述規定，由不同 actor、fresh context 完成審查。
   - 已觸發的 bot review（例如 Codex）要先跑完；blocking finding 修正並回讀後才 merge，不得在 review 進行中搶先 merge。
-  - merge 後讀回確認：PR 顯示 merged、merge commit 可由 `main` 到達、`main` 上的 CI 結果。
+  - merge 後讀回確認：PR 顯示 merged、merge commit 可由 `main` 到達、`main` 上的 CI 結果；並依鐵律 7 把結果寫回 issue 留言與 worklog。
 - 不在本授權範圍：
   - 改動凍結區或 harness 治理檔：仍依 `CLAUDE.md` 鐵律 3、9 處理。
   - `apply_migration`／schema 變更：仍需 `SQL-OVERRIDE`（鐵律 2）。
-  - 手動 Production promote／rollback。
+  - 手動 Production deployment／promote／流量切換／rollback：需另行授權。
+  - 修改、繞過或放寬 CI／hooks 守門；修改這些守門本身的 PR 仍需 Owner 明確授權。
   - 真實付款與通知。
   - 任何 force-push（鐵律 10）。
 - 已知後果：`main` 會觸發 Vercel 自動部署到正式站（midao.com.tw）。merge 會改變正式行為的 PR 會經既有流程自動上線，這是本授權接受的結果。
