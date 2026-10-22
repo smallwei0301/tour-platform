@@ -76,7 +76,7 @@
         "requestedSelector": "haiku",
         "actualModel": "unknown",
         "count": 1,
-        "accepted": false,
+        "accepted": true,
         "dispatchedAt": "2026-10-22T09:31:30Z",
         "contextClass": "compact",
         "inputTokens": null,
@@ -91,7 +91,7 @@
         "requestedSelector": "haiku",
         "actualModel": "unknown",
         "count": 1,
-        "accepted": false,
+        "accepted": true,
         "dispatchedAt": "2026-10-22T09:31:30Z",
         "contextClass": "compact",
         "inputTokens": null,
@@ -111,13 +111,55 @@
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
+      },
+      {
+        "id": "r01-sol-triage",
+        "lane": "audit",
+        "role": "SOL TRIAGE 選 MAIN（主 Agent，audit 層）",
+        "requestedModel": "sol",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r01-terra-main-1761",
+        "lane": "build",
+        "role": "MAIN Terra 施工 #1761 Stage 5B",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-22T09:34:30Z"
+      },
+      {
+        "id": "r01-luna-closure",
+        "lane": "scout",
+        "role": "LUNA_CLOSURE 掃描",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
       }
     ],
     "fullContextReplays": 0,
     "duplicateScans": 0
   },
   "delivery": {
-    "issuesStarted": 0,
+    "issuesStarted": 1,
     "issuesClosed": 0,
     "auditReady": 0,
     "ownerBlockedComplete": 0,
@@ -143,14 +185,14 @@
     "hardFailReasons": []
   },
   "flow": {
-    "lunaTasks": 5,
-    "lunaAccepted": 3,
+    "lunaTasks": 6,
+    "lunaAccepted": 5,
     "lunaDelegationRatePercent": null,
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
     "waitTimeConvertedPercent": null,
-    "solTouches": 0,
-    "solIssues": 0
+    "solTouches": 1,
+    "solIssues": 1
   },
   "auditability": {
     "evidenceFieldsCompletePercent": null,
@@ -171,7 +213,14 @@
   },
   "wipLifecycle": {
     "schemaVersion": 1,
-    "events": []
+    "events": [
+      {
+        "kind": "BUILD_ENTER",
+        "pr": 1913,
+        "issue": 1761,
+        "at": "2026-10-22T09:34:30Z"
+      }
+    ]
   },
   "completionTruth": {
     "status": "NOT_CHECKED",
