@@ -1,0 +1,307 @@
+#!/usr/bin/env node
+
+// Ported from smallwei0301/vibeaico-admin-rebuild@417263410475fcca2b83b71dcf389f75977e2acc scripts/agents/scorecard-readiness.mjs.
+// Keep behavior in sync with the source; tour-platform deltas are listed in docs/metrics/README.md.
+
+import fs from 'node:fs';
+import path from 'node:path';
+import process from 'node:process';
+import { fileURLToPath } from 'node:url';
+import { validateRunLedgerV2 } from './run-ledger-v2.mjs';
+
+const OBSERVED_SCORE_EFFECTIVE_AT = '2026-09-15T00:00:00Z';
+const TERMINAL_ONLY_INPUTS = Object.freeze([
+  'endedAt',
+  'main.endSha',
+  'inventory.openIssuesEnd',
+  'inventory.openPrsEnd',
+  'closeout.state',
+  'closeout.closedAt',
+  'closeout.evidenceRef',
+  'completionTruth.status',
+  'completionTruth.checkedAt',
+]);
+
+const num = (value) => typeof value === 'number' && Number.isFinite(value) ? value : 0;
+const observedNumber = (value) => typeof value === 'number' && Number.isFinite(value) ? value : null;
+const lower = (value) => String(value ?? '').trim().toLowerCase();
+
+const REQUIRED_EVENT_COUNTERS = Object.freeze([
+  'delivery.issuesStarted',
+  'delivery.issuesClosed',
+  'ci.fullCiRuns',
+  'ci.invalidReruns',
+  'ci.sharedTestCollisions',
+  'inventory.mainTerraPeak',
+  'inventory.reserveTerraPeak',
+  'inventory.activeCandidatePeak',
+  'inventory.sharedTestPeak',
+  'inventory.closureSweeps',
+  'inventory.closureAdvancedOrClosed',
+  'flow.lunaTasks',
+  'flow.lunaAccepted',
+  'flow.solTouches',
+  'flow.solIssues',
+]);
+
+function valueAt(object, dottedPath) {
+  return dottedPath.split('.').reduce((value, key) => value?.[key], object);
+}
+
+function isMissing(value) {
+  return value === null || value === undefined || value === '';
+}
+
+function targetScoreProfile(run) {
+  const startedAt = Date.parse(String(run?.startedAt ?? ''));
+  const cutoff = Date.parse(OBSERVED_SCORE_EFFECTIVE_AT);
+  return Number.isFinite(startedAt) && startedAt >= cutoff ? 'OBSERVED_V1' : 'LEGACY_V2';
+}
+
+function observedTaskCounters(run) {
+  const tasks = Array.isArray(run?.modelUsage?.tasks) ? run.modelUsage.tasks : [];
+  let total = 0;
+  let lunaTasks = 0;
+  let lunaAccepted = 0;
+  let solTaskCount = 0;
+  const ids = new Set();
+  const duplicateIds = new Set();
+
+  for (const task of tasks) {
+    const count = Math.max(0, num(task?.count));
+    total += count;
+    const id = String(task?.id ?? '').trim();
+    if (id) {
+      if (ids.has(id)) duplicateIds.add(id);
+      ids.add(id);
+    }
+    const requested = lower(task?.requestedModel);
+    if (requested === 'luna') {
+      lunaTasks += count;
+      if (task?.accepted === true) lunaAccepted += count;
+    }
+    if (requested === 'sol') solTaskCount += count;
+  }
+
+  return { total, lunaTasks, lunaAccepted, solTaskCount, duplicateIds: [...duplicateIds] };
+}
+
+function verifiedIssueCloseCount(run) {
+  const claims = Array.isArray(run?.completionTruth?.claims) ? run.completionTruth.claims : [];
+  const subjects = new Set();
+  for (const claim of claims) {
+    if (claim?.type !== 'ISSUE_CLOSED' || claim?.verification !== 'VERIFIED') continue;
+    if (lower(claim?.observedState) !== 'closed') continue;
+    const match = String(claim?.subject ?? '').match(/(?:issue#|#)(\d+)/i);
+    if (match) subjects.add(match[1]);
+  }
+  return subjects.size;
+}
+
+function reconstructWipPeaks(run) {
+  const events = run?.wipLifecycle?.events;
+  if (!Array.isArray(events)) return { available: false, peaks: null };
+  const states = new Map();
+  const peaks = { mainTerraPeak: 0, activeCandidatePeak: 0, sharedTestPeak: 0 };
+  for (const event of events) {
+    const enter = { BUILD_ENTER: 'BUILD', VERIFY_ENTER: 'VERIFY', TEST_ENTER: 'TEST' }[event.kind];
+    const exit = { BUILD_EXIT: 'BUILD', VERIFY_EXIT: 'VERIFY', TEST_EXIT: 'TEST' }[event.kind];
+    if (enter) states.set(event.pr, { state: enter, issue: event.issue });
+    if (exit) states.delete(event.pr);
+    const active = [...states.values()];
+    peaks.mainTerraPeak = Math.max(peaks.mainTerraPeak, active.filter(item => item.state === 'BUILD').length);
+    peaks.sharedTestPeak = Math.max(peaks.sharedTestPeak, active.filter(item => item.state === 'TEST').length);
+    peaks.activeCandidatePeak = Math.max(peaks.activeCandidatePeak, new Set(active.map(item => item.issue)).size);
+  }
+  return { available: true, peaks };
+}
+
+export function analyzeScorecardReadiness(run) {
+  const validationErrors = validateRunLedgerV2(run);
+  const tasks = observedTaskCounters(run);
+  const rawCaptureGaps = [];
+  const consistencyWarnings = [];
+  const scoreProfileTarget = targetScoreProfile(run);
+  const lifecycle = reconstructWipPeaks(run);
+
+  if (validationErrors.length === 0) {
+    for (const field of REQUIRED_EVENT_COUNTERS) {
+      const value = valueAt(run, field);
+      if (!Number.isSafeInteger(value) || value < 0) {
+        rawCaptureGaps.push(`${field} must be an observed non-negative safe integer; unknown stays null/unavailable`);
+      }
+    }
+    const taskRows = Array.isArray(run?.modelUsage?.tasks) ? run.modelUsage.tasks : [];
+    taskRows.forEach((task, index) => {
+      if (!Number.isSafeInteger(task?.count) || task.count < 0) {
+        rawCaptureGaps.push(`modelUsage.tasks[${index}].count must be an observed non-negative safe integer`);
+      }
+    });
+
+    const observableActivity =
+      num(run?.delivery?.issuesStarted) > 0 ||
+      num(run?.ci?.fullCiRuns) > 0 ||
+      num(run?.inventory?.closureSweeps) > 0 ||
+      num(run?.flow?.solTouches) > 0 ||
+      num(run?.flow?.lunaTasks) > 0;
+
+    if (observableActivity && tasks.total === 0) {
+      rawCaptureGaps.push('modelUsage.tasks has no observed task records despite recorded Run activity');
+    }
+    if (tasks.duplicateIds.length) {
+      rawCaptureGaps.push(`modelUsage.tasks has duplicate task id(s): ${tasks.duplicateIds.join(', ')}`);
+    }
+    if (scoreProfileTarget === 'OBSERVED_V1' && !lifecycle.available) {
+      rawCaptureGaps.push('wipLifecycle events are required for OBSERVED_V1 WIP peak evidence; unknown remains unavailable');
+    }
+    if (lifecycle.available) {
+      // New-run events must belong to this Run; chronological sorting alone is insufficient.
+      // This is consistency checking, not proof that an event was actually observed.
+      if (scoreProfileTarget === 'OBSERVED_V1') {
+        const startedAt = Date.parse(run.startedAt);
+        const endedAt = run.endedAt === null ? null : Date.parse(run.endedAt);
+        run.wipLifecycle.events.forEach((event, index) => {
+          const at = Date.parse(event.at);
+          if (at < startedAt) {
+            rawCaptureGaps.push(`wipLifecycle.events[${index}].at precedes Run startedAt; do not backdate the Run or invent dispatch evidence`);
+          }
+          if (endedAt !== null && Number.isFinite(endedAt) && at > endedAt) {
+            rawCaptureGaps.push(`wipLifecycle.events[${index}].at exceeds Run endedAt; keep outside-window observations separate`);
+          }
+        });
+      }
+      for (const field of ['mainTerraPeak', 'activeCandidatePeak', 'sharedTestPeak']) {
+        if (run.inventory?.[field] !== lifecycle.peaks[field]) {
+          consistencyWarnings.push(`inventory.${field}=${run.inventory?.[field]} disagrees with wipLifecycle-derived ${lifecycle.peaks[field]}`);
+        }
+      }
+    }
+
+    if (num(run?.flow?.lunaTasks) !== tasks.lunaTasks) {
+      consistencyWarnings.push(`flow.lunaTasks=${num(run?.flow?.lunaTasks)} disagrees with modelUsage.tasks-derived ${tasks.lunaTasks}`);
+    }
+    if (num(run?.flow?.lunaAccepted) !== tasks.lunaAccepted) {
+      consistencyWarnings.push(`flow.lunaAccepted=${num(run?.flow?.lunaAccepted)} disagrees with modelUsage.tasks-derived ${tasks.lunaAccepted}`);
+    }
+    if (num(run?.ci?.invalidReruns) > num(run?.ci?.fullCiRuns)) {
+      consistencyWarnings.push(`ci.invalidReruns=${num(run?.ci?.invalidReruns)} exceeds ci.fullCiRuns=${num(run?.ci?.fullCiRuns)}`);
+    }
+    if (num(run?.inventory?.closureAdvancedOrClosed) > num(run?.inventory?.closureSweeps)) {
+      consistencyWarnings.push(`inventory.closureAdvancedOrClosed=${num(run?.inventory?.closureAdvancedOrClosed)} exceeds closureSweeps=${num(run?.inventory?.closureSweeps)}`);
+    }
+    if (Number.isSafeInteger(run?.inventory?.mainTerraPeak)
+      && Number.isSafeInteger(run?.inventory?.activeCandidatePeak)
+      && run.inventory.mainTerraPeak > run.inventory.activeCandidatePeak) {
+      consistencyWarnings.push(`inventory.mainTerraPeak=${run.inventory.mainTerraPeak} exceeds activeCandidatePeak=${run.inventory.activeCandidatePeak}`);
+    }
+    const verifiedClosed = verifiedIssueCloseCount(run);
+    const recordedClosed = num(run?.delivery?.issuesClosed);
+    if ((verifiedClosed > 0 || recordedClosed > 0) && verifiedClosed !== recordedClosed) {
+      consistencyWarnings.push(`verified ISSUE_CLOSED subjects=${verifiedClosed} disagrees with delivery.issuesClosed=${recordedClosed}`);
+    }
+  }
+
+  const terminalOnlyPending = TERMINAL_ONLY_INPUTS.filter((field) => {
+    const value = valueAt(run, field);
+    if (field === 'closeout.state') return value !== 'CLOSED';
+    if (field === 'completionTruth.status') return value !== 'VERIFIED';
+    return isMissing(value);
+  });
+
+  const readyForContinuedCapture = validationErrors.length === 0
+    && rawCaptureGaps.length === 0
+    && consistencyWarnings.length === 0;
+
+  return {
+    runId: run?.runId ?? null,
+    validLedger: validationErrors.length === 0,
+    validationErrors,
+    scoreProfileTarget,
+    observedScoreEffectiveAt: OBSERVED_SCORE_EFFECTIVE_AT,
+    liveCaptureStatus: readyForContinuedCapture ? 'LIVE_CAPTURE_READY' : 'NEEDS_CAPTURE',
+    rawCaptureGaps,
+    consistencyWarnings,
+    terminalOnlyPending,
+    observed: {
+      taskCount: tasks.total,
+      lunaTasks: tasks.lunaTasks,
+      lunaAccepted: tasks.lunaAccepted,
+      solTaskCount: tasks.solTaskCount,
+      recordedSolTouches: num(run?.flow?.solTouches),
+      fullCiRuns: observedNumber(run?.ci?.fullCiRuns),
+      invalidReruns: observedNumber(run?.ci?.invalidReruns),
+      closureSweeps: observedNumber(run?.inventory?.closureSweeps),
+      verifiedIssueClosedSubjects: verifiedIssueCloseCount(run),
+      recordedIssuesClosed: observedNumber(run?.delivery?.issuesClosed),
+      mainTerraPeak: observedNumber(run?.inventory?.mainTerraPeak),
+      activeCandidatePeak: observedNumber(run?.inventory?.activeCandidatePeak),
+      sharedTestPeak: observedNumber(run?.inventory?.sharedTestPeak),
+      counterEvidence: lifecycle.available ? 'WIP_EVENTS_RECONSTRUCTED' : 'RECORDED_ONLY',
+    },
+    readyForContinuedCapture,
+  };
+}
+
+export function renderScorecardReadiness(result) {
+  const lines = [
+    `# Scorecard Live Readiness: ${result.runId ?? 'unknown'}`,
+    '',
+    `- Target score profile: ${result.scoreProfileTarget}`,
+    `- OBSERVED_V1 effective at: ${result.observedScoreEffectiveAt}`,
+    `- Ledger valid: ${result.validLedger ? 'YES' : 'NO'}`,
+    `- Live capture status: ${result.liveCaptureStatus}`,
+    `- Raw capture healthy: ${result.readyForContinuedCapture ? 'YES' : 'NO'}`,
+    '',
+    '## Observed raw facts',
+    '',
+    `- tasks: ${result.observed.taskCount}`,
+    `- Luna tasks / accepted: ${result.observed.lunaTasks} / ${result.observed.lunaAccepted}`,
+    `- Sol task records / recorded Sol touches: ${result.observed.solTaskCount} / ${result.observed.recordedSolTouches}`,
+    `- full CI / invalid reruns: ${result.observed.fullCiRuns} / ${result.observed.invalidReruns}`,
+    `- closure sweeps: ${result.observed.closureSweeps}`,
+    `- verified / recorded ISSUE_CLOSED: ${result.observed.verifiedIssueClosedSubjects} / ${result.observed.recordedIssuesClosed}`,
+    `- recorded BUILD / candidate / shared TEST peaks: ${result.observed.mainTerraPeak} / ${result.observed.activeCandidatePeak} / ${result.observed.sharedTestPeak}`,
+    `- counter evidence: ${result.observed.counterEvidence}`,
+  ];
+
+  if (result.validationErrors.length) {
+    lines.push('', '## Ledger validation errors', '', ...result.validationErrors.map((item) => `- ${item}`));
+  }
+  lines.push(
+    '',
+    '## Raw-capture gaps',
+    '',
+    ...(result.rawCaptureGaps.length ? result.rawCaptureGaps.map((item) => `- ${item}`) : ['- none']),
+    '',
+    '## Counter consistency warnings',
+    '',
+    ...(result.consistencyWarnings.length ? result.consistencyWarnings.map((item) => `- ${item}`) : ['- none']),
+    '',
+    '## Terminal-only pending fields',
+    '',
+    ...(result.terminalOnlyPending.length ? result.terminalOnlyPending.map((item) => `- ${item}`) : ['- none']),
+    '',
+    '> Sol task records and flow.solTouches are shown side-by-side but are not asserted equal: the repository defines solTouches as triage/audit touches, not as a strict alias of task-record count.',
+    '> RECORDED_ONLY means the peak counters are ledger claims checked for internal consistency; it is not independent event reconstruction.',
+    '> Readiness is a categorical capture gate, not a score. It never rewrites a legacy Run into OBSERVED_V1. Runs started before the cutoff remain LEGACY_V2.',
+    '> For new OBSERVED_V1 Runs, this tool checks raw capture health without requiring legacy manual percentage fields.',
+    '',
+  );
+  return lines.join('\n');
+}
+
+function cli(argv = process.argv.slice(2)) {
+  const file = argv.find((item) => !item.startsWith('--'));
+  if (!file) throw new Error('Usage: scorecard-readiness.mjs <ledger.json> [--json] [--strict-live]');
+  const run = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const result = analyzeScorecardReadiness(run);
+  if (argv.includes('--json')) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  else process.stdout.write(renderScorecardReadiness(result));
+  if (argv.includes('--strict-live') && !result.readyForContinuedCapture) process.exitCode = 2;
+  return result;
+}
+
+const entry = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+if (entry) {
+  try { cli(); } catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; }
+}
