@@ -253,6 +253,19 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-terra-rework5-1761",
+        "role": "Terra 修第四次審查 BLOCKING（bookings 查詢失敗退回 schedule 方案）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
         "accepted": false,
         "inputTokens": null,
         "outputTokens": null,
@@ -287,7 +300,7 @@
     "postMergeRegressions": 0,
     "safetyViolations": 0,
     "hardFailReasons": [],
-    "auditFindings": 2,
+    "auditFindings": 3,
     "botFindings": 1
   },
   "flow": {
@@ -521,6 +534,16 @@
         "head": "2b2b5fa465ce392223e217dcdc2c05be685ecb2f",
         "workstream": "PRODUCT_MAINLINE",
         "reason": "Sol 第四次審查與 CI"
+      },
+      {
+        "id": "r02-wip-20",
+        "at": "2026-10-22T11:28:04Z",
+        "kind": "VERIFY_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "2b2b5fa465ce392223e217dcdc2c05be685ecb2f",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "第四次 Sol FIX_REQUIRED：bookings 查詢失敗退回 schedule 方案"
       }
     ]
   },
