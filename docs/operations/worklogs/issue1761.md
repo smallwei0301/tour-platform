@@ -83,3 +83,23 @@
 - 最小 GREEN 在 page-local loader 加入 `projectOrder()`，每筆資料建立新物件且僅保留 `id`、`tourTitle`、`scheduleDate`、`partySize`、`status`、`paymentStatus`、`totalTwd`、`createdAt` 後才寫入 state；不變更 canonical API、global helper、auth/session 或 schema。GREEN 重跑新 contract 3/3 PASS；三份 focused contracts 加 `--typecheck` 為 7/7 PASS、exit 0；`git diff --check` exit 0。
 - 官方 Midao2-only Chromium lane 尚未對這個 final page/contract bytes 啟動；依 review 要求下一步僅跑一次 repository-owned lane，並要求 3/3、`MIDAO_STAGE=complete` 與 cleanup readback 才可 commit/re-review。
 - 已以 final page/contract bytes 執行唯一 repository-owned Midao2-only Chromium lane：`NODE22_BIN=/root/.hermes/toolchains/node/22.23.1/bin/node scripts/testing/run-midao-e2e.sh apps/web/e2e/issue1761-midao2-orders-workbench.spec.ts` exit 0、Chromium 3/3 PASS（desktop 安全投影、390x844 409/retry→empty、concurrent dual-401 exact return path）；runner 輸出 `MIDAO_STAGE=complete`、`cleanup-identity`、`cleanup`。next-intl webpack cache warnings 未造成測試失敗。
+
+## 2026-10-22 Stage 5B：需求單 action/readback parity（Run `2026-10-22-midao2-r01`，PR #1913）
+
+- 治理：VibeAI B+（規則 main `ce39e520`），`WORKSTREAM: PRODUCT_MAINLINE`。Run 帳本：`docs/metrics/agent-runs/2026-10-22-midao2-r01.json`。
+- LUNA 盤點（scout／requested `haiku`，actual unknown），4 項：
+  - TRUTH：#1761 為 `agent:now`。
+  - ENV：22 支 midao migration 在 `docs/operations/migration-ledger.json` 皆為 production verified，沒有 Environment Delivery 尾項。
+  - CI：PR #1901 的 browser 失敗為 `AggregateError`，原因 UNKNOWN；PR #1890 的 browser 失敗是該 PR 自身的 release-gate 斷言。
+  - REQ：新舊 UI 共用 `RequestListScreen`／`RequestDetailScreen` 與同一組 v2 command（decide、mark-replied、convert，另有唯讀的 reply-template）。寫入真相唯一，沒有後端缺口。
+- SOL TRIAGE：
+  - MAIN 為本切片：`RequestDetailScreen.tsx` 返回連結寫死 `/midao/requests`，從 `/midao2/requests/[id]` 返回會跳到舊 UI。
+  - 本切片不改 command、idempotency、concurrency 或 DB，風險由預設 high-risk 下修為 normal，不需要 Final Risk。
+  - 盤點發現但不在本切片：`mark-replied` 的 idempotency key 沒有寫入 DB；client 每次重試都產生新的 key。兩者都靠 status CAS 防止重複。
+- Terra 施工（build／requested `sonnet`）：commit `b3d7e907`。
+  - RED：4 個測試中 2 個失敗，失敗原因與預期一致。
+  - GREEN：`run-checks.sh` 29/29，含 `--typecheck`；`git diff --check` 無輸出；`playwright --list` 3 個測試。
+- Sol diff audit（audit／requested `opus`，fresh context，非 builder）：PASS，blocking 0。
+  - 反證：修改前的檔案跑新測試會 2 失敗。
+  - non-blocking：返回時遺失 bucket query，修改前就是如此，不算回歸。
+- 本機限制：本機沒有 docker daemon，無法執行 `scripts/testing/run-midao-e2e.sh`。另外環境帶有正式金鑰（#1912），所以不啟動 dev server。browser 證據以 CI 為準。
