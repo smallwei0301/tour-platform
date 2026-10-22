@@ -204,6 +204,19 @@
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
+      },
+      {
+        "id": "r02-terra-rework3-1761",
+        "role": "Terra 修 Codex P1（legacy schedule plan id 混入 UUID IN）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
       }
     ],
     "fullContextReplays": 0,
@@ -220,7 +233,7 @@
     "cycleTimeMinutes": null
   },
   "ci": {
-    "fullCiRuns": 0,
+    "fullCiRuns": null,
     "invalidReruns": 0,
     "firstPassRatePercent": null,
     "sharedTestCollisions": 0
@@ -234,7 +247,8 @@
     "postMergeRegressions": 0,
     "safetyViolations": 0,
     "hardFailReasons": [],
-    "auditFindings": 1
+    "auditFindings": 1,
+    "botFindings": 1
   },
   "flow": {
     "lunaTasks": 7,
@@ -261,7 +275,9 @@
     "流程缺失：rework（r02-terra-rework-1761）以 SendMessage 續派原 builder 前未先跑 dispatch-preflight before；事後補跑會違反時序，故不補，如實記錄。",
     "另案 issue #1916：mark-replied idempotency key 未生效、client 重試換新 key（high，需 Final Risk）。",
     "預盤點 /midao2/me：身分只取 session、無目標 id → 無越權路徑；GAP：updateGuideExperienceYearsDb 用 Number() 寬鬆轉型（\"\"/null→0、true→1）、profile-extras 無 401/403 行為測試；頁面註解宣稱可編輯服務區域但未實作。",
-    "預盤點 calendar：/midao/calendar 為靜態占位無寫入；midao2 寫入走 /api/v2/guide/midao/availability/{days/[date] PUT, defaults POST}，有 expectedRevision CAS 與 idempotency；單日衝突 409、週模板衝突 200+conflicts[]（語意不一致，疑似 GAP）。未涵蓋 pre-Midao /guide/** 檔期管理（真正的 legacy 寫入面）→ 下一輪需補盤點後才能判定 round-trip。"
+    "預盤點 calendar：/midao/calendar 為靜態占位無寫入；midao2 寫入走 /api/v2/guide/midao/availability/{days/[date] PUT, defaults POST}，有 expectedRevision CAS 與 idempotency；單日衝突 409、週模板衝突 200+conflicts[]（語意不一致，疑似 GAP）。未涵蓋 pre-Midao /guide/** 檔期管理（真正的 legacy 寫入面）→ 下一輪需補盤點後才能判定 round-trip。",
+    "Codex P1（a1e1ff4）：legacy text schedule.plan_id 混入 activity_plans.id UUID IN 查詢 → 整體失敗、planName 全清空；兩次 Sol 審查與自寫 stub 均未發現（stub 不模擬 UUID 型別錯誤）。",
+    "ci.fullCiRuns 暫設 null，closeout 前以 gh api actions/runs 實數填入。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
