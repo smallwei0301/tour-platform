@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Ported from smallwei0301/vibeaico-admin-rebuild@0741fff37e114b6ebeec165352f1e68e1ee919ee scripts/agents/run-ledger-v2.mjs.
+// Ported from smallwei0301/vibeaico-admin-rebuild@ddd158733bc133094da43df1c140b9b3fb0633f5 scripts/agents/run-ledger-v2.mjs.
 // Keep behavior in sync with the source; tour-platform deltas are listed in docs/metrics/README.md.
 
 import fs from "node:fs";
