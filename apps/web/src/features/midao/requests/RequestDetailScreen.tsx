@@ -233,7 +233,13 @@ function isSuccessEnvelope(value: unknown): value is { success: true; data: unkn
   return isRecord(value) && value.success === true && Object.hasOwn(value, 'data');
 }
 
-export function RequestDetailScreen({ requestRef }: { requestRef: string }) {
+export function RequestDetailScreen({
+  requestRef,
+  listHref = '/midao/requests',
+}: {
+  requestRef: string;
+  listHref?: string;
+}) {
   const [state, setState] = useState<DetailState>({ kind: 'loading' });
   const mountedRef = useRef(true);
   const loadedRef = useRef(false);
@@ -283,7 +289,7 @@ export function RequestDetailScreen({ requestRef }: { requestRef: string }) {
 
   return (
     <section className="midao-request-detail-screen" aria-labelledby="midao-request-detail-title">
-      <Link className="midao-request-detail-back" href="/midao/requests">
+      <Link className="midao-request-detail-back" href={listHref}>
         <span aria-hidden="true">←</span>返回需求列表
       </Link>
       <div className="midao-request-detail-intro">

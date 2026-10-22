@@ -1,0 +1,330 @@
+{
+  "schemaVersion": 2,
+  "runId": "2026-10-22-midao2-r01",
+  "status": "IN_PROGRESS",
+  "startedAt": "2026-10-22T09:30:38.136Z",
+  "endedAt": null,
+  "sources": [],
+  "main": {
+    "startSha": null,
+    "endSha": null
+  },
+  "inventory": {
+    "openIssuesStart": 93,
+    "openIssuesEnd": null,
+    "openPrsStart": null,
+    "openPrsEnd": null,
+    "mainTerraPeak": 1,
+    "reserveTerraPeak": 0,
+    "activeCandidatePeak": 1,
+    "sharedTestPeak": 0,
+    "closureSweeps": 1,
+    "closureAdvancedOrClosed": 0,
+    "closureSweepLog": [
+      {
+        "at": "2026-10-22T09:36:00Z",
+        "result": "EMPTY_WITH_SCAN",
+        "scanned": [
+          {
+            "ref": "#1901",
+            "verdict": "ADVANCEABLE",
+            "reason": "新 head 106dff79 無同 head 審查；browser 失敗 AggregateError 原因 UNKNOWN"
+          },
+          {
+            "ref": "#1890",
+            "verdict": "NOT_CANDIDATE",
+            "reason": "draft 停滯 16 天；browser 為 PR 自身 release-gate 斷言失敗"
+          },
+          {
+            "ref": "#1827",
+            "verdict": "ADVANCEABLE",
+            "reason": "已被 #1863 取代，但未勾 AC 尚未搬入 #1863"
+          },
+          {
+            "ref": "#1755",
+            "verdict": "NOT_CANDIDATE",
+            "reason": "epic 無子項清單，07-22 review FAIL 待補救"
+          },
+          {
+            "ref": "#1860",
+            "verdict": "NOT_CANDIDATE",
+            "reason": "已 closed，無殘留"
+          },
+          {
+            "ref": "#1760",
+            "verdict": "NOT_CANDIDATE",
+            "reason": "已 closed，殘留已轉 #1860 並完成"
+          }
+        ]
+      }
+    ]
+  },
+  "modelUsage": {
+    "actualTokensAvailable": false,
+    "weeklyUsageStartPercent": null,
+    "weeklyUsageEndPercent": null,
+    "weightedUsageImprovementPercent": null,
+    "weights": {
+      "luna": 1,
+      "terra": 3,
+      "sol": 6
+    },
+    "contextMultipliers": {
+      "compact": 1,
+      "medium": 1.5,
+      "full": 3
+    },
+    "tasks": [
+      {
+        "id": "r01-luna-truth",
+        "lane": "scout",
+        "role": "LUNA 窄盤點 truth",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "accepted": true,
+        "dispatchedAt": "2026-10-22T09:31:30Z",
+        "contextClass": "compact",
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "note": "接受；scout 違規寫了 1 個暫存檔，已由主 Agent 刪除"
+      },
+      {
+        "id": "r01-luna-env",
+        "lane": "scout",
+        "role": "LUNA 窄盤點 env",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "accepted": true,
+        "dispatchedAt": "2026-10-22T09:31:30Z",
+        "contextClass": "compact",
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r01-luna-ci",
+        "lane": "scout",
+        "role": "LUNA 窄盤點 ci",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "accepted": true,
+        "dispatchedAt": "2026-10-22T09:31:30Z",
+        "contextClass": "compact",
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r01-luna-req",
+        "lane": "scout",
+        "role": "LUNA 窄盤點 req",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "accepted": true,
+        "dispatchedAt": "2026-10-22T09:31:30Z",
+        "contextClass": "compact",
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r01-ledger-writes",
+        "lane": "scout",
+        "role": "audit 層代做 docs/metrics 即時埋點（違反 scout 路徑判準，如實記錄）",
+        "requestedModel": "luna",
+        "actualModel": "sol",
+        "count": 1,
+        "accepted": true,
+        "violation": "DOCS_METRICS_WRITTEN_BY_AUDIT_TIER",
+        "contextClass": "compact",
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r01-sol-triage",
+        "lane": "audit",
+        "role": "SOL TRIAGE 選 MAIN（主 Agent，audit 層）",
+        "requestedModel": "sol",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r01-terra-main-1761",
+        "lane": "build",
+        "role": "MAIN Terra 施工 #1761 Stage 5B",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-22T09:34:30Z"
+      },
+      {
+        "id": "r01-luna-closure",
+        "lane": "scout",
+        "role": "LUNA_CLOSURE 掃描",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r01-sol-audit-1761",
+        "lane": "audit",
+        "role": "Early Sol diff audit（fresh context，非 builder）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r01-ledger-fix-codex-p1",
+        "lane": "scout",
+        "role": "audit 層代修 docs/metrics 帳本（Codex P1），違反 scout 路徑判準",
+        "requestedModel": "luna",
+        "actualModel": "sol",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "violation": "DOCS_METRICS_WRITTEN_BY_AUDIT_TIER"
+      }
+    ],
+    "fullContextReplays": 0,
+    "duplicateScans": 0
+  },
+  "delivery": {
+    "issuesStarted": 1,
+    "issuesClosed": 0,
+    "auditReady": 0,
+    "ownerBlockedComplete": 0,
+    "exactHeadCiOnly": 0,
+    "commitOnly": 0,
+    "unfinishedCarryover": 0,
+    "cycleTimeMinutes": null
+  },
+  "ci": {
+    "fullCiRuns": 3,
+    "invalidReruns": 0,
+    "firstPassRatePercent": null,
+    "sharedTestCollisions": 0
+  },
+  "quality": {
+    "acceptanceEvidenceCoveragePercent": null,
+    "auditFirstPassRatePercent": null,
+    "unresolvedP0": 0,
+    "unresolvedP1": 0,
+    "reopenedIssues": 0,
+    "postMergeRegressions": 0,
+    "safetyViolations": 0,
+    "hardFailReasons": []
+  },
+  "flow": {
+    "lunaTasks": 7,
+    "lunaAccepted": 7,
+    "lunaDelegationRatePercent": null,
+    "duplicateAgentTasks": 0,
+    "ownershipCollisions": 0,
+    "waitTimeConvertedPercent": null,
+    "solTouches": 2,
+    "solIssues": 1
+  },
+  "auditability": {
+    "evidenceFieldsCompletePercent": null,
+    "exactHeadTestCoveragePercent": null,
+    "stalePendingDescriptions": 0,
+    "preciseBlockersPercent": null,
+    "scoreInputsCompletePercent": null
+  },
+  "notes": [],
+  "deliveryTruthVersion": 4,
+  "closeout": {
+    "contractVersion": 1,
+    "ownerRole": "PRODUCT_MAIN_SESSION",
+    "terminalPolicy": "CLOSE_OR_REASSIGN_BEFORE_SESSION_EXIT_OR_OWNER_STOP_OR_SCOPE_EXHAUSTED_OR_OWNER_BLOCKED",
+    "state": "OPEN",
+    "closedAt": null,
+    "evidenceRef": null
+  },
+  "wipLifecycle": {
+    "schemaVersion": 1,
+    "events": [
+      {
+        "id": "r01-wip-1",
+        "at": "2026-10-22T09:34:30Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1913,
+        "issue": 1761,
+        "head": "b3d7e90710d1149e3d7fc7491196c7e506e292a1",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "MAIN Terra 施工派工（sonnet）"
+      },
+      {
+        "id": "r01-wip-2",
+        "at": "2026-10-22T09:36:30Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1913,
+        "issue": 1761,
+        "head": "b3d7e90710d1149e3d7fc7491196c7e506e292a1",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "施工完成 commit b3d7e907，run-checks 29/29"
+      },
+      {
+        "id": "r01-wip-3",
+        "at": "2026-10-22T09:38:00Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1913,
+        "issue": 1761,
+        "head": "4dddcae5ff62f51d16911f1a642ea0103c78b377",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Sol audit PASS 後進入 exact-head CI 與 bot review"
+      },
+      {
+        "id": "r01-wip-4",
+        "at": "2026-10-22T09:41:30Z",
+        "kind": "VERIFY_EXIT",
+        "pr": 1913,
+        "issue": 1761,
+        "head": "4dddcae5ff62f51d16911f1a642ea0103c78b377",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Codex P1：WIP 事件缺必填欄位，修正帳本產生新 head"
+      }
+    ]
+  },
+  "completionTruth": {
+    "status": "NOT_CHECKED",
+    "checkedAt": null,
+    "claims": []
+  }
+}

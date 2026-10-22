@@ -15,7 +15,7 @@ export default async function Midao2RequestDetailPage({ params }: Midao2RequestD
       <p data-testid="midao2-manual-line-disclosure" role="status">
         系統只準備文案或開啟 LINE；不保證送達，也不會自動重送。
       </p>
-      <RequestDetailScreen requestRef={requestRef} />
+      <RequestDetailScreen requestRef={requestRef} listHref="/midao2/requests" />
     </div>
   );
 }
