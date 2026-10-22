@@ -147,3 +147,22 @@ test('midao2 LINE copy is manual, uses the safe template, and does not mutate CR
   await expect(page.getByTestId('midao-line-share-link')).toHaveAttribute('href', 'https://line.me/R/share?text=%E6%82%A8%E5%A5%BD');
   expect(writes).toEqual([`/api/v2/guide/requests/${REQUEST_REF}/reply-template`]);
 });
+test('midao2 request detail back link returns to the midao2 request list', async ({ page }) => {
+  await setGuideSession(page, GUIDE_ID);
+  await mockMidaoGuideSummary(page);
+  await page.route(`**/api/v2/guide/requests/${REQUEST_REF}`, (route) =>
+    route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: CANONICAL_INQUIRY_DETAIL }) }),
+  );
+  await page.route('**/api/v2/guide/requests?**', (route) =>
+    route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { items: [], nextCursor: null } }) }),
+  );
+  await page.route('**/api/v2/guide/requests', (route) =>
+    route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { items: [], nextCursor: null } }) }),
+  );
+
+  await page.goto(`/midao2/requests/${REQUEST_REF}`);
+  const back = page.getByRole('link', { name: /返回需求列表/ });
+  await expect(back).toHaveAttribute('href', '/midao2/requests');
+  await back.click();
+  await expect(page).toHaveURL(/\/midao2\/requests$/u);
+});
