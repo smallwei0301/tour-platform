@@ -266,6 +266,19 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-sol-reaudit4-1761",
+        "role": "Sol 第五次審查（新 actor）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
         "accepted": false,
         "inputTokens": null,
         "outputTokens": null,
@@ -310,7 +323,7 @@
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
     "waitTimeConvertedPercent": null,
-    "solTouches": 5,
+    "solTouches": 6,
     "solIssues": 1
   },
   "auditability": {
@@ -544,6 +557,36 @@
         "head": "2b2b5fa465ce392223e217dcdc2c05be685ecb2f",
         "workstream": "PRODUCT_MAINLINE",
         "reason": "第四次 Sol FIX_REQUIRED：bookings 查詢失敗退回 schedule 方案"
+      },
+      {
+        "id": "r02-wip-21",
+        "at": "2026-10-22T11:28:20Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "b93096f955a9be82138b25c0087b60d918e3757e",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "rework5"
+      },
+      {
+        "id": "r02-wip-22",
+        "at": "2026-10-22T11:29:20Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "b93096f955a9be82138b25c0087b60d918e3757e",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "b93096f9，29/29"
+      },
+      {
+        "id": "r02-wip-23",
+        "at": "2026-10-22T11:29:34Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "b93096f955a9be82138b25c0087b60d918e3757e",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Sol 第五次審查與 CI"
       }
     ]
   },
