@@ -14,9 +14,9 @@
     "openIssuesEnd": null,
     "openPrsStart": null,
     "openPrsEnd": null,
-    "mainTerraPeak": 0,
+    "mainTerraPeak": 1,
     "reserveTerraPeak": 0,
-    "activeCandidatePeak": 0,
+    "activeCandidatePeak": 1,
     "sharedTestPeak": 0,
     "closureSweeps": 1,
     "closureAdvancedOrClosed": 0,
@@ -205,6 +205,20 @@
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
+      },
+      {
+        "id": "r01-ledger-fix-codex-p1",
+        "lane": "scout",
+        "role": "audit 層代修 docs/metrics 帳本（Codex P1），違反 scout 路徑判準",
+        "requestedModel": "luna",
+        "actualModel": "sol",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "violation": "DOCS_METRICS_WRITTEN_BY_AUDIT_TIER"
       }
     ],
     "fullContextReplays": 0,
@@ -237,8 +251,8 @@
     "hardFailReasons": []
   },
   "flow": {
-    "lunaTasks": 6,
-    "lunaAccepted": 6,
+    "lunaTasks": 7,
+    "lunaAccepted": 7,
     "lunaDelegationRatePercent": null,
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
@@ -267,22 +281,44 @@
     "schemaVersion": 1,
     "events": [
       {
+        "id": "r01-wip-1",
+        "at": "2026-10-22T09:34:30Z",
         "kind": "BUILD_ENTER",
         "pr": 1913,
         "issue": 1761,
-        "at": "2026-10-22T09:34:30Z"
+        "head": "b3d7e90710d1149e3d7fc7491196c7e506e292a1",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "MAIN Terra 施工派工（sonnet）"
       },
       {
+        "id": "r01-wip-2",
+        "at": "2026-10-22T09:36:30Z",
         "kind": "BUILD_EXIT",
         "pr": 1913,
         "issue": 1761,
-        "at": "2026-10-22T09:36:30Z"
+        "head": "b3d7e90710d1149e3d7fc7491196c7e506e292a1",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "施工完成 commit b3d7e907，run-checks 29/29"
       },
       {
+        "id": "r01-wip-3",
+        "at": "2026-10-22T09:38:00Z",
         "kind": "VERIFY_ENTER",
         "pr": 1913,
         "issue": 1761,
-        "at": "2026-10-22T09:36:30Z"
+        "head": "4dddcae5ff62f51d16911f1a642ea0103c78b377",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Sol audit PASS 後進入 exact-head CI 與 bot review"
+      },
+      {
+        "id": "r01-wip-4",
+        "at": "2026-10-22T09:41:30Z",
+        "kind": "VERIFY_EXIT",
+        "pr": 1913,
+        "issue": 1761,
+        "head": "4dddcae5ff62f51d16911f1a642ea0103c78b377",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Codex P1：WIP 事件缺必填欄位，修正帳本產生新 head"
       }
     ]
   },
