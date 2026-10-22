@@ -183,3 +183,15 @@
   - 第一次 rework 用 SendMessage 續派之前，沒有先跑 dispatch-preflight before。
   - 施工派工的時間戳一度以估計值填入，而且晚於當時的實際時間，已更正。
 - 另案：#1916（mark-replied 的 idempotency key 沒有生效；high 風險）。
+- 後續修正與審查（皆在 PR #1915）：
+  - Codex P1：legacy 文字 `schedule.plan_id` 混入 UUID 的 `IN` 查詢，結果 planName 整批被清空。修正 `404dffe3`：分成 UUID 組與 `(activity_id, legacy_plan_id)` 組。thread 已回覆並 resolve。
+  - Sol 第三次審查 FIX_REQUIRED：重複的 legacy id 採先到先贏。修正 `2b2b5fa4`：視為歧義，回 null。
+  - Sol 第四次審查 FIX_REQUIRED：bookings 查詢失敗時會退回 schedule 方案。修正 `b93096f9`：有 booking 的訂單回 null；UUID 統一轉小寫；stub 遇到不存在的欄位會報錯。
+  - Sol 第五次審查（新 actor）：PASS，blocking 0。逐一模擬每個查詢失敗或回空，結果都符合原則。
+  - `bf10c7be`：`issue1761-midao2-orders-workbench.spec.ts` 納入 `test:e2e:smoke`。legacy orders spec 會打真實登入 API，不符合 smoke 條件，未納入，瀏覽器層記為 `NOT_VERIFIED`；source contract 與行為測試已涵蓋。
+- head `bf10c7be` 的 CI：
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39771871409/job/119801134220)：success
+  - [smoke](https://github.com/smallwei0301/tour-platform/actions/runs/39771871404/job/119801133983)：success，18/18，含 `issue1761-midao2-orders-workbench` 3/3 與 `midao2-request-conversion` 3/3
+  - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39771871356/job/119801133751)：success
+  - Vercel：success
+- 另案：#1917（orders 查詢失敗時回傳原始 DB error.message，origin/main 既有問題）。

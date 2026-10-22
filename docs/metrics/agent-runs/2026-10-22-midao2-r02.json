@@ -292,7 +292,7 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "compact",
-        "accepted": false,
+        "accepted": true,
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
