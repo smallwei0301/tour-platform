@@ -279,6 +279,19 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r02-terra-smoke-1761",
+        "role": "Terra 將 issue1761 orders e2e 加入 smoke lane（補 CI browser 證據缺口）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
         "accepted": false,
         "inputTokens": null,
         "outputTokens": null,
@@ -344,7 +357,9 @@
     "預盤點 calendar：/midao/calendar 為靜態占位無寫入；midao2 寫入走 /api/v2/guide/midao/availability/{days/[date] PUT, defaults POST}，有 expectedRevision CAS 與 idempotency；單日衝突 409、週模板衝突 200+conflicts[]（語意不一致，疑似 GAP）。未涵蓋 pre-Midao /guide/** 檔期管理（真正的 legacy 寫入面）→ 下一輪需補盤點後才能判定 round-trip。",
     "Codex P1（a1e1ff4）：legacy text schedule.plan_id 混入 activity_plans.id UUID IN 查詢 → 整體失敗、planName 全清空；兩次 Sol 審查與自寫 stub 均未發現（stub 不模擬 UUID 型別錯誤）。",
     "ci.fullCiRuns 暫設 null，closeout 前以 gh api actions/runs 實數填入。",
-    "更正：rework3 派工時間原估 11:15:30Z，早於其 before record（11:16:52Z），改為 11:17:05Z；WIP r02-wip-12/13/14 同步更正（仍為推估值）。ci.fullCiRuns 以 gh api actions/runs（branch、created>=startedAt）實數填入，截至 11:19:13Z。"
+    "更正：rework3 派工時間原估 11:15:30Z，早於其 before record（11:16:52Z），改為 11:17:05Z；WIP r02-wip-12/13/14 同步更正（仍為推估值）。ci.fullCiRuns 以 gh api actions/runs（branch、created>=startedAt）實數填入，截至 11:19:13Z。",
+    "第五次 Sol 審查 PASS（blocking 0）。另案 #1917：orders 查詢失敗回傳原始 DB error.message（origin/main 既有）。",
+    "CI browser 缺口：本 PR 修改的兩支 issue1761 orders e2e 不在 smoke 清單、也不符合 midao-baseline 路徑條件，CI 從未跑過；派工補入 smoke。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
