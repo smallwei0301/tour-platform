@@ -226,10 +226,24 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "compact",
-        "accepted": false,
+        "accepted": true,
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
+      },
+      {
+        "id": "r02-terra-rework4-1761",
+        "role": "Terra 修第三次審查 BLOCKING（重複 legacy_plan_id 歧義）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-22T11:24:20Z"
       }
     ],
     "fullContextReplays": 0,
@@ -260,7 +274,7 @@
     "postMergeRegressions": 0,
     "safetyViolations": 0,
     "hardFailReasons": [],
-    "auditFindings": 1,
+    "auditFindings": 2,
     "botFindings": 1
   },
   "flow": {
@@ -454,6 +468,16 @@
         "head": "404dffe3e03bd02356d77bc467666f83d2921809",
         "workstream": "PRODUCT_MAINLINE",
         "reason": "Sol 第三次審查與 CI"
+      },
+      {
+        "id": "r02-wip-16",
+        "at": "2026-10-22T11:24:00Z",
+        "kind": "VERIFY_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "404dffe3e03bd02356d77bc467666f83d2921809",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "第三次 Sol FIX_REQUIRED：重複 legacy_plan_id 先到先贏"
       }
     ]
   },
