@@ -52,6 +52,8 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://images.unsplash.com https://images.pexels.com https://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com",
   "font-src 'self' data:",
+  // 首頁 3D 滾動世界影片住在 Vercel Blob（不再打包進部署），須精確放行該 origin
+  "media-src 'self' https://pekgelfm9z6nkvfj.public.blob.vercel-storage.com",
   `connect-src 'self'${connectSrcLocalDev} https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://vitals.vercel-insights.com https://va.vercel-scripts.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com`,
   "form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw",
   "frame-ancestors 'self'",
