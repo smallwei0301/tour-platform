@@ -223,3 +223,6 @@
 - 行為測試的 stub 要模擬型別錯誤與欄位投影，否則審查找不到 UUID／legacy 混用這類問題。這次是 Codex 抓到的，前兩輪 Sol 都沒有。
 - 審查 prompt 要明確要求逐一模擬每個查詢的失敗與回空、列順序反轉、重複資料。這次第五輪才完整覆蓋。
 - 改到的 e2e spec 要先確認在 CI 的某條 lane 上會跑；不在的話，納入 smoke 或記為 `NOT_VERIFIED`。
+- 收尾 PR #1918：
+  - Codex 提出 2 個 P2：smoke 候選 head 漏登 WIP、`PR_MERGED` 的 subject 沒寫出 PR。兩項都已修正，thread 已 resolve。
+  - head `74258ee2` 的 CI：[test](https://github.com/smallwei0301/tour-platform/actions/runs/39774179577/job/119808856424)、[scan](https://github.com/smallwei0301/tour-platform/actions/runs/39774179608/job/119808856526) 皆 success，Vercel 也是 success。
