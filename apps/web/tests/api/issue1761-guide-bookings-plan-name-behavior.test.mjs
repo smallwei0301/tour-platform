@@ -48,6 +48,9 @@ export function createClient() {
           const badUuid = filters.some((f) => f.op === 'in' && f.col === 'id' && table === 'activity_plans'
             && f.vals.some((v) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)));
           if (badUuid) return resolve({ data: null, error: { message: 'secret-invalid-input-syntax-for-type-uuid' } });
+          if (table === 'activity_plans' && !filters.some((f) => f.col === 'legacy_plan_id') && w.fail['activity_plans.uuid']) {
+            return resolve({ data: null, error: { message: 'secret-db-failure-uuid' } });
+          }
           const isLegacyQuery = table === 'activity_plans' && filters.some((f) => f.col === 'legacy_plan_id');
           if (isLegacyQuery && w.fail['activity_plans.legacy']) return resolve({ data: null, error: { message: 'secret-db-failure-legacy' } });
           if (w.fail[table]) return resolve({ data: null, error: { message: 'secret-db-failure-' + table } });
@@ -227,5 +230,32 @@ test('legacy 組查詢失敗只影響 legacy 訂單：UUID 方案仍有名稱、
   assert.equal(byId['o-book-wins'].planName, '預約方案');
   assert.equal(byId['o-legacy-text'].planName, null);
   assert.equal(byId['o-legacy-text'].planId, null);
+  assert.ok(!JSON.stringify(body).includes('secret-'));
+});
+
+for (const position of ['before', 'after']) {
+  test(`同一 (activity_id, legacy_plan_id) 對到多個方案即歧義：planId 與 planName 皆 null（重複列在${position === 'before' ? '前' : '後'}）`, async () => {
+    seed();
+    const dup = { id: '88888888-8888-4888-8888-888888888888', name: 'DUP-ARCHIVED', activity_id: 'a1', legacy_plan_id: 'half-day' };
+    const plans = globalThis.__PLAN_TEST.tables.activity_plans;
+    if (position === 'before') plans.unshift(dup); else plans.push(dup);
+    const { res, body, byId } = await load();
+    assert.equal(res.status, 200);
+    assert.equal(byId['o-legacy-text'].planName, null);
+    assert.equal(byId['o-legacy-text'].planId, null);
+    assert.ok(!JSON.stringify(body).includes('DUP-ARCHIVED'));
+    assert.equal(byId['o-legacy-a2'].planName, '半日方案A2', '其他 activity 的同名 legacy id 不受影響');
+  });
+}
+
+test('UUID 組查詢失敗只影響 UUID 訂單：legacy 方案仍有名稱、回 200、不洩漏錯誤', async () => {
+  seed();
+  globalThis.__PLAN_TEST.fail['activity_plans.uuid'] = true;
+  const { res, body, byId } = await load();
+  assert.equal(res.status, 200);
+  assert.equal(byId['o-book-wins'].planName, null);
+  assert.equal(byId['o-book-wins'].planId, null);
+  assert.equal(byId['o-legacy-text'].planName, '半日方案A1');
+  assert.equal(byId['o-legacy-a2'].planName, '半日方案A2');
   assert.ok(!JSON.stringify(body).includes('secret-'));
 });

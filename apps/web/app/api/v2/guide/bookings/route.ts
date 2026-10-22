@@ -94,6 +94,7 @@ export async function GET(req: Request) {
 
   type PlanRow = { id: string; name: string | null; activity_id: string };
   const planById: Record<string, PlanRow> = {};
+  const ambiguousLegacy = new Set<string>();
   const planByLegacy: Record<string, PlanRow> = {}; // key = `${activity_id}\u0000${legacy_plan_id}`
   if (uuidKeys.length > 0) {
     const { data: plans } = await supabase
@@ -113,7 +114,14 @@ export async function GET(req: Request) {
     for (const plan of plans || []) {
       if (!activityIdSet.has(plan.activity_id) || !plan.legacy_plan_id) continue;
       const key = `${plan.activity_id}\u0000${plan.legacy_plan_id}`;
-      if (!planByLegacy[key]) planByLegacy[key] = plan;
+      // schema 對 (activity_id, legacy_plan_id) 沒有唯一約束：同 key 出現第二列即視為歧義（比照 maybeSingle 語意），
+      // 不依賴列順序挑一個，該 key 的訂單 planId／planName 皆回 null
+      if (planByLegacy[key] || ambiguousLegacy.has(key)) {
+        delete planByLegacy[key];
+        ambiguousLegacy.add(key);
+      } else {
+        planByLegacy[key] = plan;
+      }
     }
   }
 
