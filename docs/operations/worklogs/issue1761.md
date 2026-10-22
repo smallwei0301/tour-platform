@@ -195,3 +195,31 @@
   - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39771871356/job/119801133751)：success
   - Vercel：success
 - 另案：#1917（orders 查詢失敗時回傳原始 DB error.message，origin/main 既有問題）。
+
+### PR #1915 merge 後讀回（2026-10-22 19:48 Asia/Taipei）
+- 狀態：`merged=true`，`merged_at=2026-10-22T11:48:24Z`，`merge_commit_sha=827c516f`。該 commit 是 main 當下的 head，可由 main 到達。
+- 在 main 上重讀關鍵檔：
+  - `bookings/route.ts` 含 `legacy_plan_id` 解析
+  - `midao2/orders/page.tsx` 含 `planName`
+- main CI：
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39773361136/job/119806117633)：success
+  - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39773361280/job/119806118089)：success
+- #1761 里程碑留言：<https://github.com/smallwei0301/tour-platform/issues/1761#issuecomment-6340089167>
+- Production：`PRODUCTION_PENDING`。由 Vercel 自動部署，沒有手動 deploy。
+- Run r02 已 closeout（COMPLETE），評分為 `NOT_GRADED`。唯一原因是 Production 的 authenticated acceptance 需要 Owner 處理，以 `--accept-not-graded` 附上理由後關帳。
+
+### r02 B+ 六步自檢
+1. Luna 盤點：做了。共 4 項盤點，另做 2 項下一個 MAIN 的預盤點，全部接受。
+2. Sol TRIAGE：做了。風險判為 normal，只改讀取投影與顯示。
+3. Terra 施工：做了。sonnet 共 6 次提交（初版、4 次 rework、smoke），主 Agent 沒有寫產品程式。
+4. LUNA_CLOSURE：做了。關閉 #1827，未完成的 AC 承接到 #1863。
+5. 即時埋點：做了，但有缺失：
+   - 帳本由 audit 層寫入，記為違規。
+   - 派工時間戳兩次以估計值填入、晚於實際時間，已更正。
+   - 第一次 rework 沒有先跑 before preflight。
+6. 收尾：做了。Completion Truth 六項都已讀回，closeout 與計分完成。
+
+### 教訓（下一輪照做）
+- 行為測試的 stub 要模擬型別錯誤與欄位投影，否則審查找不到 UUID／legacy 混用這類問題。這次是 Codex 抓到的，前兩輪 Sol 都沒有。
+- 審查 prompt 要明確要求逐一模擬每個查詢的失敗與回空、列順序反轉、重複資料。這次第五輪才完整覆蓋。
+- 改到的 e2e spec 要先確認在 CI 的某條 lane 上會跑；不在的話，納入 smoke 或記為 `NOT_VERIFIED`。
