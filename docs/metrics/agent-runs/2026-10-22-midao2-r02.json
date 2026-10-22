@@ -14,9 +14,9 @@
     "openIssuesEnd": null,
     "openPrsStart": 24,
     "openPrsEnd": null,
-    "mainTerraPeak": 0,
+    "mainTerraPeak": 1,
     "reserveTerraPeak": 0,
-    "activeCandidatePeak": 0,
+    "activeCandidatePeak": 1,
     "sharedTestPeak": 0,
     "closureSweeps": 1,
     "closureAdvancedOrClosed": 1
@@ -121,11 +121,24 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "medium",
-        "accepted": false,
+        "accepted": true,
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null,
-        "dispatchedAt": "2026-10-22T11:01:00Z"
+        "dispatchedAt": "2026-10-22T10:59:00Z"
+      },
+      {
+        "id": "r02-sol-audit-1761",
+        "role": "Early Sol diff audit（fresh context，非 builder）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
       }
     ],
     "fullContextReplays": 0,
@@ -164,7 +177,7 @@
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
     "waitTimeConvertedPercent": null,
-    "solTouches": 1,
+    "solTouches": 2,
     "solIssues": 1
   },
   "auditability": {
@@ -177,7 +190,8 @@
   "notes": [
     "RULES_MAIN_SHA=2abbc037（自 ce39e520 起只多一個產品 commit #1096，規則檔無變動）。",
     "#1901 browser：AggregateError 吞掉內層錯誤；前一 head 86101a2 綠、與 106dff7 間只改測試與 worklog → 疑似 runner 環境；需讓 build-expected-terminal.mjs main() 印出 error.errors（另案）。",
-    "產品語意待決：轉預約報價為手填 quotedTotalTwd，與 base_price 快照無強制關係。"
+    "產品語意待決：轉預約報價為手填 quotedTotalTwd，與 base_price 快照無強制關係。",
+    "更正：施工派工與 WIP 事件時間原以估計值填入且晚於當時實際時間；依 before record（10:58:52Z）與完成通知（約 81 秒）改為 10:59:00Z／11:00:30Z／11:01:00Z，仍為推估值（UTC_EVIDENCE_RECORDED_NOT_PLATFORM_VERIFIED）。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
@@ -190,7 +204,38 @@
   },
   "wipLifecycle": {
     "schemaVersion": 1,
-    "events": []
+    "events": [
+      {
+        "id": "r02-wip-1",
+        "at": "2026-10-22T10:59:00Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "db3c4b62871a9d3ffa680896f97b3fbe4025a648",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "MAIN Terra 施工派工（sonnet）"
+      },
+      {
+        "id": "r02-wip-2",
+        "at": "2026-10-22T11:00:30Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "db3c4b62871a9d3ffa680896f97b3fbe4025a648",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "施工完成 db3c4b62，run-checks 16/16"
+      },
+      {
+        "id": "r02-wip-3",
+        "at": "2026-10-22T11:01:00Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "db3c4b62871a9d3ffa680896f97b3fbe4025a648",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Sol audit 與 CI"
+      }
+    ]
   },
   "completionTruth": {
     "status": "NOT_CHECKED",
