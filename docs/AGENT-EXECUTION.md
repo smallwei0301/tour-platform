@@ -103,6 +103,26 @@ premium finding 必須回 source 修復並逐項核對，再由 Sol 重審；fin
 unresolvedFindingCount；未知不能當 0，大於 0 不允 PASS。runtime 無 selector 時
 記實際執行模式與 unknown 型號，不冒稱獨立指定 Sol；CLI 沒有為此新增豁免。
 
+## Merge 長期授權（Owner 2026-10-22）
+
+來源：Owner 2026-10-22 在對話中指示「修改永久規則不用我授權merge」。
+vibeaico-admin-rebuild 的對應裁示檔為 `docs/decisions/2026-10-22-owner-agent-merge-authorization.md`。
+
+- 裁示：Agent 負責的 PR 通過下列關卡後，可以自行 merge 進 `main`，不需 Owner 逐次授權。
+- merge 前必須全部成立：
+  - 引用 `CLAUDE.md` 鐵律 5、6：commit 前要有 `.claude/hooks/run-checks.sh` 的綠燈證據；exact head 的 CI conclusion 必須是 success，並把 check-run 連結記入 worklog。
+  - 沒有 merge conflict。
+  - 實作者不得自我驗收：依本文件前述規定，由不同 actor、fresh context 完成審查。
+  - 已觸發的 bot review（例如 Codex）要先跑完；blocking finding 修正並回讀後才 merge，不得在 review 進行中搶先 merge。
+  - merge 後讀回確認：PR 顯示 merged、merge commit 可由 `main` 到達、`main` 上的 CI 結果。
+- 不在本授權範圍：
+  - 改動凍結區或 harness 治理檔：仍依 `CLAUDE.md` 鐵律 3、9 處理。
+  - `apply_migration`／schema 變更：仍需 `SQL-OVERRIDE`（鐵律 2）。
+  - 手動 Production promote／rollback。
+  - 真實付款與通知。
+  - 任何 force-push（鐵律 10）。
+- 已知後果：`main` 會觸發 Vercel 自動部署到正式站（midao.com.tw）。merge 會改變正式行為的 PR 會經既有流程自動上線，這是本授權接受的結果。
+
 ## 容量與風險 gate
 
 Tour 容量由本 repo harness 管理，不與 VibeAI 共用模型 slot 或計數器，
