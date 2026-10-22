@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Ported from smallwei0301/vibeaico-admin-rebuild@417263410475fcca2b83b71dcf389f75977e2acc scripts/agents/score-run.mjs.
+// Ported from smallwei0301/vibeaico-admin-rebuild@0741fff37e114b6ebeec165352f1e68e1ee919ee scripts/agents/score-run.mjs.
 // Keep behavior in sync with the source; tour-platform deltas are listed in docs/metrics/README.md.
 
 import fs from "node:fs";

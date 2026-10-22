@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Ported from smallwei0301/vibeaico-admin-rebuild@417263410475fcca2b83b71dcf389f75977e2acc scripts/agents/scorecard-readiness.mjs.
+// Ported from smallwei0301/vibeaico-admin-rebuild@0741fff37e114b6ebeec165352f1e68e1ee919ee scripts/agents/scorecard-readiness.mjs.
 // Keep behavior in sync with the source; tour-platform deltas are listed in docs/metrics/README.md.
 
 import fs from 'node:fs';
@@ -8,6 +8,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { validateRunLedgerV2 } from './run-ledger-v2.mjs';
+import { canonicalIssueSubject } from './score-run-v2.mjs';
 
 const OBSERVED_SCORE_EFFECTIVE_AT = '2026-09-15T00:00:00Z';
 const TERMINAL_ONLY_INPUTS = Object.freeze([
@@ -92,8 +93,11 @@ function verifiedIssueCloseCount(run) {
   for (const claim of claims) {
     if (claim?.type !== 'ISSUE_CLOSED' || claim?.verification !== 'VERIFIED') continue;
     if (lower(claim?.observedState) !== 'closed') continue;
-    const match = String(claim?.subject ?? '').match(/(?:issue#|#)(\d+)/i);
-    if (match) subjects.add(match[1]);
+    // Parse subjects with the same canonical rule as OBSERVED_V1 grading, so a Run
+    // grading accepts is not blocked here now that grading enforces readiness.
+    // evidenceRef strictness stays a grading gap, not a readiness capture rule.
+    const subject = canonicalIssueSubject(claim?.subject);
+    if (subject) subjects.add(subject);
   }
   return subjects.size;
 }

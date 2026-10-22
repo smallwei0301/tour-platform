@@ -2,7 +2,7 @@
 
 本目錄放 Agent Run 的原始帳本：`docs/metrics/agent-runs/<RUN_ID>.json`（raw events，唯一真相）與同名 `.md`（由腳本重算的報告）。
 
-工具移植自 `smallwei0301/vibeaico-admin-rebuild@417263410475fcca2b83b71dcf389f75977e2acc` 的 `scripts/agents/`，語意以該版本為準。本 repo 是否強制每輪埋點、評分是否作為 gate，仍由 `docs/AGENT-EXECUTION.md` 與 Owner 決策決定；移植工具本身不改變任何治理規則。
+工具移植自 `smallwei0301/vibeaico-admin-rebuild@0741fff37e114b6ebeec165352f1e68e1ee919ee` 的 `scripts/agents/`，語意以該版本為準。本 repo 是否強制每輪埋點、評分是否作為 gate，仍由 `docs/AGENT-EXECUTION.md` 與 Owner 決策決定；移植工具本身不改變任何治理規則。
 
 ## 指令
 
