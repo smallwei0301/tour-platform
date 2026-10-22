@@ -103,3 +103,13 @@
   - 反證：修改前的檔案跑新測試會 2 失敗。
   - non-blocking：返回時遺失 bucket query，修改前就是如此，不算回歸。
 - 本機限制：本機沒有 docker daemon，無法執行 `scripts/testing/run-midao-e2e.sh`。另外環境帶有正式金鑰（#1912），所以不啟動 dev server。browser 證據以 CI 為準。
+- Codex：
+  - code review 回報 P1：Run 帳本的 WIP 事件缺必填欄位。已在 `0baba8d9` 修正，thread 已 resolve。
+  - security review：沒有 finding。
+- head `0baba8d9` 的 CI 全綠：
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39757347180/job/119752603389)：success
+  - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39757347231/job/119752603358)：success
+  - [smoke](https://github.com/smallwei0301/tour-platform/actions/runs/39757347175/job/119752602604)：success
+  - Vercel：success
+- browser 證據：`smoke` job 在 CI Chromium 跑 `midao2-request-conversion.spec.ts`，新案例 `midao2 request detail back link returns to the midao2 request list` PASS，整體 15/15。`midao-baseline-e2e` 的路徑條件只涵蓋 `midao-*`，本 PR 不會觸發這條 lane。
+- 下一步：本 worklog commit 的 head CI 綠燈後，依 merge 長期授權自行 merge，然後讀回確認並回寫 #1761。

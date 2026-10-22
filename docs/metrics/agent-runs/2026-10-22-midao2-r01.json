@@ -235,7 +235,7 @@
     "cycleTimeMinutes": null
   },
   "ci": {
-    "fullCiRuns": 1,
+    "fullCiRuns": 3,
     "invalidReruns": 0,
     "firstPassRatePercent": null,
     "sharedTestCollisions": 0
