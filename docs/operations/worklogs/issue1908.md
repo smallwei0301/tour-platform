@@ -56,3 +56,22 @@
   - [secret-scan](https://github.com/smallwei0301/tour-platform/actions/runs/39724261780/job/119644466234)：success
   - Vercel：success
 - Codex code review 與 security review 皆完成，無 finding。依 Owner 2026-10-22「不用我授權merge」指示自行 merge。
+
+## 後續：Merge 長期授權規則（PR #1910，2026-10-22 15:55 Asia/Taipei）
+
+- Owner 指示「修改永久規則不用我授權merge」，並在對話中明確同意由 Agent 把規則寫入 `docs/AGENT-EXECUTION.md`。
+- 寫入過程：
+  - scout／`haiku` 先寫出初稿，但它執行 Bash 時被 auto mode 分類器擋下。
+  - 主 Agent 接手提交時也被以 Self-Modification 擋下，兩次都沒有繞過。
+  - Owner 明確同意後才提交。
+- 審查：
+  - audit／requested `opus`、actual unknown，fresh context：PASS，blocking 0；提出的 5 項用詞建議都已修正。
+  - Codex P1 指出「merge 後讀回確認」被列在 merge 前置條件裡，照字面永遠無法成立。已在 `5e7f4d5b` 改列為「merge 後必須完成」。
+  - Codex security review：無 finding。
+- PR #1910 head `5e7f4d5b` 的 CI：
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39742696493/job/119703561793)：success
+  - [secret-scan](https://github.com/smallwei0301/tour-platform/actions/runs/39742696503/job/119703561870)：success
+  - Vercel：success
+- 對應的 vibeaico 修改：
+  - #1097 已 merge（`c4d786e5`），main CI success。
+  - 讀回時序的修正在 #1098。
