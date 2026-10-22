@@ -1,5 +1,7 @@
 # 3d-scroll-homepage — 第二個 3D 滾動首頁（/world）
 > 最後更新：2026-07-15｜負責 session：Claude（branch `claude/3d-scroll-homepage-58zygx`）
+>
+> 2026-10-22 註記：下文提到的 `public/videos/world/` 為當時位置。影片現改由 Vercel Blob 提供、原檔移至 `media/world-videos/`，見 `world-video-blob-production-20261022.md`（PR #1919）。
 
 ## 目標
 參考 [oso95/scroll-world](https://github.com/oso95/scroll-world) 的「滾動＝攝影機自場景外飛入內部、再無縫飛向下一景」概念，為 Midao 製作第二個 3D 滾動首頁。原 repo 依賴 Higgsfield AI 預渲染影片＋scrub 引擎；改以 **CSS 3D 透視（perspective + translateZ 縱深飛行）** 實作同等體驗，零新依賴。**第二階段（2026-07-15）**：使用者用 Higgsfield（gpt/其他影像模型）自行生成七景黏土微景觀主圖，取代第一版手繪 SVG；場景改吃 AI 主圖 billboard，並預留 `clip` 影片欄位給 intro/finale 兩景的「飛入」影片。

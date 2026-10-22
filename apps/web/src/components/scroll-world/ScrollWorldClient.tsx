@@ -21,6 +21,7 @@ export type SceneView = {
   id: string;
   still: string;
   clip: string | null;
+  clipWebm: string | null;
   accent: string;
   href: string;
   eyebrow: string;
@@ -113,7 +114,7 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
   /** 只有 active±1 的場景掛影片：交叉淡化只涉及相鄰兩景，其餘場景 opacity:0。 */
   const clipSrcFor = (scene: SceneView, i: number): string | null => {
     if (!scene.clip || !clipExt || Math.abs(i - active) > 1) return null;
-    return clipExt === 'webm' ? scene.clip.replace(/\.mp4$/, '.webm') : scene.clip;
+    return clipExt === 'webm' ? (scene.clipWebm ?? scene.clip) : scene.clip;
   };
 
   useEffect(() => {

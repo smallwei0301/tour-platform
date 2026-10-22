@@ -84,7 +84,7 @@ export default async function WorldHomePage({ params }: { params: Promise<{ loca
   };
 
   const scenes: SceneView[] = SCROLL_WORLD_SCENES.map(
-    (scene: { id: string; still: string; clip: string | null; accent: string; href: string }) => ({
+    (scene: { id: string; still: string; clip: string | null; clipWebm: string | null; accent: string; href: string }) => ({
       ...scene,
       eyebrow: t(`scenes.${scene.id}.eyebrow`),
       title: t(`scenes.${scene.id}.title`),

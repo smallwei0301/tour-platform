@@ -1,12 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SCROLL_WORLD_PRELUDE, SCROLL_WORLD_SCENES } from '../../src/lib/scroll-world/scenes.mjs';
+import { SCROLL_WORLD_PRELUDE, SCROLL_WORLD_SCENES, WORLD_MEDIA_ORIGIN } from '../../src/lib/scroll-world/scenes.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const webRoot = path.resolve(here, '../..');
+const repoRoot = path.resolve(webRoot, '../..');
 
 // BRAND_BOOK Section 03 八色系統——/world 場景 accent 只允許取自這裡
 const BRAND_COLORS = new Set([
@@ -27,7 +29,7 @@ test('場景註冊表：id 唯一、欄位齊備', () => {
   for (const scene of SCROLL_WORLD_SCENES) {
     assert.ok(scene.id && typeof scene.id === 'string');
     assert.ok(scene.still?.startsWith('/'), `${scene.id} 的 still 必須是站內路徑`);
-    assert.ok(scene.clip === null || typeof scene.clip === 'string', `${scene.id} 的 clip 需為 null 或路徑`);
+    assert.ok(typeof scene.clip === 'string' && typeof scene.clipWebm === 'string', `${scene.id} 的 clip／clipWebm 需為字串 URL`);
     assert.ok(scene.href?.startsWith('/'), `${scene.id} 的 href 必須是站內路徑`);
   }
 });
@@ -74,12 +76,35 @@ test('每景 still 圖檔實際存在於 public/', () => {
   }
 });
 
-test('有 clip 的場景其影片檔存在於 public/', () => {
+test('clip／clipWebm 皆為 Blob origin 下的 hash 路徑，且場景 id 與副檔名一致', () => {
   for (const scene of SCROLL_WORLD_SCENES) {
-    if (!scene.clip) continue;
-    const clipPath = path.join(webRoot, 'public', scene.clip.replace(/^\//, ''));
-    assert.ok(fs.existsSync(clipPath), `${scene.id} 的 clip ${scene.clip} 找不到 ${clipPath}`);
+    for (const [field, ext] of [['clip', 'mp4'], ['clipWebm', 'webm']]) {
+      const url = new URL(scene[field]);
+      assert.equal(url.origin, WORLD_MEDIA_ORIGIN, `${scene.id}.${field} origin 不符`);
+      assert.match(
+        url.pathname,
+        new RegExp(`^/world-media/v1/${scene.id}/[a-f0-9]{64}\\.${ext}$`),
+        `${scene.id}.${field} 路徑不符規則`
+      );
+    }
   }
+});
+
+test('Blob URL 內的 hash 等於 media/world-videos 原檔 SHA-256（離線完整性）', () => {
+  for (const scene of SCROLL_WORLD_SCENES) {
+    for (const field of ['clip', 'clipWebm']) {
+      const { pathname } = new URL(scene[field]);
+      const [, hash, ext] = pathname.match(/\/([a-f0-9]{64})\.(mp4|webm)$/);
+      const file = path.join(repoRoot, 'media', 'world-videos', `${scene.id}.${ext}`);
+      assert.ok(fs.existsSync(file), `${scene.id}.${ext} 原檔不存在：${file}`);
+      const digest = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+      assert.equal(digest, hash, `${scene.id}.${ext} 原檔 SHA-256 與 URL hash 不一致`);
+    }
+  }
+});
+
+test('apps/web/public/videos 不存在（影片不再打包進部署）', () => {
+  assert.equal(fs.existsSync(path.join(webRoot, 'public', 'videos')), false);
 });
 
 for (const localeFile of ['zh-Hant.json', 'en.json']) {
