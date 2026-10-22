@@ -172,7 +172,7 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "medium",
-        "accepted": false,
+        "accepted": true,
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null,
@@ -188,6 +188,20 @@
         "count": 1,
         "contextClass": "compact",
         "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r01-sol-audit-1761",
+        "lane": "audit",
+        "role": "Early Sol diff audit（fresh context，非 builder）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": false,
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
@@ -207,7 +221,7 @@
     "cycleTimeMinutes": null
   },
   "ci": {
-    "fullCiRuns": 0,
+    "fullCiRuns": 1,
     "invalidReruns": 0,
     "firstPassRatePercent": null,
     "sharedTestCollisions": 0
@@ -229,7 +243,7 @@
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
     "waitTimeConvertedPercent": null,
-    "solTouches": 1,
+    "solTouches": 2,
     "solIssues": 1
   },
   "auditability": {
@@ -257,6 +271,18 @@
         "pr": 1913,
         "issue": 1761,
         "at": "2026-10-22T09:34:30Z"
+      },
+      {
+        "kind": "BUILD_EXIT",
+        "pr": 1913,
+        "issue": 1761,
+        "at": "2026-10-22T09:36:30Z"
+      },
+      {
+        "kind": "VERIFY_ENTER",
+        "pr": 1913,
+        "issue": 1761,
+        "at": "2026-10-22T09:36:30Z"
       }
     ]
   },
