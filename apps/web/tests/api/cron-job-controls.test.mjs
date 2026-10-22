@@ -195,9 +195,10 @@ test('pruneOldCronRuns — 刪除超過保留期的舊列、保留期內的留�
   await recordCronRun({ jobKey: 'settlement_sweep', outcome: 'success', startedAt: new Date(nowMs).toISOString() });
   await recordCronRun({ jobKey: 'settlement_sweep', outcome: 'success', startedAt: new Date(nowMs - 89 * dayMs).toISOString() });
   await recordCronRun({ jobKey: 'settlement_sweep', outcome: 'success', startedAt: new Date(nowMs - 91 * dayMs).toISOString() });
-  // recordCronRun 的 finished_at 用真實 now，故用 nowMs+1 天當清理基準確保三筆的相對關係穩定
+  // recordCronRun 的 finished_at 用真實 now（不是 nowMs），所以清理基準也必須從真實 now 起算；
+  // 以 nowMs 起算會在 nowMs+200 天−保留期（2026-10-20）之後變成時間炸彈。
   // 這裡直接驗 pruneOldCronRuns 對 finished_at 的判斷：以「很久以後」為基準應把全部視為過期
-  const farFuture = await pruneOldCronRuns({ nowMs: nowMs + 200 * dayMs });
+  const farFuture = await pruneOldCronRuns({ nowMs: Date.now() + 200 * dayMs });
   assert.equal(farFuture.ok, true);
   assert.ok(farFuture.pruned >= 1, '應刪除至少一筆過期列');
 });
