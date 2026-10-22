@@ -165,7 +165,8 @@
     "r03 盤點 r03-luna-guidecal 於 11:55Z 派出、r03 帳本於 init 後補登（r02 收尾 PR #1918 未 merge 前不能提交 r03 帳本）。",
     "CONCURRENT_RUN_JUSTIFICATION：r02 已 closeout CLOSED（檔案在 #1918），無其他 OPEN Run。",
     "#1918 Codex security review 卡在 running 超過 40 分鐘（重新觸發無效），r03 施工接在同一分支，#1918 一併承載 r02 收尾與 r03。",
-    "TRIAGE：MAIN=#1761 calendar round-trip slice 1：midao2 calendar GET 唯讀疊加 guide_blackout_dates（hasBlackout/blackouts），讀取失敗 5xx 不 degrade；不改寫入、不雙寫。RISK normal（導遊端顯示；旅客端 available-slots 已讀 blackout＋day_revisions）。BLOCKER：舊後台 availability-preview 不讀 day_revisions，修正需改非 v2 舊路由（goal 限定新碼落 app/api/v2/**），記為 #1869 legacy 退役或 Owner 授權範圍。"
+    "TRIAGE：MAIN=#1761 calendar round-trip slice 1：midao2 calendar GET 唯讀疊加 guide_blackout_dates（hasBlackout/blackouts），讀取失敗 5xx 不 degrade；不改寫入、不雙寫。RISK normal（導遊端顯示；旅客端 available-slots 已讀 blackout＋day_revisions）。BLOCKER：舊後台 availability-preview 不讀 day_revisions，修正需改非 v2 舊路由（goal 限定新碼落 app/api/v2/**），記為 #1869 legacy 退役或 Owner 授權範圍。",
+    "更正：smoke 派工 receipt 的 dispatchedAt 原估 12:43:10Z，早於 before record 12:44:02Z，改為 12:44:10Z（推估值）。教訓：dispatchedAt 一律在 SendMessage 前以 date -u 取得，不憑記憶估。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
