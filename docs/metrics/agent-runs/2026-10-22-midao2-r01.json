@@ -235,7 +235,7 @@
     "cycleTimeMinutes": null
   },
   "ci": {
-    "fullCiRuns": 4,
+    "fullCiRuns": 25,
     "invalidReruns": 0,
     "firstPassRatePercent": null,
     "sharedTestCollisions": 0
@@ -271,7 +271,9 @@
     "openIssuesStart 原誤記為 93（issue+PR 合計），依開工快照 tour-open.tsv 更正為 69 issue／24 PR。",
     "#1827 為 ADVANCEABLE（未完成 AC 需搬入 #1863），本 Run 未處理，留給下一輪 Closure。",
     "盤點發現：mark-replied idempotency key 未落 DB、client 重試換新 key；屬 command 語意變更，另案。",
-    "closeout 後更正 MERGED_TO_MAIN／CI_GREEN 的 claimedState 與 observedState 寫法：原 observedState 加了說明文字，被計分器逐字比對判為矛盾；事實未變，說明移到 evidenceRef。"
+    "closeout 後更正 MERGED_TO_MAIN／CI_GREEN 的 claimedState 與 observedState 寫法：原 observedState 加了說明文字，被計分器逐字比對判為矛盾；事實未變，說明移到 evidenceRef。",
+    "MERGED_TO_MAIN 改用 canonical issue subject（issue#1761）與 merged 狀態（Codex P2）；merge commit ac537496 可由 origin/main 到達（git merge-base --is-ancestor），證據見 #1761 留言 6337929167。",
+    "ci.fullCiRuns 改為實數 25：GitHub Actions 於 Run 期間在 ccr-80d3864e-9i7mop 觸發 23 個 workflow run（含 #1914 head 229732f3 的 2 個），加 main@ac537496 的 ci 與 secret-scan 共 2 個；先前以 head 數粗估（Codex P2）。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
@@ -361,11 +363,11 @@
       },
       {
         "type": "MERGED_TO_MAIN",
-        "subject": "ac537496e5f96bc6326f7dc7bee16e6c0f7a693a",
-        "claimedState": "reachable from main",
-        "observedState": "reachable from main",
+        "subject": "issue#1761",
+        "claimedState": "merged",
+        "observedState": "merged",
         "verification": "VERIFIED",
-        "evidenceRef": "git merge-base --is-ancestor ac537496 origin/main; RequestDetailScreen listHref re-read on main"
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/issues/1761#issuecomment-6337929167"
       },
       {
         "type": "CI_GREEN",
