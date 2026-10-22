@@ -174,7 +174,7 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "compact",
-        "accepted": false,
+        "accepted": true,
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
@@ -316,6 +316,46 @@
         "head": "2a9a4d796aa0cbb516f6d3b87442b45dd9b8a9bd",
         "workstream": "PRODUCT_MAINLINE",
         "reason": "fresh Sol 重審"
+      },
+      {
+        "id": "r02-wip-8",
+        "at": "2026-10-22T11:08:05Z",
+        "kind": "VERIFY_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "2a9a4d796aa0cbb516f6d3b87442b45dd9b8a9bd",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "重審 PASS，補強測試 non-blocking"
+      },
+      {
+        "id": "r02-wip-9",
+        "at": "2026-10-22T11:08:10Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "5b0093db72a9d2db3d7c0653ae5aa3071d3bd50f",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "測試補強派回 sonnet"
+      },
+      {
+        "id": "r02-wip-10",
+        "at": "2026-10-22T11:08:50Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "5b0093db72a9d2db3d7c0653ae5aa3071d3bd50f",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "5b0093db，15/15，M5/M7 突變被擋"
+      },
+      {
+        "id": "r02-wip-11",
+        "at": "2026-10-22T11:09:05Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1915,
+        "issue": 1761,
+        "head": "5b0093db72a9d2db3d7c0653ae5aa3071d3bd50f",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "主 Agent 複驗 M5 被擋；CI 與 Codex review"
       }
     ]
   },

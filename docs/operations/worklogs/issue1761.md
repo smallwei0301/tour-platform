@@ -150,3 +150,36 @@
   - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39760087456/job/119761802942)：success
   - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39760087492/job/119761802737)：success
   - Vercel：success
+
+## 2026-10-22 Stage 5C slice 1：訂單投影補方案名稱（Run `2026-10-22-midao2-r02`，PR #1915）
+
+- 治理：VibeAI B+（規則 main `2abbc037`），`WORKSTREAM: PRODUCT_MAINLINE`。Run 帳本：`docs/metrics/agent-runs/2026-10-22-midao2-r02.json`。
+- LUNA 盤點（haiku，4 項）：
+  - TRUTH：live 狀態與交接一致。
+  - PLAN：需求單有 `planName`，但轉預約後，新舊兩個訂單列表都不顯示方案；`/api/v2/guide/bookings` 只從 `activity_schedules.plan_id` 取方案，而轉預約寫的是 `bookings.activity_plan_id`。
+  - CI1901：`AggregateError` 吞掉了內層錯誤，原因 UNKNOWN。
+  - AC1827：9 條未勾 AC 全部有對應。
+- Closure：#1827 已關閉（not_planned，已被 #1863 取代）。其中 2 條部分涵蓋的 AC 已在 #1863 留言 `6339075284` 承接。
+- SOL TRIAGE：MAIN 定為本切片，風險 normal：只改讀取投影與顯示，不動 command、計價或 idempotency。另外記錄一個待 Owner 決定的產品語意：轉預約報價是手填，與 `base_price` 快照之間沒有強制關係。
+- Terra 施工（sonnet）：
+  - `db3c4b62`：
+    - `planName` 來自 `activity_plans.name`，只有在方案屬於該訂單的 activity 時才回傳。
+    - `planId` 優先取 `bookings.activity_plan_id`。
+    - 兩個訂單列表都顯示方案名稱；fallback 統一為「尚未指定方案」。
+  - `2a9a4d79`（依 Sol FIX_REQUIRED）：
+    - 新增行為測試：stub supabase-js，直接呼叫 `GET`。
+    - `planId` 也要通過 ownership 驗證，確保與 `planName` 指向同一個方案。
+  - `5b0093db`（依重審 non-blocking）：
+    - stub 依 select 欄位投影資料。
+    - 鎖住 orders 的 ownership 範圍。
+    - 測試後清理暫存目錄。
+- 審查：
+  - Sol 第一次審查：FIX_REQUIRED。突變測試證實守門邏輯可以被移除，而測試不會失敗。
+  - Sol 重審：換了新的 actor 與 fresh context，結果 PASS。M1–M8 突變中，只有作者已說明的冗餘守門 M3，以及後來補上的 M5、M7 沒被擋下。
+  - 補強後，主 Agent 複驗 M5：會造成 3 個測試失敗。
+- 本機：`run-checks.sh --typecheck` 依序為 16/16、21/21、15/15（三個 commit 各跑一次）。本機沒有 docker，#1912 也未解決，所以沒有啟動 dev server，也沒有跑 Playwright（只跑了 `--list`）。
+- CI：`db3c4b62` 與 `2a9a4d79` 的 test、smoke、scan、Vercel 皆為 success。
+- 流程缺失（如實記錄）：
+  - 第一次 rework 用 SendMessage 續派之前，沒有先跑 dispatch-preflight before。
+  - 施工派工的時間戳一度以估計值填入，而且晚於當時的實際時間，已更正。
+- 另案：#1916（mark-replied 的 idempotency key 沒有生效；high 風險）。
