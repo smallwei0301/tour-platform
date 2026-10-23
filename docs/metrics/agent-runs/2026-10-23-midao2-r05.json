@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 2,
+  "runId": "2026-10-23-midao2-r05",
+  "status": "IN_PROGRESS",
+  "startedAt": "2026-10-23T06:09:09.459Z",
+  "endedAt": null,
+  "sources": [],
+  "main": {
+    "startSha": "ed215b1cb7ee41a4b96063e6e88d16d5b555aeb6",
+    "endSha": null
+  },
+  "inventory": {
+    "openIssuesStart": 72,
+    "openIssuesEnd": null,
+    "openPrsStart": 24,
+    "openPrsEnd": null,
+    "mainTerraPeak": 1,
+    "reserveTerraPeak": 0,
+    "activeCandidatePeak": 1,
+    "sharedTestPeak": 0,
+    "closureSweeps": 0,
+    "closureAdvancedOrClosed": 0
+  },
+  "modelUsage": {
+    "actualTokensAvailable": false,
+    "weeklyUsageStartPercent": null,
+    "weeklyUsageEndPercent": null,
+    "weightedUsageImprovementPercent": null,
+    "weights": {
+      "luna": 1,
+      "terra": 3,
+      "sol": 6
+    },
+    "contextMultipliers": {
+      "compact": 1,
+      "medium": 1.5,
+      "full": 3
+    },
+    "tasks": [
+      {
+        "id": "r05-sol-triage",
+        "role": "Sol TRIAGE：RESERVE #1911（sendEmailWithContract 把 Resend error 記成 sent、空收件人仍呼叫 provider）升為本輪 MAIN；盤點沿用 r04 LUNA_CLOSURE（06:07Z）對 #1911 的 main 證據掃描，未另派 scout",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T06:08:30Z"
+      },
+      {
+        "id": "r05-terra-1911",
+        "role": "Terra 施工：#1911 sendEmailWithContract error→failed、空收件人→skipped＋測試",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T06:09:25Z"
+      },
+      {
+        "id": "r05-sol-audit",
+        "role": "Sol 獨立審查（fresh context）83eff681 #1911",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T06:22:25Z"
+      },
+      {
+        "id": "r05-terra-1911-rework1",
+        "role": "Terra rework：契約邏輯移出 email.ts（architecture ratchet 863 行上限）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T06:25:40Z"
+      },
+      {
+        "id": "r05-sol-audit2",
+        "role": "Sol 複審（fresh context）ed215b1c..9fcd96e0",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T06:33:50Z"
+      }
+    ],
+    "fullContextReplays": 0,
+    "duplicateScans": 0
+  },
+  "delivery": {
+    "issuesStarted": 1,
+    "issuesClosed": 0,
+    "auditReady": 0,
+    "ownerBlockedComplete": 0,
+    "exactHeadCiOnly": 0,
+    "commitOnly": 0,
+    "unfinishedCarryover": 0,
+    "cycleTimeMinutes": null
+  },
+  "ci": {
+    "fullCiRuns": 0,
+    "invalidReruns": 0,
+    "firstPassRatePercent": null,
+    "sharedTestCollisions": 0
+  },
+  "quality": {
+    "acceptanceEvidenceCoveragePercent": null,
+    "auditFirstPassRatePercent": null,
+    "unresolvedP0": 0,
+    "unresolvedP1": 0,
+    "reopenedIssues": 0,
+    "postMergeRegressions": 0,
+    "safetyViolations": 0,
+    "hardFailReasons": []
+  },
+  "flow": {
+    "lunaTasks": 0,
+    "lunaAccepted": 0,
+    "lunaDelegationRatePercent": null,
+    "duplicateAgentTasks": 0,
+    "ownershipCollisions": 0,
+    "waitTimeConvertedPercent": null,
+    "solTouches": 3,
+    "solIssues": 1
+  },
+  "auditability": {
+    "evidenceFieldsCompletePercent": null,
+    "exactHeadTestCoveragePercent": null,
+    "stalePendingDescriptions": 0,
+    "preciseBlockersPercent": null,
+    "scoreInputsCompletePercent": null
+  },
+  "notes": [
+    "MAIN：#1911。只用 _emailClientOverride 假 client 做單元測試，不寄真信、不連 Resend。r04 收尾 commit 與本輪施工一起推送。盤點缺口：未為本輪另派 scout（沿用 r04 closure 掃描結果），如實記錄。",
+    "更正：r05-sol-triage dispatchedAt 原寫 06:12:00Z（晚於實際時間），改為 06:08:30Z。",
+    "83eff681：施工回報 RED 5/7→GREEN 51/51、突變 4/4；呼叫端盤點無重複寄信／無限重試；殘留：review-invitation-sweep cron 不看回傳值（既有問題，另案）。",
+    "Sol 審查 FIX_REQUIRED／blocking 1：83eff681 使 email.ts 897 行 > architecture-ratchet 上限 863，CI unit 會紅；施工自測未跑全量 unit 漏抓。送 rework1（preflight 06:25:24Z）。",
+    "9fcd96e0：契約邏輯拆至 src/lib/email-delivery/contract.ts，email.ts 861 行（上限 863 未放寬）；施工回報 unit 全量 32 項既有環境失敗（base 33 含 ratchet）。",
+    "Sol 複審 PASS／blocking 0（8 突變全擋、base vs HEAD unit 無新增失敗、假金鑰下 fetch 0 次）。另開 #1923（review-invitation-sweep 不讀回傳值，既有問題）。",
+    "#1924 head 0523a841：test／scan success（smoke、browser 依 paths 未觸發）。"
+  ],
+  "deliveryTruthVersion": 4,
+  "closeout": {
+    "contractVersion": 1,
+    "ownerRole": "PRODUCT_MAIN_SESSION",
+    "terminalPolicy": "CLOSE_OR_REASSIGN_BEFORE_SESSION_EXIT_OR_OWNER_STOP_OR_SCOPE_EXHAUSTED_OR_OWNER_BLOCKED",
+    "state": "OPEN",
+    "closedAt": null,
+    "evidenceRef": null
+  },
+  "wipLifecycle": {
+    "schemaVersion": 1,
+    "events": [
+      {
+        "id": "r05-wip-1",
+        "at": "2026-10-23T06:09:25Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1924,
+        "issue": 1911,
+        "head": "83eff6812ddc340324be1f5a03b16698dbde7ad3",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "#1911 email 契約（sonnet）"
+      },
+      {
+        "id": "r05-wip-2",
+        "at": "2026-10-23T06:21:00Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1924,
+        "issue": 1911,
+        "head": "83eff6812ddc340324be1f5a03b16698dbde7ad3",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "83eff681，51/51"
+      },
+      {
+        "id": "r05-wip-3",
+        "at": "2026-10-23T06:25:40Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1924,
+        "issue": 1911,
+        "head": "9fcd96e0a92fb3f6ba9a590ce7e280b7001536c3",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "rework1：ratchet（sonnet）"
+      },
+      {
+        "id": "r05-wip-4",
+        "at": "2026-10-23T06:31:00Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1924,
+        "issue": 1911,
+        "head": "9fcd96e0a92fb3f6ba9a590ce7e280b7001536c3",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "9fcd96e0，62/62"
+      },
+      {
+        "id": "r05-wip-5",
+        "at": "2026-10-23T06:40:30Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1924,
+        "issue": 1911,
+        "head": "0523a8413fcc6eba78d6c2b5e611919939ecb787",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "draft PR #1924 開立，等 CI"
+      }
+    ]
+  },
+  "completionTruth": {
+    "status": "NOT_CHECKED",
+    "checkedAt": null,
+    "claims": []
+  }
+}

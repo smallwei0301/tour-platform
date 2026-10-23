@@ -8,6 +8,7 @@
  */
 
 import { Resend, type CreateEmailOptions } from 'resend';
+import { checkRecipient, failedDelivery, interpretSendResult, type EmailFailureCode } from './email-delivery/contract.ts';
 
 // ── Delivery logger ────────────────────────────────────────────────────────────
 
@@ -22,7 +23,7 @@ interface EmailLogEntry {
   ts: string;
 }
 
-export type EmailFailureCode = 'EMAIL_PROVIDER_NOT_CONFIGURED' | 'EMAIL_SEND_FAILED' | 'NO_GUIDE_EMAIL';
+export type { EmailFailureCode };
 
 export interface EmailDeliveryResult {
   ok: boolean;
@@ -43,7 +44,7 @@ function logEmail(entry: EmailLogEntry): void {
   if (entry.status === 'sent') {
     console.log(`${base} | messageId=${entry.messageId} | orderId=${entry.orderId ?? '-'}`);
   } else if (entry.status === 'skipped') {
-    console.log(`${base} | reason=no_api_key`);
+    console.log(`${base} | reason=${entry.error ?? 'no_api_key'}`);
   } else {
     console.error(`${base} | error=${entry.error}`);
   }
@@ -51,7 +52,7 @@ function logEmail(entry: EmailLogEntry): void {
 
 const FROM = process.env.EMAIL_FROM || 'Midao 祕島 <noreply@resend.dev>';
 
-type EmailClient = { emails: { send: (args: CreateEmailOptions) => Promise<{ data: { id?: string } | null }> } };
+type EmailClient = { emails: { send: (args: CreateEmailOptions) => Promise<{ data: { id?: string } | null; error?: { message?: unknown } | null }> } };
 let _resend: Resend | null = null;
 let _emailClientOverride: EmailClient | null = null;
 
@@ -74,13 +75,21 @@ export async function sendEmailWithContract(input: {
   html: string;
   orderId?: string;
 }): Promise<EmailDeliveryResult> {
-  const resend = getResend();
   const base = {
     fn: input.fn,
     to: input.to,
     subject: input.subject,
     orderId: input.orderId,
   };
+
+  // 空收件人必須在 getResend()/send 之前返回（#1911）。
+  const noRecipient = checkRecipient(input.to);
+  if (noRecipient) {
+    logEmail({ ...base, status: 'skipped', error: 'no_recipient', ts: new Date().toISOString() });
+    return { ...base, ...noRecipient };
+  }
+
+  const resend = getResend();
 
   if (!resend) {
     logEmail({ ...base, status: 'skipped', ts: new Date().toISOString() });
@@ -96,24 +105,13 @@ export async function sendEmailWithContract(input: {
 
   try {
     const result = await resend.emails.send({ from: FROM, to: input.to, subject: input.subject, html: input.html });
-    logEmail({ ...base, messageId: result.data?.id, status: 'sent', ts: new Date().toISOString() });
-    return {
-      ...base,
-      ok: true,
-      status: 'sent',
-      messageId: result.data?.id,
-    };
+    const outcome = interpretSendResult(result);
+    logEmail({ ...base, messageId: outcome.ok ? outcome.messageId : undefined, status: outcome.status, error: outcome.ok ? undefined : outcome.errorMessage, ts: new Date().toISOString() });
+    return { ...base, ...outcome };
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    logEmail({ ...base, status: 'failed', error: errorMessage, ts: new Date().toISOString() });
-    return {
-      ...base,
-      ok: false,
-      status: 'failed',
-      errorCode: 'EMAIL_SEND_FAILED',
-      errorMessage,
-      retriable: true,
-    };
+    const failed = failedDelivery(err instanceof Error ? err.message : String(err));
+    logEmail({ ...base, status: 'failed', error: failed.errorMessage, ts: new Date().toISOString() });
+    return { ...base, ...failed };
   }
 }
 
