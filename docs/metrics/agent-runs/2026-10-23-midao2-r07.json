@@ -1,25 +1,25 @@
 {
   "schemaVersion": 2,
   "runId": "2026-10-23-midao2-r07",
-  "status": "IN_PROGRESS",
+  "status": "COMPLETE",
   "startedAt": "2026-10-23T09:50:36.067Z",
-  "endedAt": null,
+  "endedAt": "2026-10-23T11:28:33Z",
   "sources": [],
   "main": {
     "startSha": "dbf18ac6febef1ce660d3e96cb14c0b1ed72d50c",
-    "endSha": null
+    "endSha": "5fefffddff7ce47429d7f141a1af190408c65507"
   },
   "inventory": {
     "openIssuesStart": 72,
-    "openIssuesEnd": null,
+    "openIssuesEnd": 72,
     "openPrsStart": 24,
-    "openPrsEnd": null,
+    "openPrsEnd": 24,
     "mainTerraPeak": 0,
     "reserveTerraPeak": 0,
     "activeCandidatePeak": 0,
     "sharedTestPeak": 0,
-    "closureSweeps": 0,
-    "closureAdvancedOrClosed": 0
+    "closureSweeps": 1,
+    "closureAdvancedOrClosed": 1
   },
   "modelUsage": {
     "actualTokensAvailable": false,
@@ -106,6 +106,20 @@
         "outputTokens": null,
         "cachedTokens": null,
         "dispatchedAt": "2026-10-23T10:24:30Z"
+      },
+      {
+        "id": "r07-luna-closure",
+        "role": "LUNA_CLOSURE 結案掃描（#1929 merge 後）",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T11:27:35Z"
       }
     ],
     "fullContextReplays": 0,
@@ -113,7 +127,7 @@
   },
   "delivery": {
     "issuesStarted": 1,
-    "issuesClosed": 0,
+    "issuesClosed": 1,
     "auditReady": 0,
     "ownerBlockedComplete": 0,
     "exactHeadCiOnly": 0,
@@ -122,7 +136,7 @@
     "cycleTimeMinutes": null
   },
   "ci": {
-    "fullCiRuns": 0,
+    "fullCiRuns": 6,
     "invalidReruns": 0,
     "firstPassRatePercent": null,
     "sharedTestCollisions": 0
@@ -138,8 +152,8 @@
     "hardFailReasons": []
   },
   "flow": {
-    "lunaTasks": 0,
-    "lunaAccepted": 0,
+    "lunaTasks": 1,
+    "lunaAccepted": 1,
     "lunaDelegationRatePercent": null,
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
@@ -160,24 +174,67 @@
     "Sol 審查 PASS／blocking 0；業務訊息 35 句全命中白名單、16 句 DB 字串無誤放行；前端無依賴 message 原文。non-blocking：guard 漏 getErrorText／變數別名（本 commit 自身缺陷，且 route-error 註解過度宣稱）＋7 項突變存活（測試缺口）→ rework1；refund-execute.ts ECPay err.message 另開 issue。",
     "3f27ccfe：guard 補 getErrorText／別名追蹤、10 個行為測試；主 session 複驗 5 檔 45/45。另開 #1928（refund-execute.ts ECPay err.message）。",
     "Codex code review d33da4b：1 項 P2（SETTLEMENT_RPC_NOT_DEPLOYED 樣式缺結尾錨定）驗證屬實——唯一來源為固定文案故實害低，但違反整句錨定契約且修正極小 → rework2。",
-    "069789a2：整句錨定＋全樣式錨定斷言；主 session 複驗 32/32；Codex thread 已回覆。"
+    "069789a2：整句錨定＋全樣式錨定斷言；主 session 複驗 32/32；Codex thread 已回覆。",
+    "Codex：d33da4b code review 1 項 P2（已修 069789a2）、security 0 findings；58eadc2 code review 自 10:26Z 起卡 running 逾 50 分鐘。Owner 選「授權本次 merge」（僅 #1929）。merge 5fefffdd（expectedHeadSha 58eadc2e）。Completion Truth：reachable；main 上重讀 route-error.ts（pickSafeMessage、13 條 ^…$ 樣式、SETTLEMENT 整句錨定）、guard 測試檔存在；main CI test／scan success；#1925 以 AC 證據留言後關閉。",
+    "LUNA_CLOSURE（11:27Z，haiku）：#1925 已關閉；#1928／#1926／#1761／#1869／#1916／#1851／#1912 非候選。fullCiRuns＝分支 4 個 run＋main 5fefffdd 2 個。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
     "contractVersion": 1,
     "ownerRole": "PRODUCT_MAIN_SESSION",
     "terminalPolicy": "CLOSE_OR_REASSIGN_BEFORE_SESSION_EXIT_OR_OWNER_STOP_OR_SCOPE_EXHAUSTED_OR_OWNER_BLOCKED",
-    "state": "OPEN",
-    "closedAt": null,
-    "evidenceRef": null
+    "state": "CLOSED",
+    "closedAt": "2026-10-23T11:28:33Z",
+    "evidenceRef": "github:issue#1925"
   },
   "wipLifecycle": {
     "schemaVersion": 1,
     "events": []
   },
   "completionTruth": {
-    "status": "NOT_CHECKED",
-    "checkedAt": null,
-    "claims": []
+    "status": "VERIFIED",
+    "checkedAt": "2026-10-23T11:28:30Z",
+    "claims": [
+      {
+        "type": "PR_MERGED",
+        "subject": "smallwei0301/tour-platform#1929",
+        "claimedState": "merged",
+        "observedState": "merged",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/pull/1929 merge_commit_sha=5fefffdd"
+      },
+      {
+        "type": "MERGED_TO_MAIN",
+        "subject": "issue#1925",
+        "claimedState": "merged",
+        "observedState": "merged",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/issues/1925#issuecomment-6363815095"
+      },
+      {
+        "type": "ISSUE_CLOSED",
+        "subject": "issue#1925",
+        "claimedState": "closed",
+        "observedState": "closed",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/issues/1925#issuecomment-6363815095"
+      },
+      {
+        "type": "CI_GREEN",
+        "subject": "main@5fefffdd",
+        "claimedState": "success",
+        "observedState": "success",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/actions/runs/39945782734/job/120387974079"
+      },
+      {
+        "type": "RUN_COMPLETE",
+        "subject": "2026-10-23-midao2-r07",
+        "claimedState": "COMPLETE",
+        "observedState": "COMPLETE",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/issues/1925#issuecomment-6363815095"
+      }
+    ]
   }
 }
