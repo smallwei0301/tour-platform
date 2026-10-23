@@ -1,24 +1,24 @@
 {
   "schemaVersion": 2,
   "runId": "2026-10-23-midao2-r04",
-  "status": "IN_PROGRESS",
+  "status": "COMPLETE",
   "startedAt": "2026-10-23T04:44:08.010Z",
-  "endedAt": null,
+  "endedAt": "2026-10-23T06:08:39Z",
   "sources": [],
   "main": {
     "startSha": "5b2c2f85da211b5570c2aafe395d89614f417aa7",
-    "endSha": null
+    "endSha": "ed215b1cb7ee41a4b96063e6e88d16d5b555aeb6"
   },
   "inventory": {
     "openIssuesStart": 72,
-    "openIssuesEnd": null,
+    "openIssuesEnd": 72,
     "openPrsStart": 24,
-    "openPrsEnd": null,
+    "openPrsEnd": 24,
     "mainTerraPeak": 1,
     "reserveTerraPeak": 0,
     "activeCandidatePeak": 1,
     "sharedTestPeak": 0,
-    "closureSweeps": 0,
+    "closureSweeps": 1,
     "closureAdvancedOrClosed": 0
   },
   "modelUsage": {
@@ -106,6 +106,20 @@
         "outputTokens": null,
         "cachedTokens": null,
         "dispatchedAt": "2026-10-23T04:50:05Z"
+      },
+      {
+        "id": "r04-luna-closure",
+        "role": "LUNA_CLOSURE 結案掃描（#1922 merge 後）",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T06:07:55Z"
       }
     ],
     "fullContextReplays": 0,
@@ -122,7 +136,7 @@
     "cycleTimeMinutes": null
   },
   "ci": {
-    "fullCiRuns": 0,
+    "fullCiRuns": 11,
     "invalidReruns": 0,
     "firstPassRatePercent": null,
     "sharedTestCollisions": 0
@@ -138,8 +152,8 @@
     "hardFailReasons": []
   },
   "flow": {
-    "lunaTasks": 1,
-    "lunaAccepted": 1,
+    "lunaTasks": 2,
+    "lunaAccepted": 2,
     "lunaDelegationRatePercent": null,
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
@@ -159,16 +173,20 @@
     "88579a27 經 Sol 檢視：server 端修正有效，但頁面讀取失敗仍 setExperienceYears(0) 會讓導遊覆寫真實年資，且前端 Math.trunc 會把 3.7 截成 3、空字串成 0；送 rework1（preflight 已於 04:48:32Z 先行）。",
     "Sol 審查 PASS／blocking 0：66/66＋tsc 0；12 突變擋下 9。non-blocking：頁面測試為原始碼斷言非渲染；CSRF→401 順序缺「無 CSRF 且未登入→403」案例；-0 回傳 -0（無實害）；00/07 依規則接受。88579a27 accepted=false（被 rework 取代部分）。",
     "PR #1922 head d0df4fda：test／smoke／scan success；browser 因 docker registry toomanyrequests（測試前、外部額度）失敗，PR 留言 6357737715 說明後重跑一次（rerun-failed-jobs）。",
-    "d0df4fda browser 重跑 success（job 120248884349）。"
+    "d0df4fda browser 重跑 success（job 120248884349）。",
+    "#1922 head 5f796ac4：CI 四項 success、mergeable clean、0 review threads；Codex code／security review 皆 completed 無 findings。merge ed215b1c（expectedHeadSha）。Completion Truth：reachable from main、main 上重讀 midao-experience-years.mjs／me page（parseExperienceYears、setExperienceYears(null)）／profile-extras route（INVALID_REQUEST）；main CI test／scan success。",
+    "LUNA_CLOSURE（06:07Z，haiku）EMPTY_WITH_SCAN：#1761（cutover gate 前置未完成）、#1869（Owner backlog）、#1911（main 已有 EMAIL_SEND_FAILED 但無空收件人略過）、#1916（mark-replied 無 idempotency）、#1917（bookings route 仍回 error.message）、#1851（未規劃）、#1912（需 Owner）皆非候選。",
+    "fullCiRuns=11：分支自 r04 startedAt 起 8 個 workflow run＋browser 外部額度重跑 1 次＋main ed215b1c 的 ci／secret-scan 2 個。",
+    "CLOSEOUT_ACCEPTED_NOT_GRADED: Production authenticated acceptance 需 Owner 以真實導遊帳號在 midao.com.tw 驗證；agent 無權限且 #1912 環境含正式金鑰禁止本機連線，故 PRODUCTION_PENDING（gaps: AUTHENTICATED_PRODUCTION_ACCEPTED midao2 me experience years is unverified）"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
     "contractVersion": 1,
     "ownerRole": "PRODUCT_MAIN_SESSION",
     "terminalPolicy": "CLOSE_OR_REASSIGN_BEFORE_SESSION_EXIT_OR_OWNER_STOP_OR_SCOPE_EXHAUSTED_OR_OWNER_BLOCKED",
-    "state": "OPEN",
-    "closedAt": null,
-    "evidenceRef": null
+    "state": "CLOSED",
+    "closedAt": "2026-10-23T06:08:39Z",
+    "evidenceRef": "github:issue#1761"
   },
   "wipLifecycle": {
     "schemaVersion": 1,
@@ -226,8 +244,49 @@
     ]
   },
   "completionTruth": {
-    "status": "NOT_CHECKED",
-    "checkedAt": null,
-    "claims": []
+    "status": "VERIFIED",
+    "checkedAt": "2026-10-23T06:10:00Z",
+    "claims": [
+      {
+        "type": "PR_MERGED",
+        "subject": "smallwei0301/tour-platform#1922",
+        "claimedState": "merged",
+        "observedState": "merged",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/pull/1922 merge_commit_sha=ed215b1c"
+      },
+      {
+        "type": "MERGED_TO_MAIN",
+        "subject": "issue#1761",
+        "claimedState": "merged",
+        "observedState": "merged",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/issues/1761#issuecomment-6358632739"
+      },
+      {
+        "type": "CI_GREEN",
+        "subject": "main@ed215b1c",
+        "claimedState": "success",
+        "observedState": "success",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/actions/runs/39906038389/job/120258118651"
+      },
+      {
+        "type": "RUN_COMPLETE",
+        "subject": "2026-10-23-midao2-r04",
+        "claimedState": "COMPLETE",
+        "observedState": "COMPLETE",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/issues/1761#issuecomment-6358632739"
+      },
+      {
+        "type": "AUTHENTICATED_PRODUCTION_ACCEPTED",
+        "subject": "midao2 me experience years",
+        "claimedState": "PRODUCTION_PENDING",
+        "observedState": "not checked",
+        "verification": "UNVERIFIED",
+        "evidenceRef": ""
+      }
+    ]
   }
 }

@@ -358,3 +358,30 @@
 - browser：
   - 第一次失敗，原因是 docker registry 回 `toomanyrequests`，發生在任何測試執行之前，屬外部額度問題。已在 [PR 留言](https://github.com/smallwei0301/tour-platform/pull/1922#issuecomment-6357737715) 說明並重跑一次。
   - [重跑結果](https://github.com/smallwei0301/tour-platform/actions/runs/39902700260/job/120248884349)：success。
+
+### CI（PR #1922 head `5f796ac4`）與 merge
+- 新 head 的 CI 全部 success：
+  - [browser](https://github.com/smallwei0301/tour-platform/actions/runs/39904600138/job/120253530468)
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39904600098/job/120253529915)
+  - [smoke](https://github.com/smallwei0301/tour-platform/actions/runs/39904600125/job/120253529962)
+  - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39904600103/job/120253530061)
+- merge 前狀態：
+  - mergeable=clean，review threads 0。
+  - Codex code review 與 security review 都已 completed，0 findings。
+- squash merge 後的 commit 為 `ed215b1c`，merge 時以 `expectedHeadSha=5f796ac4` 鎖定 head。
+- main 的 CI 全部 success：
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39906038389/job/120258118651)
+  - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39906038358/job/120258118019)
+- Completion Truth：
+  - 已讀回 main 上的 `midao-experience-years.mjs`、`me/page.tsx`、`profile-extras/route.ts`，內容與預期一致。
+  - 里程碑留言：[#1761 留言](https://github.com/smallwei0301/tour-platform/issues/1761#issuecomment-6358632739)。
+- Run r04 已 closeout，狀態 COMPLETE。評分為 `NOT_GRADED`，原因是 Production authenticated acceptance 需要 Owner 處理。
+
+### B+ 自檢（r04）
+1. **盤點**：做了，由 haiku scout 負責。
+2. **TRIAGE**：做了，由 opus 負責。
+3. **Terra 施工**：做了，由 sonnet 負責，含 1 次 rework。
+4. **LUNA_CLOSURE**：做了，由 haiku 負責。掃 7 個 Issue，0 個可結案（EMPTY_WITH_SCAN），各自理由記在帳本 notes。
+5. **即時埋點**：做了，readiness 為 LIVE_CAPTURE_READY。
+   - 缺口：WIP 事件是在 PR 開立後才補登，不是當下即時寫入。
+6. **收尾**：做了。Completion Truth 有 4 條 VERIFIED；Production 那條是 UNVERIFIED。
