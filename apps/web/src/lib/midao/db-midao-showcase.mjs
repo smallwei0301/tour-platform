@@ -5,6 +5,7 @@
  * 主站可見度只看既有 status（審核流不動）。
  */
 import { hasSupabaseEnv, getSupabase } from '../db.mjs';
+import { parseExperienceYears } from './midao-experience-years.mjs';
 
 export const MIDAO_DEAL_MODES = ['instant_booking', 'confirm_first', 'line_inquiry'];
 const QUESTION_TYPES = ['text', 'single_choice', 'multi_choice', 'yes_no'];
@@ -315,9 +316,8 @@ export async function getGuideExperienceYearsDb(guideId) {
  * @returns {Promise<{ok:true, experienceYears:number}|{ok:false, code:string, message:string}>}
  */
 export async function updateGuideExperienceYearsDb(guideId, years) {
-  // 嚴格解析：只收整數 number，或 1–2 位純數字字串；空字串／null／boolean／陣列／空白／指數／正負號一律拒絕
-  const n = typeof years === 'number' ? years : (typeof years === 'string' && /^\d{1,2}$/.test(years) ? Number(years) : NaN);
-  if (!Number.isInteger(n) || n < 0 || n > 60) {
+  const n = parseExperienceYears(years); // 嚴格解析，與 midao2/me 頁面共用
+  if (n === null) {
     return { ok: false, code: 'INVALID_YEARS', message: '導覽經驗需為 0–60 的整數年' };
   }
   if (!hasSupabaseEnv()) {

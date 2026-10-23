@@ -1,6 +1,6 @@
 /**
  * #1761 midao2「導覽經驗年資」行為測試：實際執行 profile-extras route 的 GET／PATCH。
- * 作法：route.ts、api-response、api、route-error、db-midao-showcase 皆載入真實實作，
+ * 作法：route.ts、api-response、api、route-error、db-midao-showcase、midao-experience-years 皆載入真實實作，
  * 只把 csrf／guide-auth／db.mjs（Supabase client）改寫成可控 stub，
  * 因此年資驗證、body 形狀檢查、錯誤脫敏與 session 擁有權都是真實執行（非字串比對）。
  */
@@ -62,6 +62,7 @@ before(async () => {
   await copyFile(path.join(LIB, 'api.ts'), path.join(dir, 'api.ts'));
   await copyFile(path.join(LIB, 'api-response.ts'), path.join(dir, 'api-response.ts'));
   await copyFile(path.join(LIB, 'route-error.ts'), path.join(dir, 'route-error.ts'));
+  await copyFile(path.join(LIB, 'midao/midao-experience-years.mjs'), path.join(dir, 'midao-experience-years.mjs'));
   let showcase = await readFile(path.join(LIB, 'midao/db-midao-showcase.mjs'), 'utf8');
   assert.match(showcase, /from '\.\.\/db\.mjs'/u);
   showcase = showcase.replace(/from '\.\.\/db\.mjs'/u, `from '${url('db.mjs')}'`);
