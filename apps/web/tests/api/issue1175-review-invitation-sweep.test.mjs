@@ -364,7 +364,8 @@ test('Route: handles missing Supabase env gracefully (no hard crash)', () => {
   assert.match(src, /SUPABASE_URL/, 'must check for SUPABASE_URL env var');
 });
 
-test('Route: initiated_by field is set to sweep_cron (not admin_manual)', () => {
+test('Route: initiated_by 為 cron（DB CHECK 只允許 admin_manual／cron，#1923）', () => {
   const src = readFileSync(ROUTE_PATH, 'utf8');
-  assert.match(src, /sweep_cron|cron/, 'delivery log must mark rows as sweep_cron origin');
+  assert.ok(!src.includes('sweep_cron'), 'sweep_cron 違反 DB CHECK，不得出現');
+  assert.match(src, /SWEEP_INITIATED_BY/, 'delivery log 的 initiated_by 來自 SWEEP_INITIATED_BY（cron）');
 });

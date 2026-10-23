@@ -25,6 +25,7 @@ import {
   isReviewInvitationSweepEnabled,
 } from '../../../../../src/lib/post-trip/review-invitation-sweep.mjs';
 import { sendReviewInvitation } from '../../../../../src/lib/email';
+import { planSweepDelivery, SWEEP_INITIATED_BY } from '../../../../../src/lib/post-trip/sweep/review-invitation-delivery.mjs';
 import { fetchReturningPromoEmailBlock } from '../../../../../src/lib/returning-promo.mjs';
 import { isCronJobEnabled, recordCronRun } from '../../../../../src/lib/cron-job-controls.mjs';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
@@ -196,7 +197,8 @@ const SUPABASE_SERVICE_ROLE_KEY = getSupabaseServiceRoleKey();
         : null;
 
       try {
-        await sendReviewInvitation({
+        // sendReviewInvitation 失敗時不 throw，而是回 { ok:false, ... }：必須讀回傳值（#1923）
+        const result = await sendReviewInvitation({
           contactEmail: order._contactEmail,
           contactName: order._contactName ?? undefined,
           activityTitle: order._activityTitle,
@@ -205,18 +207,15 @@ const SUPABASE_SERVICE_ROLE_KEY = getSupabaseServiceRoleKey();
           returningPromoHtml: returningPromo?.html,
         });
 
-        sentCount += 1;
+        const plan = planSweepDelivery({ result, orderId: decision.orderId, nowIso });
+        sentCount += plan.countDelta.sent;
+        failedCount += plan.countDelta.failed;
 
-        // Record 'sent' delivery log — ignore unique violations (23505)
-        if (srClient) {
-          const { error: insertError } = await srClient.from('review_invitations').insert({
-            order_id: decision.orderId,
-            status: 'sent',
-            initiated_by: 'sweep_cron',
-            sent_at: nowIso,
-          });
+        // 寫 delivery log — 'sent' 忽略 unique violation (23505)；只記錄錯誤代碼，不記 PII
+        if (srClient && plan.row) {
+          const { error: insertError } = await srClient.from('review_invitations').insert(plan.row);
           if (insertError && insertError.code !== '23505') {
-            console.error('[review-invitation-sweep] log insert error:', insertError.code);
+            console.error('[review-invitation-sweep] log insert error:', plan.row.status, insertError.code);
           }
         }
       } catch (sendErr) {
@@ -226,13 +225,16 @@ const SUPABASE_SERVICE_ROLE_KEY = getSupabaseServiceRoleKey();
 
         // Record 'failed' delivery log
         if (srClient) {
-          await srClient.from('review_invitations').insert({
+          const { error: insertError } = await srClient.from('review_invitations').insert({
             order_id: decision.orderId,
             status: 'failed',
-            initiated_by: 'sweep_cron',
+            initiated_by: SWEEP_INITIATED_BY,
             failed_at: nowIso,
             failure_reason: errorCode,
           });
+          if (insertError) {
+            console.error('[review-invitation-sweep] log insert error:', 'failed', insertError.code);
+          }
         }
       }
     }
