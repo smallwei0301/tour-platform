@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 2,
+  "runId": "2026-10-23-midao2-r06",
+  "status": "IN_PROGRESS",
+  "startedAt": "2026-10-23T07:57:45.541Z",
+  "endedAt": null,
+  "sources": [],
+  "main": {
+    "startSha": "9f711f66b2c6f6fe018db1f4f243b4ac2931e41d",
+    "endSha": null
+  },
+  "inventory": {
+    "openIssuesStart": 72,
+    "openIssuesEnd": null,
+    "openPrsStart": 24,
+    "openPrsEnd": null,
+    "mainTerraPeak": 0,
+    "reserveTerraPeak": 0,
+    "activeCandidatePeak": 0,
+    "sharedTestPeak": 0,
+    "closureSweeps": 0,
+    "closureAdvancedOrClosed": 0
+  },
+  "modelUsage": {
+    "actualTokensAvailable": false,
+    "weeklyUsageStartPercent": null,
+    "weeklyUsageEndPercent": null,
+    "weightedUsageImprovementPercent": null,
+    "weights": {
+      "luna": 1,
+      "terra": 3,
+      "sol": 6
+    },
+    "contextMultipliers": {
+      "compact": 1,
+      "medium": 1.5,
+      "full": 3
+    },
+    "tasks": [
+      {
+        "id": "r06-luna-scan",
+        "role": "Luna 盤點 #1917 v2 route error.message 洩漏面＋#1923 sweep 失敗／重試語意",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T07:57:55Z"
+      },
+      {
+        "id": "r06-sol-triage",
+        "role": "Sol TRIAGE：#1917 只修 guide 端 4 處（admin 端另案）；#1923 擴大為含 initiated_by sweep_cron 違反 DB CHECK 的修正（production sweep 目前 status=disabled，已讀 cron log 確認未寄出）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T07:59:30Z"
+      },
+      {
+        "id": "r06-terra",
+        "role": "Terra 施工：#1917 guide route 不洩漏 error.message；#1923 sweep 依 ok 判斷＋initiated_by=cron",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T08:01:00Z"
+      },
+      {
+        "id": "r06-sol-audit",
+        "role": "Sol 獨立審查（fresh context）9f711f66..773516ad",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T08:06:45Z"
+      },
+      {
+        "id": "r06-terra-rework1",
+        "role": "Terra rework：Codex P2×2（sweep null 收件人計入 failed 不寫列、guide bookings 頂層 catch）＋補 recordCronRun summary 斷言",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T08:19:55Z"
+      }
+    ],
+    "fullContextReplays": 0,
+    "duplicateScans": 0
+  },
+  "delivery": {
+    "issuesStarted": 2,
+    "issuesClosed": 0,
+    "auditReady": 0,
+    "ownerBlockedComplete": 0,
+    "exactHeadCiOnly": 0,
+    "commitOnly": 0,
+    "unfinishedCarryover": 0,
+    "cycleTimeMinutes": null
+  },
+  "ci": {
+    "fullCiRuns": 0,
+    "invalidReruns": 0,
+    "firstPassRatePercent": null,
+    "sharedTestCollisions": 0
+  },
+  "quality": {
+    "acceptanceEvidenceCoveragePercent": null,
+    "auditFirstPassRatePercent": null,
+    "unresolvedP0": 0,
+    "unresolvedP1": 0,
+    "reopenedIssues": 0,
+    "postMergeRegressions": 0,
+    "safetyViolations": 0,
+    "hardFailReasons": []
+  },
+  "flow": {
+    "lunaTasks": 1,
+    "lunaAccepted": 1,
+    "lunaDelegationRatePercent": null,
+    "duplicateAgentTasks": 0,
+    "ownershipCollisions": 0,
+    "waitTimeConvertedPercent": null,
+    "solTouches": 2,
+    "solIssues": 2
+  },
+  "auditability": {
+    "evidenceFieldsCompletePercent": null,
+    "exactHeadTestCoveragePercent": null,
+    "stalePendingDescriptions": 0,
+    "preciseBlockersPercent": null,
+    "scoreInputsCompletePercent": null
+  },
+  "notes": [
+    "MAIN：#1917（v2 route 不洩漏 DB error.message）＋#1923（review-invitation-sweep 依 sendReviewInvitation 回傳值記 failed）。兩者皆小範圍、同一 PR 以減少 Vercel 部署。r05 收尾 commit 隨本輪推送。",
+    "scout 發現：review-invitation-sweep 兩處 insert 寫 initiated_by=sweep_cron，違反 migration CHECK（admin_manual|cron），insert 必被拒 → 啟用後會每日重寄。已讀 2026-10-21／22 cron log：production 回 {ok:true,status:disabled}，未實際寄送。",
+    "施工 d1a1b9a3（#1917）、773516ad（#1923）。admin 端 13 處同類洩漏清單待另開 issue。NO_RECIPIENT 寫 failed（suppressed 不擋重寄）；provider 未設定不寫列。",
+    "Sol 審查 PASS／blocking 0（13/14 突變擋下；存活項列 #1926）。另開 #1925（其餘 v2 error.message 洩漏：admin 端＋guide pending-approval）、#1926（sweep 重試上限、catch failure_reason、summary 測試、首次啟用範圍）。",
+    "Codex code review 83e01dd：2 項 P2 皆驗證屬實——(1) null／空 email 被 continue 跳過，未計入也未記錄；(2) bookings 無頂層 catch，reject 時未回報卻已移出 WHITELIST。NO_RECIPIENT 決策改為計 failed 不寫列（避免每日累積）。送 rework1（preflight 08:19:42Z）。",
+    "6ecd29c3：Codex P2×2 修正；主 session 複驗 4 檔 58/58。已於兩個 Codex thread 回覆（r4357550475、r4357550767）後推送。"
+  ],
+  "deliveryTruthVersion": 4,
+  "closeout": {
+    "contractVersion": 1,
+    "ownerRole": "PRODUCT_MAIN_SESSION",
+    "terminalPolicy": "CLOSE_OR_REASSIGN_BEFORE_SESSION_EXIT_OR_OWNER_STOP_OR_SCOPE_EXHAUSTED_OR_OWNER_BLOCKED",
+    "state": "OPEN",
+    "closedAt": null,
+    "evidenceRef": null
+  },
+  "wipLifecycle": {
+    "schemaVersion": 1,
+    "events": []
+  },
+  "completionTruth": {
+    "status": "NOT_CHECKED",
+    "checkedAt": null,
+    "claims": []
+  }
+}

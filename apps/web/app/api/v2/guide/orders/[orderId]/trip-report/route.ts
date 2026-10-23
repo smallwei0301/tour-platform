@@ -155,7 +155,8 @@ export async function POST(
       .eq('guide_id', session.guideId);
 
     if (reportsError) {
-      return Response.json(fail('SERVER_ERROR', reportsError.message), { status: 500 });
+      // #1917：交給下方 catch 上報；client 只拿通用文案，不外洩 DB 錯誤
+      throw new Error(reportsError.message);
     }
 
     // Step 7: evaluateGuideTripReportIdempotency
@@ -198,7 +199,7 @@ export async function POST(
       .single();
 
     if (insertError) {
-      return Response.json(fail('SERVER_ERROR', insertError.message), { status: 500 });
+      throw new Error(insertError.message);
     }
 
     // Step 9: Return 201

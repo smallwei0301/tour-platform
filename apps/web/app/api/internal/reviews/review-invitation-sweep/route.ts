@@ -25,6 +25,7 @@ import {
   isReviewInvitationSweepEnabled,
 } from '../../../../../src/lib/post-trip/review-invitation-sweep.mjs';
 import { sendReviewInvitation } from '../../../../../src/lib/email';
+import { planSweepDelivery, SWEEP_INITIATED_BY } from '../../../../../src/lib/post-trip/sweep/review-invitation-delivery.mjs';
 import { fetchReturningPromoEmailBlock } from '../../../../../src/lib/returning-promo.mjs';
 import { isCronJobEnabled, recordCronRun } from '../../../../../src/lib/cron-job-controls.mjs';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
@@ -183,7 +184,20 @@ const SUPABASE_SERVICE_ROLE_KEY = getSupabaseServiceRoleKey();
       if (decision.action !== 'send') continue;
 
       const order = sweepOrders.find((o) => o.id === decision.orderId);
-      if (!order || !order._contactEmail) continue;
+      if (!order) continue;
+
+      // 收件人為空（null／''／純空白）：不呼叫 provider，改以合成 NO_RECIPIENT 結果走 planner，
+      // 讓這類訂單計入 failed（不寫列）而不是被靜默略過（#1923）
+      if (typeof order._contactEmail !== 'string' || order._contactEmail.trim() === '') {
+        const noRecipient = planSweepDelivery({
+          result: { ok: false, status: 'skipped', errorCode: 'NO_RECIPIENT' },
+          orderId: decision.orderId,
+          nowIso,
+        });
+        sentCount += noRecipient.countDelta.sent;
+        failedCount += noRecipient.countDelta.failed;
+        continue;
+      }
 
       const reviewUrl = `${siteUrl}/me/orders/${decision.orderId}?review=1`;
 
@@ -196,7 +210,8 @@ const SUPABASE_SERVICE_ROLE_KEY = getSupabaseServiceRoleKey();
         : null;
 
       try {
-        await sendReviewInvitation({
+        // sendReviewInvitation 失敗時不 throw，而是回 { ok:false, ... }：必須讀回傳值（#1923）
+        const result = await sendReviewInvitation({
           contactEmail: order._contactEmail,
           contactName: order._contactName ?? undefined,
           activityTitle: order._activityTitle,
@@ -205,18 +220,15 @@ const SUPABASE_SERVICE_ROLE_KEY = getSupabaseServiceRoleKey();
           returningPromoHtml: returningPromo?.html,
         });
 
-        sentCount += 1;
+        const plan = planSweepDelivery({ result, orderId: decision.orderId, nowIso });
+        sentCount += plan.countDelta.sent;
+        failedCount += plan.countDelta.failed;
 
-        // Record 'sent' delivery log — ignore unique violations (23505)
-        if (srClient) {
-          const { error: insertError } = await srClient.from('review_invitations').insert({
-            order_id: decision.orderId,
-            status: 'sent',
-            initiated_by: 'sweep_cron',
-            sent_at: nowIso,
-          });
+        // 寫 delivery log — 'sent' 忽略 unique violation (23505)；只記錄錯誤代碼，不記 PII
+        if (srClient && plan.row) {
+          const { error: insertError } = await srClient.from('review_invitations').insert(plan.row);
           if (insertError && insertError.code !== '23505') {
-            console.error('[review-invitation-sweep] log insert error:', insertError.code);
+            console.error('[review-invitation-sweep] log insert error:', plan.row.status, insertError.code);
           }
         }
       } catch (sendErr) {
@@ -226,13 +238,16 @@ const SUPABASE_SERVICE_ROLE_KEY = getSupabaseServiceRoleKey();
 
         // Record 'failed' delivery log
         if (srClient) {
-          await srClient.from('review_invitations').insert({
+          const { error: insertError } = await srClient.from('review_invitations').insert({
             order_id: decision.orderId,
             status: 'failed',
-            initiated_by: 'sweep_cron',
+            initiated_by: SWEEP_INITIATED_BY,
             failed_at: nowIso,
             failure_reason: errorCode,
           });
+          if (insertError) {
+            console.error('[review-invitation-sweep] log insert error:', 'failed', insertError.code);
+          }
         }
       }
     }

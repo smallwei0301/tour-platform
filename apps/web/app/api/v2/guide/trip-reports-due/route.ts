@@ -71,7 +71,8 @@ export async function GET(request: NextRequest) {
       .limit(200);
 
     if (error) {
-      return Response.json(fail('SERVER_ERROR', error.message), { status: 500 });
+      // #1917：交給下方 catch 上報；client 只拿通用文案，不外洩 DB 錯誤
+      throw new Error(error.message);
     }
 
     const tripReportsDue: Array<{
