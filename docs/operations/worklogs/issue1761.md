@@ -294,3 +294,59 @@
   - 範圍：只適用 #1918 這一次 merge，不是常設規則。
 - main 已前進到 `ad2ec734`。其中 #1920 已把 `midao2/**` 加進 `e2e-smoke` paths，所以審查列出的 workflow paths 後續項目已由 main 處理。
 - 本段 worklog 是新 head 唯一的變更（純文件）。merge 前會確認新 head 的 CI 結果。
+
+### merge 與收尾（2026-10-23）
+- #1918 已 squash merge，merge commit 為 `5b2c2f85`，merge 時以 `expectedHeadSha=e1982ca0` 鎖定 head。
+- 新 head 的 CI 全部 success：
+  - [browser](https://github.com/smallwei0301/tour-platform/actions/runs/39899834575/job/120238617318)
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39899834526/job/120238616342)
+  - [smoke](https://github.com/smallwei0301/tour-platform/actions/runs/39899834584/job/120238616610)
+  - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39899834828/job/120238616938)
+- main `5b2c2f85` 的 CI 全部 success：
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39901238032/job/120243062878)
+  - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39901238004/job/120243062642)
+- Completion Truth 已讀回：
+  - 已 merge，且可由 main 到達。
+  - 在 main 上重讀 calendar route、`midao-calendar-blackouts.mjs` 與 smoke 清單，內容都在。
+  - 里程碑留言：[#1761 留言](https://github.com/smallwei0301/tour-platform/issues/1761#issuecomment-6357551412)。
+- Run r03 已 closeout，狀態 COMPLETE；評分 `NOT_GRADED`，原因是 Production authenticated acceptance 需要 Owner 驗證。
+
+### B+ 自檢（r03）
+1. 盤點：做了（haiku scout，舊後台導遊行事曆的寫入路徑）。
+2. TRIAGE：做了（opus）。
+3. Terra 施工：做了（sonnet 施工＋smoke 清單）。
+4. LUNA_CLOSURE：做了（haiku），掃 7 個 Issue，0 個可結案（EMPTY_WITH_SCAN）。逐項理由記在帳本 notes。
+5. 即時埋點：做了。帳本 validate VALID_V2，readiness 結果 LIVE_CAPTURE_READY。
+   - 缺口：派工時間曾三次需要更正，且兩次 rework 送出前沒有先跑 preflight。兩者都已如實記在帳本。
+6. 收尾：做了。Completion Truth 有 4 條已驗證；Production 那一條為 UNVERIFIED。
+
+## Run r04（2026-10-23）：MAIN-4 /midao2/me 年資編輯與擁有權
+
+### 盤點（haiku scout）
+- 頁面 `/midao2/me` 唯一可編輯的是導覽經驗年資，走 `PATCH /api/v2/guide/midao/profile-extras`。
+- 擁有權已正確：只以 session 的 guideId 寫入，body 裡沒有可竄改的 id。
+- 發現的漏洞：
+  - server 用 `Number()` 轉型，`''`、`null`、`false` 會被當成 0 寫入。
+  - body 為 `null` 時回 500。
+  - GET 忽略 DB error。
+  - route 層沒有 401／403／400／500 的行為測試。
+
+### 施工（sonnet）
+- `88579a27`：
+  - server 端改為嚴格解析，非 object 的 body 回 400。
+  - GET 遇到 DB 錯誤改為拋出，route 轉成通用 500，不洩漏訊息。
+  - 新增 route 行為測試 31 項，實際執行 handler。
+  - 驗證：RED 12 → GREEN 61/61，突變 4/4 被擋下。
+- `89ef18ec`（rework）：
+  - 頁面讀取失敗時年資改為 null，只顯示錯誤加重試，不可進入編輯，避免把真實年資覆寫成 0。
+  - 前端與 server 共用純函式 `parseExperienceYears`，並移除 `Math.trunc`。
+  - 驗證：RED 3 → GREEN 62/62，突變 3/3 被擋下。
+
+### 審查（opus，fresh context）
+- PASS，blocking 0。測試 66/66 通過，tsc 0 錯誤。
+- 突變 12 組擋下 9 組。其中 1 組改了也不影響行為，另 1 組是下方第 2 點的順序缺口。
+- 凍結區沒有任何變更。
+- non-blocking 後續項目：
+  1. 頁面測試是原始碼斷言，沒有實際渲染；要用 Playwright 驗收補上。
+  2. 缺「無 CSRF 且未登入 → 403」的順序測試。
+  3. `-0` 回傳 `-0`，序列化後即為 0，沒有實害。
