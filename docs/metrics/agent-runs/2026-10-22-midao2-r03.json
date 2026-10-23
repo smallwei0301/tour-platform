@@ -90,7 +90,7 @@
       },
       {
         "id": "r03-sol-audit-1761",
-        "role": "Sol diff audit（fresh context）",
+        "role": "Sol diff audit（fresh context）— 於 Owner 中斷時被打斷，未產出結論",
         "requestedModel": "sol",
         "requestedSelector": "opus",
         "actualModel": "unknown",
@@ -113,6 +113,20 @@
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null
+      },
+      {
+        "id": "r03-sol-audit2-1761",
+        "role": "Sol 重派審查（新 actor；第一次被中斷）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T00:45:20Z"
       }
     ],
     "fullContextReplays": 0,
@@ -151,7 +165,7 @@
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
     "waitTimeConvertedPercent": null,
-    "solTouches": 2,
+    "solTouches": 3,
     "solIssues": 1
   },
   "auditability": {
@@ -166,7 +180,10 @@
     "CONCURRENT_RUN_JUSTIFICATION：r02 已 closeout CLOSED（檔案在 #1918），無其他 OPEN Run。",
     "#1918 Codex security review 卡在 running 超過 40 分鐘（重新觸發無效），r03 施工接在同一分支，#1918 一併承載 r02 收尾與 r03。",
     "TRIAGE：MAIN=#1761 calendar round-trip slice 1：midao2 calendar GET 唯讀疊加 guide_blackout_dates（hasBlackout/blackouts），讀取失敗 5xx 不 degrade；不改寫入、不雙寫。RISK normal（導遊端顯示；旅客端 available-slots 已讀 blackout＋day_revisions）。BLOCKER：舊後台 availability-preview 不讀 day_revisions，修正需改非 v2 舊路由（goal 限定新碼落 app/api/v2/**），記為 #1869 legacy 退役或 Owner 授權範圍。",
-    "更正：smoke 派工 receipt 的 dispatchedAt 原估 12:43:10Z，早於 before record 12:44:02Z，改為 12:44:10Z（推估值）。教訓：dispatchedAt 一律在 SendMessage 前以 date -u 取得，不憑記憶估。"
+    "更正：smoke 派工 receipt 的 dispatchedAt 原估 12:43:10Z，早於 before record 12:44:02Z，改為 12:44:10Z（推估值）。教訓：dispatchedAt 一律在 SendMessage 前以 date -u 取得，不憑記憶估。",
+    "2026-10-22 12:50Z 起依 Owner 中斷與停止指示暫停（Vercel Deployment Storage 滿額），2026-10-23 00:44Z Owner 說「繼續」恢復。期間 main 前進至 abe7e714（#1919 世界影片改走 Vercel Blob），與本 PR 無檔案重疊，不需 re-align。",
+    "恢復後推送策略：帳本／worklog 不單獨推送，併入施工或收尾 commit，以減少 Preview 部署。",
+    "#1918 browser（midao-baseline，head 03642a7a）失敗：docker registry toomanyrequests: Data limit exceeded（外部額度），非本 PR 程式。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
