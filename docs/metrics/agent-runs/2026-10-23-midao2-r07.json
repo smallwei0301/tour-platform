@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 2,
+  "runId": "2026-10-23-midao2-r07",
+  "status": "IN_PROGRESS",
+  "startedAt": "2026-10-23T09:50:36.067Z",
+  "endedAt": null,
+  "sources": [],
+  "main": {
+    "startSha": "dbf18ac6febef1ce660d3e96cb14c0b1ed72d50c",
+    "endSha": null
+  },
+  "inventory": {
+    "openIssuesStart": 72,
+    "openIssuesEnd": null,
+    "openPrsStart": 24,
+    "openPrsEnd": null,
+    "mainTerraPeak": 0,
+    "reserveTerraPeak": 0,
+    "activeCandidatePeak": 0,
+    "sharedTestPeak": 0,
+    "closureSweeps": 0,
+    "closureAdvancedOrClosed": 0
+  },
+  "modelUsage": {
+    "actualTokensAvailable": false,
+    "weeklyUsageStartPercent": null,
+    "weeklyUsageEndPercent": null,
+    "weightedUsageImprovementPercent": null,
+    "weights": {
+      "luna": 1,
+      "terra": 3,
+      "sol": 6
+    },
+    "contextMultipliers": {
+      "compact": 1,
+      "medium": 1.5,
+      "full": 3
+    },
+    "tasks": [
+      {
+        "id": "r07-sol-triage",
+        "role": "Sol TRIAGE：MAIN #1925（其餘 v2 route error.message 洩漏：admin 13 處＋guide pending-approval）；清單已由 r06 scout／Terra／Sol 盤點，本輪不另派盤點 scout（如實記為缺口）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T09:50:00Z"
+      },
+      {
+        "id": "r07-terra-1925",
+        "role": "Terra 施工：#1925 其餘 v2 route 不回傳 DB／err.message＋source guard",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T09:51:00Z"
+      },
+      {
+        "id": "r07-sol-audit",
+        "role": "Sol 獨立審查（fresh context）dbf18ac6..21b88a8d（33 route，金流相鄰，重點：業務訊息回歸）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T10:03:05Z"
+      },
+      {
+        "id": "r07-terra-rework1",
+        "role": "Terra rework：補 guard 缺口（getErrorText／變數別名 sink）＋補存活突變的行為測試",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T10:12:00Z"
+      }
+    ],
+    "fullContextReplays": 0,
+    "duplicateScans": 0
+  },
+  "delivery": {
+    "issuesStarted": 1,
+    "issuesClosed": 0,
+    "auditReady": 0,
+    "ownerBlockedComplete": 0,
+    "exactHeadCiOnly": 0,
+    "commitOnly": 0,
+    "unfinishedCarryover": 0,
+    "cycleTimeMinutes": null
+  },
+  "ci": {
+    "fullCiRuns": 0,
+    "invalidReruns": 0,
+    "firstPassRatePercent": null,
+    "sharedTestCollisions": 0
+  },
+  "quality": {
+    "acceptanceEvidenceCoveragePercent": null,
+    "auditFirstPassRatePercent": null,
+    "unresolvedP0": 0,
+    "unresolvedP1": 0,
+    "reopenedIssues": 0,
+    "postMergeRegressions": 0,
+    "safetyViolations": 0,
+    "hardFailReasons": []
+  },
+  "flow": {
+    "lunaTasks": 0,
+    "lunaAccepted": 0,
+    "lunaDelegationRatePercent": null,
+    "duplicateAgentTasks": 0,
+    "ownershipCollisions": 0,
+    "waitTimeConvertedPercent": null,
+    "solTouches": 2,
+    "solIssues": 1
+  },
+  "auditability": {
+    "evidenceFieldsCompletePercent": null,
+    "exactHeadTestCoveragePercent": null,
+    "stalePendingDescriptions": 0,
+    "preciseBlockersPercent": null,
+    "scoreInputsCompletePercent": null
+  },
+  "notes": [
+    "MAIN：#1925。r06 收尾 commit 隨本輪推送。",
+    "21b88a8d：33 支 v2 route＋route-error.ts 新增 pickSafeMessage／ORDER_DOMAIN_ERROR_PATTERNS；guard 允許清單 5 項；範圍外多修 conflict-overrides 上報、send-review-invitation 寄信 errorMessage、refund-execute DB_UPDATE_FAILED 細節。殘留：src/lib/refund-execute.ts 的 ECPay err.message（v2 外、金流）。",
+    "Sol 審查 PASS／blocking 0；業務訊息 35 句全命中白名單、16 句 DB 字串無誤放行；前端無依賴 message 原文。non-blocking：guard 漏 getErrorText／變數別名（本 commit 自身缺陷，且 route-error 註解過度宣稱）＋7 項突變存活（測試缺口）→ rework1；refund-execute.ts ECPay err.message 另開 issue。",
+    "3f27ccfe：guard 補 getErrorText／別名追蹤、10 個行為測試；主 session 複驗 5 檔 45/45。另開 #1928（refund-execute.ts ECPay err.message）。"
+  ],
+  "deliveryTruthVersion": 4,
+  "closeout": {
+    "contractVersion": 1,
+    "ownerRole": "PRODUCT_MAIN_SESSION",
+    "terminalPolicy": "CLOSE_OR_REASSIGN_BEFORE_SESSION_EXIT_OR_OWNER_STOP_OR_SCOPE_EXHAUSTED_OR_OWNER_BLOCKED",
+    "state": "OPEN",
+    "closedAt": null,
+    "evidenceRef": null
+  },
+  "wipLifecycle": {
+    "schemaVersion": 1,
+    "events": []
+  },
+  "completionTruth": {
+    "status": "NOT_CHECKED",
+    "checkedAt": null,
+    "claims": []
+  }
+}
