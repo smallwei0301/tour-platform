@@ -15,6 +15,16 @@ async function getSupabase() {
 }
 
 export async function GET(req: Request) {
+  try {
+    return await handleGet(req);
+  } catch (err) {
+    // client／查詢 reject（例如網路錯誤）也要上報；回應維持本檔 fail() 形狀與通用文案
+    await reportRouteError(err, { route: 'v2/guide/bookings' });
+    return Response.json(fail('SERVER_ERROR', '讀取訂單失敗，請稍後再試'), { status: 500 });
+  }
+}
+
+async function handleGet(req: Request) {
   const session = verifyGuideSession(req);
   if (!session) return Response.json(fail('UNAUTHORIZED', 'session required'), { status: 401 });
 

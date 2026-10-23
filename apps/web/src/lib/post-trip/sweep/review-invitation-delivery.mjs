@@ -8,15 +8,20 @@
  * DB CHECK（20260604_issue1174_review_invitations.sql）：
  *   status ∈ sent | failed | suppressed；initiated_by ∈ admin_manual | cron
  * 注意 evaluateReviewInvitationIdempotency 只看 status==='sent'，suppressed 並不會阻止
- * 重寄，所以 NO_RECIPIENT 也寫 failed（誠實反映「未寄出」），不使用 suppressed。
+ * 重寄，所以 NO_RECIPIENT 不使用 suppressed，而是只計入 failed、不寫列（見 NO_ROW_ERROR_CODES）。
  *
  * 隱私：failure_reason 只放 errorCode，不放 email 或 errorMessage。
  */
 
 export const SWEEP_INITIATED_BY = 'cron';
 
-/** provider 未設定是環境問題，不是該訂單的問題：計入 failed，但不寫列（避免每天累積假失敗紀錄）。 */
-const NO_ROW_ERROR_CODES = new Set(['EMAIL_PROVIDER_NOT_CONFIGURED']);
+/**
+ * 計入 failed，但不寫列（避免每天累積假失敗紀錄）：
+ * - EMAIL_PROVIDER_NOT_CONFIGURED：環境問題，不是該訂單的問題。
+ * - NO_RECIPIENT：idempotency 只看 status==='sent'，沒有 email 的訂單每天都會被重新評估；
+ *   若每次都寫 failed 列會無限累積，而 suppressed 也不會阻止重評，所以只計數、不寫列。
+ */
+const NO_ROW_ERROR_CODES = new Set(['EMAIL_PROVIDER_NOT_CONFIGURED', 'NO_RECIPIENT']);
 
 /**
  * @param {{ result: any, orderId: string, nowIso: string }} input

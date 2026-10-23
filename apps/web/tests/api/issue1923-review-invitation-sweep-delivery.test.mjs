@@ -163,13 +163,30 @@ test('ok:false failed → 寫入 failed 列，failure_reason 為 errorCode（不
   assert.ok(!JSON.stringify(w.rows).includes('fail@x.test'));
 });
 
-test('NO_RECIPIENT（skipped）→ failed 計數，寫 failed 列（suppressed 不阻止重寄，所以不用 suppressed），sent 不增加', async () => {
+test('空白 email 經 provider 回 NO_RECIPIENT → 計入 failed，但不寫列（否則每天累積）', async () => {
   const { body, w } = await run([order('o3', '   ')]);
   assert.equal(body.sent, 0);
   assert.equal(body.failed, 1);
-  assert.equal(w.rows.length, 1);
-  assert.equal(w.rows[0].status, 'failed');
-  assert.equal(w.rows[0].failure_reason, 'NO_RECIPIENT');
+  assert.equal(w.rows.length, 0);
+  assert.equal(w.attempts.length, 0);
+});
+
+test('email 為 null 或 \'\'：不呼叫 sendReviewInvitation、failed+1、不寫列', async () => {
+  const { body, w } = await run([order('n1', null), order('n2', ''), order('n3', '   ')]);
+  assert.equal(w.sendCalls.length, 0, '空收件人不得呼叫 provider');
+  assert.equal(body.sent, 0);
+  assert.equal(body.failed, 3);
+  assert.equal(w.attempts.length, 0);
+});
+
+test('recordCronRun summary 的 sent／failed 與實際計數一致（對調會紅）', async () => {
+  const { body, w } = await run([order('a', 'ok@x.test'), order('b', 'ok2@x.test'), order('c', 'ok3@x.test'), order('d', 'fail@x.test'), order('e', null)]);
+  assert.equal(body.sent, 3);
+  assert.equal(body.failed, 2);
+  const success = w.cron.find((c) => c.outcome === 'success');
+  assert.ok(success, '應有 success 的 cron 紀錄');
+  assert.equal(success.summary.sent, 3);
+  assert.equal(success.summary.failed, 2);
 });
 
 test('EMAIL_PROVIDER_NOT_CONFIGURED → 計入 failed，但不寫 DB 列（避免設定問題每日累積假紀錄）', async () => {
@@ -217,6 +234,13 @@ test('DB CHECK 一致性（原始碼）：兩個 route 所有 initiated_by／sta
   assert.ok(!sweepSrc.includes('sweep_cron'));
 });
 
+test('route 原始碼：空 email 分支走 planner（不是單純 continue），且 summary 為 sent: sentCount／failed: failedCount', () => {
+  const src = readFileSync(path.join(WEB, ROUTE_REL), 'utf8');
+  assert.ok(!/if \(!order \|\| !order\._contactEmail\) continue;/.test(src));
+  assert.match(src, /NO_RECIPIENT/);
+  assert.match(src, /sent: sentCount, failed: failedCount/);
+});
+
 test('route 使用 delivery 純函式並讀取 sendReviewInvitation 回傳值', () => {
   const src = readFileSync(path.join(WEB, ROUTE_REL), 'utf8');
   assert.match(src, /review-invitation-delivery\.mjs/);
@@ -245,11 +269,11 @@ test('planSweepDelivery：failed → failed 列用 errorCode；缺 errorCode 退
   assert.deepEqual(c.countDelta, { sent: 0, failed: 1 });
 });
 
-test('planSweepDelivery：NO_RECIPIENT → failed 列；EMAIL_PROVIDER_NOT_CONFIGURED → 只計數不寫列', async () => {
+test('planSweepDelivery：NO_RECIPIENT → 只計數不寫列；EMAIL_PROVIDER_NOT_CONFIGURED → 只計數不寫列', async () => {
   const { planSweepDelivery } = await import(pathToFileURL(DELIVERY_MODULE).href);
   const a = planSweepDelivery({ result: { ok: false, status: 'skipped', errorCode: 'NO_RECIPIENT' }, orderId: 'o', nowIso: NOW });
-  assert.equal(a.row.status, 'failed');
-  assert.equal(a.row.failure_reason, 'NO_RECIPIENT');
+  assert.deepEqual(a.countDelta, { sent: 0, failed: 1 });
+  assert.equal(a.row, null);
   const b = planSweepDelivery({ result: { ok: false, status: 'skipped', errorCode: 'EMAIL_PROVIDER_NOT_CONFIGURED' }, orderId: 'o', nowIso: NOW });
   assert.deepEqual(b.countDelta, { sent: 0, failed: 1 });
   assert.equal(b.row, null);

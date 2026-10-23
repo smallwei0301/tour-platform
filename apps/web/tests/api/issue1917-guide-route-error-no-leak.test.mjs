@@ -37,6 +37,7 @@ export function createClient() {
         then(resolve) {
           const w = globalThis.__T1917;
           const key = table + '.' + op;
+          if (w.throwOn === key) throw new Error(w.fail[key]);
           if (w.fail[key]) return resolve({ data: null, error: { message: w.fail[key] } });
           const v = w.data[key];
           return resolve({ data: v === undefined ? [] : v, error: null });
@@ -128,6 +129,18 @@ test('guide/bookings：orders 查詢失敗不外洩 DB 錯誤，且 server 端�
   await assertNoLeak(res, 'bookings');
   assert.equal(globalThis.__T1917.reported.length, 1);
   assert.ok(globalThis.__T1917.reported[0].message.includes('secret-db-detail'), '原始錯誤應交給 reportRouteError');
+});
+
+test('guide/bookings：supabase 查詢 reject（throw）也回通用 500 並上報', async () => {
+  seed({ 'orders.select': SECRET }, {});
+  globalThis.__T1917.throwOn = 'orders.select';
+  const res = await handlers.bookings.GET(new Request('http://x/api/v2/guide/bookings'));
+  const text = await res.text();
+  assert.equal(res.status, 500);
+  assert.ok(!text.includes('secret-db-detail'), text);
+  assert.ok(!/relation/i.test(text), text);
+  assert.equal(globalThis.__T1917.reported.length, 1);
+  assert.ok(globalThis.__T1917.reported[0].message.includes('secret-db-detail'));
 });
 
 test('guide/trip-reports-due：orders 查詢失敗不外洩 DB 錯誤，且 server 端有上報', async () => {

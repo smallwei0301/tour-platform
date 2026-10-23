@@ -184,7 +184,20 @@ const SUPABASE_SERVICE_ROLE_KEY = getSupabaseServiceRoleKey();
       if (decision.action !== 'send') continue;
 
       const order = sweepOrders.find((o) => o.id === decision.orderId);
-      if (!order || !order._contactEmail) continue;
+      if (!order) continue;
+
+      // 收件人為空（null／''／純空白）：不呼叫 provider，改以合成 NO_RECIPIENT 結果走 planner，
+      // 讓這類訂單計入 failed（不寫列）而不是被靜默略過（#1923）
+      if (typeof order._contactEmail !== 'string' || order._contactEmail.trim() === '') {
+        const noRecipient = planSweepDelivery({
+          result: { ok: false, status: 'skipped', errorCode: 'NO_RECIPIENT' },
+          orderId: decision.orderId,
+          nowIso,
+        });
+        sentCount += noRecipient.countDelta.sent;
+        failedCount += noRecipient.countDelta.failed;
+        continue;
+      }
 
       const reviewUrl = `${siteUrl}/me/orders/${decision.orderId}?review=1`;
 
