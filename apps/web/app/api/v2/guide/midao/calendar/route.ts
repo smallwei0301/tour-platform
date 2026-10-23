@@ -2,11 +2,13 @@
  * GET /api/v2/guide/midao/calendar?month=YYYY-MM — 月曆聚合。
  * 可用時段（canonical 單一真相）＋需求單點色＋既有 bookings 唯讀疊加（查詢失敗 degrade，不整頁 500）。
  * 點色：橘=未結案需求（new/pending_reply/replied）、綠=closed_won 或既有 confirmed 訂單。
+ * #1761：另疊加舊後台封鎖日 hasBlackout／blackouts（讀失敗 5xx，不 degrade）。
  * #1760 Stage 2：可用性改讀 canonical rules/day revisions；可用性讀取失敗維持 5xx，不 degrade。
  */
 import { verifyGuideSession } from '../../../../../../src/lib/guide-auth';
 import { getCanonicalMonthCalendarDb } from '../../../../../../src/lib/midao/db-midao-canonical-availability.mjs';
 import { listMidaoRequestsDb } from '../../../../../../src/lib/midao/db-midao-requests.mjs';
+import { blackoutMonthRange, projectBlackoutsByDate } from '../../../../../../src/lib/midao/midao-calendar-blackouts.mjs';
 import { hasSupabaseEnv, getSupabase } from '../../../../../../src/lib/db.mjs';
 import { jsonOk, jsonError } from '../../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../../src/lib/route-error';
@@ -43,6 +45,24 @@ async function fetchBookingsOverlay(guideId: string, month: string) {
   }
 }
 
+/**
+ * 舊後台封鎖日（旅客端 available-slots 會讀）：一次查詢取當月（含跨月延伸）。
+ * 不同於 bookings 疊加，失敗必須拋出（5xx）——降級成「可用」會讓導遊以為可接單。
+ * 只 select 時段欄位，不取 reason／備註。
+ */
+async function fetchBlackoutRows(guideId: string, month: string): Promise<Array<{ starts_at: string; ends_at: string }>> {
+  if (!hasSupabaseEnv()) return [];
+  const { monthStartIso, nextMonthStartIso } = blackoutMonthRange(month);
+  const supabase = await getSupabase();
+  const { data, error } = await supabase.from('guide_blackout_dates')
+    .select('starts_at, ends_at')
+    .eq('guide_id', guideId)
+    .lt('starts_at', nextMonthStartIso)
+    .gt('ends_at', monthStartIso);
+  if (error) throw new Error(error.message);
+  return Array.isArray(data) ? data : [];
+}
+
 function nextMonthStart(month: string): string {
   const [y, m] = month.split('-').map(Number);
   const ny = m === 12 ? y + 1 : y;
@@ -59,11 +79,13 @@ export async function GET(request: Request) {
   const mm = Number(month.slice(5, 7));
   if (mm < 1 || mm > 12) return jsonError('INVALID_MONTH', '月份格式需為 YYYY-MM', 400);
   try {
-    const [availability, requests, bookings] = await Promise.all([
+    const [availability, requests, bookings, blackoutRows] = await Promise.all([
       getCanonicalMonthCalendarDb(session.guideId, month),
       listMidaoRequestsDb(session.guideId, { status: 'all', sort: 'newest' }),
       fetchBookingsOverlay(session.guideId, month),
+      fetchBlackoutRows(session.guideId, month),
     ]);
+    const blackoutsByDate = projectBlackoutsByDate(blackoutRows, availability.map((d) => d.date));
     const days = availability.map((day) => {
       const dayRequests = requests.items.filter((r) => r.preferredDate === day.date);
       const dayBookings = bookings.filter((b) => taipeiDateOf(String(b.start_at)) === day.date);
@@ -74,6 +96,8 @@ export async function GET(request: Request) {
         revision: day.revision,
         isClosed: day.isClosed,
         timezone: day.timezone,
+        hasBlackout: blackoutsByDate.has(day.date),
+        blackouts: blackoutsByDate.get(day.date) ?? [],
         hasPending: dayRequests.some((r) => OPEN_REQ.includes(r.status)),
         hasConfirmed: dayRequests.some((r) => r.status === 'closed_won') || dayBookings.some((b) => b.status === 'confirmed'),
         items: [

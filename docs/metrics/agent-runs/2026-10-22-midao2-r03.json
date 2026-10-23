@@ -1,0 +1,259 @@
+{
+  "schemaVersion": 2,
+  "runId": "2026-10-22-midao2-r03",
+  "status": "IN_PROGRESS",
+  "startedAt": "2026-10-22T12:40:36.466Z",
+  "endedAt": null,
+  "sources": [],
+  "main": {
+    "startSha": "827c516fec9d5d847be30a62b6cf829d7a76190c",
+    "endSha": null
+  },
+  "inventory": {
+    "openIssuesStart": 72,
+    "openIssuesEnd": null,
+    "openPrsStart": 25,
+    "openPrsEnd": null,
+    "mainTerraPeak": 1,
+    "reserveTerraPeak": 0,
+    "activeCandidatePeak": 1,
+    "sharedTestPeak": 0,
+    "closureSweeps": 0,
+    "closureAdvancedOrClosed": 0
+  },
+  "modelUsage": {
+    "actualTokensAvailable": false,
+    "weeklyUsageStartPercent": null,
+    "weeklyUsageEndPercent": null,
+    "weightedUsageImprovementPercent": null,
+    "weights": {
+      "luna": 1,
+      "terra": 3,
+      "sol": 6
+    },
+    "contextMultipliers": {
+      "compact": 1,
+      "medium": 1.5,
+      "full": 3
+    },
+    "tasks": [
+      {
+        "id": "r03-luna-guidecal",
+        "role": "LUNA 盤點 /guide 檔期寫入 vs midao2 canonical（r03 init 前派出，事後登帳）",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r03-ledger-writes",
+        "role": "audit 層代寫 docs/metrics 即時埋點（違反 scout 路徑判準）",
+        "requestedModel": "luna",
+        "actualModel": "sol",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r03-sol-triage",
+        "role": "SOL TRIAGE（主 Agent）",
+        "requestedModel": "sol",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r03-terra-main-1761",
+        "role": "MAIN Terra：midao2 calendar 唯讀疊加 blackout",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "medium",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-22T12:41:27Z"
+      },
+      {
+        "id": "r03-sol-audit-1761",
+        "role": "Sol diff audit（fresh context）— 於 Owner 中斷時被打斷，未產出結論",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r03-terra-smoke-1761",
+        "role": "Terra：calendar e2e 納入 smoke",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null
+      },
+      {
+        "id": "r03-sol-audit2-1761",
+        "role": "Sol 重派審查（新 actor；第一次被中斷）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T00:45:20Z"
+      }
+    ],
+    "fullContextReplays": 0,
+    "duplicateScans": 0
+  },
+  "delivery": {
+    "issuesStarted": 1,
+    "issuesClosed": 0,
+    "auditReady": 0,
+    "ownerBlockedComplete": 0,
+    "exactHeadCiOnly": 0,
+    "commitOnly": 0,
+    "unfinishedCarryover": 0,
+    "cycleTimeMinutes": null
+  },
+  "ci": {
+    "fullCiRuns": 0,
+    "invalidReruns": 0,
+    "firstPassRatePercent": null,
+    "sharedTestCollisions": 0
+  },
+  "quality": {
+    "acceptanceEvidenceCoveragePercent": null,
+    "auditFirstPassRatePercent": null,
+    "unresolvedP0": 0,
+    "unresolvedP1": 0,
+    "reopenedIssues": 0,
+    "postMergeRegressions": 0,
+    "safetyViolations": 0,
+    "hardFailReasons": []
+  },
+  "flow": {
+    "lunaTasks": 2,
+    "lunaAccepted": 2,
+    "lunaDelegationRatePercent": null,
+    "duplicateAgentTasks": 0,
+    "ownershipCollisions": 0,
+    "waitTimeConvertedPercent": null,
+    "solTouches": 3,
+    "solIssues": 1
+  },
+  "auditability": {
+    "evidenceFieldsCompletePercent": null,
+    "exactHeadTestCoveragePercent": null,
+    "stalePendingDescriptions": 0,
+    "preciseBlockersPercent": null,
+    "scoreInputsCompletePercent": null
+  },
+  "notes": [
+    "r03 盤點 r03-luna-guidecal 於 11:55Z 派出、r03 帳本於 init 後補登（r02 收尾 PR #1918 未 merge 前不能提交 r03 帳本）。",
+    "CONCURRENT_RUN_JUSTIFICATION：r02 已 closeout CLOSED（檔案在 #1918），無其他 OPEN Run。",
+    "#1918 Codex security review 卡在 running 超過 40 分鐘（重新觸發無效），r03 施工接在同一分支，#1918 一併承載 r02 收尾與 r03。",
+    "TRIAGE：MAIN=#1761 calendar round-trip slice 1：midao2 calendar GET 唯讀疊加 guide_blackout_dates（hasBlackout/blackouts），讀取失敗 5xx 不 degrade；不改寫入、不雙寫。RISK normal（導遊端顯示；旅客端 available-slots 已讀 blackout＋day_revisions）。BLOCKER：舊後台 availability-preview 不讀 day_revisions，修正需改非 v2 舊路由（goal 限定新碼落 app/api/v2/**），記為 #1869 legacy 退役或 Owner 授權範圍。",
+    "更正：smoke 派工 receipt 的 dispatchedAt 原估 12:43:10Z，早於 before record 12:44:02Z，改為 12:44:10Z（推估值）。教訓：dispatchedAt 一律在 SendMessage 前以 date -u 取得，不憑記憶估。",
+    "2026-10-22 12:50Z 起依 Owner 中斷與停止指示暫停（Vercel Deployment Storage 滿額），2026-10-23 00:44Z Owner 說「繼續」恢復。期間 main 前進至 abe7e714（#1919 世界影片改走 Vercel Blob），與本 PR 無檔案重疊，不需 re-align。",
+    "恢復後推送策略：帳本／worklog 不單獨推送，併入施工或收尾 commit，以減少 Preview 部署。",
+    "#1918 browser（midao-baseline，head 03642a7a）失敗：docker registry toomanyrequests: Data limit exceeded（外部額度），非本 PR 程式。",
+    "Sol 重派審查 PASS（blocking 0；突變 9 項全擋）。non-blocking 後續：異常列靜默略過（DB CHECK 已擋）、跨日時段只標 blackout 當日、全日封鎖月格同時顯示可用短條、缺多筆重疊／跨年等邊界正式測試、e2e-smoke workflow paths 不含 midao2/**（既有，需改 workflow，非本授權）。",
+    "2026-10-23T04:25Z Codex code review（cbc5c0f5，01:03Z 起）與 security review（74258ee，2026-10-22T11:55Z 起）持續 running 無結論，重觸發留言 6340753201、6354853581 無回應；Owner 一次性授權本次略過 Codex，以 CI 全綠＋Sol 獨立審查 PASS 作為 #1918 merge 依據，僅限本次。"
+  ],
+  "deliveryTruthVersion": 4,
+  "closeout": {
+    "contractVersion": 1,
+    "ownerRole": "PRODUCT_MAIN_SESSION",
+    "terminalPolicy": "CLOSE_OR_REASSIGN_BEFORE_SESSION_EXIT_OR_OWNER_STOP_OR_SCOPE_EXHAUSTED_OR_OWNER_BLOCKED",
+    "state": "OPEN",
+    "closedAt": null,
+    "evidenceRef": null
+  },
+  "wipLifecycle": {
+    "schemaVersion": 1,
+    "events": [
+      {
+        "id": "r03-wip-1",
+        "at": "2026-10-22T12:41:27Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1918,
+        "issue": 1761,
+        "head": "856fde57340c66747b26c6a034b3843407e4a0ae",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "calendar blackout overlay 派工（sonnet）"
+      },
+      {
+        "id": "r03-wip-2",
+        "at": "2026-10-22T12:44:02Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1918,
+        "issue": 1761,
+        "head": "856fde57340c66747b26c6a034b3843407e4a0ae",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "856fde57，34/34，突變 2/2 被擋"
+      },
+      {
+        "id": "r03-wip-3",
+        "at": "2026-10-22T12:44:10Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1918,
+        "issue": 1761,
+        "head": "7355a16e4b33a79e4cda09dbd965a395a72b6382",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "calendar e2e 納入 smoke（sonnet）"
+      },
+      {
+        "id": "r03-wip-4",
+        "at": "2026-10-22T12:45:00Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1918,
+        "issue": 1761,
+        "head": "7355a16e4b33a79e4cda09dbd965a395a72b6382",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "7355a16e"
+      },
+      {
+        "id": "r03-wip-5",
+        "at": "2026-10-23T00:45:20Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1918,
+        "issue": 1761,
+        "head": "7355a16e4b33a79e4cda09dbd965a395a72b6382",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Sol 重派審查、CI 與 browser 重跑"
+      }
+    ]
+  },
+  "completionTruth": {
+    "status": "NOT_CHECKED",
+    "checkedAt": null,
+    "claims": []
+  }
+}

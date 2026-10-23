@@ -24,10 +24,13 @@ type CalendarItem = {
   type: 'midao_request' | 'booking'; id: string; travelerName: string | null; title: string | null;
   status: string; timeRange: string | null; participantsCount: number;
 };
+type BlackoutWindow = { startTime: string; endTime: string; allDay?: boolean };
 type CalendarDay = {
   date: string; availability: DayAvailability; ranges: CanonicalRange[];
   revision: number; isClosed: boolean; timezone: string;
   hasPending: boolean; hasConfirmed: boolean; items: CalendarItem[];
+  // #1761：舊後台封鎖日（旅客端訂位會被擋）；舊版 API 回應可能沒有這兩個欄位
+  hasBlackout?: boolean; blackouts?: BlackoutWindow[];
 };
 
 const WEEKDAY_HEADERS = ['一', '二', '三', '四', '五', '六', '日'];
@@ -291,6 +294,9 @@ export default function Midao2CalendarPage() {
                   ) : anyOpen ? (
                     <span style={{ width: 16, height: 3, borderRadius: 2, background: C.ACCENT_SOFT, border: `1px solid ${C.ACCENT}` }} />
                   ) : null}
+                  {day.hasBlackout && (
+                    <span data-testid={`midao2-cal-blackout-mark-${day.date}`} style={{ fontSize: 6, fontWeight: 700, color: C.RED }}>封鎖</span>
+                  )}
                 </button>
               );
             }),
@@ -300,6 +306,18 @@ export default function Midao2CalendarPage() {
 
       <Card style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ fontSize: 16, fontWeight: 700 }}>{dayHeading(selectedDate)}</div>
+
+        {selectedDay?.hasBlackout && (
+          <div
+            data-testid="midao2-cal-blackout"
+            style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '10px 12px', borderRadius: 10, background: C.ORANGE_SOFT, border: `1px solid ${C.ORANGE}`, fontSize: 13 }}
+          >
+            <div style={{ fontWeight: 700, color: C.ORANGE }}>舊後台封鎖</div>
+            <div style={{ color: C.MUTED }}>
+              旅客在這段時間無法訂位：{(selectedDay.blackouts ?? []).map((b) => (b.allDay ? '整天' : `${b.startTime}–${b.endTime}`)).join('、')}
+            </div>
+          </div>
+        )}
 
         {selectedDay && selectedDay.items.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column' }}>

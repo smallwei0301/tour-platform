@@ -18,6 +18,8 @@ function buildDays(overrides: Record<string, any> = {}) {
       timezone: TZ,
       hasPending: false,
       hasConfirmed: false,
+      hasBlackout: false,
+      blackouts: [],
       items: [],
       ...(overrides[date] ?? {}),
     };
@@ -179,4 +181,25 @@ test('W-2 週批次：勾選段別後展開為單日 canonical 寫入', async ({
   await expect.poll(() => postBody?.month).toBe(MONTH);
   await expect.poll(() => Array.isArray(postBody?.days) && postBody.days.length).toBeTruthy();
   await expect.poll(() => postBody?.days?.[0]).toHaveProperty('expectedRevision');
+});
+
+test('舊後台封鎖日：月格標示「封鎖」，當日明細顯示「舊後台封鎖」與時段', async ({ page }) => {
+  const days = buildDays({
+    [`${MONTH}-05`]: { hasBlackout: true, blackouts: [{ startTime: '09:00', endTime: '12:00' }] },
+    [`${MONTH}-06`]: { hasBlackout: true, blackouts: [{ startTime: '00:00', endTime: '24:00', allDay: true }] },
+  });
+  await page.route('**/api/v2/guide/midao/calendar*', (r) =>
+    r.fulfill({ json: { success: true, data: { month: MONTH, days } } }),
+  );
+  await page.goto('/midao2/calendar');
+  await page.getByTestId('midao2-cal-next').click();
+  await expect(page.getByTestId(`midao2-cal-blackout-mark-${MONTH}-05`)).toBeVisible();
+  await expect(page.getByTestId(`midao2-cal-blackout-mark-${MONTH}-07`)).toHaveCount(0);
+  await page.getByTestId(`midao2-cal-day-${MONTH}-05`).click();
+  await expect(page.getByTestId('midao2-cal-blackout')).toContainText('舊後台封鎖');
+  await expect(page.getByTestId('midao2-cal-blackout')).toContainText('09:00–12:00');
+  await page.getByTestId(`midao2-cal-day-${MONTH}-06`).click();
+  await expect(page.getByTestId('midao2-cal-blackout')).toContainText('整天');
+  await page.getByTestId(`midao2-cal-day-${MONTH}-07`).click();
+  await expect(page.getByTestId('midao2-cal-blackout')).toHaveCount(0);
 });

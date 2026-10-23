@@ -195,3 +195,102 @@
   - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39771871356/job/119801133751)：success
   - Vercel：success
 - 另案：#1917（orders 查詢失敗時回傳原始 DB error.message，origin/main 既有問題）。
+
+### PR #1915 merge 後讀回（2026-10-22 19:48 Asia/Taipei）
+- 狀態：`merged=true`，`merged_at=2026-10-22T11:48:24Z`，`merge_commit_sha=827c516f`。該 commit 是 main 當下的 head，可由 main 到達。
+- 在 main 上重讀關鍵檔：
+  - `bookings/route.ts` 含 `legacy_plan_id` 解析
+  - `midao2/orders/page.tsx` 含 `planName`
+- main CI：
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39773361136/job/119806117633)：success
+  - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39773361280/job/119806118089)：success
+- #1761 里程碑留言：<https://github.com/smallwei0301/tour-platform/issues/1761#issuecomment-6340089167>
+- Production：`PRODUCTION_PENDING`。由 Vercel 自動部署，沒有手動 deploy。
+- Run r02 已 closeout（COMPLETE），評分為 `NOT_GRADED`。唯一原因是 Production 的 authenticated acceptance 需要 Owner 處理，以 `--accept-not-graded` 附上理由後關帳。
+
+### r02 B+ 六步自檢
+1. Luna 盤點：做了。共 4 項盤點，另做 2 項下一個 MAIN 的預盤點，全部接受。
+2. Sol TRIAGE：做了。風險判為 normal，只改讀取投影與顯示。
+3. Terra 施工：做了。sonnet 共 6 次提交（初版、4 次 rework、smoke），主 Agent 沒有寫產品程式。
+4. LUNA_CLOSURE：做了。關閉 #1827，未完成的 AC 承接到 #1863。
+5. 即時埋點：做了，但有缺失：
+   - 帳本由 audit 層寫入，記為違規。
+   - 派工時間戳兩次以估計值填入、晚於實際時間，已更正。
+   - 第一次 rework 沒有先跑 before preflight。
+6. 收尾：做了。Completion Truth 六項都已讀回，closeout 與計分完成。
+
+### 教訓（下一輪照做）
+- 行為測試的 stub 要模擬型別錯誤與欄位投影，否則審查找不到 UUID／legacy 混用這類問題。這次是 Codex 抓到的，前兩輪 Sol 都沒有。
+- 審查 prompt 要明確要求逐一模擬每個查詢的失敗與回空、列順序反轉、重複資料。這次第五輪才完整覆蓋。
+- 改到的 e2e spec 要先確認在 CI 的某條 lane 上會跑；不在的話，納入 smoke 或記為 `NOT_VERIFIED`。
+- 收尾 PR #1918：
+  - Codex 提出 2 個 P2：smoke 候選 head 漏登 WIP、`PR_MERGED` 的 subject 沒寫出 PR。兩項都已修正，thread 已 resolve。
+  - head `74258ee2` 的 CI：[test](https://github.com/smallwei0301/tour-platform/actions/runs/39774179577/job/119808856424)、[scan](https://github.com/smallwei0301/tour-platform/actions/runs/39774179608/job/119808856526) 皆 success，Vercel 也是 success。
+
+## 2026-10-22／23 calendar round-trip slice 1：Midao2 月曆疊加舊後台封鎖日（Run `2026-10-22-midao2-r03`，PR #1918）
+
+### 盤點（r03-luna-guidecal，haiku）
+- 舊後台與 Midao2 只共用全域週規則，兩邊之間沒有同步機制。
+  - 舊後台寫入的 `guide_blackout_dates`、`activity_schedules`，Midao2 月曆讀不到。
+  - Midao2 寫入的 `guide_availability_day_revisions`，舊後台的 availability-preview 讀不到。
+- 旅客端 `available-slots` 會讀週規則、day_revisions、blackout 三種來源，所以訂位結果正確。缺口只在導遊端的顯示。
+
+### TRIAGE（主 Agent）
+- 切片內容：Midao2 月曆 GET 以唯讀方式疊加 blackout，新增 `hasBlackout`／`blackouts`。
+  - blackout 讀取失敗時回 5xx，不降級。
+  - 不改寫入、不雙寫。
+  - 風險 normal：只影響導遊端顯示，旅客端的判斷早已涵蓋 blackout。
+- BLOCKER：舊後台 availability-preview 不讀 `day_revisions`。要修正得改 v2 以外的舊路由，超出 goal 限定的「新碼只落 `app/api/v2/**`」，留到 #1869（legacy 退役）處理，或由 Owner 另行授權。
+
+### 施工（sonnet）
+- `856fde57`：
+  - 新增 `src/lib/midao/midao-calendar-blackouts.mjs`，依 Asia/Taipei 逐日分配 blackout；跨日的封鎖每一天都標示，整天被涵蓋時加 `allDay`。
+  - calendar route 只查一次，條件為 `guide_id`、`starts_at < 下月初`、`ends_at > 本月初`，只 select `starts_at, ends_at`。
+  - UI 在月格與當日明細標示「舊後台封鎖」。
+  - 驗證：RED 8/8 失敗 → GREEN 34/34；突變測試 2 項都有擋下。
+- `7355a16e`：`midao2-calendar-canonical.spec.ts` 加入 `test:e2e:smoke`。
+
+### 審查（opus，fresh context）
+- 第一次審查在 Owner 中斷時被打斷，沒有結論。
+- 重派後 PASS，blocking 0。
+  - 突變 9 項全部擋下，包括 `guide_id`、失敗回空陣列、時區偏移 8 小時、上下界寫反、改成閉區間等。
+  - 半開區間的語意與旅客端 `rangesOverlap` 一致。
+  - 只回傳本導遊的資料，不含 reason，失敗時回 500。
+- non-blocking 後續項目：
+  - 跨日時段只在 blackout 所在的那天標示。
+  - 整天封鎖的日子，月格同時顯示「可用」短條與「封鎖」。
+  - 多筆重疊、跨年等邊界缺正式測試。
+  - `e2e-smoke` workflow 的 paths 不含 `midao2/**`。這是既有問題，修正要改 workflow，不在本授權範圍。
+
+### 暫停與恢復
+- 2026-10-22 12:50Z：Owner 中斷，並因 Vercel Deployment Storage 用量達 100% 指示暫停。
+- 2026-10-23 00:44Z：Owner 說「繼續」恢復。
+- 暫停期間 main 前進到 `abe7e714`（#1919：世界影片改由 Vercel Blob 提供），與本 PR 沒有重疊的檔案。
+- 恢復後的推送策略：帳本與 worklog 不再單獨推送。
+
+### CI（PR head `03642a7a`）
+- [test](https://github.com/smallwei0301/tour-platform/actions/runs/39781001879/job/119831920794)：success
+- [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39781001826/job/119831921708)：success
+- [smoke](https://github.com/smallwei0301/tour-platform/actions/runs/39781001921/job/119831921822)：success，24/24。其中 `midao2-calendar-canonical` 6/6，包含「舊後台封鎖日」案例。
+- browser（midao-baseline）：
+  - 第一次因 docker registry 回 `toomanyrequests: Data limit exceeded` 失敗，屬外部額度問題。已在 PR 留言說明並重跑一次。
+  - [重跑結果](https://github.com/smallwei0301/tour-platform/actions/runs/39781001896/job/120175000026)：success，53 passed，`MIDAO_STAGE=complete`。
+
+### CI（PR head `cbc5c0f5`）
+- [browser](https://github.com/smallwei0301/tour-platform/actions/runs/39881678300/job/120180242192)：success
+- [test](https://github.com/smallwei0301/tour-platform/actions/runs/39881678384/job/120180242067)：success
+- [smoke](https://github.com/smallwei0301/tour-platform/actions/runs/39881678313/job/120180242045)：success
+- [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39881678303/job/120180242012)：success
+- 兩條 review thread 都已 resolved，mergeable=clean。
+
+### Codex 卡住與 Owner 一次性例外（2026-10-23）
+- Codex code review 自 2026-10-23 01:03Z 起在 `cbc5c0f5` 一直是 running，沒有結論。
+- Codex security review 自 2026-10-22 11:55Z 起在 `74258ee` 一直是 running，沒有結論。
+- 重新觸發兩次都沒有回應：
+  - [留言 6340753201](https://github.com/smallwei0301/tour-platform/pull/1918#issuecomment-6340753201)（`@codex security review`）
+  - [留言 6354853581](https://github.com/smallwei0301/tour-platform/pull/1918#issuecomment-6354853581)（`@codex review`＋`@codex security review`）
+- Owner 在對話中選擇「授權本次略過 Codex」。
+  - 依據：CI 全綠，加上 Sol（opus，fresh context）獨立審查 PASS，blocking 0。
+  - 範圍：只適用 #1918 這一次 merge，不是常設規則。
+- main 已前進到 `ad2ec734`。其中 #1920 已把 `midao2/**` 加進 `e2e-smoke` paths，所以審查列出的 workflow paths 後續項目已由 main 處理。
+- 本段 worklog 是新 head 唯一的變更（純文件）。merge 前會確認新 head 的 CI 結果。
