@@ -3,6 +3,7 @@
  * legacy 路徑已退役刪除；行為與測試契約以本檔為準。
  */
 import { ok, fail } from '../../../../../src/lib/api';
+import { reportRouteError } from '../../../../../src/lib/route-error';
 import { verifyGuideSession, maskEmail } from '../../../../../src/lib/guide-auth';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
@@ -56,7 +57,11 @@ export async function GET(req: Request) {
 
   const { data: orders, error } = await query;
 
-  if (error) return Response.json(fail('SERVER_ERROR', error.message), { status: 500 });
+  if (error) {
+    // #1917：DB 錯誤只進 server 端上報，client 只拿通用文案
+    await reportRouteError(new Error(error.message), { route: 'v2/guide/bookings' });
+    return Response.json(fail('SERVER_ERROR', '讀取訂單失敗，請稍後再試'), { status: 500 });
+  }
 
   // Fetch conflict_override_snapshot for orders that have a booking_id
   const bookingIds = (orders || [])

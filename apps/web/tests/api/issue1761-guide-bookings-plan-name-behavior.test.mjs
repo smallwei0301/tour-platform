@@ -78,6 +78,8 @@ export const fail = (code, message) => ({ success: false, code, message });`;
 const STUB_AUTH = `
 export const verifyGuideSession = () => ({ guideId: 'g1' });
 export const maskEmail = () => 'm***';`;
+const STUB_ROUTE_ERROR = `
+export async function reportRouteError() {}`;
 const STUB_ENV = `
 export const getSupabaseUrl = () => 'http://stub.invalid';
 export const getSupabaseServiceRoleKey = () => 'stub-key';`;
@@ -88,12 +90,13 @@ let tmpDir;
 before(async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'tp-1761-bookings-'));
   tmpDir = dir;
-  const files = { 'supabase.mjs': STUB_SUPABASE, 'api.mjs': STUB_API, 'auth.mjs': STUB_AUTH, 'env.mjs': STUB_ENV };
+  const files = { 'supabase.mjs': STUB_SUPABASE, 'api.mjs': STUB_API, 'auth.mjs': STUB_AUTH, 'env.mjs': STUB_ENV, 'route-error.mjs': STUB_ROUTE_ERROR };
   for (const [name, body] of Object.entries(files)) await writeFile(path.join(dir, name), body);
   const url = (name) => pathToFileURL(path.join(dir, name)).href;
   let src = await readFile(ROUTE, 'utf8');
   const swaps = [
     [/'\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/src\/lib\/api'/u, `'${url('api.mjs')}'`],
+    [/'\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/src\/lib\/route-error'/u, `'${url('route-error.mjs')}'`],
     [/'\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/src\/lib\/guide-auth'/u, `'${url('auth.mjs')}'`],
     [/'\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/src\/config\/supabase-service-env\.mjs'/u, `'${url('env.mjs')}'`],
     [/import\('@supabase\/supabase-js'\)/u, `import('${url('supabase.mjs')}')`],
