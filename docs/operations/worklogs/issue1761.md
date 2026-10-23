@@ -275,3 +275,22 @@
 - browser（midao-baseline）：
   - 第一次因 docker registry 回 `toomanyrequests: Data limit exceeded` 失敗，屬外部額度問題。已在 PR 留言說明並重跑一次。
   - [重跑結果](https://github.com/smallwei0301/tour-platform/actions/runs/39781001896/job/120175000026)：success，53 passed，`MIDAO_STAGE=complete`。
+
+### CI（PR head `cbc5c0f5`）
+- [browser](https://github.com/smallwei0301/tour-platform/actions/runs/39881678300/job/120180242192)：success
+- [test](https://github.com/smallwei0301/tour-platform/actions/runs/39881678384/job/120180242067)：success
+- [smoke](https://github.com/smallwei0301/tour-platform/actions/runs/39881678313/job/120180242045)：success
+- [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39881678303/job/120180242012)：success
+- 兩條 review thread 都已 resolved，mergeable=clean。
+
+### Codex 卡住與 Owner 一次性例外（2026-10-23）
+- Codex code review 自 2026-10-23 01:03Z 起在 `cbc5c0f5` 一直是 running，沒有結論。
+- Codex security review 自 2026-10-22 11:55Z 起在 `74258ee` 一直是 running，沒有結論。
+- 重新觸發兩次都沒有回應：
+  - [留言 6340753201](https://github.com/smallwei0301/tour-platform/pull/1918#issuecomment-6340753201)（`@codex security review`）
+  - [留言 6354853581](https://github.com/smallwei0301/tour-platform/pull/1918#issuecomment-6354853581)（`@codex review`＋`@codex security review`）
+- Owner 在對話中選擇「授權本次略過 Codex」。
+  - 依據：CI 全綠，加上 Sol（opus，fresh context）獨立審查 PASS，blocking 0。
+  - 範圍：只適用 #1918 這一次 merge，不是常設規則。
+- main 已前進到 `ad2ec734`。其中 #1920 已把 `midao2/**` 加進 `e2e-smoke` paths，所以審查列出的 workflow paths 後續項目已由 main 處理。
+- 本段 worklog 是新 head 唯一的變更（純文件）。merge 前會確認新 head 的 CI 結果。
