@@ -83,7 +83,9 @@ export async function handleRouteError(err: unknown, opts: RouteErrorOpts): Prom
  * - `pickSafeMessage`：只有 err.message 完整符合 `allow` 內「我方自己定義的業務訊息」樣式時才原樣回傳，
  *   其餘（含 PostgREST／pg 錯誤、未知例外、非 Error）一律換成 `fallback`。
  * - `getErrorText`：取原始訊息**僅供 route 內部分類**（例如 `includes('not found')` 決定 HTTP 狀態）；
- *   結果不得放進 response（source guard `issue1925-v2-no-db-error-leak-guard` 守門）。
+ *   結果不得放進 response。source guard `issue1925-v2-no-db-error-leak-guard` 守門範圍：route.ts 內
+ *   回應 sink 參數直接出現 `.message`／`getErrorText(`，或經「單檔一層變數別名」放進 sink；
+ *   跨函式／跨檔（如經 lib 組出的 body）不在守門範圍內。
  */
 export const GENERIC_SERVER_ERROR_MESSAGE = '伺服器發生錯誤，請稍後再試';
 

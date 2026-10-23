@@ -52,15 +52,77 @@ export function stripForScan(source) {
   );
 }
 
+/** 移除 `pickSafeMessage(…)` 呼叫（含巢狀括號）——其結果是安全的，且其參數（err／原文長度判斷）不算外洩。 */
+function removeSafeCalls(code) {
+  let out = '';
+  let i = 0;
+  const marker = 'pickSafeMessage(';
+  while (i < code.length) {
+    const at = code.indexOf(marker, i);
+    if (at === -1) {
+      out += code.slice(i);
+      break;
+    }
+    out += code.slice(i, at);
+    let depth = 0;
+    let j = at + marker.length - 1;
+    for (; j < code.length; j += 1) {
+      if (code[j] === '(') depth += 1;
+      else if (code[j] === ')') {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+    out += '"safe"';
+    i = j + 1;
+  }
+  return out;
+}
+
+const GET_TEXT_RE = /\bgetErrorText\s*\(/;
+// 別名來源：整個右值「就是」例外原文（`x.message`／`String(x?.message)`／`getErrorText(x)`，可後接 `||`／`??` 備援）。
+// `getErrorText(err).includes('not found') ? 404 : 400` 這類只拿來分類的布林／數字運算不算別名。
+const ALIAS_SRC_RE =
+  /^\(?\s*(?:String\(\s*)?(?:(?:\w*[eE]rr\w*|e)\??\.message|\(\s*\w+\s+as\s+Error\s*\)\??\.message|getErrorText\s*\([^()]*\))\s*(?:\|\||\?\?|\)|$)/;
+const ALIAS_DEF_RE = /\b(?:const|let|var)\s+(\w+)\s*(?::[^=;]+)?=\s*([^;]*)/g;
+const PROP_SINK_RE = /\berror\s*:\s*([^,}\n;]*)/g;
+
+/**
+ * 回傳疑似外洩清單。偵測來源：
+ *   1. 回應 sink 參數內直接出現 `<err>.message`／`.errorMessage`／`getErrorText(`；
+ *   2. 單檔一層別名追蹤：`const x = <err>.message`／`getErrorText(…)`，之後 x 出現在 sink 參數或 `error: x` 屬性；
+ *   3. `x = err instanceof Error ? err.message : …` 別名（無論之後用在哪）。
+ * `pickSafeMessage(…)` 的結果不算外洩。
+ */
 export function findLeaks(source) {
-  const code = stripForScan(source);
+  const code = removeSafeCalls(stripForScan(source));
   const leaks = [];
+  const sinks = [];
   for (const m of code.matchAll(SINK_RE)) {
     const rest = code.slice(m.index);
     const end = rest.indexOf(';');
-    const stmt = end === -1 ? rest : rest.slice(0, end);
-    if (ERRISH_MESSAGE_RE.test(stmt)) leaks.push({ kind: 'sink', snippet: stmt.replace(/\s+/g, ' ').slice(0, 140) });
+    sinks.push(end === -1 ? rest : rest.slice(0, end));
   }
+  const propSinks = [...code.matchAll(PROP_SINK_RE)].map((m) => m[1]);
+  const snip = (t) => t.replace(/\s+/g, ' ').slice(0, 140);
+
+  for (const stmt of sinks) {
+    if (ERRISH_MESSAGE_RE.test(stmt) || GET_TEXT_RE.test(stmt)) leaks.push({ kind: 'sink', snippet: snip(stmt) });
+  }
+  for (const expr of propSinks) {
+    if (GET_TEXT_RE.test(expr)) leaks.push({ kind: 'sink', snippet: snip(`error: ${expr}`) });
+  }
+
+  const aliases = new Set();
+  for (const m of code.matchAll(ALIAS_DEF_RE)) {
+    if (ALIAS_SRC_RE.test(m[2].trim())) aliases.add(m[1]);
+  }
+  for (const name of aliases) {
+    const useRe = new RegExp(`(?<![\\w.$])${name}\\b(?!\\s*:)`);
+    const hit = [...sinks, ...propSinks].find((t) => useRe.test(t));
+    if (hit) leaks.push({ kind: 'alias-sink', snippet: snip(`${name} → ${hit}`) });
+  }
+
   const alias = code.match(ALIAS_RE);
   if (alias) leaks.push({ kind: 'alias', snippet: alias[0] });
   return leaks;
@@ -129,6 +191,13 @@ test('偵測器自檢：其他洩漏形態都會被抓到', () => {
     "return jsonError('INVALID_REQUEST', (err as Error)?.message || 'x', 422);",
     "return NextResponse.json(errorV2(result.errorCode ?? 'E', result.errorMessage ?? 'x'), { status: 500 });",
     'return Response.json(fail("X", `failed: ${err.message}`));',
+    // #1925 審查補強：getErrorText 直接進 sink、以及先存變數再進 sink
+    "return Response.json(fail('X', getErrorText(err)), { status: 500 });",
+    "return NextResponse.json({ ok: false, error: getErrorText(e) }, { status: 400 });",
+    "const msg = err.message;\nreturn Response.json(fail('X', msg), { status: 500 });",
+    "const m = getErrorText(e);\nreturn jsonError('INVALID_REQUEST', m, 400);",
+    "const m = getErrorText(e);\nreturn NextResponse.json({ ok: false, error: m }, { status: 400 });",
+    "const detail = String(err?.message);\nreturn Response.json(errorV2('X', `bad: ${detail}`));",
   ];
   for (const s of samples) assert.ok(findLeaks(s).length > 0, `應被偵測：${s}`);
 });
@@ -141,6 +210,11 @@ test('偵測器自檢：安全寫法與註解／字串內容不會誤報', () =>
     "return Response.json(fail('X', pickSafeMessage(err, ORDER_DOMAIN_ERROR_PATTERNS)), { status: 400 });",
     "console.warn('Audit log insert failed (non-fatal):', auditError.message);\nreturn Response.json(ok(1));",
     "return jsonError(parts.code, parts.message, parts.status);",
+    // pickSafeMessage 的結果是安全的；getErrorText 僅供內部分類（未進 sink）
+    "const raw = getErrorText(err);\nif (raw.includes('not found')) return Response.json(fail('X', pickSafeMessage(err, PATTERNS, '找不到')), { status: 404 });",
+    "const msg = pickSafeMessage(err, PATTERNS);\nreturn Response.json(fail('X', msg), { status: 400 });",
+    "const raw = getErrorText(err);\nreturn Response.json(fail('X', pickSafeMessage(err, PATTERNS, raw.length ? 'a' : 'b')), { status: 400 });",
+    "const message = getErrorText(error);\nif (message.startsWith('A:')) throw new Error('x');\nreturn jsonError('X', parts.message, 400);",
   ];
   for (const s of samples) assert.deepEqual(findLeaks(s), [], `不應誤報：${s}`);
 });

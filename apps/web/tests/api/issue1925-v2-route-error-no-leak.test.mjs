@@ -15,6 +15,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import test, { after, before } from 'node:test';
+import { ORDER_DOMAIN_ERROR_PATTERNS, pickSafeMessage } from '../../src/lib/route-error.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WEB = path.resolve(__dirname, '../..');
@@ -33,6 +34,10 @@ const ROUTES = {
   adminRefundRequests: 'app/api/v2/admin/refund-requests/route.ts',
   refundApprove: 'app/api/v2/admin/refund-requests/[refundRequestId]/approve/route.ts',
   guideApproval: 'app/api/v2/guide/bookings/[bookingId]/approval/route.ts',
+  refundExecute: 'app/api/v2/admin/orders/[orderId]/refund-execute/route.ts',
+  travelerRefundRequests: 'app/api/v2/orders/[orderId]/refund-requests/route.ts',
+  travelerCancel: 'app/api/v2/orders/[orderId]/cancel/route.ts',
+  manualPayment: 'app/api/v2/admin/pos/bookings/[bookingId]/manual-payment/route.ts',
 };
 
 const STUBS = {
@@ -44,7 +49,10 @@ export async function reportRouteError(err, opts) {
 }
 export async function handleRouteError(err, opts) {
   await reportRouteError(err, opts);
-  return Response.json({ success: false, error: { code: 'INTERNAL_ERROR', message: GENERIC_SERVER_ERROR_MESSAGE } }, { status: 500 });
+  return Response.json(
+    { success: false, error: { code: opts.code ?? 'INTERNAL_ERROR', message: opts.message ?? GENERIC_SERVER_ERROR_MESSAGE } },
+    { status: opts.status ?? 500 },
+  );
 }`,
   'api.mjs': `
 export const ok = (data) => ({ success: true, data });
@@ -59,16 +67,49 @@ export const successV2 = (data) => ({ success: true, data });`,
   'notify.mjs': `export const notifyBookingApprovalDecided = async () => {};`,
   'supabase.mjs': `
 export function createClient() {
-  const q = {
-    select() { return q; }, order() { return q; }, limit() { return q; },
-    then(resolve) {
-      const w = globalThis.__T1925;
-      if (w.supabaseError) return resolve({ data: null, error: { message: w.supabaseError } });
-      return resolve({ data: [], error: null });
+  return {
+    from(table) {
+      let single = false;
+      const q = {
+        select() { return q; }, order() { return q; }, limit() { return q; }, eq() { return q; }, in() { return q; },
+        insert() { return q; }, update() { return q; },
+        single() { single = true; return q; }, maybeSingle() { single = true; return q; },
+        then(resolve) {
+          const w = globalThis.__T1925;
+          const cfg = w.tables?.[table];
+          if (cfg) return resolve({ data: cfg.data ?? null, error: cfg.error ?? null });
+          if (w.supabaseError) return resolve({ data: null, error: { message: w.supabaseError } });
+          return resolve({ data: single ? null : [], error: null });
+        },
+      };
+      return q;
     },
   };
-  return { from() { return q; } };
 }`,
+  'supabase-server.mjs': `import { createClient as c } from './supabase.mjs'; export const createClient = async () => c();`,
+  'supabase-service.mjs': `export const createServiceRoleClient = () => ({});`,
+  'booking-state.mjs': `export class BookingStateService { async paymentReceived() { return globalThis.__T1925.transition; } }`,
+  'admin-auth.mjs': `export const pickAdminCredentials = () => ({}); export const isAdminAuthorized = () => ({ ok: true });`,
+  'admin-session.mjs': `export const getAdminSecurityState = () => ({ sessionVersion: 1 }); export const getRequiredAdminToken = () => 't';`,
+  'ecpay.mjs': `export const requestAllRefund = async () => ({}); export const requestEcpayDoAction = async () => ({}); export const queryEcpayTradeInfo = async () => ({});`,
+  'refund-execute.mjs': `
+export const REFUND_AUTO_EXECUTE = false;
+export const resolvePartialRefundStatus = () => 'completed';
+export const executeRefund = async (...a) => globalThis.__T1925.db.executeRefund(...a);
+export const executeEcpayReversal = async (...a) => globalThis.__T1925.db.executeRefund(...a);`,
+  'incidents.mjs': `export const recordIncident = async () => {};`,
+  'payout-sync.mjs': `
+export const readCumulativeRefundTwd = async () => ({ ok: true, cumulativeRefundTwd: 0 });
+export const checkRefundWithinRemaining = () => ({ ok: true });
+export const syncRefundToPayoutLedger = async () => ({});
+export const REFUND_EXCEEDS_REMAINING_CODE = 'REFUND_EXCEEDS_REMAINING';`,
+  'traveler-auth.mjs': `export const getTravelerIdentity = async () => ({ id: 'u1', email: 'a@example.com' });`,
+  'parse-body.mjs': `export const parseBody = async () => ({ ok: true, data: { requestId: 'req1', reason: 'r', note: '' } });`,
+  'schemas.mjs': `export const RefundRequestBodySchema = {};`,
+  'email.mjs': `export const sendOrderCancellation = async () => ({ ok: true }); export const sendRefundRequested = async () => ({ ok: true }); export const sendRefundExecuted = async () => ({ ok: true });`,
+  'line-notify.mjs': `export const notifyOrderCancelled = async () => {}; export const notifyRefundRequest = async () => {}; export const notifyRefundExecuted = async () => {};`,
+  'order-email-notify.mjs': `export const dispatchOrderEventEmails = async () => {};`,
+  'refund-policy.mjs': `export const calculateRefundAmount = () => ({});`,
   'db.mjs': `
 const call = (name) => async (...args) => {
   const w = globalThis.__T1925;
@@ -85,7 +126,13 @@ export const updateAdminRefundStatusDb = call('updateAdminRefundStatusDb');
 export const generateManualPayoutDb = call('generateManualPayoutDb');
 export const cancelPayoutDb = call('cancelPayoutDb');
 export const listGuideBalancesWithProfilesDb = call('listGuideBalancesWithProfilesDb');
-export const decideBookingApprovalDb = call('decideBookingApprovalDb');`,
+export const decideBookingApprovalDb = call('decideBookingApprovalDb');
+export const recordRefundReversalDb = call('recordRefundReversalDb');
+export const createRefundRequestDb = call('createRefundRequestDb');
+export const listRefundRequestsDb = call('listRefundRequestsDb');
+export const getMyOrderDetailDb = call('getMyOrderDetailDb');
+export const cancelOrderDb = call('cancelOrderDb');
+export const hasSupabaseEnv = () => false;`,
   'atomic.mjs': `export const confirmPayoutAtomicDb = async (...a) => globalThis.__T1925.db.confirmPayoutAtomicDb(...a);`,
   'settlement-config.mjs': `export const getSettlementConfig = async () => ({ min_withdrawal_twd: 1000 });`,
   'noop.mjs': `export const dispatchOrderEventTelegram = async () => {}; export const adminStatusToTelegramKind = () => null; export const pushTravelerOrderEvent = async () => {}; export const pushGuideOrderEvent = async () => {};`,
@@ -106,6 +153,23 @@ const IMPORT_MAP = {
   'lib/admin-order-event-kind.mjs': 'noop.mjs',
   'lib/line-traveler-push.mjs': 'noop.mjs',
   'lib/line-guide-push.mjs': 'noop.mjs',
+  'lib/supabase/server': 'supabase-server.mjs',
+  'lib/supabase/service': 'supabase-service.mjs',
+  'lib/booking-state': 'booking-state.mjs',
+  'lib/admin-auth.mjs': 'admin-auth.mjs',
+  'lib/admin-session.mjs': 'admin-session.mjs',
+  'lib/ecpay': 'ecpay.mjs',
+  'lib/refund-execute': 'refund-execute.mjs',
+  'lib/incidents': 'incidents.mjs',
+  'lib/settlement/refund-payout-sync.mjs': 'payout-sync.mjs',
+  'lib/v2/traveler-auth': 'traveler-auth.mjs',
+  'lib/validation/parse-body': 'parse-body.mjs',
+  'lib/validation/traveler-order-schemas': 'schemas.mjs',
+  'lib/email': 'email.mjs',
+  'lib/line-notify': 'line-notify.mjs',
+  'lib/order-email-notify': 'order-email-notify.mjs',
+  'lib/refund-policy': 'refund-policy.mjs',
+  'lib/api-response': 'REAL:src/lib/api-response.ts',
 };
 
 let tmpDir;
@@ -115,10 +179,13 @@ async function loadRoute(name, rel) {
   const url = (f) => pathToFileURL(path.join(tmpDir, f)).href;
   let src = await readFile(path.join(WEB, rel), 'utf8');
   src = src.replace(/(from |import\()'(?:\.\.\/)+src\/([^']+)'/g, (m, lead, rest) => {
-    assert.ok(IMPORT_MAP[rest], `未知的 import：${rest}`);
-    return `${lead}'${url(IMPORT_MAP[rest])}'`;
+    const target = IMPORT_MAP[rest];
+    assert.ok(target, `未知的 import：${rest}`);
+    const href = target.startsWith('REAL:') ? pathToFileURL(path.join(WEB, target.slice(5))).href : url(target);
+    return `${lead}'${href}'`;
   });
   src = src.replace(/import\('@supabase\/supabase-js'\)/u, `import('${url('supabase.mjs')}')`);
+  src = src.replace(/from '@supabase\/supabase-js'/u, `from '${url('supabase.mjs')}'`);
   src = src.replace(/from 'next\/server'/u, `from '${url('next.mjs')}'`);
   assert.ok(!/from '\.\.?\//.test(src), `${name} 仍有未改寫的相對 import`);
   await writeFile(path.join(tmpDir, `${name}.ts`), src);
@@ -316,4 +383,151 @@ test('guide/bookings/[bookingId]/approval：已知業務碼維持原狀態與訊
   const body = await readBody(res);
   assert.equal(body.error.code, 'SERVER_ERROR');
   assert.ok(reportedSecret());
+});
+
+// ── 審查補強：refund-execute／旅客端／manual-payment／樣式錨定 ─────────────────────────────
+
+const CASH_ORDER = { id: 'o1', status: 'refund_pending', trade_no: null, total_twd: 1000, people_count: 1 };
+const postExecute = () => handlers.refundExecute.POST(
+  new Request('http://x/api/v2/admin/orders/o1/refund-execute', { method: 'POST', body: JSON.stringify({ reason: 'cash refund' }) }),
+  ctx({ orderId: 'o1' }),
+);
+
+test('admin/orders/[orderId]/refund-execute：executor 的 DB_UPDATE_FAILED 去除 DB 細節，code／status 不變並上報', async () => {
+  seed(
+    { executeRefund: async () => ({ status: 500, body: { ok: false, error: { code: 'DB_UPDATE_FAILED', message: `failed to persist refund result: ${SECRET}` } } }) },
+    { tables: { orders: { data: CASH_ORDER } } },
+  );
+  const res = await postExecute();
+  assert.equal(res.status, 500);
+  const body = await readBody(res);
+  assert.equal(body.error.code, 'DB_UPDATE_FAILED');
+  assert.equal(body.error.message, 'failed to persist refund result');
+  assert.ok(reportedSecret(), '原始錯誤應交給 reportRouteError');
+});
+
+test('admin/orders/[orderId]/refund-execute：stub 自檢——非 DB_UPDATE_FAILED 的 executor 結果不被改寫（409 原文保留）', async () => {
+  seed(
+    { executeRefund: async () => ({ status: 409, body: { ok: false, error: { code: 'INVALID_STATUS', message: 'order must be refund_pending' } } }) },
+    { tables: { orders: { data: CASH_ORDER } } },
+  );
+  const res = await postExecute();
+  assert.equal(res.status, 409);
+  assert.equal((await res.json()).error.message, 'order must be refund_pending');
+});
+
+test('admin/orders/[orderId]/refund-execute：修復路徑 recordRefundReversalDb 丟 DB 錯誤 → 500 DB_UPDATE_FAILED 固定文案', async () => {
+  seed(
+    { recordRefundReversalDb: async () => { throw new Error(SECRET); } },
+    { tables: { orders: { data: { ...CASH_ORDER, status: 'refunded' } } } },
+  );
+  const res = await postExecute();
+  assert.equal(res.status, 500);
+  const body = await readBody(res);
+  assert.equal(body.error.code, 'DB_UPDATE_FAILED');
+  assert.equal(body.error.message, 'failed to repair refund reversal records');
+  assert.ok(reportedSecret());
+});
+
+const postRefundRequest = () => handlers.travelerRefundRequests.POST(
+  new Request('http://x/api/v2/orders/o1/refund-requests', { method: 'POST', body: '{}' }),
+  ctx({ orderId: 'o1' }),
+);
+
+test('旅客端 refund-requests：業務訊息 refund already requested 原樣保留（400）', async () => {
+  seed({ createRefundRequestDb: async () => { throw new Error('refund already requested'); } });
+  const res = await postRefundRequest();
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.equal(body.error.code, 'INVALID_REQUEST');
+  assert.equal(body.error.message, 'refund already requested');
+  assert.equal((globalThis.__T1925.reported ?? []).length, 0, '業務拒絕不進 incident');
+});
+
+test('旅客端 refund-requests：DB 錯誤 → 400 通用文案不含 DB 字串，且上報；含 not found 的 DB 字串維持 404', async () => {
+  seed({ createRefundRequestDb: async () => { throw new Error(SECRET); } });
+  let res = await postRefundRequest();
+  assert.equal(res.status, 400);
+  const body = await readBody(res);
+  assert.equal(body.error.code, 'INVALID_REQUEST');
+  assert.ok(reportedSecret());
+
+  seed({ createRefundRequestDb: async () => { throw new Error(`${SECRET} not found`); } });
+  res = await postRefundRequest();
+  assert.equal(res.status, 404);
+  await readBody(res);
+});
+
+const postCancel = () => handlers.travelerCancel.POST(
+  new Request('http://x/api/v2/orders/o1/cancel', { method: 'POST', body: '{}' }),
+  ctx({ orderId: 'o1' }),
+);
+
+test('旅客端 cancel：gateway 業務訊息 only pending_payment… 原樣保留（409 CANCEL_NOT_ALLOWED）', async () => {
+  seed({
+    getMyOrderDetailDb: async () => null,
+    cancelOrderDb: async () => { throw new Error('only pending_payment orders can be cancelled by user'); },
+  });
+  const res = await postCancel();
+  assert.equal(res.status, 409);
+  const body = await res.json();
+  assert.equal(body.error.code, 'CANCEL_NOT_ALLOWED');
+  assert.equal(body.error.message, 'only pending_payment orders can be cancelled by user');
+});
+
+test('旅客端 cancel：DB 錯誤 → handleRouteError 400 CANCEL_FAILED 固定文案', async () => {
+  seed({ getMyOrderDetailDb: async () => null, cancelOrderDb: async () => { throw new Error(SECRET); } });
+  const res = await postCancel();
+  assert.equal(res.status, 400);
+  const body = await readBody(res);
+  assert.equal(body.error.code, 'CANCEL_FAILED');
+  assert.ok(reportedSecret());
+});
+
+const BOOKING_ID = '11111111-1111-4111-8111-111111111111';
+const MANUAL_TABLES = {
+  bookings: { data: { id: BOOKING_ID, booking_no: 'B1', status: 'pending', order_id: 'o1' } },
+  orders: { data: { id: 'o1', status: 'pending_payment', payment_status: 'pending', total_twd: 1000 } },
+  payments: { data: { id: 'p1' } },
+};
+const postManual = () => handlers.manualPayment.POST(
+  new Request('http://x/manual-payment', { method: 'POST', body: JSON.stringify({ note: 'n' }) }),
+  ctx({ bookingId: BOOKING_ID }),
+);
+
+test('pos manual-payment：狀態機 INTERNAL_ERROR（內含 DB 字串）→ 400 同 code，通用文案', async () => {
+  seed({}, { tables: MANUAL_TABLES, transition: { success: false, error: { code: 'INTERNAL_ERROR', message: SECRET } } });
+  const res = await postManual();
+  assert.equal(res.status, 400);
+  const body = await readBody(res);
+  assert.equal(body.error.code, 'INTERNAL_ERROR');
+  assert.equal(body.error.message, '伺服器發生錯誤，請稍後再試');
+});
+
+test('pos manual-payment：狀態機業務文案（非法轉移）原樣保留；成功路徑自檢', async () => {
+  seed({}, { tables: MANUAL_TABLES, transition: { success: false, error: { code: 'INVALID_TRANSITION', message: "Cannot transition from terminal status 'cancelled'" } } });
+  let res = await postManual();
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error.message, "Cannot transition from terminal status 'cancelled'");
+
+  seed({}, { tables: MANUAL_TABLES, transition: { success: true, booking: { status: 'confirmed' } } });
+  res = await postManual();
+  assert.equal(res.status, 200);
+});
+
+test('ORDER_DOMAIN_ERROR_PATTERNS 整句錨定：精確業務訊息放行，前後夾帶任何內容一律不放行', () => {
+  const FALLBACK = 'generic';
+  const pick = (msg) => pickSafeMessage(new Error(msg), ORDER_DOMAIN_ERROR_PATTERNS, FALLBACK);
+  for (const ok of [
+    'order not found', 'refund already requested', 'orderId is required',
+    'capacity insufficient: capacity=2 booked=2 delta=1', 'order_edit_locked:completed',
+    'insufficient guide balance: have 1, need 5', 'payout already paid',
+  ]) assert.equal(pick(ok), ok, `應放行：${ok}`);
+  for (const bad of [
+    'order not found: secret', 'xx order not found', 'order not found\nsecret-db-detail',
+    'refund already requested; secret', 'prefix refund already requested',
+    'capacity insufficient: capacity=2 booked=2 delta=1 secret', 'payout already paid: secret',
+    'orderId is required: relation "orders"', 'SECRET order_edit_locked:completed',
+  ]) assert.equal(pick(bad), FALLBACK, `不應放行：${bad}`);
+  assert.equal(pickSafeMessage('order not found', ORDER_DOMAIN_ERROR_PATTERNS, FALLBACK), FALLBACK, '非 Error 一律 fallback');
 });
