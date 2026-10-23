@@ -26,6 +26,7 @@ on:
     paths:
       - 'apps/web/app/booking/**'
       - 'apps/web/app/guide/**'
+      - 'apps/web/app/(non-locale)/midao2/**'
       - 'apps/web/e2e/**'
       - 'apps/web/playwright.config.ts'
       - 'apps/web/package.json'
