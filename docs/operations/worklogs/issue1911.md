@@ -46,3 +46,28 @@
 - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39912995843/job/120280045090)：success
 - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39912995710/job/120280044547)：success
 - `smoke` 和 `browser` 沒有被觸發。這次 diff 沒有動到 midao 或 e2e 路徑，所以這兩條 workflow 的 paths 不包含本 PR 的檔案。
+
+## CI（PR #1924 head `a54d9661`）與 merge
+- 新 head 的 CI 都是 success：
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39915185794/job/120287058138)
+  - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39915185802/job/120287058163)
+- merge 前確認：mergeable=clean、review threads 0、Codex code review 與 security review 都是 0 findings。
+- squash merge，commit 為 `9f711f66`，合併時以 `expectedHeadSha=a54d9661` 鎖定 head。
+- main 的 CI 都是 success：
+  - [test](https://github.com/smallwei0301/tour-platform/actions/runs/39915664717/job/120288570599)
+  - [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39915664798/job/120288571024)
+- Completion Truth：在 main 上讀回確認——
+  - `email-delivery/contract.ts`：`NO_RECIPIENT`、`EMAIL_SEND_FAILED` 都在。
+  - `email.ts`：860 行。
+- 結案：[#1911 留言](https://github.com/smallwei0301/tour-platform/issues/1911#issuecomment-6360244758) 逐條附 AC 證據，Issue 已關閉（completed）。
+- Run r05 已 closeout，狀態 COMPLETE。評分 `GRADED_OBSERVED_V1` 80.9（B）。
+
+## B+ 自檢（r05）
+1. **盤點**：部分做了。沒有為本輪另派 scout，改用 r04 LUNA_CLOSURE 對 #1911 做的 main 證據掃描。這是缺口，已記在帳本。
+2. **TRIAGE**：做了（opus）。
+3. **Terra 施工**：做了（sonnet），含 1 次 rework（ratchet）。
+4. **LUNA_CLOSURE**：做了（haiku）。#1911 已關閉；其餘 7 個 Issue 都不是候選。
+5. **即時埋點**：做了，readiness 為 LIVE_CAPTURE_READY。
+   - 缺口：WIP 事件是在 PR 開立後才補登。
+   - 缺口：triage 的時間戳曾經寫得比實際晚，已更正。
+6. **收尾**：做了。Completion Truth 5 條都是 VERIFIED。
