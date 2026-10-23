@@ -41,3 +41,8 @@
 ## 後續
 - 另開 #1923：review-invitation-sweep 不讀 `sendReviewInvitation` 的回傳值，失敗仍記成 sent。這是修正前就存在的問題。
 - 單元測試還沒直接涵蓋 `result` 為 null、`to` 不是字串的情況。審查時已用 probe 驗過結果正確，屬 non-blocking。
+
+## CI（PR #1924 head `0523a841`）
+- [test](https://github.com/smallwei0301/tour-platform/actions/runs/39912995843/job/120280045090)：success
+- [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39912995710/job/120280044547)：success
+- `smoke` 和 `browser` 沒有被觸發。這次 diff 沒有動到 midao 或 e2e 路徑，所以這兩條 workflow 的 paths 不包含本 PR 的檔案。
