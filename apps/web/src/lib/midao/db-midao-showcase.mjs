@@ -302,8 +302,10 @@ export async function getGuideExperienceYearsDb(guideId) {
     return g?.experience_years ?? null;
   }
   const supabase = await getSupabase();
-  const { data } = await supabase.from('guide_profiles')
+  const { data, error } = await supabase.from('guide_profiles')
     .select('experience_years').eq('id', guideId).maybeSingle();
+  // 讀取失敗必須拋出：回 null 會讓頁面誤以為「未填」，導遊再儲存就可能覆寫既有年資
+  if (error) throw new Error(error.message);
   return data?.experience_years ?? null;
 }
 
@@ -313,7 +315,8 @@ export async function getGuideExperienceYearsDb(guideId) {
  * @returns {Promise<{ok:true, experienceYears:number}|{ok:false, code:string, message:string}>}
  */
 export async function updateGuideExperienceYearsDb(guideId, years) {
-  const n = Number(years);
+  // 嚴格解析：只收整數 number，或 1–2 位純數字字串；空字串／null／boolean／陣列／空白／指數／正負號一律拒絕
+  const n = typeof years === 'number' ? years : (typeof years === 'string' && /^\d{1,2}$/.test(years) ? Number(years) : NaN);
   if (!Number.isInteger(n) || n < 0 || n > 60) {
     return { ok: false, code: 'INVALID_YEARS', message: '導覽經驗需為 0–60 的整數年' };
   }
