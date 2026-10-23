@@ -58,3 +58,11 @@ v3 worklog-only delta 已完成限定獨立審查，最終未解 finding 0；報
 - 23 個 open PR 的完整 changed filenames 已逐一核對，兩個目標路徑無 ownership 重疊；Node 22.23.1 canonical wrapper `--check` 與 `run-checks.sh apps/web/tests/api/issue657-agent-routing.test.mjs` 通過 6/6；另以候選外定向 assertions 通過 8/8，含修改前反例、歷史與非本輪 queue 不變驗證。僅為 bounded docs 驗證，不取代後續 CI 或全量 #1658 驗收。
 - requested model：`gpt-6.1-sol`；actual model：unknown，未宣稱 runtime 身分驗證。
 - 僅準備兩檔候選；獨立審查、ownership 與發布 gates 未完成前，不宣稱完整驗收、已發布或可合併。其他排程、程式、DB／TEST、Production、憑證、網路及權限不在本次範圍。
+
+## 2026-10-23 11:19 Asia/Taipei 遠端驗證補記
+
+- PR #1921 已交付並轉 Ready，原已驗證 head `6729107e6f2d1ae04f130de9258236324bd6eaf3`。
+- [CI 39893480372](https://github.com/smallwei0301/tour-platform/actions/runs/39893480372) success；Web tests／Preflight 為 6009 pass、3 skip、0 fail，lint/typecheck/build成功。
+- [Code／Security 審查](https://github.com/smallwei0301/tour-platform/pull/1921#issuecomment-6356492908) 綁上述 head，均 completed，無 findings／unresolved findings；不代表 actual model 身份已驗證。
+- 本次僅補記既有結果；這些結果不移作補記後新 head 的 CI。合併前仍須核新 exact head 的 CI、適用審查、ownership／衝突與必要授權；未合併、未宣稱 Production 驗收。
+- 兩份既有docs修正已從保存候選獨立恢復；不含cron測試。focused contracts 9 pass、2個no-token skip，獨立覆核重跑一致。#1658完整範圍仍未結案。
