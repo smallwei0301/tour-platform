@@ -163,8 +163,8 @@ export async function POST(
     } catch (err) {
     // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
     void reportRouteError(err, { route: 'v2/admin/orders/[orderId]/refund-execute' });
-      const message = err instanceof Error ? err.message : 'failed to repair refund reversal records';
-      return Response.json(fail('DB_UPDATE_FAILED', message), { status: 500 });
+      // #1925：DB 錯誤字串已由上方 reportRouteError 上報，不回給 client。
+      return Response.json(fail('DB_UPDATE_FAILED', 'failed to repair refund reversal records'), { status: 500 });
     }
   }
 
@@ -361,8 +361,8 @@ export async function POST(
         } catch (err) {
     // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
     void reportRouteError(err, { route: 'v2/admin/orders/[orderId]/refund-execute' });
-          const message = err instanceof Error ? err.message : 'failed to record refund reversal';
-          return { error: { message }, data: [], count: 0 };
+          // #1925：此訊息會被 executor 組進回應（failed to persist refund result: …）；原始錯誤已上報，這裡只留固定文案。
+          return { error: { message: 'failed to record refund reversal' }, data: [], count: 0 };
         }
 
         const finalPaymentPatch: Record<string, unknown> = {
@@ -474,6 +474,16 @@ export async function POST(
         await recordRefundReversalDb(supabase, { orderId: refundedOrderId, actor: 'refund-execute' });
       },
     });
+
+  // #1925：executor 的 DB_UPDATE_FAILED 訊息帶有 `failed to persist refund result: <PostgREST error.message>`。
+  // 原始字串只上報 server 端；回給 client 的文案去掉 DB 細節（code／status 不變）。
+  const outcomeError = (outcome.body as { error?: { code?: string; message?: string } } | undefined)?.error;
+  if (outcomeError?.code === 'DB_UPDATE_FAILED') {
+    void reportRouteError(new Error(String(outcomeError.message ?? 'DB_UPDATE_FAILED')), {
+      route: 'v2/admin/orders/[orderId]/refund-execute',
+    });
+    outcomeError.message = 'failed to persist refund result';
+  }
 
   // 出帳同步（#1777，owner 決策 B／C）：把**本次**退款額交給原子 RPC。
   //

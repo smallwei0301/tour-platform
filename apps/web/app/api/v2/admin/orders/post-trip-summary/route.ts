@@ -1,5 +1,5 @@
 import { successV2, errorV2 } from '../../../../../../src/lib/api';
-import { handleRouteError } from '../../../../../../src/lib/route-error';
+import { handleRouteError, reportRouteError } from '../../../../../../src/lib/route-error';
 import { createClient } from '../../../../../../src/lib/supabase/server';
 import { buildAdminPostTripSummary } from '../../../../../../src/lib/admin-post-trip-summary.mjs';
 
@@ -40,7 +40,9 @@ export async function GET(req: Request) {
       .limit(200);
 
     if (error) {
-      return Response.json(errorV2('DB_ERROR', error.message), { status: 500 });
+      // #1925：DB 錯誤字串只上報 server 端，不回給 client。
+      await reportRouteError(new Error(error.message), { route: 'v2/admin/orders/post-trip-summary' });
+      return Response.json(errorV2('DB_ERROR', '讀取失敗，請稍後再試'), { status: 500 });
     }
 
     const bookingIds = [
@@ -60,7 +62,8 @@ export async function GET(req: Request) {
         .in('booking_id', bookingIds);
 
       if (guideTripReportsError) {
-        return Response.json(errorV2('DB_ERROR', guideTripReportsError.message), { status: 500 });
+        await reportRouteError(new Error(guideTripReportsError.message), { route: 'v2/admin/orders/post-trip-summary' });
+        return Response.json(errorV2('DB_ERROR', '讀取失敗，請稍後再試'), { status: 500 });
       }
 
       guideTripReports = data ?? [];

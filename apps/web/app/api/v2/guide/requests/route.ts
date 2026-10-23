@@ -1,6 +1,7 @@
 import { listMidaoRequestsDb } from '../../../../../src/lib/midao/db-requests.mjs';
 import { resolveMidaoRequestList } from '../../../../../src/lib/midao/request-list-resolver.ts';
 import { MidaoRouteError } from '../../../../../src/lib/midao/route-errors.ts';
+import { getErrorText } from '../../../../../src/lib/route-error.ts';
 import { withMidaoGuideQuery } from '../../../../../src/lib/midao/with-guide-route.ts';
 
 const ALLOWED_QUERY_KEYS = new Set(['bucket', 'cursor', 'limit', 'sort']);
@@ -36,7 +37,7 @@ function parseListQuery(request: Request) {
 }
 
 function translateListGatewayError(error: unknown): never {
-  const message = error instanceof Error ? error.message : '';
+  const message = getErrorText(error); // 僅供內部分類，不回給 client
   if (message.startsWith('BAD_REQUEST:')) {
     throw new MidaoRouteError('INVALID_REQUEST_QUERY', 'Invalid request query', 422);
   }

@@ -15,7 +15,7 @@ import { NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient as createAnonClient } from '../../../../../../../src/lib/supabase/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
-import { handleRouteError } from '../../../../../../../src/lib/route-error';
+import { handleRouteError, reportRouteError } from '../../../../../../../src/lib/route-error';
 import { isReviewInvitationEligible } from '../../../../../../../src/lib/post-trip-eligibility.mjs';
 import { evaluateReviewInvitationIdempotency } from '../../../../../../../src/lib/post-trip/review-invitation.mjs';
 import { sendReviewInvitation } from '../../../../../../../src/lib/email';
@@ -50,7 +50,9 @@ export async function POST(
       .maybeSingle();
 
     if (orderError) {
-      return NextResponse.json(errorV2('DB_ERROR', orderError.message), { status: 500 });
+      // #1925：DB 錯誤字串只上報 server 端，不回給 client。
+      await reportRouteError(new Error(orderError.message), { route: 'v2/admin/orders/send-review-invitation' });
+      return NextResponse.json(errorV2('DB_ERROR', '讀取失敗，請稍後再試'), { status: 500 });
     }
 
     if (!order) {
@@ -177,11 +179,13 @@ const SUPABASE_SERVICE_ROLE_KEY = getSupabaseServiceRoleKey();
         });
       }
 
+      // #1925：寄信服務（Resend／設定檢查）的原始錯誤字串只上報 server 端；client 只拿 errorCode＋通用文案。
+      await reportRouteError(
+        new Error(`${result.errorCode ?? 'EMAIL_FAILED'}: ${String(result.errorMessage ?? '')}`),
+        { route: 'v2/admin/orders/send-review-invitation' },
+      );
       return NextResponse.json(
-        errorV2(
-          result.errorCode ?? 'EMAIL_FAILED',
-          result.errorMessage ?? 'Failed to send review invitation'
-        ),
+        errorV2(result.errorCode ?? 'EMAIL_FAILED', '評價邀請寄送失敗，請稍後再試'),
         { status: 500 }
       );
     }

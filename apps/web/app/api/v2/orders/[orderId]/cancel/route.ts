@@ -10,7 +10,7 @@
  */
 import { validateCsrf } from '../../../../../../src/lib/csrf.mjs';
 import { jsonOk, jsonError } from '../../../../../../src/lib/api-response';
-import { handleRouteError } from '../../../../../../src/lib/route-error';
+import { handleRouteError, getErrorText, pickSafeMessage, ORDER_DOMAIN_ERROR_PATTERNS } from '../../../../../../src/lib/route-error';
 import { getTravelerIdentity } from '../../../../../../src/lib/v2/traveler-auth';
 import { getMyOrderDetailDb, cancelOrderDb } from '../../../../../../src/lib/db.mjs';
 import { sendOrderCancellation } from '../../../../../../src/lib/email';
@@ -105,12 +105,13 @@ export async function POST(
 
     return jsonOk(result);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown error';
-    if (message.includes('not found')) {
+    // #1925：以原始訊息分類（僅內部使用）；回給 client 的文案只允許我方業務訊息。
+    const rawErrorText = getErrorText(err);
+    if (rawErrorText.includes('not found')) {
       return jsonError('NOT_FOUND', 'Order not found', 404);
     }
-    if (message.includes('only pending_payment')) {
-      return jsonError('CANCEL_NOT_ALLOWED', message, 409);
+    if (rawErrorText.includes('only pending_payment')) {
+      return jsonError('CANCEL_NOT_ALLOWED', pickSafeMessage(err, ORDER_DOMAIN_ERROR_PATTERNS, '此訂單目前無法取消'), 409);
     }
     return handleRouteError(err, { route: 'v2/orders/cancel', code: 'CANCEL_FAILED', status: 400, message: '取消失敗，請稍後再試' });
   }

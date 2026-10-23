@@ -153,8 +153,13 @@ export async function POST(
     });
 
     if (!transition.success) {
+      // #1925：BookingStateService 的 INTERNAL_ERROR 帶有原始例外字串（可能是 DB 錯誤），只回通用文案；
+      // 其餘 code（NOT_FOUND／UPDATE_FAILED／非法轉移）的 message 為我方狀態機定義的文案，原樣保留。
+      const transitionMessage = transition.error?.code === 'INTERNAL_ERROR'
+        ? '伺服器發生錯誤，請稍後再試'
+        : transition.error?.message || 'Booking state transition failed';
       return Response.json(
-        errorV2(transition.error?.code || 'INVALID_STATE_TRANSITION', transition.error?.message || 'Booking state transition failed'),
+        errorV2(transition.error?.code || 'INVALID_STATE_TRANSITION', transitionMessage),
         { status: 400 }
       );
     }

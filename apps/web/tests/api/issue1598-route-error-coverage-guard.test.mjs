@@ -19,14 +19,12 @@ const V2_DIR = path.resolve(__dirname, '../..', 'app/api/v2');
 
 // 白名單：key = 相對 app/api/v2 的路徑，value = 原因。皆為「無頂層 try/catch 的唯讀
 // GET／handoff route」——例外會落到 Next 預設 500（不含使用者輸入的敏感操作），
-// 事故價值低於 mutation 路徑。conflict-overrides 的頂層 catch 僅守 body parse，
-// 下游 DB 例外目前 bubble 到預設 500，列為 follow-up（POST 但屬 admin 內部工具）。
+// 事故價值低於 mutation 路徑。（conflict-overrides 已於 #1925 接上 reportRouteError，移出白名單。）
 const WHITELIST = {
   'activities/[activityId]/available-slots/route.ts': '唯讀 GET，無頂層 try/catch；可用性查詢例外落 Next 預設 500',
   'admin/activities/[activityId]/readiness/route.ts': '唯讀 GET readiness 快照；無頂層 try/catch',
   'orders/[orderId]/refund-preview/route.ts': '唯讀 GET 退款試算；無頂層 try/catch',
   'line/auth/handoff/route.ts': 'LINE handoff（redirect），無頂層 try/catch',
-  'admin/guides/[guideId]/conflict-overrides/route.ts': 'follow-up：頂層 catch 僅守 body parse，下游 DB 例外待另包 try 上報',
   // #1649 Phase 6 自 legacy 搬遷的唯讀 GET（legacy 即無頂層 try/catch，例外落 Next 預設 500）：
   'guide/bookings/[bookingId]/route.ts': '唯讀 GET 訂單明細；無頂層 try/catch（#1649 搬遷保留 legacy 態）',
   'guide/payout/monthly/route.ts': '唯讀 GET 月結估算；無頂層 try/catch（#1649 搬遷保留 legacy 態）',

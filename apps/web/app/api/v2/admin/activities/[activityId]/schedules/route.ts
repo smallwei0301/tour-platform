@@ -17,7 +17,7 @@
 
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
-import { reportRouteError } from '../../../../../../../src/lib/route-error';
+import { reportRouteError, pickSafeMessage, GENERIC_SERVER_ERROR_MESSAGE } from '../../../../../../../src/lib/route-error';
 import { createClient } from '../../../../../../../src/lib/supabase/server';
 import { createScheduleDb } from '../../../../../../../src/lib/db.mjs';
 import { resolveAdminSchedulePlan } from '../../../../../../../src/lib/availability-v2/admin-schedule-plan-resolver.mjs';
@@ -64,10 +64,11 @@ export async function POST(
     .eq('status', 'active');
 
   if (plansError) {
-    return Response.json(
-      errorV2('INTERNAL_ERROR', plansError.message || '讀取方案失敗'),
-      { status: 500 },
-    );
+    // #1925：DB 錯誤字串只上報 server 端，不回給 client。
+    await reportRouteError(new Error(plansError.message || 'activity_plans select failed'), {
+      route: 'v2/admin/activities/schedules',
+    });
+    return Response.json(errorV2('INTERNAL_ERROR', '讀取方案失敗'), { status: 500 });
   }
 
   const resolved = resolveAdminSchedulePlan({
@@ -111,14 +112,18 @@ export async function POST(
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code;
     const messageZh = (err as { messageZh?: string })?.messageZh;
-    const message = err instanceof Error ? err.message : '建立場次失敗';
     if (code === 'SCHEDULE_CAPACITY_EXCEEDS_PLAN') {
+      // 我方定義的業務訊息（db.mjs 以 `SCHEDULE_CAPACITY_EXCEEDS_PLAN: <messageZh>` 丟出），原樣保留。
       return Response.json(
-        errorV2('SCHEDULE_CAPACITY_EXCEEDS_PLAN', messageZh || message),
+        errorV2(
+          'SCHEDULE_CAPACITY_EXCEEDS_PLAN',
+          messageZh || pickSafeMessage(err, [/^SCHEDULE_CAPACITY_EXCEEDS_PLAN: /], '場次人數超過方案上限'),
+        ),
         { status: 422 },
       );
     }
     await reportRouteError(err, { route: 'v2/admin/activities/schedules', metadata: { code } });
-    return Response.json(errorV2('INTERNAL_ERROR', message), { status: 500 });
+    // #1925：其餘例外（DB 錯誤等）不把 err.message 回給 client。
+    return Response.json(errorV2('INTERNAL_ERROR', GENERIC_SERVER_ERROR_MESSAGE), { status: 500 });
   }
 }

@@ -75,3 +75,52 @@ export async function handleRouteError(err: unknown, opts: RouteErrorOpts): Prom
     { status: opts.status ?? 500 },
   );
 }
+
+/**
+ * #1925：v2 route 回給 client 的錯誤訊息一律「白名單或通用文案」，不得把 DB／外部服務的
+ * `error.message` 原樣外洩。
+ *
+ * - `pickSafeMessage`：只有 err.message 完整符合 `allow` 內「我方自己定義的業務訊息」樣式時才原樣回傳，
+ *   其餘（含 PostgREST／pg 錯誤、未知例外、非 Error）一律換成 `fallback`。
+ * - `getErrorText`：取原始訊息**僅供 route 內部分類**（例如 `includes('not found')` 決定 HTTP 狀態）；
+ *   結果不得放進 response（source guard `issue1925-v2-no-db-error-leak-guard` 守門）。
+ */
+export const GENERIC_SERVER_ERROR_MESSAGE = '伺服器發生錯誤，請稍後再試';
+
+export function getErrorText(err: unknown): string {
+  return err instanceof Error ? err.message : '';
+}
+
+export function isDomainError(err: unknown, allow: ReadonlyArray<RegExp>): boolean {
+  const text = getErrorText(err);
+  return text !== '' && allow.some((re) => re.test(text));
+}
+
+export function pickSafeMessage(
+  err: unknown,
+  allow: ReadonlyArray<RegExp>,
+  fallback: string = GENERIC_SERVER_ERROR_MESSAGE,
+): string {
+  return isDomainError(err, allow) ? getErrorText(err) : fallback;
+}
+
+/**
+ * 訂單／退款／出款相關 gateway（db.mjs、admin.mjs、db-payouts.mjs、fn_confirm_payout_atomic）
+ * 以字面值 `throw new Error('…')` 丟出的業務訊息。來源逐條追到 throw 點確認為我方定義；
+ * 樣式一律錨定整句（^…$），DB 回傳的錯誤字串（relation／column／constraint…）不會命中。
+ */
+export const ORDER_DOMAIN_ERROR_PATTERNS: ReadonlyArray<RegExp> = [
+  /^[A-Za-z]+ (?:is )?required$/,
+  /^(?:order|refund request|schedule|target schedule|experience|payout|Activity|activity) not found$/,
+  /^invalid (?:order status|refund action|exception action|review action|status)$/,
+  /^(?:peopleCount must be a positive integer|newCapacity must be positive integer|newCapacity cannot be less than bookedCount)$/,
+  /^(?:target schedule not enough seats|not enough seats|schedule is not open|refund already requested)$/,
+  /^capacity insufficient: capacity=\d+ booked=\d+ delta=-?\d+$/,
+  /^(?:order_edit_locked|order_cancel_locked|manual_status_change_blocked):\w+$/,
+  /^(?:order cannot request refund in current status|only pending_payment orders can be cancelled by user|refund create failed)$/,
+  /^payout already \w+$/,
+  /^guide balance is empty — nothing to pay out$/,
+  /^guide balance row not found for guide [0-9a-fA-F-]+$/,
+  /^insufficient guide balance: have -?\d+, need -?\d+$/,
+  /^SETTLEMENT_RPC_NOT_DEPLOYED: /,
+];

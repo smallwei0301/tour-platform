@@ -9,6 +9,7 @@ import {
 } from '../../../../../../../src/lib/midao/line-reply-template.ts';
 import { parseRequestRef } from '../../../../../../../src/lib/midao/request-ref.mjs';
 import { MidaoRouteError } from '../../../../../../../src/lib/midao/route-errors.ts';
+import { getErrorText } from '../../../../../../../src/lib/route-error.ts';
 import { withMidaoGuideQuery } from '../../../../../../../src/lib/midao/with-guide-route.ts';
 
 type ReplyTemplateRouteContext = {
@@ -28,7 +29,7 @@ function translateReferenceError(error: unknown): never {
     && (error as { code?: unknown }).code === 'INVALID_REQUEST_REF') {
     throw new MidaoRouteError('INVALID_REQUEST_REF', 'Invalid request reference', 422);
   }
-  const message = error instanceof Error ? error.message : '';
+  const message = getErrorText(error); // 僅供內部分類，不回給 client
   if (message.startsWith('BOOKING_NOT_FOUND:') || message.startsWith('INQUIRY_NOT_FOUND:')) {
     notFound();
   }

@@ -11,7 +11,7 @@
  * payout 仍 pending」，重試即重複扣款。Phase 2 的 fn_confirm_payout_atomic
  * 驗收前，本 route 由 fail-closed guard 擋下（預設擋，需明確設定才放行）。
  */
-import { reportRouteError } from '../../../../../../../src/lib/route-error';
+import { reportRouteError, pickSafeMessage, ORDER_DOMAIN_ERROR_PATTERNS } from '../../../../../../../src/lib/route-error';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../../src/config/supabase-service-env.mjs';
 import { isPayoutConfirmAllowed } from '../../../../../../../src/lib/settlement/payout-confirm-guard.mjs';
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
   } catch (e: any) {
     // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
     void reportRouteError(e, { route: 'v2/admin/payouts/[payoutId]/confirm' });
-    return NextResponse.json({ ok: false, error: e.message }, { status: 400 });
+    // #1925：回給 client 的文案只允許我方定義的業務訊息（payout not found／already…／餘額不足等），其餘（DB 錯誤）通用文案。
+    return NextResponse.json({ ok: false, error: pickSafeMessage(e, ORDER_DOMAIN_ERROR_PATTERNS) }, { status: 400 });
   }
 }

@@ -6,7 +6,7 @@
  * 否則 null（資格外絕不回傳電話，防 PII 外洩）。ownership 由 db 層以 contact_email 把關。
  */
 import { jsonOk, jsonError } from '../../../../../../src/lib/api-response';
-import { reportRouteError } from '../../../../../../src/lib/route-error';
+import { reportRouteError, getErrorText, pickSafeMessage, ORDER_DOMAIN_ERROR_PATTERNS } from '../../../../../../src/lib/route-error';
 import { getTravelerIdentity } from '../../../../../../src/lib/v2/traveler-auth';
 import { getEligibleGuideContactDb } from '../../../../../../src/lib/db-pre-tour-contact.mjs';
 
@@ -33,10 +33,10 @@ export async function GET(request: Request, context: { params: Promise<{ orderId
     // 資格外：guideContact = null（不帶電話欄位值）
     return jsonOk({ guideContact });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown error';
-    const status = message.includes('not found') ? 404 : 400;
+    const status = getErrorText(err).includes('not found') ? 404 : 400;
     // 非 not-found 的例外多半是未預期故障（DB 連線等），上報但維持 legacy 狀態碼（#1598）。
     if (status !== 404) await reportRouteError(err, { route: 'v2/orders/guide-contact' });
-    return jsonError('INVALID_REQUEST', message, status);
+    // #1925：client 文案只允許我方業務訊息，其餘（DB 錯誤）通用文案。
+    return jsonError('INVALID_REQUEST', pickSafeMessage(err, ORDER_DOMAIN_ERROR_PATTERNS), status);
   }
 }

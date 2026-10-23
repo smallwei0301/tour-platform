@@ -10,7 +10,7 @@
  * threshold) with profile info + has_pending_payout flag, plus the active
  * min_withdrawal_twd so the UI can mark 達門檻 / 未達門檻.
  */
-import { reportRouteError } from '../../../../../../src/lib/route-error';
+import { reportRouteError, GENERIC_SERVER_ERROR_MESSAGE } from '../../../../../../src/lib/route-error';
 import { NextResponse } from 'next/server';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
 
@@ -37,6 +37,7 @@ export async function GET() {
   } catch (e: any) {
     // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
     void reportRouteError(e, { route: 'v2/admin/payouts/balances' });
-    return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
+    // #1925：不把 DB 錯誤字串回給 client。
+    return NextResponse.json({ ok: false, error: GENERIC_SERVER_ERROR_MESSAGE }, { status: 500 });
   }
 }
