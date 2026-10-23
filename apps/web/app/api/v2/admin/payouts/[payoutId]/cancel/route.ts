@@ -8,7 +8,7 @@
  * Guide balance is NOT debited; cancelling releases the pending-uniqueness
  * slot so a corrected payout can be generated later. Audit-logged.
  */
-import { reportRouteError } from '../../../../../../../src/lib/route-error';
+import { reportRouteError, pickSafeMessage, ORDER_DOMAIN_ERROR_PATTERNS } from '../../../../../../../src/lib/route-error';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../../src/config/supabase-service-env.mjs';
 
@@ -36,6 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
   } catch (e: any) {
     // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
     void reportRouteError(e, { route: 'v2/admin/payouts/[payoutId]/cancel' });
-    return NextResponse.json({ ok: false, error: e.message }, { status: 400 });
+    // #1925：回給 client 的文案只允許我方定義的業務訊息（payout not found／already…／餘額不足等），其餘（DB 錯誤）通用文案。
+    return NextResponse.json({ ok: false, error: pickSafeMessage(e, ORDER_DOMAIN_ERROR_PATTERNS) }, { status: 400 });
   }
 }

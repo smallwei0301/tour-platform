@@ -2,7 +2,7 @@
  * #1649 Phase 6：實作自 legacy 路徑（app/api/admin/orders/[orderId]/timeline）整體搬遷至 v2 命名空間。
  * legacy 路徑已退役刪除；行為與測試契約以本檔為準。
  */
-import { reportRouteError } from '../../../../../../../src/lib/route-error';
+import { reportRouteError, GENERIC_SERVER_ERROR_MESSAGE } from '../../../../../../../src/lib/route-error';
 import { ok, fail } from '../../../../../../../src/lib/api';
 import { createClient } from '../../../../../../../src/lib/supabase/server';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../../src/config/supabase-service-env.mjs';
@@ -43,7 +43,9 @@ export async function GET(_request: Request, context: { params: Promise<{ orderI
       .maybeSingle();
 
     if (bookingError) {
-      return Response.json(fail('INTERNAL_ERROR', bookingError.message), { status: 500 });
+      // #1925：DB 錯誤字串只上報 server 端，不回給 client。
+      await reportRouteError(new Error(bookingError.message), { route: 'v2/admin/orders/[orderId]/timeline' });
+      return Response.json(fail('INTERNAL_ERROR', '讀取失敗，請稍後再試'), { status: 500 });
     }
 
     const [paymentsRes, refundsRes, auditRes] = await Promise.all([
@@ -148,7 +150,6 @@ export async function GET(_request: Request, context: { params: Promise<{ orderI
   } catch (err) {
     // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
     void reportRouteError(err, { route: 'v2/admin/orders/[orderId]/timeline' });
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return Response.json(fail('INTERNAL_ERROR', message), { status: 500 });
+    return Response.json(fail('INTERNAL_ERROR', GENERIC_SERVER_ERROR_MESSAGE), { status: 500 });
   }
 }

@@ -8,7 +8,7 @@
  * request plan 仍為 draft + guide_approval_status='pending' 的 booking。
  * 與既有 /api/guide/bookings（查 orders）分流，避免污染既有列表。
  */
-import { reportRouteError } from '../../../../../../src/lib/route-error';
+import { reportRouteError, GENERIC_SERVER_ERROR_MESSAGE } from '../../../../../../src/lib/route-error';
 import { ok, fail } from '../../../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../../../src/lib/guide-auth';
 import { listGuidePendingApprovalsDb } from '../../../../../../src/lib/db.mjs';
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
   } catch (error) {
     // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
     void reportRouteError(error, { route: 'v2/guide/bookings/pending-approval' });
-    const message = error instanceof Error ? error.message : 'server error';
-    return Response.json(fail('SERVER_ERROR', message), { status: 500 });
+    // #1925：不把 gateway 丟出的 DB 錯誤字串回給 client。
+    return Response.json(fail('SERVER_ERROR', GENERIC_SERVER_ERROR_MESSAGE), { status: 500 });
   }
 }

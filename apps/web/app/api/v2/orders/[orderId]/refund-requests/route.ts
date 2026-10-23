@@ -11,7 +11,7 @@
  */
 import { validateCsrf } from '../../../../../../src/lib/csrf.mjs';
 import { jsonOk, jsonError } from '../../../../../../src/lib/api-response';
-import { handleRouteError } from '../../../../../../src/lib/route-error';
+import { handleRouteError, reportRouteError, getErrorText, isDomainError, pickSafeMessage, ORDER_DOMAIN_ERROR_PATTERNS } from '../../../../../../src/lib/route-error';
 import { parseBody } from '../../../../../../src/lib/validation/parse-body';
 import { RefundRequestBodySchema } from '../../../../../../src/lib/validation/traveler-order-schemas';
 import { getTravelerIdentity } from '../../../../../../src/lib/v2/traveler-auth';
@@ -243,8 +243,11 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
     return jsonOk(created);
   } catch (err) {
     // 與 legacy 等價：業務規則拒絕（資格/狀態/重複）以原訊息回 400，不進 incident。
-    const message = err instanceof Error ? err.message : 'unknown error';
-    const status = message.includes('not found') ? 404 : 400;
-    return jsonError('INVALID_REQUEST', message, status);
+    // #1925：業務訊息（資格／狀態／重複）原樣回 400；其餘（DB 錯誤等）通用文案並上報，狀態碼不變。
+    if (!isDomainError(err, ORDER_DOMAIN_ERROR_PATTERNS)) {
+      await reportRouteError(err, { route: 'v2/orders/refund-requests' });
+    }
+    const status = getErrorText(err).includes('not found') ? 404 : 400;
+    return jsonError('INVALID_REQUEST', pickSafeMessage(err, ORDER_DOMAIN_ERROR_PATTERNS), status);
   }
 }

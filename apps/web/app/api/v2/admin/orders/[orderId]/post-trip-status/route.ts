@@ -1,5 +1,5 @@
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
-import { handleRouteError } from '../../../../../../../src/lib/route-error';
+import { handleRouteError, reportRouteError } from '../../../../../../../src/lib/route-error';
 import { createClient } from '../../../../../../../src/lib/supabase/server';
 import {
   isCompletionEligible,
@@ -35,7 +35,9 @@ export async function GET(
       .maybeSingle();
 
     if (orderError) {
-      return Response.json(errorV2('DB_ERROR', orderError.message), { status: 500 });
+      // #1925：DB 錯誤字串只上報 server 端，不回給 client。
+      await reportRouteError(new Error(orderError.message), { route: 'v2/admin/orders/order/post-trip-status' });
+      return Response.json(errorV2('DB_ERROR', '讀取失敗，請稍後再試'), { status: 500 });
     }
     if (!order) {
       return Response.json(errorV2('ORDER_NOT_FOUND', 'Order not found'), { status: 404 });

@@ -2,7 +2,7 @@
  * #1649 Phase 6：實作自 legacy 路徑（app/api/admin/orders/[orderId]）整體搬遷至 v2 命名空間。
  * legacy 路徑已退役刪除；行為與測試契約以本檔為準。
  */
-import { reportRouteError } from '../../../../../../src/lib/route-error';
+import { reportRouteError, getErrorText, pickSafeMessage, ORDER_DOMAIN_ERROR_PATTERNS } from '../../../../../../src/lib/route-error';
 import { ok, fail } from '../../../../../../src/lib/api';
 import { getAdminOrderDetailDb, updateAdminOrderDb } from '../../../../../../src/lib/db.mjs';
 import { dispatchOrderEventTelegram } from '../../../../../../src/lib/order-telegram-notify.mjs';
@@ -19,9 +19,9 @@ export async function GET(_request: Request, context: { params: Promise<{ orderI
   } catch (err) {
     // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
     void reportRouteError(err, { route: 'v2/admin/orders/[orderId]' });
-    const message = err instanceof Error ? err.message : 'unknown error';
-    const status = message.includes('not found') ? 404 : 400;
-    return Response.json(fail('INVALID_REQUEST', message), { status });
+    // #1925：狀態仍由原始訊息分類；回給 client 的文案只允許我方定義的業務訊息，其餘（DB 錯誤）一律通用文案。
+    const status = getErrorText(err).includes('not found') ? 404 : 400;
+    return Response.json(fail('INVALID_REQUEST', pickSafeMessage(err, ORDER_DOMAIN_ERROR_PATTERNS)), { status });
   }
 }
 
@@ -83,25 +83,29 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
   } catch (err) {
     // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
     void reportRouteError(err, { route: 'v2/admin/orders/[orderId]' });
-    const message = err instanceof Error ? err.message : 'unknown error';
+    // #1925：以原始訊息分類（僅內部使用）；回給 client 的文案一律經 pickSafeMessage。
+    const rawErrorText = getErrorText(err);
     // AC5: locked order edit → 409 Conflict (locked statuses: LOCKED_STATUSES)
-    if (message.startsWith('order_edit_locked:')) {
+    if (rawErrorText.startsWith('order_edit_locked:')) {
       return Response.json(fail('ORDER_EDIT_LOCKED',
         `cannot edit order in current status (locked: ${LOCKED_STATUSES.join(', ')})`
       ), { status: 409 });
     }
     // 防呆：不得手動把狀態改成終端狀態（須走專用流程）→ 409
-    if (message.startsWith('manual_status_change_blocked:')) {
-      const target = message.split(':')[1] || '';
+    if (rawErrorText.startsWith('manual_status_change_blocked:')) {
+      const target = rawErrorText.split(':')[1] || '';
       return Response.json(fail('MANUAL_STATUS_CHANGE_BLOCKED',
         `不可手動將訂單狀態改為「${target}」。退款請用「取消＋退款」按鈕（進行中訂單）或「執行退款」按鈕（已是退款中）；取消請用「取消＋退款」。`
       ), { status: 409 });
     }
     // AC1.1: capacity check → 400
-    if (message.startsWith('capacity insufficient')) {
-      return Response.json(fail('CAPACITY_INSUFFICIENT', message), { status: 400 });
+    if (rawErrorText.startsWith('capacity insufficient')) {
+      return Response.json(
+        fail('CAPACITY_INSUFFICIENT', pickSafeMessage(err, ORDER_DOMAIN_ERROR_PATTERNS, '場次名額不足')),
+        { status: 400 },
+      );
     }
-    const status = message.includes('not found') ? 404 : 400;
-    return Response.json(fail('INVALID_REQUEST', message), { status });
+    const status = rawErrorText.includes('not found') ? 404 : 400;
+    return Response.json(fail('INVALID_REQUEST', pickSafeMessage(err, ORDER_DOMAIN_ERROR_PATTERNS)), { status });
   }
 }

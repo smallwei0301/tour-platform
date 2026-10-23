@@ -9,7 +9,7 @@
  * Allows admin to apply a manual refund amount override for an order.
  * Validates input, fetches order (404 if not found), writes audit log, returns result.
  */
-import { reportRouteError } from '../../../../../../../src/lib/route-error';
+import { reportRouteError, GENERIC_SERVER_ERROR_MESSAGE } from '../../../../../../../src/lib/route-error';
 import { ok, fail } from '../../../../../../../src/lib/api';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../../src/config/supabase-service-env.mjs';
@@ -83,13 +83,14 @@ export async function POST(
       created_at: new Date().toISOString(),
     });
     if (auditError) {
-      return Response.json(fail('DB_ERROR', auditError.message), { status: 500 });
+      // #1925：DB 錯誤字串只上報 server 端，不回給 client。
+      await reportRouteError(new Error(auditError.message), { route: 'v2/admin/orders/[orderId]/refund-override' });
+      return Response.json(fail('DB_ERROR', GENERIC_SERVER_ERROR_MESSAGE), { status: 500 });
     }
   } catch (err) {
     // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
     void reportRouteError(err, { route: 'v2/admin/orders/[orderId]/refund-override' });
-    const message = err instanceof Error ? err.message : 'unknown error';
-    return Response.json(fail('DB_ERROR', message), { status: 500 });
+    return Response.json(fail('DB_ERROR', GENERIC_SERVER_ERROR_MESSAGE), { status: 500 });
   }
 
   return Response.json(ok({ override_amount: amount, reason: reason.trim() }));

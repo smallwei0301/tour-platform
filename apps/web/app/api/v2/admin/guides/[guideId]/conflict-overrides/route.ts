@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { errorV2, successV2 } from '../../../../../../../src/lib/api.ts';
+import { reportRouteError } from '../../../../../../../src/lib/route-error.ts';
 import { isAdminAuthorized, pickAdminCredentials } from '../../../../../../../src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from '../../../../../../../src/lib/admin-session.mjs';
 import { validateCsrf } from '../../../../../../../src/lib/csrf.mjs';
@@ -215,7 +216,11 @@ export async function POST(
     .single();
 
   if (insertError) {
-    return Response.json(errorV2('INTERNAL_ERROR', insertError.message || 'Failed to create conflict override'), { status: 500 });
+    // #1925：DB 錯誤字串（含 fallback 前的 insertError.message）只上報 server 端，不回給 client。
+    await reportRouteError(new Error(insertError.message || 'conflict override insert failed'), {
+      route: 'v2/admin/guides/[guideId]/conflict-overrides',
+    });
+    return Response.json(errorV2('INTERNAL_ERROR', 'Failed to create conflict override'), { status: 500 });
   }
 
   // #1497 — 主動通知導遊(best-effort,fire-and-forget,不阻斷加開主流程)。

@@ -16,6 +16,11 @@
 /** RPC 尚未套用到資料庫時的可辨識錯誤碼。 */
 export const RPC_MISSING_CODE = 'SETTLEMENT_RPC_NOT_DEPLOYED';
 
+/** RPC 未套用時丟出的完整固定訊息（route 的白名單與此共用同一句，#1925）。 */
+export const RPC_MISSING_MESSAGE =
+  `${RPC_MISSING_CODE}: 原子結算 RPC 尚未套用至資料庫，已中止以避免非原子寫入。`
+  + '請先套用 migration 20260729160000_issue1777_atomic_settlement_and_payout_confirm.sql。';
+
 /** PostgREST 對「找不到函式」的錯誤碼。 */
 const PGRST_FN_NOT_FOUND = 'PGRST202';
 
@@ -29,10 +34,7 @@ function isMissingFunctionError(error) {
 
 function toError(error, fallbackMessage) {
   if (isMissingFunctionError(error)) {
-    const err = new Error(
-      `${RPC_MISSING_CODE}: 原子結算 RPC 尚未套用至資料庫，已中止以避免非原子寫入。`
-      + '請先套用 migration 20260729160000_issue1777_atomic_settlement_and_payout_confirm.sql。',
-    );
+    const err = new Error(RPC_MISSING_MESSAGE);
     err.code = RPC_MISSING_CODE;
     return err;
   }

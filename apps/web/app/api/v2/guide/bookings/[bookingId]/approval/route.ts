@@ -12,7 +12,7 @@
  * 導遊只能審核自己的 booking（guide_id 比對）。CSRF + guide-auth 由 middleware 套用
  * （/api/guide/* 範圍）。
  */
-import { reportRouteError } from '../../../../../../../src/lib/route-error';
+import { reportRouteError, getErrorText, GENERIC_SERVER_ERROR_MESSAGE } from '../../../../../../../src/lib/route-error';
 import { validateCsrf } from '../../../../../../../src/lib/csrf.mjs';
 import { ok, fail } from '../../../../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../../../../src/lib/guide-auth';
@@ -20,7 +20,7 @@ import { decideBookingApprovalDb } from '../../../../../../../src/lib/db.mjs';
 import { notifyBookingApprovalDecided } from '../../../../../../../src/lib/booking-approval-notify';
 
 function errorToParts(error: unknown): { code: string; message: string; status: number } {
-  const raw = error instanceof Error ? error.message : String(error);
+  const raw = getErrorText(error) || String(error); // 僅供內部分類；回應文案見下方白名單判斷
   const [code, ...rest] = raw.split(':');
   const message = rest.join(':').trim() || raw;
   const statusByCode: Record<string, number> = {
@@ -30,8 +30,13 @@ function errorToParts(error: unknown): { code: string; message: string; status: 
     NOT_APPROVABLE: 409,
     NOT_PENDING_APPROVAL: 409,
   };
-  const status = statusByCode[code?.trim()] ?? 500;
-  return { code: code?.trim() || 'SERVER_ERROR', message, status };
+  const knownCode = code?.trim();
+  if (!knownCode || !Object.hasOwn(statusByCode, knownCode)) {
+    // #1925：不在已知業務碼內的例外（多半是 DB／未預期錯誤）一律 500 SERVER_ERROR＋通用文案，
+    // 避免把例外字串當作 code／message 外洩（原始錯誤已由呼叫端 reportRouteError 上報）。
+    return { code: 'SERVER_ERROR', message: GENERIC_SERVER_ERROR_MESSAGE, status: 500 };
+  }
+  return { code: knownCode, message, status: statusByCode[knownCode] };
 }
 
 export async function POST(

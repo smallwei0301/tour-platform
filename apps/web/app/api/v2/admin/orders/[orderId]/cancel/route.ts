@@ -2,7 +2,7 @@
  * #1649 Phase 6：實作自 legacy 路徑（app/api/admin/orders/[orderId]/cancel）整體搬遷至 v2 命名空間。
  * legacy 路徑已退役刪除；行為與測試契約以本檔為準。
  */
-import { reportRouteError } from '../../../../../../../src/lib/route-error';
+import { reportRouteError, getErrorText, pickSafeMessage, ORDER_DOMAIN_ERROR_PATTERNS } from '../../../../../../../src/lib/route-error';
 import { ok, fail } from '../../../../../../../src/lib/api';
 import {
   getAdminOrderDetailDb,
@@ -138,13 +138,17 @@ export async function POST(
   } catch (err) {
     // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
     void reportRouteError(err, { route: 'v2/admin/orders/[orderId]/cancel' });
-    const message = err instanceof Error ? err.message : 'unknown error';
-    if (message.includes('not found')) {
-      return Response.json(fail('NOT_FOUND', message), { status: 404 });
+    // #1925：狀態由原始訊息分類；client 文案只允許我方業務訊息。
+    const rawErrorText = getErrorText(err);
+    if (rawErrorText.includes('not found')) {
+      return Response.json(fail('NOT_FOUND', pickSafeMessage(err, ORDER_DOMAIN_ERROR_PATTERNS, '找不到指定的資料')), { status: 404 });
     }
-    if (message.startsWith('order_cancel_locked:')) {
+    if (rawErrorText.startsWith('order_cancel_locked:')) {
       return Response.json(fail('ORDER_CANCEL_LOCKED', 'cannot cancel order in current status'), { status: 409 });
     }
-    return Response.json(fail('CANCEL_FAILED', message), { status: 400 });
+    return Response.json(
+      fail('CANCEL_FAILED', pickSafeMessage(err, ORDER_DOMAIN_ERROR_PATTERNS, '取消失敗，請稍後再試')),
+      { status: 400 },
+    );
   }
 }
