@@ -49,3 +49,12 @@ v3 worklog-only delta 已完成限定獨立審查，最終未解 finding 0；報
 - 不把限定兩筆狀態核對說成整份 issue queue 已 refresh；其他 active routing 與 snapshot 數字不在本次範圍。
 - 不修改 harness、runtime code、測試檔、readiness snapshot 或任何其他候選工作；DB／TEST、credential、network、permission 或付費資源操作不在本次範圍；Git 發布與本次合併附帶自動正式部署僅按上述有效批准及完整 gates 執行。
 
+## #1265 限定補修（2026-10-19 Asia/Taipei）
+
+- Owner 本輪另行批准僅修 #1265 過期路由文字；先前 #1904 僅限 #1301／#1336、保留 #1265 原文的決定與測試證據維持歷史，不冒作本輪批准。
+- 本輪基準 main：`5d68a11a7e93021e7f7cca8e0f02368f9b9ec764`；該提交相對前 main `b83b8c51dbcb4a806cf9cc6d2f7bd6713a60ea3e` 僅更新自動 readiness snapshot，兩份目標文件未變。
+- [#1265 即時來源](https://github.com/smallwei0301/tour-platform/issues/1265)：`closed/completed`，`closed_at=2026-06-10T07:24:43Z`；本次移除 Current top pointer 的 verified-active 範例，並補 historical/non-routing 記錄。
+- 保留原 Updated 2026-06-10、2026-10-16 定向註記、既有 worklog 全文與其他 queue 條目；不重做整份 queue refresh，不關閉 #1658。
+- 23 個 open PR 的完整 changed filenames 已逐一核對，兩個目標路徑無 ownership 重疊；Node 22.23.1 canonical wrapper `--check` 與 `run-checks.sh apps/web/tests/api/issue657-agent-routing.test.mjs` 通過 6/6；另以候選外定向 assertions 通過 8/8，含修改前反例、歷史與非本輪 queue 不變驗證。僅為 bounded docs 驗證，不取代後續 CI 或全量 #1658 驗收。
+- requested model：`gpt-6.1-sol`；actual model：unknown，未宣稱 runtime 身分驗證。
+- 僅準備兩檔候選；獨立審查、ownership 與發布 gates 未完成前，不宣稱完整驗收、已發布或可合併。其他排程、程式、DB／TEST、Production、憑證、網路及權限不在本次範圍。
