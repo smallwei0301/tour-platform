@@ -46,3 +46,32 @@
 - base vs HEAD：HEAD 沒有新增失敗。
 - 審查自設的突變有 7 項存活（測試缺口），已在 `3f27ccfe` 補上測試。
 - 後續另開 #1928：`src/lib/refund-execute.ts` 在 ECPay 退款例外時，會把 `err.message` 原樣回給 client。
+
+## PR #1929：Codex 審查、merge 與收尾
+- Codex 在 `d33da4b` 上的審查：
+  - Code review 提出 1 項 P2：`SETTLEMENT_RPC_NOT_DEPLOYED` 樣式缺結尾錨定。驗證後屬實，已在 `069789a2` 修正：
+    - 改為整句錨定。
+    - 固定訊息抽成常數 `RPC_MISSING_MESSAGE`。
+    - 補一條測試，鎖住每條樣式都必須是 `^…$`。
+  - Thread 回覆 [r4358545347](https://github.com/smallwei0301/tour-platform/pull/1929#discussion_r4358545347)，已 resolved。
+  - Security review：0 findings。
+- 新 head `58eadc2e`：
+  - CI 全部 success：[test](https://github.com/smallwei0301/tour-platform/actions/runs/39939105723/job/120365854504)、[scan](https://github.com/smallwei0301/tour-platform/actions/runs/39939105867/job/120365855085)。
+  - Codex code review 從 10:26Z 起卡在 running，超過 50 分鐘沒有結果（[留言 6362803573](https://github.com/smallwei0301/tour-platform/pull/1929#issuecomment-6362803573)）。
+  - 主 session 逐行檢查與 `d33da4b` 之間的 delta：只有 regex 收緊、抽出常數、補測試。
+- **Owner 一次性授權**：Owner 選「授權本次 merge」，僅限 #1929。
+- 合併：squash 為 `5fefffdd`，`expectedHeadSha=58eadc2e`。
+- main CI 全部 success：[test](https://github.com/smallwei0301/tour-platform/actions/runs/39945782734/job/120387974079)、[scan](https://github.com/smallwei0301/tour-platform/actions/runs/39945782742/job/120387972928)。
+- Completion Truth：
+  - merge commit 可由 main 到達。
+  - 已在 main 上重讀 `route-error.ts` 與 guard 測試。
+  - #1925 已附 AC 證據後關閉（[結案留言](https://github.com/smallwei0301/tour-platform/issues/1925#issuecomment-6363815095)）。
+- Run r07 closeout：COMPLETE。
+
+## B+ 自檢（r07）
+1. 盤點：**未另派 scout**，沿用 r06 的盤點清單，算缺口。
+2. TRIAGE：做了（opus）。
+3. Terra 施工：做了（sonnet），共 3 個 commit，含 2 次 rework。
+4. LUNA_CLOSURE：做了（haiku）。#1925 已關閉；其餘 7 個 Issue 都不是候選。
+5. 即時埋點：做了。缺口是沒有登記 WIP lifecycle 事件。
+6. 收尾：做了，Completion Truth 5 條全部 VERIFIED。
