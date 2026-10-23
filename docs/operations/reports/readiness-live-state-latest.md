@@ -1,19 +1,20 @@
-<!-- query_timestamp: 2026-10-22T05:05:01.084Z -->
+<!-- query_timestamp: 2026-10-23T05:04:53.874Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-10-22T05:05:01.084Z  
-**Commit SHA:** `af1829d75c45d54902c80472133e8ad1645a3282`
+**Query timestamp:** 2026-10-23T05:04:53.874Z  
+**Commit SHA:** `5b2c2f85da211b5570c2aafe395d89614f417aa7`
 
 ---
 
-## Open PRs (24)
+## Open PRs (25)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1922 | [Midao2 我的頁面：年資讀取失敗不再被當成 0 覆寫、嚴格驗證年資輸入（#1761）](https://github.com/smallwei0301/tour-platform/pull/1922) _(draft)_ | `ccr-80d3864e-9i7mop` |
 | #1907 | [fix(guide): 接續頭像裁切並修正過期回呼與重複確認（#1534）](https://github.com/smallwei0301/tour-platform/pull/1907) _(draft)_ | `verify/issue1534-cloud-20261019` |
 | #1906 | [fix: 每日健康檢查區分執行失效與產品回歸（#1670）](https://github.com/smallwei0301/tour-platform/pull/1906) | `ava/issue1670-runner-recovery-20261017` |
 | #1905 | [chore(claude): 放行 gh 讀取、workflow 派送與 PR 留言／審查寫入](https://github.com/smallwei0301/tour-platform/pull/1905) _(draft)_ | `ccr-61cf40aa-0wsxsk` |
@@ -39,7 +40,7 @@
 | #1438 | [Use next/font variables in globals, set CJK fonts to `display: optional`, and scope serif usage to LP/brand](https://github.com/smallwei0301/tour-platform/pull/1438) | `codex/improve-homepage-loading-speed` |
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 
-## Open Issues (69 total)
+## Open Issues (72 total)
 
 ### P0 (1)
 
@@ -51,11 +52,11 @@
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1912 | [[Security] 雲端執行環境帶有正式服務金鑰（Supabase service role、Resend）](https://github.com/smallwei0301/tour-platform/issues/1912) | type:security, priority:P1, security, infra, owner:human |
 | #1863 | [[Midao Program] Execute #1763 release, canonical calendar, reliability convergence, then legacy retirement](https://github.com/smallwei0301/tour-platform/issues/1863) | triaged, type:feature, priority:P1, qa, guide-dashboard, agent:backlog, owner:mixed, status:blocked, traveler-booking, database, infra |
 | #1847 | [[QA] Daily test checklist for recent merged PRs 2026-08-18](https://github.com/smallwei0301/tour-platform/issues/1847) | triaged, priority:P1, cron-followup, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, auth, database, docs, admin, post-merge |
 | #1845 | [[QA] Daily test checklist for recent merged PRs 2026-08-17](https://github.com/smallwei0301/tour-platform/issues/1845) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, auth, database, admin, post-merge |
 | #1841 | [[#1825] 在較大資源環境執行 exact PostgreSQL replay（4/4）交棒](https://github.com/smallwei0301/tour-platform/issues/1841) | type:investigation, priority:P1, owner:ai-agent, status:ready, database |
-| #1827 | [[Midao Backend] 收斂為新 UI、既有核心系統：功能遷移與 PR #1763 UI 吸收路線圖](https://github.com/smallwei0301/tour-platform/issues/1827) | triaged, type:investigation, priority:P1, guide-dashboard, agent:backlog, owner:ai-agent, status:blocked, database |
 | #1773 | [[QA] Daily test checklist for recent merged PRs 2026-07-29](https://github.com/smallwei0301/tour-platform/issues/1773) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, docs, post-merge |
 | #1770 | [[QA] Daily test checklist for recent merged PRs 2026-07-28](https://github.com/smallwei0301/tour-platform/issues/1770) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, admin, post-merge |
 | #1762 | [[QA] Daily test checklist for recent merged PRs 2026-07-23](https://github.com/smallwei0301/tour-platform/issues/1762) | priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, auth, admin, post-merge |
@@ -86,10 +87,13 @@
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (18)
+### P2 (21)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1917 | [guide bookings API：orders 查詢失敗時回傳原始 DB 錯誤訊息](https://github.com/smallwei0301/tour-platform/issues/1917) | type:bug, priority:P2, guide-dashboard, security, owner:ai-agent |
+| #1916 | [Midao：mark-replied 的 idempotency key 未生效，client 重試每次換新 key](https://github.com/smallwei0301/tour-platform/issues/1916) | type:bug, priority:P2, guide-dashboard, owner:ai-agent |
+| #1911 | [寄信：Resend 錯誤回應被記成 sent，空收件人仍呼叫 provider](https://github.com/smallwei0301/tour-platform/issues/1911) | type:bug, priority:P2, owner:ai-agent, notifications |
 | #1879 | [[Frontend Daily Check] E2E activities listing navigation timeout](https://github.com/smallwei0301/tour-platform/issues/1879) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:ready, traveler-booking |
 | #1869 | [[Midao] Event-based observation and verified legacy retirement after #1861](https://github.com/smallwei0301/tour-platform/issues/1869) | triaged, type:investigation, priority:P2, agent:backlog, owner:ai-agent, status:blocked, database, infra, launch:post-first-payment, data-hygiene |
 | #1844 | [補記 6 支既有 migration 的 verified ledger record（#1811/#1812/#1813/#1814/#1760 相關，release gate 現 HOLD）](https://github.com/smallwei0301/tour-platform/issues/1844) | type:investigation, priority:P2, owner:ai-agent, status:ready, database |
@@ -141,16 +145,16 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1921 | [修正已結案 #1265 的歷史路由文件](https://github.com/smallwei0301/tour-platform/pull/1921) | 2026-10-23 |
+| #1920 | [修正 Midao2 單獨介面變更未觸發隔離 smoke](https://github.com/smallwei0301/tour-platform/pull/1920) | 2026-10-23 |
+| #1919 | [首頁世界影片改由 Vercel Blob 提供，不再打包進每個部署](https://github.com/smallwei0301/tour-platform/pull/1919) | 2026-10-22 |
+| #1918 | [#1761 Run r02 收尾＋calendar round-trip slice 1：Midao2 月曆疊加舊後台封鎖日](https://github.com/smallwei0301/tour-platform/pull/1918) | 2026-10-23 |
+| #1915 | [#1761 Stage 5C：訂單列表顯示方案名稱（bookings 投影以 booking 方案優先、驗證歸屬）](https://github.com/smallwei0301/tour-platform/pull/1915) | 2026-10-22 |
+| #1914 | [docs(metrics): Run 2026-10-22-midao2-r01 收尾（#1761 Stage 5B）](https://github.com/smallwei0301/tour-platform/pull/1914) | 2026-10-22 |
+| #1913 | [#1761 Stage 5B：Midao2 需求詳情返回連結留在新 UI＋跨 UI parity 測試](https://github.com/smallwei0301/tour-platform/pull/1913) | 2026-10-22 |
+| #1910 | [docs: 記錄 Owner 2026-10-22 merge 長期授權](https://github.com/smallwei0301/tour-platform/pull/1910) | 2026-10-22 |
 | #1909 | [同步 vibeaico #1094：計分強制 readiness 一致性與 v4 Run 時間窗](https://github.com/smallwei0301/tour-platform/pull/1909) | 2026-10-22 |
 | #1908 | [移植 VibeAI Agent Run 埋點與 Scorecard 腳本（含修正 cron 測試日期時間炸彈）](https://github.com/smallwei0301/tour-platform/pull/1908) | 2026-10-22 |
-| #1904 | [docs: 清除 #1301／#1336 的過期派工路由（#1658）](https://github.com/smallwei0301/tour-platform/pull/1904) | 2026-10-17 |
-| #1899 | [第三方設計 skills 改為純建議版（移除 Impeccable 外部引擎與子代理）](https://github.com/smallwei0301/tour-platform/pull/1899) | 2026-10-13 |
-| #1896 | [新增第三方設計 skills：Emil Kowalski 與 Impeccable](https://github.com/smallwei0301/tour-platform/pull/1896) | 2026-10-08 |
-| #1892 | [fix(build): 修復 Google 無副檔名字型 URL (#1891)](https://github.com/smallwei0301/tour-platform/pull/1892) | 2026-10-06 |
-| #1889 | [fix(midao2): 防止封面上傳與儲存競態](https://github.com/smallwei0301/tour-platform/pull/1889) | 2026-10-06 |
-| #1888 | [docs(ledger): 補登 #1861 單筆歷史缺證例外](https://github.com/smallwei0301/tour-platform/pull/1888) | 2026-10-06 |
-| #1881 | [建立模型路由與派工防漏治理](https://github.com/smallwei0301/tour-platform/pull/1881) | 2026-10-04 |
-| #1880 | [修正 Node22 雲端工具鏈與正式證據契約](https://github.com/smallwei0301/tour-platform/pull/1880) | 2026-10-04 |
 
 ---
 
