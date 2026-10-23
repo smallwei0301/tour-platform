@@ -5,6 +5,7 @@
  * 主站可見度只看既有 status（審核流不動）。
  */
 import { hasSupabaseEnv, getSupabase } from '../db.mjs';
+import { parseExperienceYears } from './midao-experience-years.mjs';
 
 export const MIDAO_DEAL_MODES = ['instant_booking', 'confirm_first', 'line_inquiry'];
 const QUESTION_TYPES = ['text', 'single_choice', 'multi_choice', 'yes_no'];
@@ -302,8 +303,10 @@ export async function getGuideExperienceYearsDb(guideId) {
     return g?.experience_years ?? null;
   }
   const supabase = await getSupabase();
-  const { data } = await supabase.from('guide_profiles')
+  const { data, error } = await supabase.from('guide_profiles')
     .select('experience_years').eq('id', guideId).maybeSingle();
+  // 讀取失敗必須拋出：回 null 會讓頁面誤以為「未填」，導遊再儲存就可能覆寫既有年資
+  if (error) throw new Error(error.message);
   return data?.experience_years ?? null;
 }
 
@@ -313,8 +316,8 @@ export async function getGuideExperienceYearsDb(guideId) {
  * @returns {Promise<{ok:true, experienceYears:number}|{ok:false, code:string, message:string}>}
  */
 export async function updateGuideExperienceYearsDb(guideId, years) {
-  const n = Number(years);
-  if (!Number.isInteger(n) || n < 0 || n > 60) {
+  const n = parseExperienceYears(years); // 嚴格解析，與 midao2/me 頁面共用
+  if (n === null) {
     return { ok: false, code: 'INVALID_YEARS', message: '導覽經驗需為 0–60 的整數年' };
   }
   if (!hasSupabaseEnv()) {

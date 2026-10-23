@@ -5,6 +5,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { C, Card, Btn, Spinner, ErrorState, copyToClipboard, apiGet, apiSend, Icon } from '../ui';
+import { parseExperienceYears } from '../../../../src/lib/midao/midao-experience-years.mjs';
 import { csrfHeaders } from '../../../../src/lib/csrf-client';
 
 type LegacyProfile = {
@@ -36,7 +37,7 @@ export default function Midao2MePage() {
   const [profile, setProfile] = useState<LegacyProfile | null>(null);
   const [services, setServices] = useState<PublicService[] | null>(null);
   const [publicAvailable, setPublicAvailable] = useState(false);
-  const [experienceYears, setExperienceYears] = useState(0);
+  const [experienceYears, setExperienceYears] = useState<number | null>(0); // null＝讀取失敗（未知），與「未填」(0) 區分
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingExp, setEditingExp] = useState(false);
@@ -57,7 +58,8 @@ export default function Midao2MePage() {
           const extras = await apiGet('/api/v2/guide/midao/profile-extras');
           setExperienceYears(extras?.experienceYears ?? 0);
         } catch {
-          setExperienceYears(0);
+          // 讀取失敗不可當作 0：否則編輯預填 0、一按儲存就覆寫真實年資
+          setExperienceYears(null);
         }
         if (p?.slug) {
           try {
@@ -90,8 +92,8 @@ export default function Midao2MePage() {
   const regions = profile.regions?.length ? profile.regions : (profile.region ? [profile.region] : []);
 
   async function saveExperience() {
-    const n = Math.trunc(Number(expInput));
-    if (!Number.isFinite(n) || n < 0 || n > 60) {
+    const n = parseExperienceYears(expInput.trim());
+    if (n === null) {
       setExpError('請輸入 0–60 的整數年');
       return;
     }
@@ -199,7 +201,19 @@ export default function Midao2MePage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Icon name="map" size={18} style={{ color: '#4F8062' }} />
           <span style={{ fontSize: 14, color: C.MUTED }}>導覽經驗</span>
-          {editingExp ? (
+          {experienceYears === null ? (
+            <span data-testid="midao2-me-exp-load-error" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: C.RED }}>
+              年資讀取失敗
+              <button
+                type="button"
+                data-testid="midao2-me-exp-retry"
+                onClick={load}
+                style={{ background: 'transparent', border: 'none', color: C.ACCENT, cursor: 'pointer', fontWeight: 700 }}
+              >
+                重試
+              </button>
+            </span>
+          ) : editingExp ? (
             <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <input

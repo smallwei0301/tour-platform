@@ -129,6 +129,23 @@ test('updateGuideExperienceYearsDb：範圍驗證與寫入', async () => {
   assert.equal(r4.ok, false);
 });
 
+test('updateGuideExperienceYearsDb：嚴格解析，不把空值／空白／指數當年資', async () => {
+  __resetMemMidaoShowcase();
+  __seedMemMidaoGuide(guideProfile());
+  for (const bad of ['', null, undefined, false, true, [], [5], {}, ' 5 ', '1e1', '+5', '-1', '3.5', '007', 'abc', NaN, Infinity]) {
+    const r = await updateGuideExperienceYearsDb(G, bad);
+    assert.equal(r.ok, false, `應拒絕 ${JSON.stringify(bad)}`);
+    assert.equal(r.code, 'INVALID_YEARS');
+  }
+  // 被拒絕時不得動到既有值
+  assert.equal(await getGuideExperienceYearsDb(G), 5);
+  const ok = await updateGuideExperienceYearsDb(G, '12');
+  assert.equal(ok.ok, true); assert.equal(ok.experienceYears, 12);
+  assert.equal(await getGuideExperienceYearsDb(G), 12);
+  const zero = await updateGuideExperienceYearsDb(G, '0');
+  assert.equal(zero.ok, true); assert.equal(zero.experienceYears, 0);
+});
+
 test('getGuideExperienceYearsDb：讀值與缺值', async () => {
   __resetMemMidaoShowcase();
   __seedMemMidaoGuide({ id: G, slug: 'andy-lee', verification_status: 'approved', experience_years: 7 });

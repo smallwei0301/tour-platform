@@ -26,8 +26,15 @@ export async function PATCH(request: Request) {
   if (csrf) return csrf;
   const session = verifyGuideSession(request);
   if (!session) return jsonError('UNAUTHORIZED', '請先登入導遊帳號', 401);
-  let body: { experienceYears?: unknown } = {};
-  try { body = await request.json(); } catch { return jsonError('INVALID_REQUEST', '請求格式不正確', 400); }
+  let body: { experienceYears?: unknown };
+  try {
+    const parsed: unknown = await request.json();
+    // JSON 合法但不是 plain object（null／陣列／數字／字串）→ 400，不可讓 body.experienceYears 丟 TypeError 變 500
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return jsonError('INVALID_REQUEST', '請求格式不正確', 400);
+    }
+    body = parsed as { experienceYears?: unknown };
+  } catch { return jsonError('INVALID_REQUEST', '請求格式不正確', 400); }
   try {
     const result = await updateGuideExperienceYearsDb(session.guideId, body.experienceYears);
     if (!result.ok) return jsonError(result.code, result.message, 400);

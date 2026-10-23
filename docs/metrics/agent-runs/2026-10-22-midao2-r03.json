@@ -1,24 +1,24 @@
 {
   "schemaVersion": 2,
   "runId": "2026-10-22-midao2-r03",
-  "status": "IN_PROGRESS",
+  "status": "COMPLETE",
   "startedAt": "2026-10-22T12:40:36.466Z",
-  "endedAt": null,
+  "endedAt": "2026-10-23T04:43:48Z",
   "sources": [],
   "main": {
     "startSha": "827c516fec9d5d847be30a62b6cf829d7a76190c",
-    "endSha": null
+    "endSha": "5b2c2f85da211b5570c2aafe395d89614f417aa7"
   },
   "inventory": {
     "openIssuesStart": 72,
-    "openIssuesEnd": null,
+    "openIssuesEnd": 72,
     "openPrsStart": 25,
-    "openPrsEnd": null,
+    "openPrsEnd": 24,
     "mainTerraPeak": 1,
     "reserveTerraPeak": 0,
     "activeCandidatePeak": 1,
     "sharedTestPeak": 0,
-    "closureSweeps": 0,
+    "closureSweeps": 1,
     "closureAdvancedOrClosed": 0
   },
   "modelUsage": {
@@ -127,6 +127,20 @@
         "outputTokens": null,
         "cachedTokens": null,
         "dispatchedAt": "2026-10-23T00:45:20Z"
+      },
+      {
+        "id": "r03-luna-closure",
+        "role": "LUNA_CLOSURE 結案掃描（#1918 merge 後）",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T04:42:50Z"
       }
     ],
     "fullContextReplays": 0,
@@ -143,7 +157,7 @@
     "cycleTimeMinutes": null
   },
   "ci": {
-    "fullCiRuns": 0,
+    "fullCiRuns": 31,
     "invalidReruns": 0,
     "firstPassRatePercent": null,
     "sharedTestCollisions": 0
@@ -159,8 +173,8 @@
     "hardFailReasons": []
   },
   "flow": {
-    "lunaTasks": 2,
-    "lunaAccepted": 2,
+    "lunaTasks": 3,
+    "lunaAccepted": 3,
     "lunaDelegationRatePercent": null,
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
@@ -185,16 +199,20 @@
     "恢復後推送策略：帳本／worklog 不單獨推送，併入施工或收尾 commit，以減少 Preview 部署。",
     "#1918 browser（midao-baseline，head 03642a7a）失敗：docker registry toomanyrequests: Data limit exceeded（外部額度），非本 PR 程式。",
     "Sol 重派審查 PASS（blocking 0；突變 9 項全擋）。non-blocking 後續：異常列靜默略過（DB CHECK 已擋）、跨日時段只標 blackout 當日、全日封鎖月格同時顯示可用短條、缺多筆重疊／跨年等邊界正式測試、e2e-smoke workflow paths 不含 midao2/**（既有，需改 workflow，非本授權）。",
-    "2026-10-23T04:25Z Codex code review（cbc5c0f5，01:03Z 起）與 security review（74258ee，2026-10-22T11:55Z 起）持續 running 無結論，重觸發留言 6340753201、6354853581 無回應；Owner 一次性授權本次略過 Codex，以 CI 全綠＋Sol 獨立審查 PASS 作為 #1918 merge 依據，僅限本次。"
+    "2026-10-23T04:25Z Codex code review（cbc5c0f5，01:03Z 起）與 security review（74258ee，2026-10-22T11:55Z 起）持續 running 無結論，重觸發留言 6340753201、6354853581 無回應；Owner 一次性授權本次略過 Codex，以 CI 全綠＋Sol 獨立審查 PASS 作為 #1918 merge 依據，僅限本次。",
+    "LUNA_CLOSURE（2026-10-23T04:42Z，haiku）EMPTY_WITH_SCAN：#1761（cutover 總 gate AC 未達）、#1869（Owner backlog）、#1911／#1916／#1917（無 main 實作）、#1851（未規劃需求）、#1912（需 Owner 處理金鑰）皆非候選。",
+    "fullCiRuns=31：PR 分支自 r03 startedAt 起 28 個 workflow run＋03642a7a midao-baseline 外部額度重跑 1 次＋main 5b2c2f85 的 ci／secret-scan 2 個；計法同 gh api actions/runs 實數。",
+    "merge 5b2c2f85；PR #1918 squash（expectedHeadSha=e1982ca0）。Completion Truth：merged、reachable from main、main 上重讀 calendar route（fetchBlackoutRows guide_id、hasBlackout）、midao-calendar-blackouts.mjs、smoke 清單；main CI test／scan success。",
+    "CLOSEOUT_ACCEPTED_NOT_GRADED: Production authenticated acceptance 需 Owner 以真實導遊帳號在 midao.com.tw 驗證；agent 無權限且 #1912 環境含正式金鑰禁止本機連線，故 PRODUCTION_PENDING（gaps: AUTHENTICATED_PRODUCTION_ACCEPTED midao2 calendar blackout is unverified）"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
     "contractVersion": 1,
     "ownerRole": "PRODUCT_MAIN_SESSION",
     "terminalPolicy": "CLOSE_OR_REASSIGN_BEFORE_SESSION_EXIT_OR_OWNER_STOP_OR_SCOPE_EXHAUSTED_OR_OWNER_BLOCKED",
-    "state": "OPEN",
-    "closedAt": null,
-    "evidenceRef": null
+    "state": "CLOSED",
+    "closedAt": "2026-10-23T04:43:48Z",
+    "evidenceRef": "github:issue#1761"
   },
   "wipLifecycle": {
     "schemaVersion": 1,
@@ -252,8 +270,49 @@
     ]
   },
   "completionTruth": {
-    "status": "NOT_CHECKED",
-    "checkedAt": null,
-    "claims": []
+    "status": "VERIFIED",
+    "checkedAt": "2026-10-23T04:45:00Z",
+    "claims": [
+      {
+        "type": "PR_MERGED",
+        "subject": "smallwei0301/tour-platform#1918",
+        "claimedState": "merged",
+        "observedState": "merged",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/pull/1918 merge_commit_sha=5b2c2f85"
+      },
+      {
+        "type": "MERGED_TO_MAIN",
+        "subject": "issue#1761",
+        "claimedState": "merged",
+        "observedState": "merged",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/issues/1761#issuecomment-6357551412"
+      },
+      {
+        "type": "CI_GREEN",
+        "subject": "main@5b2c2f85",
+        "claimedState": "success",
+        "observedState": "success",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/actions/runs/39901238032/job/120243062878"
+      },
+      {
+        "type": "RUN_COMPLETE",
+        "subject": "2026-10-22-midao2-r03",
+        "claimedState": "COMPLETE",
+        "observedState": "COMPLETE",
+        "verification": "VERIFIED",
+        "evidenceRef": "https://github.com/smallwei0301/tour-platform/issues/1761#issuecomment-6357551412"
+      },
+      {
+        "type": "AUTHENTICATED_PRODUCTION_ACCEPTED",
+        "subject": "midao2 calendar blackout",
+        "claimedState": "PRODUCTION_PENDING",
+        "observedState": "not checked",
+        "verification": "UNVERIFIED",
+        "evidenceRef": ""
+      }
+    ]
   }
 }

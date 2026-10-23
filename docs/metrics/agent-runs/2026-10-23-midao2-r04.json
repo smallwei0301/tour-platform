@@ -1,0 +1,233 @@
+{
+  "schemaVersion": 2,
+  "runId": "2026-10-23-midao2-r04",
+  "status": "IN_PROGRESS",
+  "startedAt": "2026-10-23T04:44:08.010Z",
+  "endedAt": null,
+  "sources": [],
+  "main": {
+    "startSha": "5b2c2f85da211b5570c2aafe395d89614f417aa7",
+    "endSha": null
+  },
+  "inventory": {
+    "openIssuesStart": 72,
+    "openIssuesEnd": null,
+    "openPrsStart": 24,
+    "openPrsEnd": null,
+    "mainTerraPeak": 1,
+    "reserveTerraPeak": 0,
+    "activeCandidatePeak": 1,
+    "sharedTestPeak": 0,
+    "closureSweeps": 0,
+    "closureAdvancedOrClosed": 0
+  },
+  "modelUsage": {
+    "actualTokensAvailable": false,
+    "weeklyUsageStartPercent": null,
+    "weeklyUsageEndPercent": null,
+    "weightedUsageImprovementPercent": null,
+    "weights": {
+      "luna": 1,
+      "terra": 3,
+      "sol": 6
+    },
+    "contextMultipliers": {
+      "compact": 1,
+      "medium": 1.5,
+      "full": 3
+    },
+    "tasks": [
+      {
+        "id": "r04-luna-me",
+        "role": "Luna 盤點 /midao2/me 編輯與擁有權",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T04:44:30Z"
+      },
+      {
+        "id": "r04-sol-triage",
+        "role": "Sol TRIAGE：MAIN-4 範圍＝profile-extras PATCH 嚴格年資驗證＋route 層 401/403/400/500 行為測試；RESERVE #1911",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T04:47:00Z"
+      },
+      {
+        "id": "r04-terra-me",
+        "role": "Terra 施工：profile-extras 嚴格年資＋body 形狀＋GET 錯誤傳遞＋route 行為測試（88579a27）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": false,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T04:46:10Z"
+      },
+      {
+        "id": "r04-terra-me-rework1",
+        "role": "Terra rework：/midao2/me 讀取失敗不得預設 0、前端嚴格解析",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T04:48:45Z"
+      },
+      {
+        "id": "r04-sol-audit",
+        "role": "Sol 獨立審查（fresh context）88579a27+89ef18ec",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-23T04:50:05Z"
+      }
+    ],
+    "fullContextReplays": 0,
+    "duplicateScans": 0
+  },
+  "delivery": {
+    "issuesStarted": 1,
+    "issuesClosed": 0,
+    "auditReady": 0,
+    "ownerBlockedComplete": 0,
+    "exactHeadCiOnly": 0,
+    "commitOnly": 0,
+    "unfinishedCarryover": 0,
+    "cycleTimeMinutes": null
+  },
+  "ci": {
+    "fullCiRuns": 0,
+    "invalidReruns": 0,
+    "firstPassRatePercent": null,
+    "sharedTestCollisions": 0
+  },
+  "quality": {
+    "acceptanceEvidenceCoveragePercent": null,
+    "auditFirstPassRatePercent": null,
+    "unresolvedP0": 0,
+    "unresolvedP1": 0,
+    "reopenedIssues": 0,
+    "postMergeRegressions": 0,
+    "safetyViolations": 0,
+    "hardFailReasons": []
+  },
+  "flow": {
+    "lunaTasks": 1,
+    "lunaAccepted": 1,
+    "lunaDelegationRatePercent": null,
+    "duplicateAgentTasks": 0,
+    "ownershipCollisions": 0,
+    "waitTimeConvertedPercent": null,
+    "solTouches": 2,
+    "solIssues": 1
+  },
+  "auditability": {
+    "evidenceFieldsCompletePercent": null,
+    "exactHeadTestCoveragePercent": null,
+    "stalePendingDescriptions": 0,
+    "preciseBlockersPercent": null,
+    "scoreInputsCompletePercent": null
+  },
+  "notes": [
+    "MAIN-4：/midao2/me 編輯與擁有權（years Number() 轉型、401/403 行為測試缺口）。RESERVE #1911。r03 收尾檔與本 Run 首個施工 commit 合併推送（Vercel storage 限制，減少推送）。",
+    "88579a27 經 Sol 檢視：server 端修正有效，但頁面讀取失敗仍 setExperienceYears(0) 會讓導遊覆寫真實年資，且前端 Math.trunc 會把 3.7 截成 3、空字串成 0；送 rework1（preflight 已於 04:48:32Z 先行）。",
+    "Sol 審查 PASS／blocking 0：66/66＋tsc 0；12 突變擋下 9。non-blocking：頁面測試為原始碼斷言非渲染；CSRF→401 順序缺「無 CSRF 且未登入→403」案例；-0 回傳 -0（無實害）；00/07 依規則接受。88579a27 accepted=false（被 rework 取代部分）。",
+    "PR #1922 head d0df4fda：test／smoke／scan success；browser 因 docker registry toomanyrequests（測試前、外部額度）失敗，PR 留言 6357737715 說明後重跑一次（rerun-failed-jobs）。",
+    "d0df4fda browser 重跑 success（job 120248884349）。"
+  ],
+  "deliveryTruthVersion": 4,
+  "closeout": {
+    "contractVersion": 1,
+    "ownerRole": "PRODUCT_MAIN_SESSION",
+    "terminalPolicy": "CLOSE_OR_REASSIGN_BEFORE_SESSION_EXIT_OR_OWNER_STOP_OR_SCOPE_EXHAUSTED_OR_OWNER_BLOCKED",
+    "state": "OPEN",
+    "closedAt": null,
+    "evidenceRef": null
+  },
+  "wipLifecycle": {
+    "schemaVersion": 1,
+    "events": [
+      {
+        "id": "r04-wip-1",
+        "at": "2026-10-23T04:46:10Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1922,
+        "issue": 1761,
+        "head": "88579a27656e833479d92b85ccd7f19e26ea7ad7",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "profile-extras 嚴格年資＋route 行為測試（sonnet）"
+      },
+      {
+        "id": "r04-wip-2",
+        "at": "2026-10-23T04:48:00Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1922,
+        "issue": 1761,
+        "head": "88579a27656e833479d92b85ccd7f19e26ea7ad7",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "88579a27，61/61，突變 4/4"
+      },
+      {
+        "id": "r04-wip-3",
+        "at": "2026-10-23T04:48:45Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1922,
+        "issue": 1761,
+        "head": "89ef18ec092a505ae78291f878f3183aff708fce",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "rework1：頁面讀取失敗不得預設 0（sonnet）"
+      },
+      {
+        "id": "r04-wip-4",
+        "at": "2026-10-23T04:49:40Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1922,
+        "issue": 1761,
+        "head": "89ef18ec092a505ae78291f878f3183aff708fce",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "89ef18ec，62/62，突變 3/3"
+      },
+      {
+        "id": "r04-wip-5",
+        "at": "2026-10-23T04:56:00Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1922,
+        "issue": 1761,
+        "head": "d0df4fda526605787fe142068cf9dd4cabca87e4",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "draft PR #1922 開立，等 CI"
+      }
+    ]
+  },
+  "completionTruth": {
+    "status": "NOT_CHECKED",
+    "checkedAt": null,
+    "claims": []
+  }
+}
