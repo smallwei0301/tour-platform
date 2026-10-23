@@ -4,6 +4,8 @@ Updated: 2026-06-10 15:30 CST (GH-1265 post-#1254/#1231 close + #1121 label refr
 
 定向修正：2026-10-16 14:26 Asia/Taipei，僅核實並移除已結案 #1301／#1336 的派工路由；未更新整份快照，其餘優先級與派工狀態仍須依即時來源重新核對。
 
+定向修正：2026-10-19 Asia/Taipei，僅核實並移除已結案 #1265 的 active safe-next 範例，保留為歷史；未更新其餘 queue 或整份快照。
+
 Repo: `smallwei0301/tour-platform`
 
 ## Purpose
@@ -52,7 +54,7 @@ Open security issue under owner decision (NOT a launch blocker per current label
   - Routing: owner/security-controlled, awaiting human decision. **Not** currently labeled `priority:P0` and **not** `launch:first-payment-blocker` — earlier snapshots that called it P0 were stale.
   - Do not auto-run credential rotation from a generic builder card.
 
-Safe-next candidates: pull from live `gh issue list --state open --label status:ready --label owner:ai-agent` rather than hard-coding here, since they rotate quickly. Recent verified-active examples include #1265 (this doc refresh itself).
+Safe-next candidates: pull from live `gh issue list --state open --label status:ready --label owner:ai-agent` rather than hard-coding here, since they rotate quickly.
 
 ## Agent Routing Invariants
 
@@ -133,6 +135,7 @@ Safe-next candidates: pull from live `gh issue list --state open --label status:
 - #1238 — closed 2026-06-05; admin seasons fix merged.
 - #1249 — closed; activities performance work merged via PR #1252.
 - #1254 — closed/verified 2026-06-05 after PR #1259 (post-trip-summary FK embed fix).
+- #1265 — closed/completed 2026-06-10；2026-10-19 已核對 GitHub 即時狀態，僅保留前次 routing-doc refresh 歷史，不作 active safe-next 範例。
 - #1301 — closed/completed 2026-06-10；2026-10-16 已核對 GitHub 即時狀態，故自目前派工清單移除。
 - #1336 — closed/completed 2026-07-02；2026-10-16 已核對 GitHub 即時狀態，故自目前派工清單移除。
 - #621, #639, #640, #641, #813 — historical closed launch-readiness entries; do not route.
