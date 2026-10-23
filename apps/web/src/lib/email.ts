@@ -8,6 +8,7 @@
  */
 
 import { Resend, type CreateEmailOptions } from 'resend';
+import { checkRecipient, failedDelivery, interpretSendResult, type EmailFailureCode } from './email-delivery/contract.ts';
 
 // ── Delivery logger ────────────────────────────────────────────────────────────
 
@@ -22,11 +23,7 @@ interface EmailLogEntry {
   ts: string;
 }
 
-export type EmailFailureCode =
-  | 'EMAIL_PROVIDER_NOT_CONFIGURED'
-  | 'EMAIL_SEND_FAILED'
-  | 'NO_GUIDE_EMAIL'
-  | 'NO_RECIPIENT';
+export type { EmailFailureCode };
 
 export interface EmailDeliveryResult {
   ok: boolean;
@@ -85,17 +82,11 @@ export async function sendEmailWithContract(input: {
     orderId: input.orderId,
   };
 
-  // 沒有收件人永遠不該寄，與 provider 是否設定無關（#1911）：必須在 getResend()/send 之前返回。
-  if (typeof input.to !== 'string' || input.to.trim() === '') {
+  // 空收件人必須在 getResend()/send 之前返回（#1911）。
+  const noRecipient = checkRecipient(input.to);
+  if (noRecipient) {
     logEmail({ ...base, status: 'skipped', error: 'no_recipient', ts: new Date().toISOString() });
-    return {
-      ...base,
-      ok: false,
-      status: 'skipped',
-      errorCode: 'NO_RECIPIENT',
-      errorMessage: 'recipient is empty',
-      retriable: false,
-    };
+    return { ...base, ...noRecipient };
   }
 
   const resend = getResend();
@@ -114,40 +105,13 @@ export async function sendEmailWithContract(input: {
 
   try {
     const result = await resend.emails.send({ from: FROM, to: input.to, subject: input.subject, html: input.html });
-    // Resend SDK 失敗通常不 throw，而是回 { data: null, error }（#1911）。
-    const messageId = result?.data?.id;
-    if (result?.error || !messageId) {
-      const errorMessage = result?.error
-        ? String(result.error.message ?? 'unknown provider error')
-        : 'provider returned no message id';
-      logEmail({ ...base, status: 'failed', error: errorMessage, ts: new Date().toISOString() });
-      return {
-        ...base,
-        ok: false,
-        status: 'failed',
-        errorCode: 'EMAIL_SEND_FAILED',
-        errorMessage,
-        retriable: true,
-      };
-    }
-    logEmail({ ...base, messageId, status: 'sent', ts: new Date().toISOString() });
-    return {
-      ...base,
-      ok: true,
-      status: 'sent',
-      messageId,
-    };
+    const outcome = interpretSendResult(result);
+    logEmail({ ...base, messageId: outcome.ok ? outcome.messageId : undefined, status: outcome.status, error: outcome.ok ? undefined : outcome.errorMessage, ts: new Date().toISOString() });
+    return { ...base, ...outcome };
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    logEmail({ ...base, status: 'failed', error: errorMessage, ts: new Date().toISOString() });
-    return {
-      ...base,
-      ok: false,
-      status: 'failed',
-      errorCode: 'EMAIL_SEND_FAILED',
-      errorMessage,
-      retriable: true,
-    };
+    const failed = failedDelivery(err instanceof Error ? err.message : String(err));
+    logEmail({ ...base, status: 'failed', error: failed.errorMessage, ts: new Date().toISOString() });
+    return { ...base, ...failed };
   }
 }
 
