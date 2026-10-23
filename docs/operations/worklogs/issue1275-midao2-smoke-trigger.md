@@ -28,3 +28,11 @@ ownership：#1918 原 Claude 持有 calendar 產品與 spec，不在本修補內
 ## 絕不重做
 
 不重做 #1918 已增加的 calendar spec、不改 #1887 supplemental jobs、不改 DB／Production／秘密／權限、不重跑不相關 CI，不將此路徑修補稱產品正式驗收。
+
+## 2026-10-23 11:19 Asia/Taipei 遠端驗證補記
+
+- PR #1920 已交付並轉 Ready，原已驗證 head `e8478d1f606dc5023ccfe1ea1717107bb45d4714`。
+- [CI 39893167957](https://github.com/smallwei0301/tour-platform/actions/runs/39893167957) success；Web tests／Preflight 為 6009 pass、3 skip、0 fail，lint/typecheck/build成功。
+- [Code／Security 審查](https://github.com/smallwei0301/tour-platform/pull/1920#issuecomment-6356482427) 綁上述 head，均 completed，無 findings／unresolved findings；不代表 actual model 身份已驗證。
+- 本次僅補記既有結果；這些結果不移作補記後新 head 的 CI。合併前仍須核新 exact head 的 CI、適用審查、ownership／衝突與必要授權；未合併、未宣稱 Production 驗收。
+- [smoke39893167979](https://github.com/smallwei0301/tour-platform/actions/runs/39893167979) 真實18 passed；本PR亦修改workflow，所以不能用本次run獨立證明未來僅Midao2檔案變更的服務端觸發。
