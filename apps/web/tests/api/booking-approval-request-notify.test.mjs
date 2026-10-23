@@ -16,9 +16,17 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP = join(__dirname, '../..');
 const read = (rel) => readFileSync(join(APP, rel), 'utf8');
 
-test('sendBookingApprovalRequested: 空收件人 → skipped', async () => {
-  const res = await sendBookingApprovalRequested({ to: '', activityTitle: 'X' });
-  assert.equal(res.status, 'skipped');
+test('sendBookingApprovalRequested: 空收件人 → skipped，且不呼叫 provider（有無 RESEND_API_KEY 皆同）', async () => {
+  let calls = 0;
+  __setEmailClientForTest({ emails: { send: async () => { calls += 1; return { data: { id: 't' } }; } } });
+  try {
+    const res = await sendBookingApprovalRequested({ to: '', activityTitle: 'X' });
+    assert.equal(res.status, 'skipped');
+    assert.equal(res.errorCode, 'NO_RECIPIENT');
+    assert.equal(calls, 0);
+  } finally {
+    __setEmailClientForTest(null);
+  }
 });
 
 test('sendBookingApprovalRequested: html 含時段/人數/金額/先審核後付款說明/審核連結', async () => {

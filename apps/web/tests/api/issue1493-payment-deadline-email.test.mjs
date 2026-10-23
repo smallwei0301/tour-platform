@@ -15,11 +15,19 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP = join(__dirname, '../..');
 const read = (rel) => readFileSync(join(APP, rel), 'utf8');
 
-test('sendPaymentDeadlineNotice: 空收件人 → skipped', async () => {
-  const res = await sendPaymentDeadlineNotice({
-    to: '', activityTitle: 'X', paymentDeadlineAt: '2030-07-07T00:00:00+08:00',
-  });
-  assert.equal(res.status, 'skipped');
+test('sendPaymentDeadlineNotice: 空收件人 → skipped，且不呼叫 provider（有無 RESEND_API_KEY 皆同）', async () => {
+  let calls = 0;
+  __setEmailClientForTest({ emails: { send: async () => { calls += 1; return { data: { id: 't' } }; } } });
+  try {
+    const res = await sendPaymentDeadlineNotice({
+      to: '', activityTitle: 'X', paymentDeadlineAt: '2030-07-07T00:00:00+08:00',
+    });
+    assert.equal(res.status, 'skipped');
+    assert.equal(res.errorCode, 'NO_RECIPIENT');
+    assert.equal(calls, 0);
+  } finally {
+    __setEmailClientForTest(null);
+  }
 });
 
 test('sendPaymentDeadlineNotice: html 含截止時間（台灣時間）與付款連結', async () => {

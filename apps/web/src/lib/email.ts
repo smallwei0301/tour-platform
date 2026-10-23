@@ -22,7 +22,11 @@ interface EmailLogEntry {
   ts: string;
 }
 
-export type EmailFailureCode = 'EMAIL_PROVIDER_NOT_CONFIGURED' | 'EMAIL_SEND_FAILED' | 'NO_GUIDE_EMAIL';
+export type EmailFailureCode =
+  | 'EMAIL_PROVIDER_NOT_CONFIGURED'
+  | 'EMAIL_SEND_FAILED'
+  | 'NO_GUIDE_EMAIL'
+  | 'NO_RECIPIENT';
 
 export interface EmailDeliveryResult {
   ok: boolean;
@@ -43,7 +47,7 @@ function logEmail(entry: EmailLogEntry): void {
   if (entry.status === 'sent') {
     console.log(`${base} | messageId=${entry.messageId} | orderId=${entry.orderId ?? '-'}`);
   } else if (entry.status === 'skipped') {
-    console.log(`${base} | reason=no_api_key`);
+    console.log(`${base} | reason=${entry.error ?? 'no_api_key'}`);
   } else {
     console.error(`${base} | error=${entry.error}`);
   }
@@ -51,7 +55,7 @@ function logEmail(entry: EmailLogEntry): void {
 
 const FROM = process.env.EMAIL_FROM || 'Midao 祕島 <noreply@resend.dev>';
 
-type EmailClient = { emails: { send: (args: CreateEmailOptions) => Promise<{ data: { id?: string } | null }> } };
+type EmailClient = { emails: { send: (args: CreateEmailOptions) => Promise<{ data: { id?: string } | null; error?: { message?: unknown } | null }> } };
 let _resend: Resend | null = null;
 let _emailClientOverride: EmailClient | null = null;
 
@@ -74,13 +78,27 @@ export async function sendEmailWithContract(input: {
   html: string;
   orderId?: string;
 }): Promise<EmailDeliveryResult> {
-  const resend = getResend();
   const base = {
     fn: input.fn,
     to: input.to,
     subject: input.subject,
     orderId: input.orderId,
   };
+
+  // 沒有收件人永遠不該寄，與 provider 是否設定無關（#1911）：必須在 getResend()/send 之前返回。
+  if (typeof input.to !== 'string' || input.to.trim() === '') {
+    logEmail({ ...base, status: 'skipped', error: 'no_recipient', ts: new Date().toISOString() });
+    return {
+      ...base,
+      ok: false,
+      status: 'skipped',
+      errorCode: 'NO_RECIPIENT',
+      errorMessage: 'recipient is empty',
+      retriable: false,
+    };
+  }
+
+  const resend = getResend();
 
   if (!resend) {
     logEmail({ ...base, status: 'skipped', ts: new Date().toISOString() });
@@ -96,12 +114,28 @@ export async function sendEmailWithContract(input: {
 
   try {
     const result = await resend.emails.send({ from: FROM, to: input.to, subject: input.subject, html: input.html });
-    logEmail({ ...base, messageId: result.data?.id, status: 'sent', ts: new Date().toISOString() });
+    // Resend SDK 失敗通常不 throw，而是回 { data: null, error }（#1911）。
+    const messageId = result?.data?.id;
+    if (result?.error || !messageId) {
+      const errorMessage = result?.error
+        ? String(result.error.message ?? 'unknown provider error')
+        : 'provider returned no message id';
+      logEmail({ ...base, status: 'failed', error: errorMessage, ts: new Date().toISOString() });
+      return {
+        ...base,
+        ok: false,
+        status: 'failed',
+        errorCode: 'EMAIL_SEND_FAILED',
+        errorMessage,
+        retriable: true,
+      };
+    }
+    logEmail({ ...base, messageId, status: 'sent', ts: new Date().toISOString() });
     return {
       ...base,
       ok: true,
       status: 'sent',
-      messageId: result.data?.id,
+      messageId,
     };
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
