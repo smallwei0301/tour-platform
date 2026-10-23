@@ -122,7 +122,7 @@
         "actualModel": "unknown",
         "count": 1,
         "contextClass": "compact",
-        "accepted": false,
+        "accepted": true,
         "inputTokens": null,
         "outputTokens": null,
         "cachedTokens": null,
@@ -183,7 +183,8 @@
     "更正：smoke 派工 receipt 的 dispatchedAt 原估 12:43:10Z，早於 before record 12:44:02Z，改為 12:44:10Z（推估值）。教訓：dispatchedAt 一律在 SendMessage 前以 date -u 取得，不憑記憶估。",
     "2026-10-22 12:50Z 起依 Owner 中斷與停止指示暫停（Vercel Deployment Storage 滿額），2026-10-23 00:44Z Owner 說「繼續」恢復。期間 main 前進至 abe7e714（#1919 世界影片改走 Vercel Blob），與本 PR 無檔案重疊，不需 re-align。",
     "恢復後推送策略：帳本／worklog 不單獨推送，併入施工或收尾 commit，以減少 Preview 部署。",
-    "#1918 browser（midao-baseline，head 03642a7a）失敗：docker registry toomanyrequests: Data limit exceeded（外部額度），非本 PR 程式。"
+    "#1918 browser（midao-baseline，head 03642a7a）失敗：docker registry toomanyrequests: Data limit exceeded（外部額度），非本 PR 程式。",
+    "Sol 重派審查 PASS（blocking 0；突變 9 項全擋）。non-blocking 後續：異常列靜默略過（DB CHECK 已擋）、跨日時段只標 blackout 當日、全日封鎖月格同時顯示可用短條、缺多筆重疊／跨年等邊界正式測試、e2e-smoke workflow paths 不含 midao2/**（既有，需改 workflow，非本授權）。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
@@ -216,6 +217,36 @@
         "head": "856fde57340c66747b26c6a034b3843407e4a0ae",
         "workstream": "PRODUCT_MAINLINE",
         "reason": "856fde57，34/34，突變 2/2 被擋"
+      },
+      {
+        "id": "r03-wip-3",
+        "at": "2026-10-22T12:44:10Z",
+        "kind": "BUILD_ENTER",
+        "pr": 1918,
+        "issue": 1761,
+        "head": "7355a16e4b33a79e4cda09dbd965a395a72b6382",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "calendar e2e 納入 smoke（sonnet）"
+      },
+      {
+        "id": "r03-wip-4",
+        "at": "2026-10-22T12:45:00Z",
+        "kind": "BUILD_EXIT",
+        "pr": 1918,
+        "issue": 1761,
+        "head": "7355a16e4b33a79e4cda09dbd965a395a72b6382",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "7355a16e"
+      },
+      {
+        "id": "r03-wip-5",
+        "at": "2026-10-23T00:45:20Z",
+        "kind": "VERIFY_ENTER",
+        "pr": 1918,
+        "issue": 1761,
+        "head": "7355a16e4b33a79e4cda09dbd965a395a72b6382",
+        "workstream": "PRODUCT_MAINLINE",
+        "reason": "Sol 重派審查、CI 與 browser 重跑"
       }
     ]
   },

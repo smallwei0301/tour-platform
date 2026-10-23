@@ -226,3 +226,52 @@
 - 收尾 PR #1918：
   - Codex 提出 2 個 P2：smoke 候選 head 漏登 WIP、`PR_MERGED` 的 subject 沒寫出 PR。兩項都已修正，thread 已 resolve。
   - head `74258ee2` 的 CI：[test](https://github.com/smallwei0301/tour-platform/actions/runs/39774179577/job/119808856424)、[scan](https://github.com/smallwei0301/tour-platform/actions/runs/39774179608/job/119808856526) 皆 success，Vercel 也是 success。
+
+## 2026-10-22／23 calendar round-trip slice 1：Midao2 月曆疊加舊後台封鎖日（Run `2026-10-22-midao2-r03`，PR #1918）
+
+### 盤點（r03-luna-guidecal，haiku）
+- 舊後台與 Midao2 只共用全域週規則，兩邊之間沒有同步機制。
+  - 舊後台寫入的 `guide_blackout_dates`、`activity_schedules`，Midao2 月曆讀不到。
+  - Midao2 寫入的 `guide_availability_day_revisions`，舊後台的 availability-preview 讀不到。
+- 旅客端 `available-slots` 會讀週規則、day_revisions、blackout 三種來源，所以訂位結果正確。缺口只在導遊端的顯示。
+
+### TRIAGE（主 Agent）
+- 切片內容：Midao2 月曆 GET 以唯讀方式疊加 blackout，新增 `hasBlackout`／`blackouts`。
+  - blackout 讀取失敗時回 5xx，不降級。
+  - 不改寫入、不雙寫。
+  - 風險 normal：只影響導遊端顯示，旅客端的判斷早已涵蓋 blackout。
+- BLOCKER：舊後台 availability-preview 不讀 `day_revisions`。要修正得改 v2 以外的舊路由，超出 goal 限定的「新碼只落 `app/api/v2/**`」，留到 #1869（legacy 退役）處理，或由 Owner 另行授權。
+
+### 施工（sonnet）
+- `856fde57`：
+  - 新增 `src/lib/midao/midao-calendar-blackouts.mjs`，依 Asia/Taipei 逐日分配 blackout；跨日的封鎖每一天都標示，整天被涵蓋時加 `allDay`。
+  - calendar route 只查一次，條件為 `guide_id`、`starts_at < 下月初`、`ends_at > 本月初`，只 select `starts_at, ends_at`。
+  - UI 在月格與當日明細標示「舊後台封鎖」。
+  - 驗證：RED 8/8 失敗 → GREEN 34/34；突變測試 2 項都有擋下。
+- `7355a16e`：`midao2-calendar-canonical.spec.ts` 加入 `test:e2e:smoke`。
+
+### 審查（opus，fresh context）
+- 第一次審查在 Owner 中斷時被打斷，沒有結論。
+- 重派後 PASS，blocking 0。
+  - 突變 9 項全部擋下，包括 `guide_id`、失敗回空陣列、時區偏移 8 小時、上下界寫反、改成閉區間等。
+  - 半開區間的語意與旅客端 `rangesOverlap` 一致。
+  - 只回傳本導遊的資料，不含 reason，失敗時回 500。
+- non-blocking 後續項目：
+  - 跨日時段只在 blackout 所在的那天標示。
+  - 整天封鎖的日子，月格同時顯示「可用」短條與「封鎖」。
+  - 多筆重疊、跨年等邊界缺正式測試。
+  - `e2e-smoke` workflow 的 paths 不含 `midao2/**`。這是既有問題，修正要改 workflow，不在本授權範圍。
+
+### 暫停與恢復
+- 2026-10-22 12:50Z：Owner 中斷，並因 Vercel Deployment Storage 用量達 100% 指示暫停。
+- 2026-10-23 00:44Z：Owner 說「繼續」恢復。
+- 暫停期間 main 前進到 `abe7e714`（#1919：世界影片改由 Vercel Blob 提供），與本 PR 沒有重疊的檔案。
+- 恢復後的推送策略：帳本與 worklog 不再單獨推送。
+
+### CI（PR head `03642a7a`）
+- [test](https://github.com/smallwei0301/tour-platform/actions/runs/39781001879/job/119831920794)：success
+- [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39781001826/job/119831921708)：success
+- [smoke](https://github.com/smallwei0301/tour-platform/actions/runs/39781001921/job/119831921822)：success，24/24。其中 `midao2-calendar-canonical` 6/6，包含「舊後台封鎖日」案例。
+- browser（midao-baseline）：
+  - 第一次因 docker registry 回 `toomanyrequests: Data limit exceeded` 失敗，屬外部額度問題。已在 PR 留言說明並重跑一次。
+  - [重跑結果](https://github.com/smallwei0301/tour-platform/actions/runs/39781001896/job/120175000026)：success，53 passed，`MIDAO_STAGE=complete`。
