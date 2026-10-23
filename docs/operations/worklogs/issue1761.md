@@ -350,3 +350,11 @@
   1. 頁面測試是原始碼斷言，沒有實際渲染；要用 Playwright 驗收補上。
   2. 缺「無 CSRF 且未登入 → 403」的順序測試。
   3. `-0` 回傳 `-0`，序列化後即為 0，沒有實害。
+
+### CI（PR #1922 head `d0df4fda`）
+- [test](https://github.com/smallwei0301/tour-platform/actions/runs/39902700289/job/120247625047)：success
+- [smoke](https://github.com/smallwei0301/tour-platform/actions/runs/39902700302/job/120247624777)：success
+- [scan](https://github.com/smallwei0301/tour-platform/actions/runs/39902700348/job/120247625003)：success
+- browser：
+  - 第一次失敗，原因是 docker registry 回 `toomanyrequests`，發生在任何測試執行之前，屬外部額度問題。已在 [PR 留言](https://github.com/smallwei0301/tour-platform/pull/1922#issuecomment-6357737715) 說明並重跑一次。
+  - [重跑結果](https://github.com/smallwei0301/tour-platform/actions/runs/39902700260/job/120248884349)：success。
