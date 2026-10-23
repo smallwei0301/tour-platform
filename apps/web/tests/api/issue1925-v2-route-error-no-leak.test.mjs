@@ -531,3 +531,20 @@ test('ORDER_DOMAIN_ERROR_PATTERNS 整句錨定：精確業務訊息放行，前�
   ]) assert.equal(pick(bad), FALLBACK, `不應放行：${bad}`);
   assert.equal(pickSafeMessage('order not found', ORDER_DOMAIN_ERROR_PATTERNS, FALLBACK), FALLBACK, '非 Error 一律 fallback');
 });
+
+test('SETTLEMENT_RPC_NOT_DEPLOYED：只放行完整固定訊息，前綴後接 DB 細節不放行', async () => {
+  const { RPC_MISSING_MESSAGE } = await import('../../src/lib/settlement/db-settlement-atomic.mjs');
+  const pick = (msg) => pickSafeMessage(new Error(msg), ORDER_DOMAIN_ERROR_PATTERNS, 'generic');
+  assert.equal(pick(RPC_MISSING_MESSAGE), RPC_MISSING_MESSAGE);
+  assert.equal(pick('SETTLEMENT_RPC_NOT_DEPLOYED: relation "x" does not exist'), 'generic');
+  assert.equal(pick(`${RPC_MISSING_MESSAGE} relation "x" does not exist`), 'generic');
+  assert.equal(pick(`prefix ${RPC_MISSING_MESSAGE}`), 'generic');
+});
+
+test('ORDER_DOMAIN_ERROR_PATTERNS 每一條都以 ^ 開頭、以 $ 結尾', () => {
+  assert.ok(ORDER_DOMAIN_ERROR_PATTERNS.length > 0);
+  for (const re of ORDER_DOMAIN_ERROR_PATTERNS) {
+    assert.ok(re.source.startsWith('^'), `缺開頭錨定：${re.source}`);
+    assert.ok(re.source.endsWith('$') && !re.source.endsWith('\\$'), `缺結尾錨定：${re.source}`);
+  }
+});

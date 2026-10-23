@@ -124,5 +124,7 @@ export const ORDER_DOMAIN_ERROR_PATTERNS: ReadonlyArray<RegExp> = [
   /^guide balance is empty — nothing to pay out$/,
   /^guide balance row not found for guide [0-9a-fA-F-]+$/,
   /^insufficient guide balance: have -?\d+, need -?\d+$/,
-  /^SETTLEMENT_RPC_NOT_DEPLOYED: /,
+  // 完整固定訊息（db-settlement-atomic.mjs 的 RPC_MISSING_MESSAGE）；整句錨定。本檔不 import .mjs（部分測試會把本檔複製到暫存目錄載入），
+  // 兩者一致性由 issue1925 測試斷言。
+  /^SETTLEMENT_RPC_NOT_DEPLOYED: 原子結算 RPC 尚未套用至資料庫，已中止以避免非原子寫入。請先套用 migration 20260729160000_issue1777_atomic_settlement_and_payout_confirm\.sql。$/,
 ];
