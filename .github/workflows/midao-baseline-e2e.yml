@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/midao-baseline-e2e.yml'
+      - 'apps/web/app/api/v2/me/booking-confirmations/**'
       - 'apps/web/e2e/helpers.ts'
       - 'apps/web/e2e/midao-*.spec.ts'
       - 'apps/web/e2e/issue1814-checkout-idempotency.spec.ts'

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
+import { load } from 'js-yaml';
 
 const root = resolve(import.meta.dirname, '../../../..');
 const workflowPath = resolve(root, '.github/workflows/midao-baseline-e2e.yml');
@@ -9,6 +10,14 @@ const workflowPath = resolve(root, '.github/workflows/midao-baseline-e2e.yml');
 function workflowSource() {
   return readFileSync(workflowPath, 'utf8');
 }
+
+test('confirmation-only route changes trigger the existing Midao runtime lane', () => {
+  const source = workflowSource();
+  const paths = load(source)?.on?.pull_request?.paths;
+  assert.ok(Array.isArray(paths), 'the path must belong to on.pull_request.paths, not a comment or runtime step');
+  assert.ok(paths.includes('apps/web/app/api/v2/me/booking-confirmations/**'));
+  assert.ok(paths.every((path) => typeof path === 'string' && !path.startsWith('!')), 'negative path filters must not exclude confirmation-only changes');
+});
 
 test('Midao baseline E2E workflow is PR-triggered, bounded, and uses Node 22', () => {
   const source = workflowSource();
