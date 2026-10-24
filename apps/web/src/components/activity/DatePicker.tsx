@@ -3,8 +3,16 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 
-// 純資料：用於月曆運算（getDay()/月份索引），顯示用文字一律改走 i18n（見 t('weekdays')/t('months')）。
-const WEEK_DAYS = ['日', '一', '二', '三', '四', '五', '六'];
+// 日期鍵是 civil date；只有「今天」從使用者本地年月日取得。
+function localDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+function civilDate(dateKey: string): Date {
+  return new Date(`${dateKey}T00:00:00Z`);
+}
+function civilWeekday(dateKey: string): number {
+  return civilDate(dateKey).getUTCDay();
+}
 
 interface Schedule {
   startAt?: string;
@@ -36,7 +44,7 @@ function toDateKey(rawStartAt: string): string | null {
   if (isoLikeMatch) return isoLikeMatch[1];
   const parsed = new Date(rawStartAt);
   if (Number.isNaN(parsed.getTime())) return null;
-  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+  return localDateKey(parsed);
 }
 
 function buildAvailMap(schedules: Schedule[]): Map<string, { available: boolean; remaining: number }> {
@@ -62,15 +70,13 @@ function buildAvailMap(schedules: Schedule[]): Map<string, { available: boolean;
 }
 
 function buildMonthDays(year: number, month: number, availMap: Map<string, { available: boolean; remaining: number }>, price?: number): (DayInfo | null)[] {
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const firstDay = new Date(Date.UTC(year, month, 1)).getUTCDay();
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const todayKey = localDateKey(new Date());
   const cells: (DayInfo | null)[] = Array(firstDay).fill(null);
   for (let d = 1; d <= daysInMonth; d++) {
     const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const dayDate = new Date(dateKey);
-    const isPast = dayDate < today;
+    const isPast = dateKey < todayKey;
     const info = availMap.get(dateKey);
     const available = !isPast && !!info?.available;
     cells.push({ dateKey, day: d, available, remaining: info?.remaining ?? 0, price });
@@ -81,17 +87,16 @@ function buildMonthDays(year: number, month: number, availMap: Map<string, { ava
 // Generate next-30-days pill dates — show ALL days, unavailable if no schedule
 function buildNext30Days(availMap: Map<string, { available: boolean; remaining: number }>) {
   const pills = [];
-  const today = new Date();
+  const today = civilDate(localDateKey(new Date()));
   for (let i = 0; i < 30; i++) {
     const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    const dateKey = d.toISOString().slice(0, 10);
+    d.setUTCDate(today.getUTCDate() + i);
+    const dateKey = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
     const info = availMap.get(dateKey);
     pills.push({
       dateKey,
-      month: d.getMonth() + 1,
-      day: d.getDate(),
-      weekDay: WEEK_DAYS[d.getDay()],
+      month: d.getUTCMonth() + 1,
+      day: d.getUTCDate(),
       available: !!info?.available,
       remaining: info?.remaining ?? 0,
       hasSchedule: !!info,
@@ -205,8 +210,8 @@ function CalendarModal({
           {cells.map((cell, i) => {
             if (!cell) return <span key={`empty-${i}`} />;
             const isSelected = selectedDate === cell.dateKey;
-            const isSun = new Date(cell.dateKey).getDay() === 0;
-            const isSat = new Date(cell.dateKey).getDay() === 6;
+            const isSun = civilWeekday(cell.dateKey) === 0;
+            const isSat = civilWeekday(cell.dateKey) === 6;
             const [y, m, d] = cell.dateKey.split('-');
             const ariaLabel = cell.available
               ? t('ariaDayAvailable', { year: y, month: Number(m), day: Number(d), remaining: cell.remaining })
@@ -248,7 +253,7 @@ function CalendarModal({
 
         {selectedDate && (
           <div className="kkd-cal-selected-summary">
-            {t('selectedSummary', { date: selectedDate.slice(5).replace('-', '/'), weekday: weekdayLabels[new Date(selectedDate).getDay()] })}
+            {t('selectedSummary', { date: selectedDate.slice(5).replace('-', '/'), weekday: weekdayLabels[civilWeekday(selectedDate)] })}
           </div>
         )}
       </div>
@@ -305,7 +310,7 @@ export function DatePicker({ schedules, selectedDate, onSelect, price }: DatePic
               title={isFull ? t('titleFull') : noSchedule ? t('titleNoSchedule') : t('titleRemaining', { n: p.remaining })}
             >
               <span className="tp-date-pill-month">{p.month}/{p.day}</span>
-              <span className="tp-date-pill-week">{t('weekPrefix', { weekday: weekdayLabels[new Date(p.dateKey).getDay()] })}</span>
+              <span className="tp-date-pill-week">{t('weekPrefix', { weekday: weekdayLabels[civilWeekday(p.dateKey)] })}</span>
               {isFull && <span className="tp-date-pill-full">{t('pillFull')}</span>}
               {noSchedule && <span className="tp-date-pill-na">—</span>}
             </button>

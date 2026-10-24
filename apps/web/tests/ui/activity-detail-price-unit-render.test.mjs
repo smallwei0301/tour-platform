@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -68,6 +69,16 @@ function loadCjsModule({ filePath, source, mockMap }) {
       if (specifier.startsWith('./') || specifier.startsWith('../')) {
         const resolved = path.resolve(dirname, specifier);
         if (mockMap[resolved]) return mockMap[resolved];
+        // Load the real new client policy component; retain this page's existing SSR assertions.
+        if (resolved.endsWith('/SelectedPlanConfirmation')) {
+          const componentPath = `${resolved}.tsx`;
+          const context = Object.entries(mockMap).find(([key]) => key.endsWith('/SelectedPlanContext'))?.[1];
+          return loadCjsModule({ filePath: componentPath,
+            source: transpileTsxToCjs(readFileSync(componentPath, 'utf8'), componentPath),
+            mockMap: { ...mockMap, './SelectedPlanContext': context, 'next-intl': { useLocale: () => 'zh-Hant' } },
+          });
+        }
+        return require(resolved);
       }
       return require(specifier);
     },

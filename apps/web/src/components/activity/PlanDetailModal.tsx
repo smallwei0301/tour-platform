@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { publicRefundRules, formatPlanConfirmation } from '../../lib/public-policy/copy.mjs';
 
 export interface PlanDetail {
   id: string;
@@ -86,6 +87,7 @@ const TABS = [
 ];
 
 export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalProps) {
+  const locale = useLocale();
   const t = useTranslations('planModal');
   const [activeTab, setActiveTab] = useState('highlights');
   const modalRef = useRef<HTMLDivElement>(null);
@@ -267,15 +269,10 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
                 {plan.confirmByDays != null && (
                   <div style={infoRowStyle}>
                     <span style={iconStyle}>{ICONS.check}</span>
-                    <span>{t('confirmByDays', { n: plan.confirmByDays })}</span>
+                    <span>{formatPlanConfirmation(locale, plan.confirmByDays)}</span>
                   </div>
                 )}
-                {plan.freeCancelDays != null && (
-                  <div style={infoRowStyle}>
-                    <span style={iconStyle}>{ICONS.refresh}</span>
-                    <span>{t('freeCancelDays', { n: plan.freeCancelDays })}</span>
-                  </div>
-                )}
+
               </div>
             </div>
           )}
@@ -377,15 +374,11 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
               <p style={subHeadStyle}>{t('refundFeeSubHead')}</p>
               <p style={{ fontSize: 14, marginBottom: 16, color: C.text }}>{t('refundFeeValue')}</p>
               <p style={subHeadStyle}>{t('refundPolicySubHead')}</p>
-              {plan.planRefundRules && plan.planRefundRules.length > 0 ? (
-                <ul style={listStyle}>
-                  {plan.planRefundRules.map((r, i) => (
-                    <li key={i} style={{ ...listItemStyle, paddingLeft: 0, listStyle: 'disc', marginLeft: 18, display: 'list-item' }}>{r}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p style={emptyStyle}>{t('refundEmpty')}</p>
-              )}
+              <ul style={listStyle}>
+                {publicRefundRules(locale).map((r, i) => (
+                  <li key={i} style={{ ...listItemStyle, paddingLeft: 0, listStyle: 'disc', marginLeft: 18, display: 'list-item' }}>{r}</li>
+                ))}
+              </ul>
             </div>
           )}
 

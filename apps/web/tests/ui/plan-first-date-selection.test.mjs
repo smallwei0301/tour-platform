@@ -20,9 +20,33 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import ts from 'typescript';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
+
+// Selection-sync effects are valid; availability loading must remain event-driven.
+function assertNoEffectAvailabilityFetch(src) {
+  const source = ts.createSourceFile('DatePlanSection.tsx', src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  assert.equal(source.parseDiagnostics.length, 0, 'component must parse before checking effect intent');
+  const callName = node => ts.isIdentifier(node) ? node.text : ts.isPropertyAccessExpression(node) ? node.name.text : null;
+  function assertCallback(node) {
+    if (ts.isCallExpression(node)) {
+      assert.ok(!['fetch', 'ensureLiveAvailability'].includes(callName(node.expression)), 'availability fetch must not be called inside an effect');
+    }
+    ts.forEachChild(node, assertCallback);
+  }
+  function visit(node) {
+    if (ts.isCallExpression(node) && callName(node.expression) === 'useEffect') {
+      assert.ok(node.arguments[0], 'effect callback must be inspectable');
+      assert.ok(ts.isArrowFunction(node.arguments[0]) || ts.isFunctionExpression(node.arguments[0]), 'effect must have an inline inspectable callback');
+      assertCallback(node.arguments[0]);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+}
+
 
 const { filterSchedulesForPlan } = await import(
   path.join(ROOT, 'src/components/activity/plan-schedule-match.ts')
@@ -111,7 +135,7 @@ test('DatePlanSection：選中的方案卡片內渲染 per-plan DatePicker（用
 
 test('DatePlanSection：可用性抓取仍為 intent-driven（無 mount fetch），點方案時觸發', async () => {
   const src = await readSource('src/components/activity/DatePlanSection.tsx');
-  assert.doesNotMatch(src, /useEffect\s*\(/, '不得加入 mount-time fetch');
+  assertNoEffectAvailabilityFetch(src);
   assert.match(
     src,
     /onClick=\{\(\) => \{\s*if \(!canBook\) return;\s*void ensureLiveAvailability\(\);/s,

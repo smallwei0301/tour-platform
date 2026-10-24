@@ -6,6 +6,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { publicRefundRules } from '../../src/lib/public-policy/copy.mjs';
 
 const pageSource = readFileSync(
   resolve(import.meta.dirname, '../../app/[locale]/activities/[region]/[slug]/page.tsx'),
@@ -39,10 +40,12 @@ describe('activity sidebar — payment and refund copy (#604)', () => {
 
   it('shows refund policy tiers in sidebar', () => {
     const trustSection = pageSource.match(/kkd-booking-trust[\s\S]{0,500}/)?.[0] || '';
-    assert.ok(trustSection.includes("t('trustRefundPrefix')"), 'Trust block must render refund tiers via t(\'trustRefundPrefix\')');
-    // Must mention refund tiers (7天/70%/72小時 or similar)
-    const hasRefundInfo = activityDetail.trustRefundPrefix.includes('退款') || activityDetail.trustRefundPrefix.includes('取消時間');
-    assert.ok(hasRefundInfo, 'trustRefundPrefix copy must mention refund policy tiers, not just "依行程政策"');
+    assert.ok(trustSection.includes("publicRefundRules(locale).join(' ')"), 'Sidebar must render the shared locale-aware V2 tiers');
+    assert.deepEqual(publicRefundRules('zh-Hant'), [
+      '出團前 168 小時（含）以上：100% 退款。',
+      '出團前大於 72 小時且少於 168 小時：70% 退款。',
+      '出團前 72 小時（含）內：0% 退款。',
+    ]);
   });
 
   it('links to /legal/refund', () => {
