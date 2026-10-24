@@ -42,7 +42,7 @@ export function createClient() {
         then(resolve) {
           const w = globalThis.__T1923;
           if (table === 'orders') return resolve({ data: w.orders, error: null });
-          if (table === 'review_invitations' && op === 'select') return resolve({ data: [], error: null });
+          if (table === 'review_invitations' && op === 'select') return resolve({ data: w.existing ?? [], error: null });
           if (table === 'review_invitations' && op === 'insert') {
             w.attempts.push(payload);
             if (!CHECK.initiated_by.has(payload.initiated_by) || !CHECK.status.has(payload.status)) {
@@ -76,6 +76,8 @@ const STUB_PROMO = `export async function fetchReturningPromoEmailBlock() { retu
 const STUB_CRON = `
 export async function isCronJobEnabled() { return { enabled: true }; }
 export async function recordCronRun(x) { (globalThis.__T1923.cron ||= []).push(x); }`;
+const STUB_ROUTE_ERROR = `
+export async function reportRouteError(err, opts) { (globalThis.__T1923.reported ||= []).push({ err, opts }); }`;
 const STUB_ENV = `
 export const getSupabaseUrl = () => 'http://stub.invalid';
 export const getSupabaseServiceRoleKey = () => 'stub-key';`;
@@ -90,6 +92,7 @@ before(async () => {
   const files = {
     'supabase.mjs': STUB_SUPABASE, 'next.mjs': STUB_NEXT, 'email.mjs': STUB_EMAIL,
     'promo.mjs': STUB_PROMO, 'cron.mjs': STUB_CRON, 'env.mjs': STUB_ENV,
+    'route-error.mjs': STUB_ROUTE_ERROR,
   };
   for (const [n, b] of Object.entries(files)) await writeFile(path.join(tmpDir, n), b);
   const real = (rel) => pathToFileURL(path.join(WEB, rel)).href;
@@ -99,6 +102,7 @@ before(async () => {
     'lib/email': url('email.mjs'),
     'lib/returning-promo.mjs': url('promo.mjs'),
     'lib/cron-job-controls.mjs': url('cron.mjs'),
+    'lib/route-error': url('route-error.mjs'),
     'config/supabase-service-env.mjs': url('env.mjs'),
   };
   let src = await readFile(path.join(WEB, ROUTE_REL), 'utf8');
@@ -128,8 +132,8 @@ function order(id, email) {
     activities: { title: 'T' }, operations_tracking: { has_complaint: false },
   };
 }
-async function run(orders) {
-  globalThis.__T1923 = { check: { initiated_by: ALLOWED_INITIATED_BY, status: ALLOWED_STATUS }, orders, rows: [], attempts: [], sendCalls: [] };
+async function run(orders, existing = []) {
+  globalThis.__T1923 = { check: { initiated_by: ALLOWED_INITIATED_BY, status: ALLOWED_STATUS }, orders, existing, rows: [], attempts: [], sendCalls: [] };
   const res = await POST(new Request('http://x/api/internal/reviews/review-invitation-sweep', { method: 'POST', headers: { 'x-internal-token': 'tok-1923' } }));
   const body = await res.json();
   return { res, body, w: globalThis.__T1923 };
@@ -204,6 +208,30 @@ test('send 拋出非預期例外 → 既有 catch：failed+1、寫 failed 列（
   assert.equal(w.rows.length, 1);
   assert.equal(w.rows[0].status, 'failed');
   assert.equal(w.rows[0].initiated_by, 'cron');
+});
+
+test('#1926 catch 路徑：failure_reason 為固定代碼 SWEEP_UNEXPECTED_ERROR，不含丟出的錯誤字串；原始錯誤只上報', async () => {
+  const { w } = await run([order('o6', 'throw@x.test')]);
+  assert.equal(w.rows.length, 1);
+  assert.equal(w.rows[0].failure_reason, 'SWEEP_UNEXPECTED_ERROR');
+  assert.ok(!JSON.stringify(w.rows).includes('boom-throw'));
+  assert.ok(!JSON.stringify(w.rows).includes('throw@x.test'));
+  assert.equal(w.reported?.length, 1, '原始例外應經 reportRouteError 上報');
+  assert.match(String(w.reported[0].err?.message), /boom-throw/);
+  assert.ok(!JSON.stringify(w.reported[0].opts).includes('throw@x.test'), '上報 metadata 不得含 email');
+});
+
+test('#1926 重試上限：existing 已有 3 筆 failed → 不呼叫 sendReviewInvitation；2 筆 failed 仍會寄', async () => {
+  const failed = (id, n) => Array.from({ length: n }, () => ({ order_id: id, status: 'failed' }));
+  const capped = await run([order('c1', 'ok@x.test')], failed('c1', 3));
+  assert.equal(capped.w.sendCalls.length, 0);
+  assert.equal(capped.body.sent, 0);
+  assert.equal(capped.body.failed, 0);
+  assert.equal(capped.body.skipReasonCounts.IDEMPOTENCY, 1);
+
+  const notYet = await run([order('c2', 'ok@x.test')], failed('c2', 2));
+  assert.equal(notYet.w.sendCalls.length, 1);
+  assert.equal(notYet.body.sent, 1);
 });
 
 test('混合批次：計數與列數一致，且全部 insert 都通過 CHECK', async () => {

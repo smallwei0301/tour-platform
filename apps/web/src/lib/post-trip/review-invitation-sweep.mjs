@@ -29,6 +29,9 @@ import {
 
 export const REVIEW_INVITATION_SWEEP_ENV_VAR = 'REVIEW_INVITATION_SWEEP_ENABLED';
 
+/** #1926：同一訂單 failed 紀錄達此次數即停止自動重寄（永久性失敗不再每天重試）。 */
+export const REVIEW_INVITATION_SWEEP_MAX_FAILED_ATTEMPTS = 3;
+
 /**
  * Feature-flag gate. Default OFF: the sweep does nothing unless an
  * operator explicitly opts in via env var.
@@ -86,7 +89,10 @@ export function evaluateReviewInvitationSweepCandidates(input) {
     const existing = Array.isArray(existingByOrderId[orderId])
       ? existingByOrderId[orderId]
       : [];
-    const idem = evaluateReviewInvitationIdempotency({ existingInvitations: existing });
+    const idem = evaluateReviewInvitationIdempotency({
+      existingInvitations: existing,
+      maxFailedAttempts: REVIEW_INVITATION_SWEEP_MAX_FAILED_ATTEMPTS,
+    });
     if (!idem.allowSend) {
       return { orderId, action: 'skip', reason: 'IDEMPOTENCY', code: idem.code };
     }
