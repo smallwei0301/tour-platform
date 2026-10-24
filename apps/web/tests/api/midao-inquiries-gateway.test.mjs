@@ -237,12 +237,171 @@ test('mark replied is guide-owned and allows only the Task 33 new-to-replied tra
   assert.equal(replied.inquiry.status, 'replied');
   assert.equal(replied.inquiry.lastRepliedAt, CLOCK);
 
+  // #1916 契約變更：已是 replied 的重複呼叫不再回 409，改為自然冪等的 replayed 200（見下方專屬測試）。
   const repeated = await gateway.markMidaoInquiryRepliedDb({ inquiryId: IDS.inquiry, guideId: IDS.guide });
-  assert.deepEqual(repeated, { ok: false, status: 409, code: 'INVALID_INQUIRY_STATE', inquiry: null });
+  assert.equal(repeated.ok, true);
+  assert.equal(repeated.status, 200);
+  assert.equal(repeated.replayed, true);
 
   gateway.__seedMidaoInquiryForTest(rawInquiry({ id: IDS.otherInquiry, inquiry_no: 'INQ-0002', status: 'opened' }));
   const opened = await gateway.markMidaoInquiryRepliedDb({ inquiryId: IDS.otherInquiry, guideId: IDS.guide });
   assert.deepEqual(opened, { ok: false, status: 409, code: 'INVALID_INQUIRY_STATE', inquiry: null });
+});
+
+test('#1916 mark replied: first transition is replayed:false, repeat is a no-write replayed 200', async () => {
+  const gateway = await setupMemory();
+  gateway.__seedMidaoInquiryForTest(rawInquiry());
+
+  const first = await gateway.markMidaoInquiryRepliedDb({ inquiryId: IDS.inquiry, guideId: IDS.guide });
+  assert.equal(first.ok, true);
+  assert.equal(first.status, 200);
+  assert.equal(first.replayed, false);
+  assert.equal(first.inquiry.lastRepliedAt, CLOCK);
+
+  gateway.__setMidaoInquiryClockForTest('2026-08-04T09:30:00.000Z');
+  const second = await gateway.markMidaoInquiryRepliedDb({ inquiryId: IDS.inquiry, guideId: IDS.guide });
+  assert.equal(second.ok, true);
+  assert.equal(second.status, 200);
+  assert.equal(second.code, 'REPLIED');
+  assert.equal(second.replayed, true);
+  assert.equal(second.inquiry.lastRepliedAt, first.inquiry.lastRepliedAt);
+  assert.equal(second.inquiry.updatedAt, first.inquiry.updatedAt);
+  assert.deepEqual(second.inquiry, first.inquiry);
+  // 回傳值之外，store 本身也不得被改寫（lastRepliedAt／updatedAt 保持第一次轉移時的值）。
+  const stored = await gateway.getMidaoInquiryDetailDb({
+    inquiryId: IDS.inquiry,
+    actor: { role: 'guide', id: IDS.guide },
+  });
+  assert.deepEqual(stored.inquiry, first.inquiry);
+});
+
+test('#1916 mark replied replay stays guide-owned and other states still reject with 409', async () => {
+  const gateway = await setupMemory();
+  gateway.__seedMidaoInquiryForTest(rawInquiry({ status: 'replied', last_replied_at: CLOCK }));
+  const foreign = await gateway.markMidaoInquiryRepliedDb({ inquiryId: IDS.inquiry, guideId: IDS.otherGuide });
+  assert.deepEqual(foreign, { ok: false, status: 404, code: 'INQUIRY_NOT_FOUND', inquiry: null });
+
+  for (const [index, status] of ['opened', 'ready_to_convert', 'converted', 'closed', 'expired'].entries()) {
+    const id = `11111111-1111-4111-8111-1111111111${30 + index}`;
+    gateway.__seedMidaoInquiryForTest(rawInquiry({
+      id,
+      inquiry_no: `INQ-${status}`,
+      status,
+      converted_booking_id: status === 'converted' ? '66666666-6666-4666-8666-666666666666' : null,
+    }));
+    const result = await gateway.markMidaoInquiryRepliedDb({ inquiryId: id, guideId: IDS.guide });
+    assert.deepEqual(result, { ok: false, status: 409, code: 'INVALID_INQUIRY_STATE', inquiry: null }, status);
+  }
+});
+
+test('#1916 Supabase mark replied: repeat on replied performs no second update', async () => {
+  const gateway = await setupMemory();
+  const fake = createSupabaseFake([rawInquiry()]);
+  process.env.SUPABASE_URL = 'http://example.local';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
+  __setSupabaseClientForTest(fake.supabase);
+
+  const first = await gateway.markMidaoInquiryRepliedDb({ inquiryId: IDS.inquiry, guideId: IDS.guide });
+  assert.equal(first.replayed, false);
+  assert.equal(fake.calls.filter((call) => call.type === 'update').length, 1);
+
+  gateway.__setMidaoInquiryClockForTest('2026-08-04T09:30:00.000Z');
+  const second = await gateway.markMidaoInquiryRepliedDb({ inquiryId: IDS.inquiry, guideId: IDS.guide });
+  assert.equal(second.ok, true);
+  assert.equal(second.replayed, true);
+  assert.deepEqual(second.inquiry, first.inquiry);
+  assert.equal(fake.calls.filter((call) => call.type === 'update').length, 1, 'replay must not write');
+
+  const foreign = await gateway.markMidaoInquiryRepliedDb({ inquiryId: IDS.inquiry, guideId: IDS.otherGuide });
+  assert.equal(foreign.code, 'INQUIRY_NOT_FOUND');
+});
+
+test('#1916 Supabase mark replied: CAS loser whose latest row is replied gets a replayed result', async () => {
+  const gateway = await setupMemory();
+  const winnerAt = '2026-08-04T08:30:00.000Z';
+  const rows = [rawInquiry()];
+  const updates = [];
+  const racing = {
+    from() {
+      return {
+        select() {
+          const filters = [];
+          const query = {
+            eq(field, value) { filters.push([field, value]); return query; },
+            maybeSingle() {
+              const row = rows.find((candidate) => filters.every(([f, v]) => candidate[f] === v));
+              return Promise.resolve({ data: structuredClone(row ?? null), error: null });
+            },
+          };
+          return query;
+        },
+        update(patch) {
+          updates.push(structuredClone(patch));
+          const query = {
+            eq() { return query; },
+            select() { return query; },
+            maybeSingle() {
+              // 另一個並行請求在我們 CAS 之前先贏了：列已被它轉為 replied，我方 CAS 不命中。
+              Object.assign(rows[0], { status: 'replied', last_replied_at: winnerAt, updated_at: winnerAt });
+              return Promise.resolve({ data: null, error: null });
+            },
+          };
+          return query;
+        },
+      };
+    },
+  };
+  process.env.SUPABASE_URL = 'http://example.local';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
+  __setSupabaseClientForTest(racing);
+
+  const loser = await gateway.markMidaoInquiryRepliedDb({ inquiryId: IDS.inquiry, guideId: IDS.guide });
+  assert.equal(loser.ok, true);
+  assert.equal(loser.status, 200);
+  assert.equal(loser.replayed, true);
+  assert.equal(loser.inquiry.status, 'replied');
+  assert.equal(loser.inquiry.lastRepliedAt, winnerAt);
+  assert.equal(updates.length, 1);
+});
+
+test('#1916 Supabase mark replied: race re-read stays guide-scoped, a foreign replied row is 404 not replayed', async () => {
+  const gateway = await setupMemory();
+  const rows = [rawInquiry()];
+  const fake = {
+    from() {
+      return {
+        select() {
+          const filters = [];
+          const query = {
+            eq(field, value) { filters.push([field, value]); return query; },
+            maybeSingle() {
+              const row = rows.find((candidate) => filters.every(([f, v]) => candidate[f] === v));
+              return Promise.resolve({ data: structuredClone(row ?? null), error: null });
+            },
+          };
+          return query;
+        },
+        update() {
+          const query = {
+            eq() { return query; },
+            select() { return query; },
+            maybeSingle() {
+              // CAS 未命中，且該列在重讀前已易主並成為 replied；只有帶 guide_id 過濾的重讀會回 null。
+              Object.assign(rows[0], { guide_id: IDS.otherGuide, status: 'replied', last_replied_at: CLOCK });
+              return Promise.resolve({ data: null, error: null });
+            },
+          };
+          return query;
+        },
+      };
+    },
+  };
+  process.env.SUPABASE_URL = 'http://example.local';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
+  __setSupabaseClientForTest(fake);
+
+  const result = await gateway.markMidaoInquiryRepliedDb({ inquiryId: IDS.inquiry, guideId: IDS.guide });
+  assert.deepEqual(result, { ok: false, status: 404, code: 'INQUIRY_NOT_FOUND', inquiry: null });
 });
 
 test('fails closed on unsupported input and invalid state fixtures', async () => {

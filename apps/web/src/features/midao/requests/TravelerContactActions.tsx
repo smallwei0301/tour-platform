@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { LineReplyAction } from './LineReplyAction';
+import { getOrCreateKey, resetKey } from './idempotency-key';
 import { markInquiryReplied } from './requests.api';
 
 const MARK_REPLIED_ERRORS: Readonly<Record<string, string>> = {
+  INVALID_INQUIRY_STATE: '詢問單狀態已變更，請重新載入確認最新狀態。',
   INQUIRY_STATE_NOT_CONVERTIBLE: '目前的詢問單狀態不能標記為已回覆，請重新載入確認最新狀態。',
   NOT_FOUND: '找不到這筆詢問單。',
   MUTATIONS_DISABLED: '目前無法執行此操作，請稍後再試。',
@@ -26,17 +28,27 @@ export function TravelerContactActions({
 }) {
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const pendingRef = useRef(false);
+  const keyRef = useRef<string | null>(null);
 
   async function handleMarkReplied() {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setPending(true);
     setErrorMessage(null);
-    const result = await markInquiryReplied({ inquiryId });
-    if (result.kind === 'success') {
-      await onReload();
-    } else {
-      setErrorMessage(MARK_REPLIED_ERRORS[result.code] ?? '目前無法完成操作，請稍後再試。');
+    try {
+      // #1916：失敗後再按一次沿用同一把 key，成功後才清掉。
+      const result = await markInquiryReplied({ inquiryId, idempotencyKey: getOrCreateKey(keyRef) });
+      if (result.kind === 'success') {
+        resetKey(keyRef);
+        await onReload();
+      } else {
+        setErrorMessage(MARK_REPLIED_ERRORS[result.code] ?? '目前無法完成操作，請稍後再試。');
+      }
+    } finally {
+      pendingRef.current = false;
+      setPending(false);
     }
-    setPending(false);
   }
 
   return (

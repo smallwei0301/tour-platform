@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { decideFingerprint, getKeyForPayload, resetKey, type PayloadKeyRef } from './idempotency-key';
 import { decideBookingRequest, type BookingDecisionAction } from './requests.api';
 
 type Confirmation = BookingDecisionAction | null;
@@ -21,6 +22,7 @@ export function RequestProgressActions({
   const [conflict, setConflict] = useState(false);
   const [error, setError] = useState(false);
   const pendingRef = useRef(false);
+  const keyRef: PayloadKeyRef = useRef(null);
   const trimmedRejectNote = rejectNote.trim();
 
   if (!allowedActions.approve && !allowedActions.reject) return null;
@@ -29,11 +31,20 @@ export function RequestProgressActions({
     if (pendingRef.current) return;
     setConflict(false);
     setError(false);
+    // #1916：每次開啟對話框是一次新的使用者操作，先清掉舊 key；
+    // 對話框內重試沿用同一把（婉拒原因被改動時 payload 不同，getKeyForPayload 會換新 key，避免 409 IDEMPOTENCY_CONFLICT）。
+    resetKey(keyRef);
     setConfirmation(action);
+  };
+
+  const closeConfirmation = () => {
+    resetKey(keyRef);
+    setConfirmation(null);
   };
 
   const submit = async (action: BookingDecisionAction) => {
     if (pendingRef.current || (action === 'reject' && (!rejectConfirmed || !trimmedRejectNote))) return;
+    const idempotencyKey = getKeyForPayload(keyRef, decideFingerprint({ action, note: trimmedRejectNote }));
     pendingRef.current = true;
     setPending(true);
     setError(false);
@@ -44,11 +55,14 @@ export function RequestProgressActions({
         bookingId,
         action,
         ...(action === 'reject' ? { note: trimmedRejectNote } : {}),
+        idempotencyKey,
       });
       if (result.kind === 'success') {
+        resetKey(keyRef);
         setConfirmation(null);
         await onReload();
       } else if (result.kind === 'conflict') {
+        resetKey(keyRef);
         setConfirmation(null);
         setConflict(true);
       } else {
@@ -80,7 +94,7 @@ export function RequestProgressActions({
         <div role="dialog" aria-modal="true" aria-labelledby="approve-request-title">
           <h3 id="approve-request-title">確認核准需求</h3>
           <p>核准後將依最新需求狀態處理。</p>
-          <button type="button" disabled={pending} onClick={() => setConfirmation(null)}>取消</button>
+          <button type="button" disabled={pending} onClick={closeConfirmation}>取消</button>
           <button type="button" disabled={pending} onClick={() => void submit('approve')}>確認核准</button>
         </div>
       ) : null}
@@ -104,7 +118,7 @@ export function RequestProgressActions({
             />
             我確認要婉拒此需求
           </label>
-          <button type="button" disabled={pending} onClick={() => setConfirmation(null)}>取消</button>
+          <button type="button" disabled={pending} onClick={closeConfirmation}>取消</button>
           <button
             type="button"
             disabled={pending || !rejectConfirmed || !trimmedRejectNote}

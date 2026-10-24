@@ -45,7 +45,7 @@ export async function POST(
           result.status,
         );
       }
-      return { inquiry: result.inquiry };
+      return { inquiry: result.inquiry, replayed: 'replayed' in result && result.replayed === true };
     },
     { route: 'v2/guide/inquiries/[inquiryId]/commands/mark-replied' },
   );

@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 2,
+  "runId": "2026-10-24-midao2-r09",
+  "status": "IN_PROGRESS",
+  "startedAt": "2026-10-24T02:09:45.862Z",
+  "endedAt": null,
+  "sources": [],
+  "main": {
+    "startSha": "b7002633fe5c3716f608e0d5c64e284124684684",
+    "endSha": null
+  },
+  "inventory": {
+    "openIssuesStart": 71,
+    "openIssuesEnd": null,
+    "openPrsStart": 24,
+    "openPrsEnd": null,
+    "mainTerraPeak": 0,
+    "reserveTerraPeak": 0,
+    "activeCandidatePeak": 0,
+    "sharedTestPeak": 0,
+    "closureSweeps": 0,
+    "closureAdvancedOrClosed": 0
+  },
+  "modelUsage": {
+    "actualTokensAvailable": false,
+    "weeklyUsageStartPercent": null,
+    "weeklyUsageEndPercent": null,
+    "weightedUsageImprovementPercent": null,
+    "weights": {
+      "luna": 1,
+      "terra": 3,
+      "sol": 6
+    },
+    "contextMultipliers": {
+      "compact": 1,
+      "medium": 1.5,
+      "full": 3
+    },
+    "tasks": [
+      {
+        "id": "r09-sol-triage",
+        "role": "Sol TRIAGE：MAIN #1916（high risk）。設計判定自然冪等（見 notes）。Final Risk：依 Owner #552 預留一次 premium（fable）審查，後續修正以 opus 對抗審查。",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-24T02:09:00Z"
+      },
+      {
+        "id": "r09-luna-1916",
+        "role": "Luna 盤點 #1916 呼叫端、UI 重試流程、既有測試",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-24T02:10:35Z"
+      },
+      {
+        "id": "r09-terra-1916",
+        "role": "Terra 施工：#1916 mark-replied 自然冪等＋client 同一操作重用 key（三個呼叫端）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-24T02:12:00Z"
+      },
+      {
+        "id": "r09-final-risk",
+        "role": "Final Risk 對抗審查（fresh context）b7002633..9b403e1d；premium（fable）未派：tour-platform model-routing 對 Claude provider 的 audit 僅允許 opus，premium 僅定義於 OpenAI astra，依 Owner #552 降級為 opus 對抗審查",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-24T02:16:20Z"
+      },
+      {
+        "id": "r09-terra-rework1",
+        "role": "Terra rework：#1916 補 M3／M12 測試缺口（fingerprint 抽純函式）＋INVALID_INQUIRY_STATE 文案",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-24T02:22:30Z"
+      }
+    ],
+    "fullContextReplays": 0,
+    "duplicateScans": 0
+  },
+  "delivery": {
+    "issuesStarted": 1,
+    "issuesClosed": 0,
+    "auditReady": 0,
+    "ownerBlockedComplete": 0,
+    "exactHeadCiOnly": 0,
+    "commitOnly": 0,
+    "unfinishedCarryover": 0,
+    "cycleTimeMinutes": null
+  },
+  "ci": {
+    "fullCiRuns": 0,
+    "invalidReruns": 0,
+    "firstPassRatePercent": null,
+    "sharedTestCollisions": 0
+  },
+  "quality": {
+    "acceptanceEvidenceCoveragePercent": null,
+    "auditFirstPassRatePercent": null,
+    "unresolvedP0": 0,
+    "unresolvedP1": 0,
+    "reopenedIssues": 0,
+    "postMergeRegressions": 0,
+    "safetyViolations": 0,
+    "hardFailReasons": []
+  },
+  "flow": {
+    "lunaTasks": 1,
+    "lunaAccepted": 1,
+    "lunaDelegationRatePercent": null,
+    "duplicateAgentTasks": 0,
+    "ownershipCollisions": 0,
+    "waitTimeConvertedPercent": null,
+    "solTouches": 2,
+    "solIssues": 1
+  },
+  "auditability": {
+    "evidenceFieldsCompletePercent": null,
+    "exactHeadTestCoveragePercent": null,
+    "stalePendingDescriptions": 0,
+    "preciseBlockersPercent": null,
+    "scoreInputsCompletePercent": null
+  },
+  "notes": [
+    "MAIN：#1916 mark-replied idempotency＋client 同一操作重用 key。r08 收尾 commit 隨本輪推送。",
+    "TRIAGE 設計判定：mark-replied body 契約為嚴格空物件、scope 固定為該 inquiry，故採「自然冪等」——同一導遊對已 replied 的 inquiry 重送回 200＋現值（replayed:true），不寫第二次、不新增 DB 寫入路徑、不需 migration；不另寫 midao_idempotency_records（app 層兩段寫入非原子，風險高於收益）。AC2（同 key 不同 payload→409）因 body 恆為 {} 而不可能發生，於 PR／Issue 說明。client 端 decide／mark-replied／convert 改為同一使用者操作重用同一 key。",
+    "更正：r09 盤點已另派 scout（r09-luna-1916），先前「未另派」的缺口註記作廢。build preflight 以 requiresDiscovery=false 通過（discovery 已由 scout 完成）。",
+    "Final Risk PASS／blocking 0；設計判定確認正確（狀態機無回到 new 的轉移；canonical 規格 §8.4／§9 僅要求 convert 寫 durable record）。16 突變擋 13；M3／M12 為本 commit 測試缺口 → rework1；M5 屬安全方向。route 註解引用之規格檔不存在 → 於 worklog 補決策紀錄。",
+    "d36f1d6e：M3／M12 測試＋INVALID_INQUIRY_STATE 文案；主 session 複驗 5 檔 67/67。"
+  ],
+  "deliveryTruthVersion": 4,
+  "closeout": {
+    "contractVersion": 1,
+    "ownerRole": "PRODUCT_MAIN_SESSION",
+    "terminalPolicy": "CLOSE_OR_REASSIGN_BEFORE_SESSION_EXIT_OR_OWNER_STOP_OR_SCOPE_EXHAUSTED_OR_OWNER_BLOCKED",
+    "state": "OPEN",
+    "closedAt": null,
+    "evidenceRef": null
+  },
+  "wipLifecycle": {
+    "schemaVersion": 1,
+    "events": []
+  },
+  "completionTruth": {
+    "status": "NOT_CHECKED",
+    "checkedAt": null,
+    "claims": []
+  }
+}
