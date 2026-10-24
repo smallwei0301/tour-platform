@@ -28,6 +28,7 @@ import {
   convertMidaoInquiryToBookingDb,
 } from '../../src/lib/midao/db-midao-booking-confirmations.mjs';
 import {
+  __internal as CONFIRMATION_INTERNAL,
   acceptMidaoTravelerConfirmationDb,
   getMidaoTravelerConfirmationPreviewDb,
 } from '../../src/lib/midao/db-midao-traveler-confirmation.mjs';
@@ -370,8 +371,9 @@ test('G6 gateway in-memory：order 關聯不存在 → backend error（非 4xx�
   seedConversionFixture();
   const converted = await convertOnce();
 
-  const { __confirmationRuntime } = await import('../../src/lib/midao/db-midao-booking-confirmations.mjs');
-  __confirmationRuntime.orderStore.delete(converted.orderId);
+  CONFIRMATION_INTERNAL.seedConfirmationLifecycleForTest({
+    bookingId: converted.bookingId, missingOrder: true,
+  });
 
   await assert.rejects(
     () => getMidaoTravelerConfirmationPreviewDb({
