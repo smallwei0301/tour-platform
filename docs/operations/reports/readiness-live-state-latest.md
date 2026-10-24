@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-10-23T05:04:53.874Z -->
+<!-- query_timestamp: 2026-10-24T05:04:03.684Z -->
 <!-- freshness_rule: auto-refreshed daily (05:00 UTC) via CI; stale threshold: 26h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-10-23T05:04:53.874Z  
-**Commit SHA:** `5b2c2f85da211b5570c2aafe395d89614f417aa7`
+**Query timestamp:** 2026-10-24T05:04:03.684Z  
+**Commit SHA:** `b7002633fe5c3716f608e0d5c64e284124684684`
 
 ---
 
@@ -14,7 +14,7 @@
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1922 | [Midao2 我的頁面：年資讀取失敗不再被當成 0 覆寫、嚴格驗證年資輸入（#1761）](https://github.com/smallwei0301/tour-platform/pull/1922) _(draft)_ | `ccr-80d3864e-9i7mop` |
+| #1933 | [Midao mark-replied 改為自然冪等，導遊端指令在同一次操作中重用 idempotency-key（#1916）](https://github.com/smallwei0301/tour-platform/pull/1933) | `ccr-80d3864e-9i7mop` |
 | #1907 | [fix(guide): 接續頭像裁切並修正過期回呼與重複確認（#1534）](https://github.com/smallwei0301/tour-platform/pull/1907) _(draft)_ | `verify/issue1534-cloud-20261019` |
 | #1906 | [fix: 每日健康檢查區分執行失效與產品回歸（#1670）](https://github.com/smallwei0301/tour-platform/pull/1906) | `ava/issue1670-runner-recovery-20261017` |
 | #1905 | [chore(claude): 放行 gh 讀取、workflow 派送與 PR 留言／審查寫入](https://github.com/smallwei0301/tour-platform/pull/1905) _(draft)_ | `ccr-61cf40aa-0wsxsk` |
@@ -40,7 +40,7 @@
 | #1438 | [Use next/font variables in globals, set CJK fonts to `display: optional`, and scope serif usage to LP/brand](https://github.com/smallwei0301/tour-platform/pull/1438) | `codex/improve-homepage-loading-speed` |
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 
-## Open Issues (72 total)
+## Open Issues (71 total)
 
 ### P0 (1)
 
@@ -87,13 +87,11 @@
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (21)
+### P2 (19)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1917 | [guide bookings API：orders 查詢失敗時回傳原始 DB 錯誤訊息](https://github.com/smallwei0301/tour-platform/issues/1917) | type:bug, priority:P2, guide-dashboard, security, owner:ai-agent |
 | #1916 | [Midao：mark-replied 的 idempotency key 未生效，client 重試每次換新 key](https://github.com/smallwei0301/tour-platform/issues/1916) | type:bug, priority:P2, guide-dashboard, owner:ai-agent |
-| #1911 | [寄信：Resend 錯誤回應被記成 sent，空收件人仍呼叫 provider](https://github.com/smallwei0301/tour-platform/issues/1911) | type:bug, priority:P2, owner:ai-agent, notifications |
 | #1879 | [[Frontend Daily Check] E2E activities listing navigation timeout](https://github.com/smallwei0301/tour-platform/issues/1879) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:ready, traveler-booking |
 | #1869 | [[Midao] Event-based observation and verified legacy retirement after #1861](https://github.com/smallwei0301/tour-platform/issues/1869) | triaged, type:investigation, priority:P2, agent:backlog, owner:ai-agent, status:blocked, database, infra, launch:post-first-payment, data-hygiene |
 | #1844 | [補記 6 支既有 migration 的 verified ledger record（#1811/#1812/#1813/#1814/#1760 相關，release gate 現 HOLD）](https://github.com/smallwei0301/tour-platform/issues/1844) | type:investigation, priority:P2, owner:ai-agent, status:ready, database |
@@ -119,10 +117,11 @@
 |---|-------|--------|
 | #1647 | [[Payments] Decide and verify post-#1637 historical paid-order / payout reconciliation](https://github.com/smallwei0301/tour-platform/issues/1647) | triaged, priority:P1, owner:human-decision, status:needs-decision, type:decision, payments, orders |
 
-### Other (15)
+### Other (16)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1931 | [退款／sweep 後續：failPersist 回傳 DB 訊息、退款寫入順序缺測試、sweep 首次啟用告警洗版](https://github.com/smallwei0301/tour-platform/issues/1931) | — |
 | #1893 | [[Payment] 初次付款 order-wide admission：ECPay 雙點產生不同 MerchantTradeNo](https://github.com/smallwei0301/tour-platform/issues/1893) | — |
 | #1885 | [[QA] 公開服務條款與隱私政策仍標示草案且內容僅簡短摘要](https://github.com/smallwei0301/tour-platform/issues/1885) | — |
 | #1884 | [[QA] 公開客服頁電話仍為 0800-XXX-XXX，與緊急支援說明不一致](https://github.com/smallwei0301/tour-platform/issues/1884) | — |
@@ -145,16 +144,16 @@
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1932 | [評價邀請 sweep 加失敗重試上限（#1926）；ECPay 退款例外不再回傳原始錯誤（#1928）](https://github.com/smallwei0301/tour-platform/pull/1932) | 2026-10-24 |
+| #1930 | [metrics/worklog：Run r07 收尾（#1929 merge、#1925 結案）](https://github.com/smallwei0301/tour-platform/pull/1930) | 2026-10-23 |
+| #1929 | [v2 route 不再把 DB／例外字串回給 client，並以 source guard 守門（#1925）](https://github.com/smallwei0301/tour-platform/pull/1929) | 2026-10-23 |
+| #1927 | [guide 端 v2 route 不再回傳 DB 錯誤字串（#1917）；評價邀請 sweep 依寄送結果記錄、initiated_by 符合 DB CHECK（#1923）](https://github.com/smallwei0301/tour-platform/pull/1927) | 2026-10-23 |
+| #1924 | [寄信契約：Resend 回錯誤不再記成已寄出、空收件人不再呼叫 provider（#1911）](https://github.com/smallwei0301/tour-platform/pull/1924) | 2026-10-23 |
+| #1922 | [Midao2 我的頁面：年資讀取失敗不再被當成 0 覆寫、嚴格驗證年資輸入（#1761）](https://github.com/smallwei0301/tour-platform/pull/1922) | 2026-10-23 |
 | #1921 | [修正已結案 #1265 的歷史路由文件](https://github.com/smallwei0301/tour-platform/pull/1921) | 2026-10-23 |
 | #1920 | [修正 Midao2 單獨介面變更未觸發隔離 smoke](https://github.com/smallwei0301/tour-platform/pull/1920) | 2026-10-23 |
 | #1919 | [首頁世界影片改由 Vercel Blob 提供，不再打包進每個部署](https://github.com/smallwei0301/tour-platform/pull/1919) | 2026-10-22 |
 | #1918 | [#1761 Run r02 收尾＋calendar round-trip slice 1：Midao2 月曆疊加舊後台封鎖日](https://github.com/smallwei0301/tour-platform/pull/1918) | 2026-10-23 |
-| #1915 | [#1761 Stage 5C：訂單列表顯示方案名稱（bookings 投影以 booking 方案優先、驗證歸屬）](https://github.com/smallwei0301/tour-platform/pull/1915) | 2026-10-22 |
-| #1914 | [docs(metrics): Run 2026-10-22-midao2-r01 收尾（#1761 Stage 5B）](https://github.com/smallwei0301/tour-platform/pull/1914) | 2026-10-22 |
-| #1913 | [#1761 Stage 5B：Midao2 需求詳情返回連結留在新 UI＋跨 UI parity 測試](https://github.com/smallwei0301/tour-platform/pull/1913) | 2026-10-22 |
-| #1910 | [docs: 記錄 Owner 2026-10-22 merge 長期授權](https://github.com/smallwei0301/tour-platform/pull/1910) | 2026-10-22 |
-| #1909 | [同步 vibeaico #1094：計分強制 readiness 一致性與 v4 Run 時間窗](https://github.com/smallwei0301/tour-platform/pull/1909) | 2026-10-22 |
-| #1908 | [移植 VibeAI Agent Run 埋點與 Scorecard 腳本（含修正 cron 測試日期時間炸彈）](https://github.com/smallwei0301/tour-platform/pull/1908) | 2026-10-22 |
 
 ---
 
