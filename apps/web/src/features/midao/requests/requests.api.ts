@@ -20,6 +20,8 @@ export async function decideBookingRequest(input: {
   bookingId: string;
   action: BookingDecisionAction;
   note?: string;
+  /** 同一次使用者操作重試時傳入同一把 key；沒傳才自動產生。 */
+  idempotencyKey?: string;
 }): Promise<DecisionResult> {
   const body = input.action === 'reject'
     ? { action: input.action, note: input.note?.trim() || '' }
@@ -34,7 +36,7 @@ export async function decideBookingRequest(input: {
         headers: {
           'content-type': 'application/json',
           'x-csrf-token': readCsrfToken(),
-          'idempotency-key': crypto.randomUUID(),
+          'idempotency-key': input.idempotencyKey ?? crypto.randomUUID(),
         },
         body: JSON.stringify(body),
       },
@@ -82,6 +84,7 @@ export interface ConvertInquiryInput {
   quotedTotalTwd: number;
   startAt: string;
   guideNote?: string;
+  idempotencyKey?: string;
 }
 
 function failure(status: number, payload: unknown): { kind: 'failure'; code: string; status: number } {
@@ -146,6 +149,7 @@ export async function fetchLineReplyTemplate(input: {
 
 export async function markInquiryReplied(input: {
   inquiryId: string;
+  idempotencyKey?: string;
 }): Promise<MidaoCommandResult<null>> {
   try {
     const response = await fetch(
@@ -156,7 +160,7 @@ export async function markInquiryReplied(input: {
         headers: {
           'content-type': 'application/json',
           'x-csrf-token': readCsrfToken(),
-          'idempotency-key': crypto.randomUUID(),
+          'idempotency-key': input.idempotencyKey ?? crypto.randomUUID(),
         },
         body: JSON.stringify({}),
       },
@@ -192,7 +196,7 @@ export async function convertInquiry(
         headers: {
           'content-type': 'application/json',
           'x-csrf-token': readCsrfToken(),
-          'idempotency-key': crypto.randomUUID(),
+          'idempotency-key': input.idempotencyKey ?? crypto.randomUUID(),
         },
         body: JSON.stringify(body),
       },

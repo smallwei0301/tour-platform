@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { getKeyForPayload, resetKey, type PayloadKeyRef } from './idempotency-key';
 import { convertInquiry, type InquiryConversionResult } from './requests.api';
 
 export interface InquiryPlanSummary {
@@ -122,6 +123,7 @@ export function InquiryConversionSheet({
   const [error, setError] = useState<ErrorPresentation | null>(null);
   const [result, setResult] = useState<InquiryConversionResult | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'fallback'>('idle');
+  const keyRef: PayloadKeyRef = useRef(null);
 
   // D4：activityPlanId 唯讀鎖定；為 null 時整個轉單區塊停用。
   if (!plan) {
@@ -165,7 +167,7 @@ export function InquiryConversionSheet({
 
     setPending(true);
     setError(null);
-    const response = await convertInquiry({
+    const payload = {
       inquiryId,
       activityPlanId: plan!.activityPlanId,
       confirmationTtlHours: Number(confirmationTtlHours),
@@ -174,8 +176,14 @@ export function InquiryConversionSheet({
       quotedTotalTwd: Number(quotedTotalTwd),
       startAt: new Date(startAt).toISOString(),
       guideNote,
-    });
+    };
+    // #1916：序列化 payload 與上次比對。純重試沿用同一把 key；表單內容改變（server 會視為
+    // 同 key 不同 payload → 409 IDEMPOTENCY_CONFLICT）就換新 key。guideNote 以 trim 後的值比對，
+    // 與 convertInquiry 實際送出的 body 一致。
+    const idempotencyKey = getKeyForPayload(keyRef, { ...payload, guideNote: guideNote.trim() });
+    const response = await convertInquiry({ ...payload, idempotencyKey });
     if (response.kind === 'success') {
+      resetKey(keyRef);
       setResult(response.data);
       onConverted(response.data);
     } else {
