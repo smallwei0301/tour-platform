@@ -272,8 +272,12 @@ function detailResult(inquiry) {
   return { ok: true, status: 200, code: null, inquiry: clone(inquiry) };
 }
 
-function repliedResult(inquiry) {
-  return { ok: true, status: 200, code: 'REPLIED', inquiry: clone(inquiry) };
+/**
+ * #1916：mark-replied 是自然冪等的命令。`replayed:true` 代表這次呼叫沒有寫入任何東西，
+ * 回傳的是先前（或並行請求）已完成的 replied 狀態。
+ */
+function repliedResult(inquiry, { replayed = false } = {}) {
+  return { ok: true, status: 200, code: 'REPLIED', inquiry: clone(inquiry), replayed };
 }
 
 function createResult(inquiry) {
@@ -421,6 +425,7 @@ export async function markMidaoInquiryRepliedDb(input = {}) {
     if (!row) return notFoundResult();
     const inquiry = mapInquiryRow(row);
     if (inquiry.guideId !== guideId) return notFoundResult();
+    if (inquiry.status === 'replied') return repliedResult(inquiry, { replayed: true });
     if (!canTransitionInquiryState(inquiry.status, 'replied')) return invalidStateResult();
     const timestamp = nowIso();
     const replied = {
@@ -436,6 +441,7 @@ export async function markMidaoInquiryRepliedDb(input = {}) {
   const supabase = await getSupabase();
   const current = await fetchOwnedInquiryInSupabase(supabase, inquiryId, 'guide_id', guideId);
   if (!current) return notFoundResult();
+  if (current.status === 'replied') return repliedResult(current, { replayed: true });
   if (!canTransitionInquiryState(current.status, 'replied')) return invalidStateResult();
 
   const timestamp = nowIso();
@@ -458,6 +464,8 @@ export async function markMidaoInquiryRepliedDb(input = {}) {
 
   const latest = await fetchOwnedInquiryInSupabase(supabase, inquiryId, 'guide_id', guideId);
   if (!latest) return notFoundResult();
+  // 並行請求輸家：CAS 沒命中但列已是 replied，與贏家拿到同一個結果。
+  if (latest.status === 'replied') return repliedResult(latest, { replayed: true });
   if (!canTransitionInquiryState(latest.status, 'replied')) return invalidStateResult();
   throw unexpected('Midao inquiry mark-replied lost update unexpectedly');
 }

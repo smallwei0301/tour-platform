@@ -809,6 +809,33 @@ test('T12 mark-replied moves a new inquiry to replied and stamps lastRepliedAt',
   assert.equal(payload.body.data.inquiry.lastRepliedAt, FIXED_NOW);
 });
 
+test('#1916 mark-replied first call replayed:false, repeat is replayed:true with no second write', async () => {
+  const fake = useSupabase(createSupabaseFake({ inquiry: inquiryRow({ status: 'new' }) }));
+  const first = await responseJson(await postMarkReplied({}));
+  assert.equal(first.status, 200);
+  assert.equal(first.body.data.replayed, false);
+  assert.equal(first.body.data.inquiry.status, 'replied');
+  assert.equal(first.body.data.inquiry.lastRepliedAt, FIXED_NOW);
+  const afterFirst = structuredClone(fake.inquiryState());
+
+  __setMidaoInquiryClockForTest(() => '2027-01-01T00:00:00.000Z');
+  const second = await responseJson(await postMarkReplied({}, { idempotencyKey: 'another-key' }));
+  assert.equal(second.status, 200);
+  assert.equal(second.body.success, true);
+  assert.equal(second.body.data.replayed, true);
+  assert.deepEqual(second.body.data.inquiry, first.body.data.inquiry);
+  assert.deepEqual(fake.inquiryState(), afterFirst, 'replay must not change lastRepliedAt/updatedAt');
+});
+
+test('#1916 mark-replied still rejects opened/closed as invalid state', async () => {
+  for (const status of ['opened', 'closed']) {
+    useSupabase(createSupabaseFake({ inquiry: inquiryRow({ status }) }));
+    const payload = await responseJson(await postMarkReplied({}));
+    assert.equal(payload.status, 409, status);
+    assert.equal(payload.body.error.code, 'INVALID_INQUIRY_STATE', status);
+  }
+});
+
 test('T13 mark-replied on another guide inquiry collapses to a sanitized 404', async () => {
   useSupabase(createSupabaseFake({ inquiry: inquiryRow({ status: 'new', guide_id: OTHER_GUIDE_ID }) }));
   const payload = await responseJson(await postMarkReplied({}));
