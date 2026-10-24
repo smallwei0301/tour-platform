@@ -459,6 +459,9 @@ export async function POST(
     : await executeRefund({
       order: order as any,
       body,
+      reportError: (err) => {
+        void reportRouteError(err, { route: 'v2/admin/orders/[orderId]/refund-execute' });
+      },
       refundAmount,
       partialTargetStatus,
       requestAllRefund,

@@ -64,6 +64,11 @@ export interface ExecuteRefundInput {
    * When omitted, partial refunds fall back to `completed`.
    */
   partialTargetStatus?: string | null;
+  /**
+   * #1928：requestAllRefund 丟出非預期例外時，原始例外交給呼叫端上報（server 端，如 reportRouteError）。
+   * 回給 client 的文案一律是固定字串，不含原始訊息。上報失敗不得影響退款結果。
+   */
+  reportError?: (err: unknown) => void;
 }
 
 export interface RefundExecutionOutcome {
@@ -296,13 +301,18 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
       reason: String(body?.reason ?? '').trim() || undefined,
     });
   } catch (err) {
-    return getFailureResult(
-      'ECPAY_REFUND_FAILED',
-      err instanceof Error ? err.message : 'failed to request ECPay refund'
-    );
+    // #1928：原始例外只上報 server 端；回給 client 的是固定文案（code／status 不變）。
+    try {
+      input.reportError?.(err);
+    } catch {
+      // 上報失敗不得反噬退款結果
+    }
+    return getFailureResult('ECPAY_REFUND_FAILED', '退款請求失敗，請稍後再試或聯絡客服');
   }
 
   if (!result.ok) {
+    // 刻意保留 rtnMsg（#1928）：這是 ECPay 文件化的業務回應訊息（如超過可退款期限），
+    // 且只有 admin 呼叫端會把它回給 client，admin 需要它來排查；與上方「例外原文」不同類。
     return {
       status: 502,
       body: fail('ECPAY_REFUND_FAILED', result.rtnMsg),
