@@ -28,6 +28,7 @@ import { sendReviewInvitation } from '../../../../../src/lib/email';
 import { planSweepDelivery, SWEEP_INITIATED_BY } from '../../../../../src/lib/post-trip/sweep/review-invitation-delivery.mjs';
 import { fetchReturningPromoEmailBlock } from '../../../../../src/lib/returning-promo.mjs';
 import { isCronJobEnabled, recordCronRun } from '../../../../../src/lib/cron-job-controls.mjs';
+import { redactErrorForReport } from '../../../../../src/lib/post-trip/sweep/redact-error-email.mjs';
 import { reportRouteError } from '../../../../../src/lib/route-error';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
@@ -234,10 +235,11 @@ const SUPABASE_SERVICE_ROLE_KEY = getSupabaseServiceRoleKey();
         }
       } catch (sendErr) {
         failedCount += 1;
-        // #1926：failure_reason 只寫固定代碼，不寫原始例外訊息（可能含 provider／收件人細節）；
-        // 原始例外只經 reportRouteError 上報（recordIncident 會遮罩 PII），metadata 不帶 email／order 內容。
+        // #1926：failure_reason 只寫固定代碼，不寫原始例外訊息（可能含 provider／收件人細節）。
+        // recordIncident 的 redactPii 只處理 metadata 的 key，message 仍會原樣進 Sentry／Telegram／
+        // incidents，所以上報前先遮罩 message 內的 email（redactErrorForReport），metadata 不帶訂單內容。
         const errorCode = 'SWEEP_UNEXPECTED_ERROR';
-        await reportRouteError(sendErr, {
+        await reportRouteError(redactErrorForReport(sendErr), {
           route: 'internal/reviews/review-invitation-sweep',
           category: 'review_invitation_send',
         });

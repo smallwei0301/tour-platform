@@ -66,6 +66,7 @@ export async function sendReviewInvitation(data) {
   const w = globalThis.__T1923;
   const email = data.contactEmail;
   w.sendCalls.push(email);
+  if (email.startsWith('throwpii')) throw new Error('smtp rejected user@example.com: mailbox full');
   if (email.startsWith('throw')) throw new Error('boom-throw');
   if (email.trim() === '') return { ok: false, status: 'skipped', errorCode: 'NO_RECIPIENT', errorMessage: 'recipient is empty', fn: 'x', to: email, subject: 's' };
   if (email.startsWith('noprov')) return { ok: false, status: 'skipped', errorCode: 'EMAIL_PROVIDER_NOT_CONFIGURED', errorMessage: 'no key', fn: 'x', to: email, subject: 's' };
@@ -98,6 +99,7 @@ before(async () => {
   const real = (rel) => pathToFileURL(path.join(WEB, rel)).href;
   const map = {
     'lib/post-trip/review-invitation-sweep.mjs': real('src/lib/post-trip/review-invitation-sweep.mjs'),
+    'lib/post-trip/sweep/redact-error-email.mjs': real('src/lib/post-trip/sweep/redact-error-email.mjs'),
     'lib/post-trip/sweep/review-invitation-delivery.mjs': real('src/lib/post-trip/sweep/review-invitation-delivery.mjs'),
     'lib/email': url('email.mjs'),
     'lib/returning-promo.mjs': url('promo.mjs'),
@@ -219,6 +221,15 @@ test('#1926 catch 路徑：failure_reason 為固定代碼 SWEEP_UNEXPECTED_ERROR
   assert.equal(w.reported?.length, 1, '原始例外應經 reportRouteError 上報');
   assert.match(String(w.reported[0].err?.message), /boom-throw/);
   assert.ok(!JSON.stringify(w.reported[0].opts).includes('throw@x.test'), '上報 metadata 不得含 email');
+});
+
+test('#1926 catch 路徑上報的錯誤 message 不含 email（遮罩為 [email]）', async () => {
+  const { w } = await run([order('o7', 'throwpii@x.test')]);
+  assert.equal(w.reported?.length, 1);
+  const msg = String(w.reported[0].err.message);
+  assert.ok(!msg.includes('user@example.com'), msg);
+  assert.match(msg, /\[email\]/);
+  assert.ok(!JSON.stringify(w.rows).includes('user@example.com'));
 });
 
 test('#1926 重試上限：existing 已有 3 筆 failed → 不呼叫 sendReviewInvitation；2 筆 failed 仍會寄', async () => {

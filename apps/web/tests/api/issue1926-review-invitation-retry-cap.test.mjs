@@ -6,6 +6,10 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { redactEmailsInText, redactErrorForReport } from '../../src/lib/post-trip/sweep/redact-error-email.mjs';
 import { evaluateReviewInvitationIdempotency } from '../../src/lib/post-trip/review-invitation.mjs';
 import {
   evaluateReviewInvitationSweepCandidates,
@@ -69,4 +73,33 @@ test('sweep 決策：failed 3 次的訂單 skip（IDEMPOTENCY／retry_exhausted�
   assert.equal(by.a.code, 'retry_exhausted');
   assert.equal(by.b.action, 'send');
   assert.equal(by.c.action, 'send');
+});
+
+test('suppressed 不計入上限：3 筆 suppressed + 0 筆 failed 仍允許寄送', () => {
+  const r = evaluateReviewInvitationIdempotency({
+    existingInvitations: Array.from({ length: 3 }, () => ({ status: 'suppressed' })),
+    maxFailedAttempts: 3,
+  });
+  assert.equal(r.allowSend, true);
+});
+
+test('admin 手動寄送不受上限影響：未傳 maxFailedAttempts 時 3 筆以上 failed 仍 allowSend', () => {
+  for (const n of [3, 5]) {
+    assert.equal(evaluateReviewInvitationIdempotency({ existingInvitations: failed(n) }).allowSend, true);
+  }
+  const WEB = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+  const src = readFileSync(path.join(WEB, 'app/api/v2/admin/orders/[orderId]/send-review-invitation/route.ts'), 'utf8');
+  assert.match(src, /evaluateReviewInvitationIdempotency\(/);
+  assert.ok(!src.includes('maxFailedAttempts'), 'admin route 不得傳 maxFailedAttempts');
+});
+
+test('redactEmailsInText／redactErrorForReport：email 換成 [email]，其餘保留，stack 不外帶', () => {
+  // 規格 regex 為 /[^\s@]+@[^\s@]+/g，緊接 email 的標點會一併被吞（寧可多遮不漏）
+  assert.equal(redactEmailsInText('rejected a.b+c@ex.co full'), 'rejected [email] full');
+  const e = redactErrorForReport(new Error('to user@example.com failed'));
+  assert.ok(e instanceof Error);
+  assert.equal(e.message, 'to [email] failed');
+  assert.ok(!String(e.stack).includes('user@example.com'));
+  assert.equal(redactErrorForReport('x@y.z').message, '[email]');
+  assert.equal(redactEmailsInText(null), '');
 });
