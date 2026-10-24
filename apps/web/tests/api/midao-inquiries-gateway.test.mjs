@@ -364,6 +364,46 @@ test('#1916 Supabase mark replied: CAS loser whose latest row is replied gets a 
   assert.equal(updates.length, 1);
 });
 
+test('#1916 Supabase mark replied: race re-read stays guide-scoped, a foreign replied row is 404 not replayed', async () => {
+  const gateway = await setupMemory();
+  const rows = [rawInquiry()];
+  const fake = {
+    from() {
+      return {
+        select() {
+          const filters = [];
+          const query = {
+            eq(field, value) { filters.push([field, value]); return query; },
+            maybeSingle() {
+              const row = rows.find((candidate) => filters.every(([f, v]) => candidate[f] === v));
+              return Promise.resolve({ data: structuredClone(row ?? null), error: null });
+            },
+          };
+          return query;
+        },
+        update() {
+          const query = {
+            eq() { return query; },
+            select() { return query; },
+            maybeSingle() {
+              // CAS 未命中，且該列在重讀前已易主並成為 replied；只有帶 guide_id 過濾的重讀會回 null。
+              Object.assign(rows[0], { guide_id: IDS.otherGuide, status: 'replied', last_replied_at: CLOCK });
+              return Promise.resolve({ data: null, error: null });
+            },
+          };
+          return query;
+        },
+      };
+    },
+  };
+  process.env.SUPABASE_URL = 'http://example.local';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
+  __setSupabaseClientForTest(fake);
+
+  const result = await gateway.markMidaoInquiryRepliedDb({ inquiryId: IDS.inquiry, guideId: IDS.guide });
+  assert.deepEqual(result, { ok: false, status: 404, code: 'INQUIRY_NOT_FOUND', inquiry: null });
+});
+
 test('fails closed on unsupported input and invalid state fixtures', async () => {
   const gateway = await setupMemory();
 

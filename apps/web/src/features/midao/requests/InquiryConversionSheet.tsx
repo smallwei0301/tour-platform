@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { getKeyForPayload, resetKey, type PayloadKeyRef } from './idempotency-key';
+import { conversionFingerprint, getKeyForPayload, resetKey, type PayloadKeyRef } from './idempotency-key';
 import { convertInquiry, type InquiryConversionResult } from './requests.api';
 
 export interface InquiryPlanSummary {
@@ -180,7 +180,7 @@ export function InquiryConversionSheet({
     // #1916：序列化 payload 與上次比對。純重試沿用同一把 key；表單內容改變（server 會視為
     // 同 key 不同 payload → 409 IDEMPOTENCY_CONFLICT）就換新 key。guideNote 以 trim 後的值比對，
     // 與 convertInquiry 實際送出的 body 一致。
-    const idempotencyKey = getKeyForPayload(keyRef, { ...payload, guideNote: guideNote.trim() });
+    const idempotencyKey = getKeyForPayload(keyRef, conversionFingerprint(payload));
     const response = await convertInquiry({ ...payload, idempotencyKey });
     if (response.kind === 'success') {
       resetKey(keyRef);

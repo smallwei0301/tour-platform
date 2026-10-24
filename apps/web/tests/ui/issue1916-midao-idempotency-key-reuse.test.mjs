@@ -7,6 +7,8 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
+  conversionFingerprint,
+  decideFingerprint,
   getKeyForPayload,
   getOrCreateKey,
   resetKey,
@@ -115,4 +117,49 @@ test('RequestProgressActions：openConfirmation 產生 key，取消／成功／�
   const open = progress.slice(progress.indexOf('const openConfirmation'), progress.indexOf('const submit'));
   assert.match(open, /resetKey\(keyRef\)/u, '開新對話框前先清舊 key（action 改變）');
   assert.equal((progress.match(/resetKey\(keyRef\)/gu) ?? []).length >= 4, true, '取消×2、成功、衝突皆清除');
+});
+
+test('decideFingerprint：note 不同則不同；trim 後相同則相同，且與實際送出的 body 一致', async (t) => {
+  const reject = (note) => decideFingerprint({ action: 'reject', note });
+  assert.notEqual(reject('原因甲'), reject('原因乙'));
+  assert.equal(reject('原因甲'), reject('  原因甲 \n'));
+  assert.notEqual(decideFingerprint({ action: 'approve' }), reject('原因甲'));
+  assert.equal(decideFingerprint({ action: 'approve', note: 'ignored' }), decideFingerprint({ action: 'approve' }));
+
+  const original = globalThis.fetch;
+  let sent = null;
+  globalThis.fetch = async (_url, init) => {
+    sent = init.body;
+    return new Response('{}', { status: 200 });
+  };
+  t.after(() => { globalThis.fetch = original; });
+  await decideBookingRequest({ bookingId: 'b1', action: 'reject', note: '  原因甲 ' });
+  assert.equal(sent, reject('  原因甲 '));
+  await decideBookingRequest({ bookingId: 'b1', action: 'approve' });
+  assert.equal(sent, decideFingerprint({ action: 'approve' }));
+});
+
+test('conversionFingerprint：每個會送出的欄位改變都會改變 fingerprint，guideNote 以 trim 比對', () => {
+  const base = { ...convertInput, guideNote: '備註' };
+  const baseline = conversionFingerprint(base);
+  const changes = {
+    inquiryId: 'other', activityPlanId: 'other', confirmationTtlHours: 48,
+    endAt: '2026-08-20T11:00:00.000Z', participants: 3, quotedTotalTwd: 3100,
+    startAt: '2026-08-20T07:00:00.000Z', guideNote: '另一則備註',
+  };
+  for (const [field, value] of Object.entries(changes)) {
+    assert.notEqual(conversionFingerprint({ ...base, [field]: value }), baseline, field);
+  }
+  assert.equal(conversionFingerprint({ ...base, guideNote: '  備註  ' }), baseline);
+  assert.equal(conversionFingerprint({ ...base, guideNote: undefined }), conversionFingerprint({ ...base, guideNote: '   ' }));
+});
+
+test('元件改用 fingerprint 純函式；MARK_REPLIED_ERRORS 涵蓋 server 實際回的 INVALID_INQUIRY_STATE', async () => {
+  const progress = await read('src/features/midao/requests/RequestProgressActions.tsx');
+  const sheet = await read('src/features/midao/requests/InquiryConversionSheet.tsx');
+  const contact = await read('src/features/midao/requests/TravelerContactActions.tsx');
+  assert.match(progress, /getKeyForPayload\(keyRef, decideFingerprint\(/u);
+  assert.match(sheet, /getKeyForPayload\(keyRef, conversionFingerprint\(/u);
+  const table = contact.slice(contact.indexOf('MARK_REPLIED_ERRORS'), contact.indexOf('};'));
+  assert.match(table, /INVALID_INQUIRY_STATE:\s*'[^']+'/u);
 });

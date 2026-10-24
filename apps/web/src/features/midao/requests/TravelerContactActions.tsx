@@ -6,6 +6,7 @@ import { getOrCreateKey, resetKey } from './idempotency-key';
 import { markInquiryReplied } from './requests.api';
 
 const MARK_REPLIED_ERRORS: Readonly<Record<string, string>> = {
+  INVALID_INQUIRY_STATE: '詢問單狀態已變更，請重新載入確認最新狀態。',
   INQUIRY_STATE_NOT_CONVERTIBLE: '目前的詢問單狀態不能標記為已回覆，請重新載入確認最新狀態。',
   NOT_FOUND: '找不到這筆詢問單。',
   MUTATIONS_DISABLED: '目前無法執行此操作，請稍後再試。',

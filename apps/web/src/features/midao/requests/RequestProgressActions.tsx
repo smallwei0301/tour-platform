@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { getKeyForPayload, resetKey, type PayloadKeyRef } from './idempotency-key';
+import { decideFingerprint, getKeyForPayload, resetKey, type PayloadKeyRef } from './idempotency-key';
 import { decideBookingRequest, type BookingDecisionAction } from './requests.api';
 
 type Confirmation = BookingDecisionAction | null;
@@ -44,7 +44,7 @@ export function RequestProgressActions({
 
   const submit = async (action: BookingDecisionAction) => {
     if (pendingRef.current || (action === 'reject' && (!rejectConfirmed || !trimmedRejectNote))) return;
-    const idempotencyKey = getKeyForPayload(keyRef, action === 'reject' ? { action, note: trimmedRejectNote } : { action });
+    const idempotencyKey = getKeyForPayload(keyRef, decideFingerprint({ action, note: trimmedRejectNote }));
     pendingRef.current = true;
     setPending(true);
     setError(false);

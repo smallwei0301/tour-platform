@@ -44,3 +44,38 @@ export function getKeyForPayload(ref: PayloadKeyRef, payload: unknown): string {
   }
   return ref.current.key;
 }
+
+/**
+ * decide 實際送出的 body 就是 fingerprint：approve 只有 action，reject 帶 trim 後的 note
+ * （與 requests.api 的 `note?.trim() || ''` 一致）。
+ */
+export function decideFingerprint(input: { action: 'approve' | 'reject'; note?: string }): string {
+  return JSON.stringify(
+    input.action === 'reject'
+      ? { action: input.action, note: input.note?.trim() || '' }
+      : { action: input.action },
+  );
+}
+
+/** convert 每個會送出的欄位都納入；guideNote 以 trim 後的值比對，與實際送出的 body 一致。 */
+export function conversionFingerprint(form: {
+  inquiryId: string;
+  activityPlanId: string;
+  confirmationTtlHours: number;
+  endAt: string;
+  participants: number;
+  quotedTotalTwd: number;
+  startAt: string;
+  guideNote?: string;
+}): string {
+  return JSON.stringify({
+    inquiryId: form.inquiryId,
+    activityPlanId: form.activityPlanId,
+    confirmationTtlHours: form.confirmationTtlHours,
+    endAt: form.endAt,
+    participants: form.participants,
+    quotedTotalTwd: form.quotedTotalTwd,
+    startAt: form.startAt,
+    guideNote: form.guideNote?.trim() || '',
+  });
+}
