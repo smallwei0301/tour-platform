@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { redactEmailsInText, redactErrorForReport } from '../../src/lib/post-trip/sweep/redact-error-email.mjs';
 import { evaluateReviewInvitationIdempotency } from '../../src/lib/post-trip/review-invitation.mjs';
 import {
@@ -102,4 +103,24 @@ test('redactEmailsInText／redactErrorForReport：email 換成 [email]，其餘�
   assert.ok(!String(e.stack).includes('user@example.com'));
   assert.equal(redactErrorForReport('x@y.z').message, '[email]');
   assert.equal(redactEmailsInText(null), '');
+});
+
+test('遮罩效能：100k 字元、不含 @ 的字串在 50ms 內完成，且被截斷', () => {
+  const big = 'a'.repeat(100_000);
+  const t0 = performance.now();
+  const out = redactEmailsInText(big);
+  const ms = performance.now() - t0;
+  assert.ok(ms < 50, `耗時 ${ms.toFixed(1)}ms`);
+  assert.ok(out.endsWith('…[truncated]'));
+  assert.ok(out.length < 2100);
+});
+
+test('長字串中段的 email 不會留在截斷後結果；跨截斷邊界的 email 也不殘留完整位址', () => {
+  const mid = 'x '.repeat(30_000) + 'user@example.com' + ' y'.repeat(30_000);
+  assert.ok(!redactEmailsInText(mid).includes('user@example.com'));
+  const edge = 'z'.repeat(1990) + ' user@example.com tail';
+  const out = redactEmailsInText(edge);
+  assert.ok(!out.includes('user@example.com'));
+  assert.ok(!out.includes('user@'));
+  assert.ok(!redactErrorForReport(new Error(mid)).message.includes('user@example.com'));
 });
