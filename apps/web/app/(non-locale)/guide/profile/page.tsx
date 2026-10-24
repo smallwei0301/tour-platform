@@ -8,6 +8,7 @@ import { listAllDivisions, normalizeRegionToDbValue } from '../../../../src/lib/
 import { GUIDE_PAYMENT_OPTIONS } from '../../../../src/lib/guide-payment-options.mjs';
 import { compressImage } from '../../../../src/lib/client-image-compress';
 import NotificationBindingButton from '../../../../src/components/NotificationBindingButton';
+import AvatarField from '../../../../src/components/guide/ProfileAvatarField';
 import MidaoReturnLink from '../../../../src/components/guide/MidaoReturnLink';
 
 // 熟悉區域：顯示短名（displayName）、儲存全名（dbValue），與行程地區格式一致。
@@ -243,6 +244,7 @@ export default function GuideProfileEditPage() {
               onUploaded={(url) => update('hero_image_url', url)}
             />
             <AvatarField
+              uploadUrl="/api/guide/profile/upload-avatar"
               currentUrl={profile.profile_photo_url}
               onUploaded={(url) => update('profile_photo_url', url)}
             />
@@ -784,93 +786,6 @@ function HeroField({ currentUrl, onUploaded }: { currentUrl: string | null; onUp
             上傳中…
           </div>
         )}
-      </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFile(file);
-          e.target.value = '';
-        }}
-      />
-      {error && <p style={{ marginTop: 4, fontSize: 12, color: '#dc2626' }}>⚠️ {error}</p>}
-    </div>
-  );
-}
-
-// ─── Avatar (1:1) upload field ──────────────────────────────────────
-function AvatarField({ currentUrl, onUploaded }: { currentUrl: string | null; onUploaded: (url: string) => void }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  async function handleFile(file: File) {
-    setBusy(true); setError('');
-    try {
-      const compressed = await compressImage(file, 'avatar');
-      const fd = new FormData();
-      fd.append('file', compressed);
-      const res = await fetch('/api/guide/profile/upload-avatar', {
-        method: 'POST', headers: csrfHeaders(), body: fd,
-      });
-      const json = await res.json();
-      if (!json?.ok) throw new Error(json?.error?.message ?? '上傳失敗');
-      onUploaded(json.data.url);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '上傳失敗');
-    } finally { setBusy(false); }
-  }
-
-  return (
-    <div>
-      <span style={LABEL}>頭像（正方形，建議 400×400）</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-        <div
-          onClick={() => !busy && inputRef.current?.click()}
-          style={{
-            position: 'relative', width: 96, height: 96,
-            borderRadius: '50%', overflow: 'hidden',
-            border: currentUrl ? '2px solid #e5e7eb' : '2px dashed #d1d5db',
-            background: '#f9fafb',
-            cursor: busy ? 'wait' : 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          {currentUrl ? (
-            <Image src={currentUrl} alt="頭像預覽" fill style={{ objectFit: 'cover' }} sizes="96px" />
-          ) : (
-            <span style={{ fontSize: 32, color: '#9ca3af' }}>👤</span>
-          )}
-          {busy && (
-            <div style={{
-              position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 600,
-            }}>
-              上傳中…
-            </div>
-          )}
-        </div>
-        <div style={{ flex: 1, minWidth: 160 }}>
-          <button
-            type="button"
-            onClick={() => !busy && inputRef.current?.click()}
-            disabled={busy}
-            style={{
-              padding: '7px 14px', borderRadius: 8,
-              border: '1px solid #d1d5db', background: '#fff',
-              fontSize: 13, fontWeight: 600, color: '#374151',
-              cursor: busy ? 'not-allowed' : 'pointer',
-              opacity: busy ? 0.6 : 1,
-            }}
-          >
-            {currentUrl ? '更換頭像' : '上傳頭像'}
-          </button>
-          <p style={{ ...HINT, marginTop: 6 }}>會自動中央裁切為正方形</p>
-        </div>
       </div>
       <input
         ref={inputRef}
