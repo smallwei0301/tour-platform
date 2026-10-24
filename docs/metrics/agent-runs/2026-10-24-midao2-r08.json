@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 2,
+  "runId": "2026-10-24-midao2-r08",
+  "status": "IN_PROGRESS",
+  "startedAt": "2026-10-24T00:01:58.993Z",
+  "endedAt": null,
+  "sources": [],
+  "main": {
+    "startSha": "72e40cdaae2116f82eaa7a6d463ab603579864e9",
+    "endSha": null
+  },
+  "inventory": {
+    "openIssuesStart": 72,
+    "openIssuesEnd": null,
+    "openPrsStart": 24,
+    "openPrsEnd": null,
+    "mainTerraPeak": 0,
+    "reserveTerraPeak": 0,
+    "activeCandidatePeak": 0,
+    "sharedTestPeak": 0,
+    "closureSweeps": 0,
+    "closureAdvancedOrClosed": 0
+  },
+  "modelUsage": {
+    "actualTokensAvailable": false,
+    "weeklyUsageStartPercent": null,
+    "weeklyUsageEndPercent": null,
+    "weightedUsageImprovementPercent": null,
+    "weights": {
+      "luna": 1,
+      "terra": 3,
+      "sol": 6
+    },
+    "contextMultipliers": {
+      "compact": 1,
+      "medium": 1.5,
+      "full": 3
+    },
+    "tasks": [
+      {
+        "id": "r08-luna-scan",
+        "role": "Luna 盤點 #1926 sweep 重試語意、#1928 refund-execute 錯誤路徑、#1916 idempotency 面",
+        "requestedModel": "luna",
+        "requestedSelector": "haiku",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-24T00:02:20Z"
+      },
+      {
+        "id": "r08-sol-triage",
+        "role": "Sol TRIAGE：#1926 sweep 專用 failed 次數上限（不影響 admin 手動寄送）＋catch 固定代碼；#1928 只遮 ECPay 例外 err.message，rtnMsg（ECPay 文件化業務回應、僅 admin 可見）保留並記錄理由",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-24T00:04:00Z"
+      },
+      {
+        "id": "r08-terra",
+        "role": "Terra 施工：#1926 sweep 失敗上限＋catch 固定代碼；#1928 refund-execute ECPay 例外不外洩",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-24T00:05:00Z"
+      },
+      {
+        "id": "r08-sol-audit",
+        "role": "Sol 獨立審查（fresh context）72e40cda..ab47714c（金流相鄰）",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-24T00:10:30Z"
+      },
+      {
+        "id": "r08-terra-rework1",
+        "role": "Terra rework：更正 PII 註解＋上報前遮罩 email、補 suppressed 不計入與 admin 不受上限測試",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-24T00:15:00Z"
+      },
+      {
+        "id": "r08-sol-audit2",
+        "role": "Sol delta 審查 559d8b5a",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-24T01:09:25Z"
+      },
+      {
+        "id": "r08-terra-rework2",
+        "role": "Terra rework2：email 遮罩 regex 輸入長度上限（二次方複雜度）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-24T01:11:15Z"
+      }
+    ],
+    "fullContextReplays": 0,
+    "duplicateScans": 0
+  },
+  "delivery": {
+    "issuesStarted": 2,
+    "issuesClosed": 0,
+    "auditReady": 0,
+    "ownerBlockedComplete": 0,
+    "exactHeadCiOnly": 0,
+    "commitOnly": 0,
+    "unfinishedCarryover": 0,
+    "cycleTimeMinutes": null
+  },
+  "ci": {
+    "fullCiRuns": 0,
+    "invalidReruns": 0,
+    "firstPassRatePercent": null,
+    "sharedTestCollisions": 0
+  },
+  "quality": {
+    "acceptanceEvidenceCoveragePercent": null,
+    "auditFirstPassRatePercent": null,
+    "unresolvedP0": 0,
+    "unresolvedP1": 0,
+    "reopenedIssues": 0,
+    "postMergeRegressions": 0,
+    "safetyViolations": 0,
+    "hardFailReasons": []
+  },
+  "flow": {
+    "lunaTasks": 1,
+    "lunaAccepted": 1,
+    "lunaDelegationRatePercent": null,
+    "duplicateAgentTasks": 0,
+    "ownershipCollisions": 0,
+    "waitTimeConvertedPercent": null,
+    "solTouches": 3,
+    "solIssues": 2
+  },
+  "auditability": {
+    "evidenceFieldsCompletePercent": null,
+    "exactHeadTestCoveragePercent": null,
+    "stalePendingDescriptions": 0,
+    "preciseBlockersPercent": null,
+    "scoreInputsCompletePercent": null
+  },
+  "notes": [
+    "Owner 2026-10-24 指定處理 #1926（首次啟用寄給所有歷史訂單）、#1928（金流相鄰，需獨立審查）、#1916（high risk，需 Final Risk）。本 Run 先做 #1926＋#1928（同一 PR），#1916 另開 Run／PR。",
+    "Sol 審查 PASS／blocking 0；退款語意逐段比對未變；rtnMsg 僅來自 ECPay RtnMsg、HashKey 不入回應。本 commit 自身缺口（PII 註解不實、M1/M2 測試缺口）→ rework1。既有問題另開 #1931（failPersist、退款寫入順序測試、首次啟用告警洗版、code 分組）。",
+    "559d8b5a：email 遮罩＋測試；主 session 複驗 5 檔 41/41。",
+    "Codex code／security 自 00:21Z 起皆 running 無結果（~48 分）；Owner 選「再觸發一次，仍卡就 merge」（僅 #1932），已留言 @codex review（6377966061）。delta 審查 PASS，F1：遮罩 regex 二次方（100k 字元 12.4s），屬本 PR 自身規格缺陷 → rework2。",
+    "ee0a4086：有上限量詞＋截斷 2000 字元；主 session 複驗 29/29。"
+  ],
+  "deliveryTruthVersion": 4,
+  "closeout": {
+    "contractVersion": 1,
+    "ownerRole": "PRODUCT_MAIN_SESSION",
+    "terminalPolicy": "CLOSE_OR_REASSIGN_BEFORE_SESSION_EXIT_OR_OWNER_STOP_OR_SCOPE_EXHAUSTED_OR_OWNER_BLOCKED",
+    "state": "OPEN",
+    "closedAt": null,
+    "evidenceRef": null
+  },
+  "wipLifecycle": {
+    "schemaVersion": 1,
+    "events": []
+  },
+  "completionTruth": {
+    "status": "NOT_CHECKED",
+    "checkedAt": null,
+    "claims": []
+  }
+}

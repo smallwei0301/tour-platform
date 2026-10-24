@@ -58,6 +58,10 @@ export function evaluateReviewInvitationEligibility(input) {
 }
 
 /**
+ * @param {{ existingInvitations?: Array<{status?: string}>, allowResend?: boolean,
+ *   resendReason?: string, maxFailedAttempts?: number }} input
+ *   maxFailedAttempts（選用，#1926）：failed 紀錄數達此值且尚無 sent → retry_exhausted。
+ *   未傳（或非正有限數）時行為與原本完全一致（admin 手動寄送不傳）。
  * @returns { allowSend: boolean, code: string, reasonZh?: string }
  */
 export function evaluateReviewInvitationIdempotency(input) {
@@ -71,6 +75,13 @@ export function evaluateReviewInvitationIdempotency(input) {
   const sent = records.find((r) => r.status === 'sent');
 
   if (!sent) {
+    const max = input?.maxFailedAttempts;
+    if (typeof max === 'number' && Number.isFinite(max) && max > 0) {
+      const failedCount = records.filter((r) => r.status === 'failed').length;
+      if (failedCount >= max) {
+        return { allowSend: false, code: 'retry_exhausted', reasonZh: '寄送失敗次數已達上限' };
+      }
+    }
     return { allowSend: true, code: records.length === 0 ? 'first_send' : 'retry_after_failure' };
   }
 

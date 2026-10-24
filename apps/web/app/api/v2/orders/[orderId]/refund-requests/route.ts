@@ -133,6 +133,9 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
             order: orderRow as Parameters<typeof executeRefund>[0]['order'],
             body: { reason },
             requestAllRefund,
+            reportError: (err) => {
+              void reportRouteError(err, { route: 'v2/orders/refund-requests' });
+            },
             updateOrder: async (oid, payload) => {
               const { data, error, count } = await svcClient
                 .from('orders')
