@@ -106,6 +106,34 @@
         "outputTokens": null,
         "cachedTokens": null,
         "dispatchedAt": "2026-10-24T00:15:00Z"
+      },
+      {
+        "id": "r08-sol-audit2",
+        "role": "Sol delta 審查 559d8b5a",
+        "requestedModel": "sol",
+        "requestedSelector": "opus",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-24T01:09:25Z"
+      },
+      {
+        "id": "r08-terra-rework2",
+        "role": "Terra rework2：email 遮罩 regex 輸入長度上限（二次方複雜度）",
+        "requestedModel": "terra",
+        "requestedSelector": "sonnet",
+        "actualModel": "unknown",
+        "count": 1,
+        "contextClass": "compact",
+        "accepted": true,
+        "inputTokens": null,
+        "outputTokens": null,
+        "cachedTokens": null,
+        "dispatchedAt": "2026-10-24T01:11:15Z"
       }
     ],
     "fullContextReplays": 0,
@@ -144,7 +172,7 @@
     "duplicateAgentTasks": 0,
     "ownershipCollisions": 0,
     "waitTimeConvertedPercent": null,
-    "solTouches": 2,
+    "solTouches": 3,
     "solIssues": 2
   },
   "auditability": {
@@ -157,7 +185,9 @@
   "notes": [
     "Owner 2026-10-24 指定處理 #1926（首次啟用寄給所有歷史訂單）、#1928（金流相鄰，需獨立審查）、#1916（high risk，需 Final Risk）。本 Run 先做 #1926＋#1928（同一 PR），#1916 另開 Run／PR。",
     "Sol 審查 PASS／blocking 0；退款語意逐段比對未變；rtnMsg 僅來自 ECPay RtnMsg、HashKey 不入回應。本 commit 自身缺口（PII 註解不實、M1/M2 測試缺口）→ rework1。既有問題另開 #1931（failPersist、退款寫入順序測試、首次啟用告警洗版、code 分組）。",
-    "559d8b5a：email 遮罩＋測試；主 session 複驗 5 檔 41/41。"
+    "559d8b5a：email 遮罩＋測試；主 session 複驗 5 檔 41/41。",
+    "Codex code／security 自 00:21Z 起皆 running 無結果（~48 分）；Owner 選「再觸發一次，仍卡就 merge」（僅 #1932），已留言 @codex review（6377966061）。delta 審查 PASS，F1：遮罩 regex 二次方（100k 字元 12.4s），屬本 PR 自身規格缺陷 → rework2。",
+    "ee0a4086：有上限量詞＋截斷 2000 字元；主 session 複驗 29/29。"
   ],
   "deliveryTruthVersion": 4,
   "closeout": {
